@@ -1,0 +1,1 @@
+cmake --build . --target sparse-tensor -j16

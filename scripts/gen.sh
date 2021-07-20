@@ -1,0 +1,2 @@
+# run this from the build directory
+cmake -G Ninja .. -DMLIR_DIR=~/workdesk/cd/llvm-project/build/lib/cmake/mlir -DLLVM_EXTERNAL_LIT=~/workdesk/cd/llvm-project/build/llvm-lit -DCMAKE_BUILD_TYPE=Debug -DCMAKE_POLICY_DEFAULT_CMP0116=OLD
