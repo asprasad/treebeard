@@ -1,0 +1,49 @@
+-- TODO --
+
+1. Write the high level tree IR
+2. Write a second level IR with tiling, looping constructs
+
+-- Compiler Input -- 
+
+- The ensemble model is the input, as a JSON
+  - main.cpp will parse the JSON with some specified format and construct the MLIR
+    - The first IR is a PredictEnsembleOp given an ensemble of trees, the row_type and the batch size
+      -
+    - The second level IR may be lowering the PredictEnsembleOp to PredictTreeOp and ReducePredictionsOp
+    ---------- MLIR Ops -----------------
+      for i in (1, numRows):
+        for j in (1, numTrees):
+          predict[i, j] = PredictTreeOp(rows[i], tree[j])
+      ReducePredictionsOp(predict)
+    ---------- MLIR Ops -----------------
+      
+
+
+-- Compiler Output -- 
+
+Output a shared library with a predict method: 
+    template<prediction_type, row_type>
+    err predict(<row_type> *rows, <prediction_type>* preds, size_t numRows)
+      - Each row_type is a list of features; feature_types are typically the same (float or double)
+        - But can be different types in the future
+      - prediction_type is also typically float or double
+    
+    - The requested prediction can also be different
+      - TODO
+
+-- High Level IR --
+
+- Input is a type
+  - The rows are input as a dense <typed> array, typically dense float 2D array or dense double 2D array.
+  - The type of the row is known at compile time
+  - [Future] The number of rows is an input to the predict() method.
+    - For now, assume a batch size
+
+- Generate code based on batch vs. single inference
+  - 
+    
+
+Note:
+
+1. Currently, we assume only numerical regression nodes. Categorical nodes will be addressed in the future.
+2. 

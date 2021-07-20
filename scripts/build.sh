@@ -1,1 +1,1 @@
-cmake --build . --target sparse-tensor -j16
+cmake --build . --target tree-heavy
