@@ -1,5 +1,5 @@
 # tree-heavy 
-A compiler for the gradient boosting trees.
+A compiler for gradient boosting tree inference.
 
 # To build the tree-heavy project
 mkdir build && cd build
