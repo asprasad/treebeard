@@ -7,8 +7,8 @@
 namespace TreeHeavy
 {
 
-template<typename ThresholdType, typename FeatureIndexType, typename NodeIndexType>
-class XGBoostJSONParser : public ModelJSONParser<ThresholdType, FeatureIndexType, NodeIndexType>
+template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+class XGBoostJSONParser : public ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>
 {
     json m_json;
     void ConstructSingleTree(json& treeJSON);
@@ -23,8 +23,8 @@ public:
     void Parse() override;
 };
 
-template<typename ThresholdType, typename FeatureIndexType, typename NodeIndexType>
-void XGBoostJSONParser<ThresholdType, FeatureIndexType, NodeIndexType>::Parse()
+template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::Parse()
 {
     auto& learnerJSON = m_json["learner"];
     auto& featureNamesJSON = learnerJSON["feature_names"];
@@ -41,12 +41,13 @@ void XGBoostJSONParser<ThresholdType, FeatureIndexType, NodeIndexType>::Parse()
     ConstructTreesFromBooster(learnerJSON["gradient_booster"]);
 }
 
-template<typename ThresholdType, typename FeatureIndexType, typename NodeIndexType>
-void XGBoostJSONParser<ThresholdType, FeatureIndexType, NodeIndexType>::ConstructTreesFromBooster(json& boosterJSON)
+template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::ConstructTreesFromBooster(json& boosterJSON)
 {
     auto& modelJSON = boosterJSON["model"];
-    int numTrees = std::stoi(modelJSON["gbtree_model_param"]["num_trees"].get<std::string>());
+    size_t numTrees = static_cast<size_t>(std::stoi(modelJSON["gbtree_model_param"]["num_trees"].get<std::string>()));
     auto& treesJSON = modelJSON["trees"];
+    assert (numTrees == treesJSON.size());
     for (auto& treeJSON : treesJSON)
     {
         this->NewTree();
@@ -55,8 +56,8 @@ void XGBoostJSONParser<ThresholdType, FeatureIndexType, NodeIndexType>::Construc
     }
 }
 
-template<typename ThresholdType, typename FeatureIndexType, typename NodeIndexType>
-void XGBoostJSONParser<ThresholdType, FeatureIndexType, NodeIndexType>::ConstructSingleTree(json& treeJSON)
+template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::ConstructSingleTree(json& treeJSON)
 {
     // TODO what is "base_weights", "categories", "categories_nodes", 
     // "categories_segments", "categories_sizes"?
@@ -71,12 +72,12 @@ void XGBoostJSONParser<ThresholdType, FeatureIndexType, NodeIndexType>::Construc
     auto& split_indices = treeJSON["split_indices"];
     auto& split_type = treeJSON["split_type"]; // 0 is Numerical and 1 is Categorical
     auto num_features = std::stoi(treeJSON["tree_param"]["num_feature"].get<std::string>());
-    auto num_nodes = std::stoi(treeJSON["tree_param"]["num_nodes"].get<std::string>());
+    auto num_nodes = static_cast<size_t>(std::stoi(treeJSON["tree_param"]["num_nodes"].get<std::string>()));
+    assert (numNodes == num_nodes);
     assert (left_children.size() == num_nodes);
     assert (left_children.size() == right_childen.size() && 
             left_children.size() == parents.size());
-    
-    // tree = Tree(tree_id, num_nodes, num_features)
+    this->SetTreeNumberOfFeatures(num_features);
     std::vector<NodeIndexType> nodes;
     for (size_t i=0 ; i< num_nodes ; ++i)
     {
@@ -86,8 +87,12 @@ void XGBoostJSONParser<ThresholdType, FeatureIndexType, NodeIndexType>::Construc
     }
     for (size_t i=0 ; i< num_nodes ; ++i)
     {
-        this->SetNodeLeftChild(nodes[i], nodes[left_children[i].get<int>()]);
-        this->SetNodeRightChild(nodes[i], nodes[right_childen[i].get<int>()]);
+        auto leftChildIndex = left_children[i].get<int>();
+        if (leftChildIndex != -1)
+            this->SetNodeLeftChild(nodes[i], nodes[leftChildIndex]);
+        auto rightChildIndex = right_childen[i].get<int>();
+        if (rightChildIndex != -1)
+            this->SetNodeRightChild(nodes[i], nodes[rightChildIndex]);
         if (parents[i].get<int>() == 2147483647)
             this->SetNodeParent(nodes[i],  -1);
         else

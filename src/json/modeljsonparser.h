@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include "json.hpp"
+#include "DecisionForest.h"
 
 using json = nlohmann::json;
 
@@ -21,27 +22,36 @@ namespace TreeHeavy
 enum ReductionType { kAdd, kVoting };
 enum FeatureType { kNumerical, kCategorical };
 
-template<typename ThresholdType, typename FeatureIndexType, typename NodeIndexType>
+template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
 class ModelJSONParser
 {
 protected:
+    using DecisionForestType = mlir::decisionforest::DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>;
+    using DecisionTreeType = typename DecisionForestType::DecisionTreeType;
+
+    DecisionForestType *m_forest;
+    DecisionTreeType *m_currentTree;
+
     void SetReductionType(ReductionType reductionType) { }
     void AddFeature(const std::string& featureName, FeatureType type) { }
-    void NewTree() { }
-    void EndTree() { }
-    void SetTreeScalingFactor(ThresholdType scale) { }
+    void NewTree() { m_currentTree = &(m_forest->NewTree()); }
+    void EndTree() { m_currentTree = nullptr; }
+    void SetTreeNumberOfFeatures(size_t numFeatures) { m_currentTree->SetNumberOfFeatures(numFeatures); }
+    void SetTreeScalingFactor(ThresholdType scale) { m_currentTree->SetTreeScalingFactor(scale); }
 
     // Create a new node in the current tree
-    NodeIndexType NewNode(ThresholdType threshold, FeatureIndexType featureIndex) { return 0; }
+    NodeIndexType NewNode(ThresholdType threshold, FeatureIndexType featureIndex) { return m_currentTree->NewNode(threshold, featureIndex); }
     // Set the parent of a node
-    void SetNodeParent(NodeIndexType node, NodeIndexType parent) { }
+    void SetNodeParent(NodeIndexType node, NodeIndexType parent) { m_currentTree->SetNodeParent(node, parent); }
     // Set right child of a node
-    void SetNodeRightChild(NodeIndexType node, NodeIndexType child) { }
+    void SetNodeRightChild(NodeIndexType node, NodeIndexType child) { m_currentTree->SetNodeRightChild(node, child); }
     // Set left child of a node
-    void SetNodeLeftChild(NodeIndexType node, NodeIndexType child) { }
+    void SetNodeLeftChild(NodeIndexType node, NodeIndexType child) { m_currentTree->SetNodeLeftChild(node, child); }
 
 public:
-    ModelJSONParser() { }
+    ModelJSONParser()
+        : m_forest(new DecisionForestType), m_currentTree(nullptr)
+    { }
     virtual void Parse() = 0;
 
     MLIRFuntion GetEvaluationFunction() { return nullptr; }

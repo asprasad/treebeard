@@ -18,7 +18,8 @@ set(LIBS
         #MLIRTargetLLVMIRExport
         #MLIRTransforms
         )
-add_llvm_executable(tree-heavy main.cpp)
+add_llvm_executable(tree-heavy
+        main.cpp)
 add_dependencies(tree-heavy DecisionForestGen)
 
 llvm_update_compile_flags(tree-heavy)
@@ -28,4 +29,4 @@ mlir_check_all_link_libraries(tree-heavy)
 
 add_subdirectory(include)
 #add_subdirectory(ast)
-#add_subdirectory(mlir)
+add_subdirectory(mlir)
