@@ -5,11 +5,21 @@
 #include <vector>
 #include "json.hpp"
 #include "DecisionForest.h"
+#include "../mlir/Dialect.h"
+
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Verifier.h"
+
+#include "llvm/ADT/STLExtras.h"
 
 using json = nlohmann::json;
 
 // TODO replace with the actual MLIR function/module type
-typedef void* MLIRFuntion;
+typedef void* MLIRFunction;
 
 /*
 //++
@@ -22,6 +32,34 @@ namespace TreeHeavy
 enum ReductionType { kAdd, kVoting };
 enum FeatureType { kNumerical, kCategorical };
 
+template<typename T>
+mlir::Type GetMLIRFloatType(const T& val, mlir::OpBuilder& builder)
+{
+    assert (false);
+    return mlir::Type();
+}
+
+template<>
+mlir::Type GetMLIRFloatType(const float& val, mlir::OpBuilder& builder)
+{
+    return builder.getF32Type();
+}
+
+template<>
+mlir::Type GetMLIRFloatType(const double& val, mlir::OpBuilder& builder)
+{
+    return builder.getF64Type();
+}
+
+mlir::Type GetMLIRTypeFromString(const std::string& typestr, mlir::OpBuilder& builder)
+{
+    if (typestr == "float")
+        return builder.getF64Type();
+    else
+        assert(false);
+    return mlir::Type();
+}
+
 template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
 class ModelJSONParser
 {
@@ -31,9 +69,12 @@ protected:
 
     DecisionForestType *m_forest;
     DecisionTreeType *m_currentTree;
+    mlir::MLIRContext& m_context;
+    mlir::ModuleOp m_module;
+    mlir::OpBuilder m_builder;
 
-    void SetReductionType(ReductionType reductionType) { }
-    void AddFeature(const std::string& featureName, FeatureType type) { }
+    void SetReductionType(ReductionType reductionType) { m_forest->SetReductionType(reductionType); }
+    void AddFeature(const std::string& featureName, const std::string& type) { m_forest->AddFeature(featureName, type); }
     void NewTree() { m_currentTree = &(m_forest->NewTree()); }
     void EndTree() { m_currentTree = nullptr; }
     void SetTreeNumberOfFeatures(size_t numFeatures) { m_currentTree->SetNumberOfFeatures(numFeatures); }
@@ -48,13 +89,59 @@ protected:
     // Set left child of a node
     void SetNodeLeftChild(NodeIndexType node, NodeIndexType child) { m_currentTree->SetNodeLeftChild(node, child); }
 
+    mlir::Type GetFunctionArgumentType()
+    {
+        // TODO this needs to encode the batch size
+        const auto& features = m_forest->GetFeatures();
+        mlir::Type elementType = GetMLIRTypeFromString(features.front().type, m_builder);
+        return mlir::RankedTensorType::get(features.size(), elementType);
+    }
+    mlir::FunctionType GetFunctionType()
+    {
+        auto argType = GetFunctionArgumentType();
+        return m_builder.getFunctionType(argType, GetMLIRFloatType(ReturnType(), m_builder));
+    }
+    mlir::FuncOp GetFunctionPrototype()
+    {
+        auto location = m_builder.getUnknownLoc();
+        auto functionType = GetFunctionType();
+        // TODO the function name needs to be an input or derived from the input
+        // return mlir::FuncOp::create(location, std::string("Prediction_Function"), functionType);
+        return m_builder.create<mlir::FuncOp>(location, std::string("Prediction_Function"), functionType);
+    }
 public:
-    ModelJSONParser()
-        : m_forest(new DecisionForestType), m_currentTree(nullptr)
-    { }
+    ModelJSONParser(mlir::MLIRContext& context)
+        : m_forest(new DecisionForestType), m_currentTree(nullptr), m_context(context), m_builder(&context)
+    {
+        m_module = mlir::ModuleOp::create(m_builder.getUnknownLoc(), llvm::StringRef("MyModule"));
+    }
     virtual void Parse() = 0;
 
-    MLIRFuntion GetEvaluationFunction() { return nullptr; }
+
+    mlir::ModuleOp GetEvaluationFunction() 
+    { 
+        mlir::FuncOp function(GetFunctionPrototype());
+        if (!function)
+            return nullptr;
+
+        // Function body. MLIR's entry block has the same arg list as function
+        auto &entryBlock = *function.addEntryBlock();
+
+        m_builder.setInsertionPointToStart(&entryBlock);
+
+        auto forestType = mlir::decisionforest::TreeEnsembleType::get(GetMLIRFloatType(ReturnType(), m_builder),
+                                                                      m_forest->NumTrees(), m_builder.getF64Type(), mlir::decisionforest::kAdd);
+        auto forestAttribute = mlir::decisionforest::DecisionForestAttribute::get(forestType, *m_forest);
+
+        // ::mlir::Type resultType0, ::mlir::decisionforest::DecisionForestAttribute ensemble, ::mlir::Value data)
+        auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(m_builder.getUnknownLoc(), m_builder.getF64Type(), forestAttribute, entryBlock.getArguments()[0]);
+        m_builder.create<mlir::decisionforest::ReturnOp>(m_builder.getUnknownLoc(), predictOp);
+        if (failed(mlir::verify(m_module))) {
+            m_module.emitError("Module verification error");
+            return nullptr;
+        }
+        return m_module;
+    }
 };
 }
 

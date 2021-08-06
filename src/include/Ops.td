@@ -97,21 +97,44 @@ def EnsembleConstantOp : DecisionForest_Op<"ensemble"> {
 
 }
 
-// TODO Need to parameterize the return type and the number of return values
-// (may have multiple return probablities, class ID etc)
-class PredictForestOp : DecisionForest_Op<"predict_ensemble"> {
-    let arguments = (ins DecisionForestAttr:$ensemble, F64ElementsAttr:$data);
+// TODO Need to parameterize 
+// 1. The return type
+// 2. The number of return values (may have multiple return probablities, class ID etc)
+// 3. The type of the input tensor (need not be F64 always)
+def PredictForestOp : DecisionForest_Op<"predict_ensemble"> {
+    let arguments = (ins DecisionForestAttr:$ensemble, F64Tensor:$data);
 
     let results = (outs F64);
-    // [TODO] Need to define the following methods
-    // 1. Add node (threshold, featureIndex) 2. Set parent/children on node 3. 
+
+    // let builders = [
+    //   // Build a constant with a given constant tensor value.
+    //   OpBuilder<(ins "DecisionForestAttribute":$ensemble, "Value":$data)>
+    // ];
 }
 
+def ReturnOp : DecisionForest_Op<"return", [NoSideEffect, HasParent<"FuncOp">,Terminator]> {
+  let summary = "return operation";
+  let description = "Represents function return operation. Takes optional tensor operand and produces no results.";
+  let arguments = (ins F64:$input); 
+  // let assemblyFormat = "($input^ `:` type($input)) ? attr-dict";
+
+  // let builders = [
+  //   OpBuilder<(ins "Value":$input)> // TODO: What's this?
+  // ];
+
+  // let extraClassDeclaration = [{
+  //   bool hasOperand() { return getNumOperands() != 0; }
+  // }];
+
+  // let verifier = [{return ::verify(*this); }];
+}
 
 // function Predict(x)
 // { 
 //   %1 = predict_const_ensemble(x) // Attr = ensemble 
 //   return %1
 // }
+
+
 
 #endif // TREE_HEAVY_OPS

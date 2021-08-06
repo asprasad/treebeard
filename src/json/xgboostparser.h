@@ -7,7 +7,7 @@
 namespace TreeHeavy
 {
 
-template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+template<typename ThresholdType=double, typename ReturnType=double, typename FeatureIndexType=int32_t, typename NodeIndexType=int32_t>
 class XGBoostJSONParser : public ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>
 {
     json m_json;
@@ -15,7 +15,8 @@ class XGBoostJSONParser : public ModelJSONParser<ThresholdType, ReturnType, Feat
     void ConstructTreesFromBooster(json& boosterJSON);
 
 public:
-    XGBoostJSONParser(const std::string& filename)
+    XGBoostJSONParser(mlir::MLIRContext& context, const std::string& filename)
+        :ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>(context)
     {
         std::ifstream fin(filename);
         fin >> m_json;
@@ -35,7 +36,7 @@ void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexTyp
     {
         auto name = featureNamesJSON[i].get<std::string>();
         auto featureType = featureTypesJSON[i].get<std::string>();
-        this->AddFeature(name, static_cast<FeatureType>(0)); //TODO hardcoded feature type
+        this->AddFeature(name, featureType); //TODO hardcoded feature type
     }
 
     ConstructTreesFromBooster(learnerJSON["gradient_booster"]);

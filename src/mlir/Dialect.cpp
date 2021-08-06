@@ -17,7 +17,7 @@ void DecisionForestDialect::initialize() {
 #include "Ops.cpp.inc"
       >();
   addTypes<TreeEnsembleType, TreeType>();
-  addAttributes<DecisionTreeAttr>();
+  addAttributes<DecisionTreeAttr, DecisionForestAttribute>();
 }
 
 /// Parse a type registered to this dialect.
@@ -30,6 +30,7 @@ void DecisionForestDialect::initialize() {
 void DecisionForestDialect::printType(::mlir::Type type,
                                       ::mlir::DialectAsmPrinter &os) const
 {
+    // mlir::decisionforest::Decs
 
 }
 
