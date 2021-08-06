@@ -140,6 +140,7 @@ public:
             m_module.emitError("Module verification error");
             return nullptr;
         }
+        m_module.push_back(function);
         return m_module;
     }
 };
