@@ -87,6 +87,7 @@ public:
     size_t NumTrees() { return m_trees.size(); }
     const std::vector<Feature>& GetFeatures() const { return m_features; }
     std::string Serialize() const;
+    std::string PrintToString() const;
     bool operator==(const DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>& that) const
     {
         return m_reductionType==that.m_reductionType && m_trees==that.m_trees;
@@ -124,6 +125,13 @@ std::string DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeInde
     return strStream.str();
 }
 
+template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+std::string DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::PrintToString() const
+{
+    std::stringstream strStream;
+    strStream << "ReductionType = " << m_reductionType << ", #Trees = " << m_trees.size();
+    return strStream.str();
+}
 
 } // decisionforest
 } // mlir

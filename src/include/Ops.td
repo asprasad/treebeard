@@ -10,6 +10,13 @@ def DecisionForestDialect : Dialect {
   let name = "decisionforest";
   let cppNamespace = "::mlir::decisionforest";
   let summary = "A high-level dialect to specify decision trees";
+
+  let extraClassDeclaration = [{
+    Attribute parseAttribute(DialectAsmParser &parser,
+                             Type type) const override;
+    void printAttribute(Attribute attr,
+                        DialectAsmPrinter &printer) const override;
+  }];
 }
 
 // def NodeType : 
@@ -87,6 +94,9 @@ def DecisionForestAttr : Attr<
 
   let storageType = [{ ::mlir::decisionforest::DecisionForestAttribute }];
   let returnType = [{ ::mlir::decisionforest::DecisionForestAttribute }];
+  
+  // let parser = [{return ::parseDecisionForestAttribute(parser, result); }];
+  // let printer = [{return ::printDecisionForestAttribute(p, *this); }];
 
   // Note that this is only constructing scalar elements attribute.
   let constBuilderCall = "::mlir::decisionforest::DecisionForestAttribute::get()";

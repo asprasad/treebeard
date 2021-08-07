@@ -34,5 +34,19 @@ void DecisionForestDialect::printType(::mlir::Type type,
 
 }
 
+mlir::Attribute DecisionForestDialect::parseAttribute(DialectAsmParser &parser, 
+                                                      Type type) const
+{
+    llvm_unreachable("DecisionForestDialect::parseAttribute Unimplement");
+    return mlir::Attribute();
+}
+
+void DecisionForestDialect::printAttribute(::mlir::Attribute attr,
+                                           ::mlir::DialectAsmPrinter &os) const
+{
+    DecisionForestAttribute decisionForrestAttr = attr.cast<DecisionForestAttribute>();
+    os << decisionForrestAttr.PrintToString();
+}
+
 #define GET_OP_CLASSES
 #include "Ops.cpp.inc"

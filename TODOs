@@ -2,9 +2,9 @@
     - Needs to take the TreeEnsemble object and construct a storage class and attribute object
     - Hash for the storage key needs to be figured out (Type, TreeEnsemble)
 * [Done] API to build TreeEnsembleAttribute from JSON parser
-* Calls to Builder interface from JSON parser
+* [Done] Calls to Builder interface from JSON parser
     - Build methods for the predict op
     - Only needs to build two ops and set the corresponding attributes
-* MLIR print routines for dialect
+* [Done] MLIR print routines for dialect
 * MLIR parse routines
 * Verify whether the features of the input are indexed with base 1 or 0 in XGBoost

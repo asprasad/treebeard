@@ -107,6 +107,12 @@ public:
     static DecisionForestAttribute get(Type type, DecisionForest<>& value) {
         return Base::get(type.getContext(), type, value);
     }
+    std::string Serialize() {
+        return getImpl()->m_forest.Serialize();
+    }
+    std::string PrintToString() {
+        return getImpl()->m_forest.PrintToString();
+    }
 };
 
 }
