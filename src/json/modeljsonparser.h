@@ -29,7 +29,6 @@ typedef void* MLIRFunction;
 */
 namespace TreeHeavy
 {
-enum ReductionType { kAdd, kVoting };
 enum FeatureType { kNumerical, kCategorical };
 
 template<typename T>
@@ -64,7 +63,7 @@ template<typename ThresholdType, typename ReturnType, typename FeatureIndexType,
 class ModelJSONParser
 {
 protected:
-    using DecisionForestType = mlir::decisionforest::DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>;
+    using DecisionForestType = mlir::decisionforest::DecisionForest<>; //<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>;
     using DecisionTreeType = typename DecisionForestType::DecisionTreeType;
 
     DecisionForestType *m_forest;
@@ -73,7 +72,7 @@ protected:
     mlir::ModuleOp m_module;
     mlir::OpBuilder m_builder;
 
-    void SetReductionType(ReductionType reductionType) { m_forest->SetReductionType(reductionType); }
+    void SetReductionType(mlir::decisionforest::ReductionType reductionType) { m_forest->SetReductionType(reductionType); }
     void AddFeature(const std::string& featureName, const std::string& type) { m_forest->AddFeature(featureName, type); }
     void NewTree() { m_currentTree = &(m_forest->NewTree()); }
     void EndTree() { m_currentTree = nullptr; }
@@ -130,11 +129,12 @@ public:
         m_builder.setInsertionPointToStart(&entryBlock);
 
         auto forestType = mlir::decisionforest::TreeEnsembleType::get(GetMLIRFloatType(ReturnType(), m_builder),
-                                                                      m_forest->NumTrees(), m_builder.getF64Type(), mlir::decisionforest::kAdd);
+                                                                      m_forest->NumTrees(), GetFunctionArgumentType(), mlir::decisionforest::kAdd);
         auto forestAttribute = mlir::decisionforest::DecisionForestAttribute::get(forestType, *m_forest);
 
         // ::mlir::Type resultType0, ::mlir::decisionforest::DecisionForestAttribute ensemble, ::mlir::Value data)
-        auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(m_builder.getUnknownLoc(), m_builder.getF64Type(), forestAttribute, entryBlock.getArguments()[0]);
+        auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(m_builder.getUnknownLoc(), GetMLIRFloatType(ReturnType(), m_builder),
+                                                                                 forestAttribute, entryBlock.getArguments()[0]);
         m_builder.create<mlir::decisionforest::ReturnOp>(m_builder.getUnknownLoc(), predictOp);
         if (failed(mlir::verify(m_module))) {
             m_module.emitError("Module verification error");

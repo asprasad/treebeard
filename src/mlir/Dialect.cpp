@@ -45,7 +45,7 @@ void DecisionForestDialect::printAttribute(::mlir::Attribute attr,
                                            ::mlir::DialectAsmPrinter &os) const
 {
     DecisionForestAttribute decisionForrestAttr = attr.cast<DecisionForestAttribute>();
-    os << decisionForrestAttr.PrintToString();
+    decisionForrestAttr.Print(os);
 }
 
 #define GET_OP_CLASSES

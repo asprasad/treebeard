@@ -111,10 +111,13 @@ def EnsembleConstantOp : DecisionForest_Op<"ensemble"> {
 // 1. The return type
 // 2. The number of return values (may have multiple return probablities, class ID etc)
 // 3. The type of the input tensor (need not be F64 always)
+
+def ReturnType : AnyTypeOf<[F16, F32, F64, F16Tensor, F32Tensor, F64Tensor]>;
+
 def PredictForestOp : DecisionForest_Op<"predict_ensemble"> {
     let arguments = (ins DecisionForestAttr:$ensemble, F64Tensor:$data);
 
-    let results = (outs F64);
+    let results = (outs ReturnType);
 
     // let builders = [
     //   // Build a constant with a given constant tensor value.
@@ -125,7 +128,7 @@ def PredictForestOp : DecisionForest_Op<"predict_ensemble"> {
 def ReturnOp : DecisionForest_Op<"return", [NoSideEffect, HasParent<"FuncOp">,Terminator]> {
   let summary = "return operation";
   let description = "Represents function return operation. Takes optional tensor operand and produces no results.";
-  let arguments = (ins F64:$input); 
+  let arguments = (ins ReturnType:$input); 
   // let assemblyFormat = "($input^ `:` type($input)) ? attr-dict";
 
   // let builders = [

@@ -8,6 +8,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "DecisionForest.h"
+#include "DecisionTreeTypes.h"
 
 namespace mlir 
 {
@@ -110,8 +111,11 @@ public:
     std::string Serialize() {
         return getImpl()->m_forest.Serialize();
     }
-    std::string PrintToString() {
-        return getImpl()->m_forest.PrintToString();
+    void Print(::mlir::DialectAsmPrinter &os) {
+        std::string forestStr = getImpl()->m_forest.PrintToString();
+        auto ensembleMLIRType = getImpl()->getType();
+        mlir::decisionforest::TreeEnsembleType ensembleType = ensembleMLIRType.cast<mlir::decisionforest::TreeEnsembleType>();
+        os << forestStr << ", resultType = " << ensembleType.getResultType();
     }
 };
 

@@ -19,7 +19,4 @@ int main(int argc, char *argv[]) {
   xgBoostParser.Parse();
   auto module = xgBoostParser.GetEvaluationFunction();
   module->dump();
-  // auto treeType = mlir::decisionforest::TreeType::get(::mlir::FloatType::getF64(&context));
-  // auto treeAttribute = mlir::decisionforest::DecisionTreeAttr::get(treeType, 42);
-  // auto treeAttribute = mlir::detail::AttributeUniquer::get<mlir::decisionforest::DecisionTree>(&context, treeType, 42);
 }
