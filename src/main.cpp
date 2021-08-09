@@ -14,8 +14,8 @@ int main(int argc, char *argv[]) {
   
   mlir::MLIRContext context;
   context.getOrLoadDialect<mlir::decisionforest::DecisionForestDialect>();
-
-  TreeHeavy::XGBoostJSONParser<> xgBoostParser(context, argv[1]);
+  const int32_t batchSize = 16;
+  TreeHeavy::XGBoostJSONParser<> xgBoostParser(context, argv[1], batchSize);
   xgBoostParser.Parse();
   auto module = xgBoostParser.GetEvaluationFunction();
   module->dump();

@@ -71,6 +71,7 @@ protected:
     mlir::MLIRContext& m_context;
     mlir::ModuleOp m_module;
     mlir::OpBuilder m_builder;
+    int32_t m_batchSize;
 
     void SetReductionType(mlir::decisionforest::ReductionType reductionType) { m_forest->SetReductionType(reductionType); }
     void AddFeature(const std::string& featureName, const std::string& type) { m_forest->AddFeature(featureName, type); }
@@ -93,7 +94,8 @@ protected:
         // TODO this needs to encode the batch size
         const auto& features = m_forest->GetFeatures();
         mlir::Type elementType = GetMLIRTypeFromString(features.front().type, m_builder);
-        return mlir::RankedTensorType::get(features.size(), elementType);
+        int64_t shape[] = { m_batchSize, static_cast<int64_t>(features.size())};
+        return mlir::RankedTensorType::get(shape, elementType);
     }
     mlir::FunctionType GetFunctionType()
     {
@@ -109,8 +111,8 @@ protected:
         return m_builder.create<mlir::FuncOp>(location, std::string("Prediction_Function"), functionType);
     }
 public:
-    ModelJSONParser(mlir::MLIRContext& context)
-        : m_forest(new DecisionForestType), m_currentTree(nullptr), m_context(context), m_builder(&context)
+    ModelJSONParser(mlir::MLIRContext& context, int32_t batchSize)
+        : m_forest(new DecisionForestType), m_currentTree(nullptr), m_context(context), m_builder(&context), m_batchSize(batchSize)
     {
         m_module = mlir::ModuleOp::create(m_builder.getUnknownLoc(), llvm::StringRef("MyModule"));
     }
@@ -141,6 +143,7 @@ public:
             return nullptr;
         }
         m_module.push_back(function);
+
         return m_module;
     }
 };

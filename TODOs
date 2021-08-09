@@ -1,3 +1,7 @@
+* Add document to describe the next level IR
+* [Defer] MLIR parse routines
+* Verify whether the features of the input are indexed with base 1 or 0 in XGBoost
+
 * [Done] TreeEnsemble attribute
     - Needs to take the TreeEnsemble object and construct a storage class and attribute object
     - Hash for the storage key needs to be figured out (Type, TreeEnsemble)
@@ -6,5 +10,4 @@
     - Build methods for the predict op
     - Only needs to build two ops and set the corresponding attributes
 * [Done] MLIR print routines for dialect
-* MLIR parse routines
-* Verify whether the features of the input are indexed with base 1 or 0 in XGBoost
+* [Done] Add batch size to high level IR 

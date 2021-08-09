@@ -119,6 +119,14 @@ def PredictForestOp : DecisionForest_Op<"predict_ensemble"> {
 
     let results = (outs ReturnType);
 
+    let extraClassDeclaration = [{
+      int32_t getBatchSize() { 
+        auto tensorReturnType = data().getType().cast<mlir::RankedTensorType>();
+        if (!tensorReturnType)
+          return 1;
+        return tensorReturnType.getShape()[0];
+      }
+    }];
     // let builders = [
     //   // Build a constant with a given constant tensor value.
     //   OpBuilder<(ins "DecisionForestAttribute":$ensemble, "Value":$data)>

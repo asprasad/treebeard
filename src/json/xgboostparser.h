@@ -15,8 +15,8 @@ class XGBoostJSONParser : public ModelJSONParser<ThresholdType, ReturnType, Feat
     void ConstructTreesFromBooster(json& boosterJSON);
 
 public:
-    XGBoostJSONParser(mlir::MLIRContext& context, const std::string& filename)
-        :ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>(context)
+    XGBoostJSONParser(mlir::MLIRContext& context, const std::string& filename, int32_t batchSize)
+        :ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>(context, batchSize)
     {
         std::ifstream fin(filename);
         fin >> m_json;
