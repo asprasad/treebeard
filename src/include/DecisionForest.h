@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <sstream>
+#include <numeric>
 namespace mlir
 {
 namespace decisionforest
@@ -31,6 +32,11 @@ public:
             return threshold==that.threshold && featureIndex==that.featureIndex && parent==that.parent &&
                    leftChild==that.leftChild && rightChild==that.rightChild && featureType==that.featureType;
         }
+
+        bool IsLeaf() const
+        {
+            return leftChild == INVALID_NODE_INDEX && rightChild == INVALID_NODE_INDEX;
+        }
     };
     void SetNumberOfFeatures(size_t numFeatures) { m_numFeatures = numFeatures; }
     void SetTreeScalingFactor(ThresholdType scale) { m_scale = scale; }
@@ -55,6 +61,9 @@ public:
     {
         return m_nodes==that.m_nodes && m_numFeatures==that.m_numFeatures && m_scale==that.m_scale;
     }
+
+    ReturnType PredictTree(std::vector<ThresholdType>& data) const;
+
 private:
     std::vector<Node> m_nodes;
     size_t m_numFeatures;
@@ -88,6 +97,7 @@ public:
     const std::vector<Feature>& GetFeatures() const { return m_features; }
     std::string Serialize() const;
     std::string PrintToString() const;
+    ReturnType Predict(std::vector<ThresholdType>& data) const;
     bool operator==(const DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>& that) const
     {
         return m_reductionType==that.m_reductionType && m_trees==that.m_trees;
@@ -116,6 +126,22 @@ std::string DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexT
 }
 
 template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+ReturnType DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::PredictTree(std::vector<ThresholdType>& data) const
+{
+    // go over the features
+    assert(m_nodes.size() > 0);
+    const Node* node = &m_nodes[0]; // root node
+    while (!node->IsLeaf())
+    {
+      if (node->threshold < data[node->featureIndex])
+        node = &m_nodes[node->leftChild];
+      else
+        node = &m_nodes[node->rightChild];
+    }    
+    return node->threshold;
+}
+
+template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
 std::string DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::Serialize() const
 {
     std::stringstream strStream;
@@ -131,6 +157,17 @@ std::string DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeInde
     std::stringstream strStream;
     strStream << "ReductionType = " << m_reductionType << ", #Trees = " << m_trees.size();
     return strStream.str();
+}
+
+template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+ReturnType DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::Predict(std::vector<ThresholdType>& data) const
+{
+    std::vector<ReturnType> predictions;
+    for (auto& tree: m_trees)
+        predictions.push_back(tree.PredictTree(data));
+    
+    assert(m_reductionType == ReductionType::kAdd);
+    return std::accumulate(predictions.begin(), predictions.end(), 0.0);
 }
 
 } // decisionforest
