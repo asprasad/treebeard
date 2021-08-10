@@ -19,4 +19,7 @@ int main(int argc, char *argv[]) {
   xgBoostParser.Parse();
   auto module = xgBoostParser.GetEvaluationFunction();
   module->dump();
+  std::vector<double> data(8);
+  auto decisionForest = xgBoostParser.GetForest();
+  cout << "Ensemble prediction: " << decisionForest->Predict(data) << endl;
 }

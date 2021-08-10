@@ -119,6 +119,8 @@ public:
     }
     virtual void Parse() = 0;
 
+        // Get the forest pointer
+    DecisionForestType* GetForest() { return m_forest; }
 
     mlir::ModuleOp GetEvaluationFunction() 
     { 
