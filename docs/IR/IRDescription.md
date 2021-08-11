@@ -9,6 +9,7 @@ The dialect is called decisionforest (see src/include/Ops.td). The subsequent se
     * **Leaf type:** Is a subclass of the TreeNode type. Specifies that a node is a leaf. Has the type of the prediction.
     * **Categorical TreeNode Type:** (Currently unimplemented) Specifies the node computes a predicate on a categorical feature.
 * **Tree Type:** Specifies general properties of the decision tree. Currently only has the return type of the tree (the type of the prediction). 
+    * The tree type also needs to contain the details of tiling. Tiling needs to match if we have to generate same traversal code for two trees.
     * TODO We currently assume that all nodes in a tree have the same feature index and threshold type. Should the tree type just contain those details?
 * **Tree Ensemble Type:** Contains details of the full forest. Currently has the return type, number of trees, the input type and the reduction type.
 
@@ -35,8 +36,10 @@ The high-level IR described above is lowered to a mid-level IR to enable optimiz
 
 * **Operations**
    * **Loops:** For and while loops.
-   * **Conditionals:** Ifs and predicates (TODO Do we need predication?). 
+   * **Conditionals:** Ifs and predicates (TODO Do we need predication?).
+   * **Arrays:** Simple arrays are needed to represent results. 
    * **Scalar operations:** Needed for reductions (+, *, max, min, voting etc.).
+   * **Constant Ops:** Constant trees and ensembles. Contain a reference to an attribute. 
    * **TraverseTreeTile(Tree T, Node \*nodePtr, RowType x) \<Attrs : int TileSize\>:** Traverse the tile of size TileSize starting at nodePtr belonging to Tree T and return the resulting node pointer. Maps (Tree, Node\*, RowType) -> Node\*.
    * **TraverseTileForFixedTree(Node \*nodePtr, RowType x) \<Attre : Tree T, int TileSize\>:** Traverse the tile of size TileSize starting at nodePtr belonging to Tree T and return the resulting node pointer. Maps (Node\*, RowType) -> Node\*. This is different than the previous op because the tree is fixed in this op and it can only perform traversals on T. 
    * **SIMDContainer(VarArgs\<Traverse\>):** Used to represent vectorization. Contains several Traverse ops that are to be executed in a SIMD fashion.
@@ -45,4 +48,86 @@ The high-level IR described above is lowered to a mid-level IR to enable optimiz
 
 * **Attributes**
    * This level of the IR contains the same attributes as the high level IR. However, the optimizer will add additional details such as tiling for trees. These details on the attributes will decide the concrete implementations of the Ops above (For example, how a tree tile is to be read etc).
+
+### Some Examples
+The initial mid-level IR generated is as follows (TODO replace these with actual MLIR when implemented).
+```C++
+builtin.module @MyModule  {
+  builtin.func @Prediction_Function(%arg0: tensor<batch_sizexnum_featuresxf64>) -> tensor<batch_sizexf64> {
+    %0 = #decisionforest<"ReductionType = 0, #Trees = 1000, resultType = tensor<16xf64>"> //The forest we're performing inference on
+    %1 = Array<f64>(batch_size)
+    for i = range(0 : batch_size) {
+      for j = range(0 : num_trees) {
+         %2 = GetTree(%0, j) // Get the j th tree from the ensemble
+         // 3.1 and 3.2 are used as short hand to simulate SSA, %3 refers to either assignment
+         %3.1 = Root(%2) // Get the root of the tree
+         while (!IsLeaf(%3)) {
+            %3.2 = TraverseTreeTile(%2, %3, x[i]) // All trees are assumed to have the same tiling since no
+                                                  // optimization passes have changed the tiling of trees.
+         }
+         %1[i] <reduction op>= GetValue(%3)
+      }
+    }
+    "decisionforest.return"(%1) : (tensor<16xf64>) -> ()
+  }
+}
+```
+Optimizations are performed starting with the above representation. For example, if an optimization pass decides that performing inference on a single tree over all inputs in the batch is better than performing inference over all trees for a single input, it would swap the i and j loops in the listing above. Similarly, an optimization that decides tree ordering would change the order of trees in the attribute that is assigned to %0 above. Similarly, to perform tiling on a tree, a pass will change the parameters of specific trees in the ensemble attribute. One complication here is that changing the tiling changes the type of the tree and all tree types have to be the same to assign to %2 above. If tiling changes the types of some trees but not others, then the code above has to be transformed so that it can be statically typed. Another similar complication to note is that the type of %3 can only be determined to be NodeType statically if even a single tree contains a categorical node. Optimization passes will need to unroll both the j loop and the while loop in order to specialize the type of the node pointer (%3) to either Numerical, Leaf or Categorical nodes.
+
+To perform a SIMD traversal of two trees, the code above would be rewritten as follows. 
+```C++
+builtin.module @MyModule  {
+  builtin.func @Prediction_Function(%arg0: tensor<batch_sizexnum_featuresxf64>) -> tensor<batch_sizexf64> {
+    %0 = #decisionforest<"ReductionType = 0, #Trees = 1000, resultType = tensor<16xf64>"> //The forest we're performing inference on
+    %1 = Array<f64>(batch_size)
+    for i = range(0 : batch_size) {
+      for j = range(0 : 2 : num_trees) { // Traverse in steps of 2
+         %2 = GetTree(%0, j) // Get the j th tree from the ensemble
+         %3 = GetTree(%0, j+1) // Get the j+1 th tree from the ensemble
+         // 4.1 and 4.2 are used as short hand to simulate SSA, %4 refers to either assignment
+         %4.1 = Root(%2) // Get the root of the tree
+         %5.1 = Root(%3)
+         while (!IsLeaf(%4) && !IsLeaf(%5)) {
+            %4.2, %5.2 = SIMDContainer( TraverseTreeTile(%2, %4, x[i]),
+                                        TraverseTreeTile(%3, %5, x[i]) )
+         }
+         // ...
+         // Epilogue loops for both trees
+         // ...
+         %1[i] <reduction op>= GetValue(%4) <reduction op> GetValue(%5)
+      }
+    }
+    "decisionforest.return"(%1) : (tensor<16xf64>) -> ()
+  }
+}
+```
+
+To perform pipelined traversal of two trees, the code would be rewritten as follows.
+```C++
+builtin.module @MyModule  {
+  builtin.func @Prediction_Function(%arg0: tensor<batch_sizexnum_featuresxf64>) -> tensor<batch_sizexf64> {
+    %0 = #decisionforest<"ReductionType = 0, #Trees = 1000, resultType = tensor<16xf64>"> //The forest we're performing inference on
+    %1 = Array<f64>(batch_size)
+    for i = range(0 : batch_size) {
+      for j = range(0 : 2 : num_trees) { // Traverse in steps of 2
+         %2 = GetTree(%0, j) // Get the j th tree from the ensemble
+         %3 = GetTree(%0, j+1) // Get the j+1 th tree from the ensemble
+         // 4.1 and 4.2 are used as short hand to simulate SSA, %4 refers to either assignment
+         %4.1 = Root(%2) // Get the root of the tree
+         %5.1 = Root(%3)
+         while (!IsLeaf(%4) && !IsLeaf(%5)) {
+            %4.2, %5.2 = PipelineContainer( TraverseTreeTile(%2, %4, x[i]),
+                                            TraverseTreeTile(%3, %5, x[i]) )
+         }
+         // ...
+         // Epilogue loops for both trees
+         // ...
+         %1[i] <reduction op>= GetValue(%4) <reduction op> GetValue(%5)
+      }
+    }
+    "decisionforest.return"(%1) : (tensor<16xf64>) -> ()
+  }
+}
+```
+
 ### Low-level 
