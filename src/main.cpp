@@ -9,6 +9,14 @@ using namespace std;
 
 mlir::decisionforest::DecisionTree<> decisionTree;
 
+namespace mlir
+{
+namespace decisionforest
+{
+void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext& context, mlir::ModuleOp module);
+}
+}
+
 int main(int argc, char *argv[]) {
   cout << "Tree-heavy: A compiler for gradient boosting tree inference.\n";
   
@@ -19,6 +27,11 @@ int main(int argc, char *argv[]) {
   xgBoostParser.Parse();
   auto module = xgBoostParser.GetEvaluationFunction();
   module->dump();
+
+  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
+
+  module->dump();
+
   std::vector<double> data(8);
   auto decisionForest = xgBoostParser.GetForest();
   cout << "Ensemble prediction: " << decisionForest->Predict(data) << endl;

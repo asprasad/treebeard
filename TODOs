@@ -1,4 +1,7 @@
-* Add document to describe the next level IR
+* Add TraverseTile for constant tree
+* Add tiling information to tree types
+* Type inference and checking passes (NodeType and TreeType)
+
 * [Defer] MLIR parse routines
 * Verify whether the features of the input are indexed with base 1 or 0 in XGBoost
 
@@ -11,3 +14,7 @@
     - Only needs to build two ops and set the corresponding attributes
 * [Done] MLIR print routines for dialect
 * [Done] Add batch size to high level IR 
+* [Done] Tree constant op
+* [Done] Forest constant op
+* [Done] Figure out how to implement node types (sub-typing)
+* [Done] Add document to describe the next level IR

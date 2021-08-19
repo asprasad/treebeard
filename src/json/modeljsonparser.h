@@ -85,7 +85,13 @@ protected:
     void SetNodeRightChild(NodeIndexType node, NodeIndexType child) { m_currentTree->SetNodeRightChild(node, child); }
     // Set left child of a node
     void SetNodeLeftChild(NodeIndexType node, NodeIndexType child) { m_currentTree->SetNodeLeftChild(node, child); }
-
+    mlir::Type GetInputRowType()
+    {
+        const auto& features = m_forest->GetFeatures();
+        mlir::Type elementType = GetMLIRTypeFromString(features.front().type, m_builder);
+        int64_t shape[] = { static_cast<int64_t>(features.size()) };
+        return mlir::RankedTensorType::get(shape, elementType);
+    }
     mlir::Type GetFunctionArgumentType()
     {
         const auto& features = m_forest->GetFeatures();
@@ -133,13 +139,13 @@ public:
 
         m_builder.setInsertionPointToStart(&entryBlock);
 
-        auto forestType = mlir::decisionforest::TreeEnsembleType::get(GetFunctionReturnType(),
-                                                                      m_forest->NumTrees(), GetFunctionArgumentType(), mlir::decisionforest::kAdd);
+        auto forestType = mlir::decisionforest::TreeEnsembleType::get(GetMLIRFloatType(ReturnType(), m_builder),
+                                                                      m_forest->NumTrees(), GetInputRowType(), mlir::decisionforest::kAdd);
         auto forestAttribute = mlir::decisionforest::DecisionForestAttribute::get(forestType, *m_forest);
 
-        // ::mlir::Type resultType0, ::mlir::decisionforest::DecisionForestAttribute ensemble, ::mlir::Value data)
         auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(m_builder.getUnknownLoc(), GetFunctionReturnType(),
                                                                                  forestAttribute, entryBlock.getArguments()[0]);
+        
         m_builder.create<mlir::decisionforest::ReturnOp>(m_builder.getUnknownLoc(), predictOp);
         if (failed(mlir::verify(m_module))) {
             m_module.emitError("Module verification error");

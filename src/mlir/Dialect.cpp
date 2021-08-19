@@ -16,7 +16,7 @@ void DecisionForestDialect::initialize() {
 #define GET_OP_LIST
 #include "Ops.cpp.inc"
       >();
-  addTypes<TreeEnsembleType, TreeType>();
+  addTypes<TreeEnsembleType, TreeType, NodeType, LeafNodeType, NumericalNodeType>();
   addAttributes<DecisionTreeAttr, DecisionForestAttribute>();
 }
 
@@ -26,12 +26,28 @@ void DecisionForestDialect::initialize() {
     return ::mlir::Type();
 }
 
+// TODO Can this somehow be made polymorphic? MLIR seems to pass everything by value!
 /// Print a type registered to this dialect.
 void DecisionForestDialect::printType(::mlir::Type type,
                                       ::mlir::DialectAsmPrinter &os) const
 {
-    // mlir::decisionforest::Decs
-
+    
+    // TODO how do you handle numerical and leaf node types here? They will just 
+    // get printed as NodeType now
+    if (type.isa<mlir::decisionforest::NodeType>()) {
+        mlir::decisionforest::NodeType nodeType = type.cast<mlir::decisionforest::NodeType>();
+        nodeType.print(os);
+    }
+    else if(type.isa<mlir::decisionforest::TreeEnsembleType>()) {
+        mlir::decisionforest::TreeEnsembleType ensembleType = type.cast<mlir::decisionforest::TreeEnsembleType>();
+        ensembleType.print(os);
+    }
+    else if(type.isa<mlir::decisionforest::TreeType>()) {
+        mlir::decisionforest::TreeType treeType = type.cast<mlir::decisionforest::TreeType>();
+        treeType.print(os);
+    }
+    else
+        assert(false && "Invalid decisionforest dialect type");
 }
 
 mlir::Attribute DecisionForestDialect::parseAttribute(DialectAsmParser &parser, 

@@ -35,7 +35,7 @@ public:
 // Decision Forest Types
 //===----------------------------------------------------------------------===//
 
-/*
+
 struct NumericalNodeTypeKey {
     Type thresholdType;
     Type indexType;
@@ -139,14 +139,18 @@ public:
     void print(mlir::DialectAsmPrinter &printer) override { }
 };
 
+// struct CategoricalNodeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
+// };
+
 class NodeType : public Type::TypeBase<NodeType, mlir::Type, TypeStorage>
 {
 public:
     /// Inherit some necessary constructors from 'TypeBase'.
-    using Base::Base;    
+    using Base::Base;
+    virtual void print(mlir::DialectAsmPrinter &printer) { printer << "NodeType"; }   
 };
 
-class NumericalNodeType : public mlir::Type::TypeBase<NumericalNodeType, mlir::Type,
+class NumericalNodeType : public mlir::Type::TypeBase<NumericalNodeType, NodeType,
                                                NumericalNodeTypeStorage> {
 public:
     /// Inherit some necessary constructors from 'TypeBase'.
@@ -167,10 +171,10 @@ public:
     mlir::Type getThresholdType() { return getImpl()->m_thresholdType; }
     mlir::Type getIndexType() { return getImpl()->m_indexType; }
 
-    void print(mlir::DialectAsmPrinter &printer) { getImpl()->print(printer); }
+    void print(mlir::DialectAsmPrinter &printer) override { getImpl()->print(printer); }
 };
 
-class LeafNodeType : public mlir::Type::TypeBase<LeafNodeType, mlir::Type,
+class LeafNodeType : public mlir::Type::TypeBase<LeafNodeType, NodeType,
                                                  LeafNodeTypeStorage> {
 public:
     /// Inherit some necessary constructors from 'TypeBase'.
@@ -187,10 +191,17 @@ public:
 
     mlir::Type getReturnType() { return getImpl()->m_returnType; }
 
-    void print(mlir::DialectAsmPrinter &printer) { getImpl()->print(printer); }
+    void print(mlir::DialectAsmPrinter &printer) override { getImpl()->print(printer); }
 };
-*/
 
+
+// class CategoricalNodeType : public mlir::Type::TypeBase<CategoricalNodeType, NodeType,
+//                                                         CategoricalNodeTypeStorage> {
+// };                
+
+// TODO We currently store the resultType here and including the "tensor type" due to the batch size.
+// Should it just be the numerical type? (f64 instead of Tensor<16xf64>)
+// TODO Should we store the input row type (apart from the batch size) here?
 struct TreeEnsembleTypeKey {
     Type resultType;
     size_t numberOfTrees;
@@ -255,7 +266,7 @@ struct TreeEnsembleTypeStorage : public TypeStorage, IDecisionForestTypePrintInt
     Type m_rowType;
     ReductionType m_reductionType;
 public:
-    void print(mlir::DialectAsmPrinter &printer) override { }
+    void print(mlir::DialectAsmPrinter &printer) override { printer << "TreeEnsembleType"; }
 };
 
 class TreeEnsembleType : public mlir::Type::TypeBase<TreeEnsembleType, mlir::Type,
@@ -315,7 +326,7 @@ struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
     /// The parametric data held by the storage class.
     Type m_resultType;
 public:
-    void print(mlir::DialectAsmPrinter &printer) override { }
+    void print(mlir::DialectAsmPrinter &printer) override { printer << "TreeType"; }
 };
 
 class TreeType : public mlir::Type::TypeBase<TreeType, mlir::Type,
