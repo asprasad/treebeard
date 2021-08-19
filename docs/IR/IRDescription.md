@@ -35,16 +35,18 @@ builtin.module @MyModule  {
 The high-level IR described above is lowered to a mid-level IR to enable optimizations such as pipelining, vectorization, tiling etc. The mid-level IR has two main components -- operations to explicity represent tree and sub-tree traversals and attributes that represent trees in the model. The optimizer will optimize the computation by rewriting the operations while simultaneously using the attributes to perform layout optimizations on the trees. 
 
 * **Operations**
-   * **Loops:** For and while loops.
-   * **Conditionals:** Ifs and predicates (TODO Do we need predication?).
-   * **Arrays:** Simple arrays are needed to represent results. 
-   * **Scalar operations:** Needed for reductions (+, *, max, min, voting etc.).
+   * **Loops:** For and while loops ([scf dialect](https://mlir.llvm.org/docs/Dialects/SCFDialect/)).
+   * **Conditionals:** Ifs and predicates ([scf dialect](https://mlir.llvm.org/docs/Dialects/SCFDialect/)). *(TODO Do we need predication?)*
+   * **Arrays:** Simple arrays are needed to represent results ([tensor dialect](https://mlir.llvm.org/docs/Dialects/TensorOps/)). 
+   * **Scalar operations:** Needed for reductions (+, \*, max, min, voting etc.) ([std dialect](https://mlir.llvm.org/docs/Dialects/Standard/)).
    * **Constant Ops:** Constant trees and ensembles. Contain a reference to an attribute. 
    * **TraverseTreeTile(Tree T, Node \*nodePtr, RowType x) \<Attrs : int TileSize\>:** Traverse the tile of size TileSize starting at nodePtr belonging to Tree T and return the resulting node pointer. Maps (Tree, Node\*, RowType) -> Node\*.
    * **TraverseTileForFixedTree(Node \*nodePtr, RowType x) \<Attre : Tree T, int TileSize\>:** Traverse the tile of size TileSize starting at nodePtr belonging to Tree T and return the resulting node pointer. Maps (Node\*, RowType) -> Node\*. This is different than the previous op because the tree is fixed in this op and it can only perform traversals on T. 
    * **SIMDContainer(VarArgs\<Traverse\>):** Used to represent vectorization. Contains several Traverse ops that are to be executed in a SIMD fashion.
    * **PipelineContainer(VarArgs\<Traverse\>):** Used to represent software pipelining between several Traverse ops. The load, compute, update stages of the contained Traverse ops are interleaved.
-   * **IsLeaf:** Determine whether the argument is a leaf. Maps a Node pointer -> bool. 
+   * **IsLeaf:** Determine whether the argument is a leaf. Maps a Node pointer -> bool.
+   * **TODO Prefetching:** How do we represent prefetching?
+   * **TODO Product trees:** How do we represent walking multiple trees simultaneously? This is different than a SIMD combination because you have a single node pointer as opposed to multiple. 
 
 * **Attributes**
    * This level of the IR contains the same attributes as the high level IR. However, the optimizer will add additional details such as tiling for trees. These details on the attributes will decide the concrete implementations of the Ops above (For example, how a tree tile is to be read etc).
