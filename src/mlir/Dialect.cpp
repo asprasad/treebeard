@@ -17,7 +17,7 @@ void DecisionForestDialect::initialize() {
 #include "Ops.cpp.inc"
       >();
   addTypes<TreeEnsembleType, TreeType, NodeType, LeafNodeType, NumericalNodeType>();
-  addAttributes<DecisionTreeAttr, DecisionForestAttribute>();
+  addAttributes<DecisionTreeAttribute, DecisionForestAttribute>();
 }
 
 /// Parse a type registered to this dialect.
@@ -60,8 +60,20 @@ mlir::Attribute DecisionForestDialect::parseAttribute(DialectAsmParser &parser,
 void DecisionForestDialect::printAttribute(::mlir::Attribute attr,
                                            ::mlir::DialectAsmPrinter &os) const
 {
-    DecisionForestAttribute decisionForrestAttr = attr.cast<DecisionForestAttribute>();
-    decisionForrestAttr.Print(os);
+    if (attr.isa<DecisionForestAttribute>()) 
+    {
+        DecisionForestAttribute decisionForrestAttr = attr.cast<DecisionForestAttribute>();
+        decisionForrestAttr.Print(os);
+    }
+    else if (attr.isa<DecisionTreeAttribute>())
+    {
+        DecisionTreeAttribute decisionTreeAttr = attr.cast<DecisionTreeAttribute>();
+        decisionTreeAttr.Print(os);
+    }
+    else
+    {
+        assert (false && "Unknow attribute");
+    }
 }
 
 #define GET_OP_CLASSES

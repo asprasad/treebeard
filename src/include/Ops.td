@@ -55,14 +55,14 @@ def TreeEnsembleType :
 //-------   Attributes   ----------------------
 
 def DecisionTreeAttr : Attr<
-  CPred<"$_self.isa<::mlir::decisionforest::DecisionTreeAttr>()">,
+  CPred<"$_self.isa<::mlir::decisionforest::DecisionTreeAttribute>()">,
   "Decision tree attribute"> {
 
-  let storageType = [{ ::mlir::decisionforest::DecisionTreeAttr }];
-  let returnType = [{ ::mlir::decisionforest::DecisionTreeAttr }];
+  let storageType = [{ ::mlir::decisionforest::DecisionTreeAttribute }];
+  let returnType = [{ ::mlir::decisionforest::DecisionTreeAttribute }];
 
   // Note that this is only constructing scalar elements attribute.
-  let constBuilderCall = "::mlir::decisionforest::DecisionTreeAttr::get()";
+  let constBuilderCall = "::mlir::decisionforest::DecisionTreeAttribute::get()";
   let convertFromStorage = "$_self";
 }
 
@@ -121,7 +121,7 @@ def TreeConstantOp : DecisionForest_Op<"tree", [NoSideEffect]> {
   let summary = "Tree constant operation";
   let description = "Represents a constant whose value is a single tree in the forest. Takes no arguments and gives a tree value out.";
 
-  let arguments = (ins DecisionForestAttr:$forest, I32Attr:$treeIndex);
+  let arguments = (ins DecisionTreeAttr:$tree);
 
   let results = (outs TreeType);
 }
@@ -175,6 +175,13 @@ def TraverseTreeTileOp : DecisionForest_Op<"traverseTreeTile", [NoSideEffect]> {
   let results = (outs NodeType);
 }
 
+def TraverseTileOfConstTree : DecisionForest_Op<"traverseTreeTile", [NoSideEffect]> {
+  let summary = "Traverse one tile of a constant tree.";
+  let description = "Traverse one tile of a constant tree stored as an attribute starting from the node passed as argument. Returns the resultant node.";
+  let arguments = (ins DecisionTreeAttr:$tree, NodeType:$node, F64Tensor:$data);
+
+  let results = (outs NodeType);
+}
 // class NodeConstantOp<string mnemonic, list<OpTrait> traits = []> : 
 //   DecisionForest_Op<mnemonic, traits> {
 //     string myStr = "";

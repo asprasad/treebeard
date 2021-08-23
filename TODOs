@@ -1,5 +1,7 @@
-* Add TraverseTile for constant tree
 * Add tiling information to tree types
+    - Tiling info needs to be in two places -- the DecisionTree class and the TreeType class
+* Add TraverseTile for constant tree
+
 * Type inference and checking passes (NodeType and TreeType)
 
 * [Defer] MLIR parse routines
@@ -18,3 +20,5 @@
 * [Done] Forest constant op
 * [Done] Figure out how to implement node types (sub-typing)
 * [Done] Add document to describe the next level IR
+* [Done] Implement the tree attribute
+

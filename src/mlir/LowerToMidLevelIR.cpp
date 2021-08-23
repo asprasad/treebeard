@@ -127,9 +127,9 @@ struct PredictForestOpLowering: public ConversionPattern {
                                                               ArrayRef<OpFoldResult>({oneIndexAttr, rowSizeAttr}), ArrayRef<OpFoldResult>({oneIndexAttr, oneIndexAttr}));
             
             auto node = after->getArguments()[0];
-            // TODO How do we index the input argument? Its not a memref
+            
             auto traverseTile = rewriter.create<decisionforest::TraverseTreeTileOp>(location, nodeType, tree, node, row);
-            auto yield = rewriter.create<scf::YieldOp>(location, static_cast<Value>(traverseTile));
+            rewriter.create<scf::YieldOp>(location, static_cast<Value>(traverseTile));
         }
         rewriter.setInsertionPointAfter(whileLoop);
         auto treePrediction = rewriter.create<decisionforest::GetLeafValueOp>(location, treeType.getResultType(), whileLoop.results()[0]);

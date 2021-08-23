@@ -56,6 +56,7 @@ public:
     void SetNodeLeftChild(NodeIndexType node, NodeIndexType child) { m_nodes[node].leftChild = child; }
 
     std::string Serialize() const;
+    std::string PrintToString() const;
 
     bool operator==(const DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>& that) const
     {
@@ -94,6 +95,7 @@ public:
     }
     void EndTree() { }
     size_t NumTrees() { return m_trees.size(); }
+    DecisionTreeType& GetTree(int64_t index) { return m_trees[index]; }
     const std::vector<Feature>& GetFeatures() const { return m_features; }
     std::string Serialize() const;
     std::string PrintToString() const;
@@ -122,6 +124,14 @@ std::string DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexT
         strStream << node.rightChild;
         strStream << node.featureType; 
     }
+    return strStream.str();
+}
+
+template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+std::string DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::PrintToString() const
+{
+    std::stringstream strStream;
+    strStream << "NumberOfFeatures = " << m_numFeatures << ", Scale = " << m_scale << ", NumberOfNodes = " << m_nodes.size();
     return strStream.str();
 }
 
