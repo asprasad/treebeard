@@ -175,7 +175,7 @@ def TraverseTreeTileOp : DecisionForest_Op<"traverseTreeTile", [NoSideEffect]> {
   let results = (outs NodeType);
 }
 
-def TraverseTileOfConstTree : DecisionForest_Op<"traverseTreeTile", [NoSideEffect]> {
+def TraverseTileOfConstTree : DecisionForest_Op<"traverseTileOfConstTree", [NoSideEffect]> {
   let summary = "Traverse one tile of a constant tree.";
   let description = "Traverse one tile of a constant tree stored as an attribute starting from the node passed as argument. Returns the resultant node.";
   let arguments = (ins DecisionTreeAttr:$tree, NodeType:$node, F64Tensor:$data);

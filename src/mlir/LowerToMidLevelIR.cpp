@@ -110,7 +110,9 @@ struct PredictForestOpLowering: public ConversionPattern {
             rewriter.setInsertionPointToStart(&whileLoop.before().front());
             auto node = before->getArguments()[0];
             auto isLeaf = rewriter.create<decisionforest::IsLeafOp>(location, rewriter.getI1Type(), tree, node);
-            rewriter.create<scf::ConditionOp>(location, isLeaf, ValueRange({node})); // this is the terminator
+            auto falseConstant = rewriter.create<ConstantIntOp>(location, int64_t(0), rewriter.getI1Type());
+            auto equalTo = rewriter.create<CmpIOp>(location, mlir::CmpIPredicate::eq, static_cast<Value>(isLeaf), static_cast<Value>(falseConstant));
+            rewriter.create<scf::ConditionOp>(location, equalTo, ValueRange({node})); // this is the terminator
         }
         // Create the loop body
         {
