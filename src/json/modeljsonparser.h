@@ -26,7 +26,6 @@ using json = nlohmann::json;
 */
 namespace TreeHeavy
 {
-enum FeatureType { kNumerical, kCategorical };
 
 template<typename T>
 mlir::Type GetMLIRFloatType(const T& val, mlir::OpBuilder& builder)
@@ -125,7 +124,7 @@ public:
     }
     virtual void Parse() = 0;
 
-        // Get the forest pointer
+    // Get the forest pointer
     DecisionForestType* GetForest() { return m_forest; }
 
     mlir::ModuleOp GetEvaluationFunction() 
@@ -140,12 +139,12 @@ public:
         m_builder.setInsertionPointToStart(&entryBlock);
 
         auto forestType = mlir::decisionforest::TreeEnsembleType::get(GetMLIRFloatType(ReturnType(), m_builder),
-                                                                      m_forest->NumTrees(), GetInputRowType(), mlir::decisionforest::kAdd);
+                                                                      m_forest->NumTrees(), GetInputRowType(), mlir::decisionforest::ReductionType::kAdd);
         auto forestAttribute = mlir::decisionforest::DecisionForestAttribute::get(forestType, *m_forest);
 
         auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(m_builder.getUnknownLoc(), GetFunctionReturnType(),
                                                                                  forestAttribute, entryBlock.getArguments()[0]);
-        
+
         m_builder.create<mlir::decisionforest::ReturnOp>(m_builder.getUnknownLoc(), predictOp);
         if (failed(mlir::verify(m_module))) {
             m_module.emitError("Module verification error");

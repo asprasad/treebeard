@@ -1,11 +1,13 @@
+* [Bug] The tensor from which result[i] is being read is not the "iteration tensor" of the the tree loop. 
 * Add tiling information to tree types
     - Tiling info needs to be in two places -- the DecisionTree class and the TreeType class
-* Add TraverseTile for constant tree
-
+* Add SIMD and Pipeline Containers
+    - How will an Op contain other Ops?!
 * Type inference and checking passes (NodeType and TreeType)
+* Verify whether the features of the input are indexed with base 1 or 0 in XGBoost
+* Tree types need to be part of the ensemble type (we may need to be able to tell tree tiling for a certain tree for example)
 
 * [Defer] MLIR parse routines
-* Verify whether the features of the input are indexed with base 1 or 0 in XGBoost
 
 * [Done] TreeEnsemble attribute
     - Needs to take the TreeEnsemble object and construct a storage class and attribute object
@@ -21,4 +23,5 @@
 * [Done] Figure out how to implement node types (sub-typing)
 * [Done] Add document to describe the next level IR
 * [Done] Implement the tree attribute
+* [Done] Add TraverseTile for constant tree
 

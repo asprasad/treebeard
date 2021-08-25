@@ -22,6 +22,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "DecisionForest.h"
+#include "TreeTilingDescriptor.h"
 
 namespace mlir {
 namespace decisionforest {
@@ -96,7 +97,7 @@ struct NumericalNodeTypeStorage : public TypeStorage, IDecisionForestTypePrintIn
     Type m_thresholdType;
     Type m_indexType;
 public:
-    void print(mlir::DialectAsmPrinter &printer) override { }
+    void print(mlir::DialectAsmPrinter &printer) override;
 };
 
 struct LeafNodeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
@@ -136,7 +137,7 @@ struct LeafNodeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterfa
     /// The parametric data held by the storage class.
     Type m_returnType;
 public:
-    void print(mlir::DialectAsmPrinter &printer) override { }
+    void print(mlir::DialectAsmPrinter &printer) override;
 };
 
 // struct CategoricalNodeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
@@ -219,9 +220,10 @@ struct TreeEnsembleTypeKey {
 
 struct TreeTypeKey {
     Type resultType;
+    TreeTilingDescriptor tilingDescriptor;
     bool operator==(const TreeTypeKey& that) const
     {
-        return this->resultType == that.resultType;
+        return this->resultType==that.resultType && this->tilingDescriptor==that.tilingDescriptor;
     }
 };
 
@@ -266,7 +268,7 @@ struct TreeEnsembleTypeStorage : public TypeStorage, IDecisionForestTypePrintInt
     Type m_rowType;
     ReductionType m_reductionType;
 public:
-    void print(mlir::DialectAsmPrinter &printer) override { printer << "TreeEnsembleType"; }
+    void print(mlir::DialectAsmPrinter &printer) override;
 };
 
 class TreeEnsembleType : public mlir::Type::TypeBase<TreeEnsembleType, mlir::Type,
@@ -293,40 +295,46 @@ public:
 };
 
 struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
-    TreeTypeStorage(Type resultType)
-        : m_resultType(resultType) {}
+    TreeTypeStorage(Type resultType, const TreeTilingDescriptor& tilingDescriptor)
+        : m_resultType(resultType), m_tilingDescriptor(tilingDescriptor) {}
 
     /// The hash key for this storage is a pair of the integer and type params.
     using KeyTy = TreeTypeKey;
 
     /// Define the comparison function for the key type.
     bool operator==(const KeyTy &key) const {
-        KeyTy myKey{ m_resultType };
+        KeyTy myKey{ m_resultType, m_tilingDescriptor };
         return key == myKey;
     }
 
     /// Define a hash function for the key type.
     static llvm::hash_code hashKey(const KeyTy &key) {
-        return llvm::hash_combine(key.resultType);
+        std::string tilingDescStr = key.tilingDescriptor.ToHashString();
+        return llvm::hash_combine(key.resultType, tilingDescStr);
     }
 
     /// Define a construction function for the key type.
     /// Note: This isn't necessary because KeyTy can be directly constructed with
     /// the given parameters.
     static KeyTy getKey(Type resultType) {
-        return KeyTy{ resultType };
+        return KeyTy{ resultType, TreeTilingDescriptor() };
+    }
+
+    static KeyTy getKey(Type resultType, TreeTilingDescriptor tilingDescriptor) {
+        return KeyTy{ resultType, tilingDescriptor };
     }
 
     /// Define a construction method for creating a new instance of this storage.
     static TreeTypeStorage *construct(TypeStorageAllocator &allocator,
                                       const KeyTy &key) {
-        return new (allocator.allocate<TreeTypeStorage>()) TreeTypeStorage(key.resultType);
+        return new (allocator.allocate<TreeTypeStorage>()) TreeTypeStorage(key.resultType, key.tilingDescriptor);
     }
 
     /// The parametric data held by the storage class.
     Type m_resultType;
+    TreeTilingDescriptor m_tilingDescriptor;
 public:
-    void print(mlir::DialectAsmPrinter &printer) override { printer << "TreeType"; }
+    void print(mlir::DialectAsmPrinter &printer) override;
 };
 
 class TreeType : public mlir::Type::TypeBase<TreeType, mlir::Type,
@@ -344,7 +352,14 @@ public:
         return Base::get(ctx, resultType);
     }
 
+    static TreeType get(Type resultType, const TreeTilingDescriptor& tilingDescriptor)
+    {
+        mlir::MLIRContext *ctx = resultType.getContext();
+        return Base::get(ctx, resultType, tilingDescriptor);
+    }
+
     mlir::Type getResultType() { return getImpl()->m_resultType; }
+    const TreeTilingDescriptor& getTilingDescriptor() const { return getImpl()->m_tilingDescriptor; }
 
     void print(mlir::DialectAsmPrinter &printer) { getImpl()->print(printer); }
 };

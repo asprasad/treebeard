@@ -86,7 +86,7 @@ struct PredictForestOpLowering: public ConversionPattern {
         auto ensembleSizeConst = rewriter.create<ConstantIndexOp>(location, numTrees); 
         // auto zeroConst2 = rewriter.create<ConstantIndexOp>(location, 0);
         // auto oneIndexConst2 = rewriter.create<ConstantIndexOp>(location, 1);
-        auto treeLoop = rewriter.create<scf::ForOp>(location, zeroConst, ensembleSizeConst, oneIndexConst, static_cast<Value>(tensorResult));
+        auto treeLoop = rewriter.create<scf::ForOp>(location, zeroConst, ensembleSizeConst, oneIndexConst, static_cast<Value>(batchLoop.getBody()->getArguments()[1]));
         
         rewriter.setInsertionPointToStart(treeLoop.getBody());
         auto j = treeLoop.getInductionVar();
@@ -138,12 +138,12 @@ struct PredictForestOpLowering: public ConversionPattern {
         
         // result[i]
         auto resultElementType = resultTensorType.getElementType();
-        auto readResultOfi = rewriter.create<tensor::ExtractOp>(location, resultElementType, tensorResult, i);
+        auto readResultOfi = rewriter.create<tensor::ExtractOp>(location, resultElementType, treeLoop.getBody()->getArguments()[1], i);
         // Accumulate the tree prediction
-        assert(forestType.getReductionType() == decisionforest::kAdd);
+        assert(forestType.getReductionType() == decisionforest::ReductionType::kAdd);
         auto accumulatedValue = rewriter.create<AddFOp>(location, resultElementType, readResultOfi, treePrediction);
         // result[i] = Accumulated value
-        auto updatedResultTensor = rewriter.create<tensor::InsertOp>(location, resultTensorType, accumulatedValue, tensorResult, i);
+        auto updatedResultTensor = rewriter.create<tensor::InsertOp>(location, resultTensorType, accumulatedValue, treeLoop.getBody()->getArguments()[1], i);
         rewriter.create<scf::YieldOp>(location, static_cast<Value>(updatedResultTensor));
 
         rewriter.setInsertionPointAfter(treeLoop);

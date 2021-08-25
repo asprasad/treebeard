@@ -5,13 +5,15 @@
 #include <string>
 #include <sstream>
 #include <numeric>
+#include "TreeTilingDescriptor.h"
+
 namespace mlir
 {
 namespace decisionforest
 {
 
-enum ReductionType { kAdd, kVoting };
-enum FeatureType { kNumerical, kCategorical };
+enum class ReductionType { kAdd, kVoting };
+enum class FeatureType { kNumerical, kCategorical };
 
 template <typename ThresholdType=double, typename ReturnType=double, typename FeatureIndexType=int32_t, typename NodeIndexType=int32_t>
 class DecisionTree
@@ -44,7 +46,7 @@ public:
     // Create a new node in the current tree
     NodeIndexType NewNode(ThresholdType threshold, FeatureIndexType featureIndex)
     { 
-        Node node{threshold, featureIndex, INVALID_NODE_INDEX, INVALID_NODE_INDEX, INVALID_NODE_INDEX, kNumerical};
+        Node node{threshold, featureIndex, INVALID_NODE_INDEX, INVALID_NODE_INDEX, INVALID_NODE_INDEX, FeatureType::kNumerical};
         m_nodes.push_back(node);
         return m_nodes.size() - 1;
     }
@@ -64,11 +66,13 @@ public:
     }
 
     ReturnType PredictTree(std::vector<ThresholdType>& data) const;
-
+    TreeTilingDescriptor& TilingDescriptor() { return m_tilingDescriptor; }
+    const TreeTilingDescriptor& TilingDescriptor() const { return m_tilingDescriptor; }
 private:
     std::vector<Node> m_nodes;
     size_t m_numFeatures;
     ThresholdType m_scale;
+    TreeTilingDescriptor m_tilingDescriptor;
 };
 
 template <typename ThresholdType=double, typename ReturnType=double, typename FeatureIndexType=int32_t, typename NodeIndexType=int32_t>
@@ -122,7 +126,7 @@ std::string DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexT
         strStream << node.parent;
         strStream << node.leftChild;
         strStream << node.rightChild;
-        strStream << node.featureType; 
+        strStream << (int32_t)node.featureType; 
     }
     return strStream.str();
 }
@@ -155,7 +159,7 @@ template <typename ThresholdType, typename ReturnType, typename FeatureIndexType
 std::string DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::Serialize() const
 {
     std::stringstream strStream;
-    strStream << m_reductionType << m_trees.size();
+    strStream << (int32_t)m_reductionType << m_trees.size();
     for (auto& tree : m_trees)
         strStream << tree.Serialize();
     return strStream.str();
@@ -165,7 +169,7 @@ template <typename ThresholdType, typename ReturnType, typename FeatureIndexType
 std::string DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::PrintToString() const
 {
     std::stringstream strStream;
-    strStream << "ReductionType = " << m_reductionType << ", #Trees = " << m_trees.size();
+    strStream << "ReductionType = " << (int32_t)m_reductionType << ", #Trees = " << m_trees.size();
     return strStream.str();
 }
 

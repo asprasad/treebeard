@@ -10,6 +10,24 @@ using namespace mlir::decisionforest;
 
 #include "Dialect.cpp.inc"
 
+void TreeTypeStorage::print(mlir::DialectAsmPrinter &printer) {
+    std::string tileDescriptorStr = m_tilingDescriptor.ToPrintString();
+    printer << "TreeType(returnType:" << m_resultType << ", tiling:( " << tileDescriptorStr << "))";
+}
+
+void TreeEnsembleTypeStorage::print(mlir::DialectAsmPrinter &printer) {
+    printer << "TreeEnsembleType(#Trees:" << m_numTrees << ", rowType:" << m_rowType 
+            << ", resultType:" << m_resultType << ", reductionType:" << (int32_t)m_reductionType << ")";
+}
+
+void NumericalNodeTypeStorage::print(mlir::DialectAsmPrinter &printer) {
+    printer << "NumericalNodeType";
+ }
+
+void LeafNodeTypeStorage::print(mlir::DialectAsmPrinter &printer) {
+    printer << "LeafNodeType";
+ }
+
 // Initialize the dialect
 void DecisionForestDialect::initialize() {
   addOperations<
@@ -23,6 +41,7 @@ void DecisionForestDialect::initialize() {
 /// Parse a type registered to this dialect.
 ::mlir::Type DecisionForestDialect::parseType(::mlir::DialectAsmParser &parser) const
 {
+    llvm_unreachable("DecisionForestDialect::parseAttribute Unimplement");
     return ::mlir::Type();
 }
 
@@ -46,14 +65,23 @@ void DecisionForestDialect::printType(::mlir::Type type,
         mlir::decisionforest::TreeType treeType = type.cast<mlir::decisionforest::TreeType>();
         treeType.print(os);
     }
-    else
-        assert(false && "Invalid decisionforest dialect type");
+    else if(type.isa<mlir::decisionforest::NumericalNodeType>()) {
+        auto numericalNodeType = type.cast<mlir::decisionforest::NumericalNodeType>();
+        numericalNodeType.print(os);
+    }
+    else if(type.isa<mlir::decisionforest::LeafNodeType>()) {
+        auto leafNodeType = type.cast<mlir::decisionforest::LeafNodeType>();
+        leafNodeType.print(os);
+    }
+    else {
+        llvm_unreachable("Invalid decisionforest dialect type");
+    }
 }
 
 mlir::Attribute DecisionForestDialect::parseAttribute(DialectAsmParser &parser, 
                                                       Type type) const
 {
-    llvm_unreachable("DecisionForestDialect::parseAttribute Unimplement");
+    llvm_unreachable("DecisionForestDialect::parseAttribute unimplemented");
     return mlir::Attribute();
 }
 
