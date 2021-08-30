@@ -34,7 +34,7 @@ void DecisionForestDialect::initialize() {
 #define GET_OP_LIST
 #include "Ops.cpp.inc"
       >();
-  addTypes<TreeEnsembleType, TreeType, NodeType, LeafNodeType, NumericalNodeType>();
+  addTypes<TreeEnsembleType, TreeType, NodeType, LeafNodeType, NumericalNodeType, TiledNumericalNodeType>();
   addAttributes<DecisionTreeAttribute, DecisionForestAttribute>();
 }
 
@@ -72,6 +72,10 @@ void DecisionForestDialect::printType(::mlir::Type type,
     else if(type.isa<mlir::decisionforest::LeafNodeType>()) {
         auto leafNodeType = type.cast<mlir::decisionforest::LeafNodeType>();
         leafNodeType.print(os);
+    }
+    else if(type.isa<mlir::decisionforest::TiledNumericalNodeType>()) {
+        auto tiledNodeType = type.cast<mlir::decisionforest::TiledNumericalNodeType>();
+        tiledNodeType.print(os);
     }
     else {
         llvm_unreachable("Invalid decisionforest dialect type");

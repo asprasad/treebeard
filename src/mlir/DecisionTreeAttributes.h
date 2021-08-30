@@ -133,6 +133,9 @@ public:
         mlir::decisionforest::TreeEnsembleType ensembleType = ensembleMLIRType.cast<mlir::decisionforest::TreeEnsembleType>();
         os << "Forest = ( " << forestStr << " ) forestType = (" << ensembleType << ")";
     }
+    DecisionForest<>& GetDecisionForest() {
+        return getImpl()->m_forest;
+    }
 };
 
 }

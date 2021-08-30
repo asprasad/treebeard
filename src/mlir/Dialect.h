@@ -10,6 +10,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "DecisionTreeAttributes.h"
 #include "DecisionTreeTypes.h"
+#include "MemrefTypes.h"
 
 /// Include the auto-generated header file containing the declaration of the sparse tensor dialect.
 #include "Dialect.h.inc"

@@ -152,7 +152,7 @@ public:
 };
 
 class NumericalNodeType : public mlir::Type::TypeBase<NumericalNodeType, NodeType,
-                                               NumericalNodeTypeStorage> {
+                                                      NumericalNodeTypeStorage> {
 public:
     /// Inherit some necessary constructors from 'TypeBase'.
     using Base::Base;

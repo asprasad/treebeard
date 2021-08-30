@@ -68,11 +68,29 @@ public:
     ReturnType PredictTree(std::vector<ThresholdType>& data) const;
     TreeTilingDescriptor& TilingDescriptor() { return m_tilingDescriptor; }
     const TreeTilingDescriptor& TilingDescriptor() const { return m_tilingDescriptor; }
+
+    int32_t GetTreeDepth() {
+        return GetTreeDepthHelper(0);
+    }
+    // The number of entries that would be needed if this tree is serialized 
+    // into a dense array reprsentation
+    int32_t GetDenseSerializationVectorLength() {
+        assert (m_tilingDescriptor.MaxTileSize() == 1 && "Larger tile sizes unimplemented");
+        return std::pow(2, GetTreeDepth()) - 1;
+    }
+    std::vector<ThresholdType> GetThresholdArray();
+    std::vector<FeatureIndexType> GetFeatureIndexArray();
+
 private:
     std::vector<Node> m_nodes;
     size_t m_numFeatures;
     ThresholdType m_scale;
     TreeTilingDescriptor m_tilingDescriptor;
+
+    int32_t GetTreeDepthHelper(size_t node) const;
+    
+    template <typename AttribType, typename GetterType>
+    void GetNodeAttributeArray(std::vector<AttribType>& thresholdVec, size_t vecIndex, size_t nodeIndex, GetterType get);
 };
 
 template <typename ThresholdType=double, typename ReturnType=double, typename FeatureIndexType=int32_t, typename NodeIndexType=int32_t>
@@ -104,16 +122,77 @@ public:
     std::string Serialize() const;
     std::string PrintToString() const;
     ReturnType Predict(std::vector<ThresholdType>& data) const;
-    bool operator==(const DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>& that) const
-    {
+    bool operator==(const DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>& that) const {
         return m_reductionType==that.m_reductionType && m_trees==that.m_trees;
     }
+
+    int32_t GetDenseSerializationVectorLength() {
+        int32_t size = 0;
+        for (auto& tree : m_trees)
+            size += tree.GetDenseSerializationVectorLength();
+        return size; 
+    }
+    // Get the serialized representation of the forest. Used to lower ensemble constants into memrefs.
+    // TODO Currently assumes that all nodes are numerical
+    void GetDenseSerialization(std::vector<ThresholdType>& thresholds, std::vector<FeatureIndexType>& featureIndices,
+                               std::vector<int32_t>& offsets);
 private:
     std::vector<Feature> m_features;
     std::vector<DecisionTreeType> m_trees;
     ReductionType m_reductionType;
 };
 
+template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+int32_t DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::GetTreeDepthHelper(size_t node) const
+{
+    const Node& n = this->m_nodes[node];
+    if (n.IsLeaf())
+        return 1;
+    return 1 + std::max(GetTreeDepthHelper(n.leftChild), GetTreeDepthHelper(n.rightChild));
+}
+
+template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+template <typename AttribType, typename GetterType>
+void DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::GetNodeAttributeArray(std::vector<AttribType>& attributeVec,
+                                                                                                     size_t vecIndex, size_t nodeIndex, GetterType get)
+{
+    Node& node = m_nodes[nodeIndex];
+    assert(vecIndex < attributeVec.size());
+    // TODO What is the type we set on leaf nodes?
+    assert(node.featureType == FeatureType::kNumerical || node.IsLeaf());
+    attributeVec[vecIndex] = get(node);
+
+    if (node.IsLeaf())
+        return;
+    GetNodeAttributeArray<AttribType, GetterType>(attributeVec, 2*vecIndex+1, node.leftChild, get);
+    GetNodeAttributeArray<AttribType, GetterType>(attributeVec, 2*vecIndex+2, node.rightChild, get);
+}
+
+template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+std::vector<ThresholdType> DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::GetThresholdArray()
+{
+    int32_t depth = GetTreeDepth();
+    size_t vectorLength = static_cast<size_t>(std::pow(2, depth)) - 1;
+    std::vector<ThresholdType> thresholdVec(vectorLength, 0.0);
+    assert (m_tilingDescriptor.MaxTileSize() == 1 && "Only size 1 tiles currently supported");
+
+    GetNodeAttributeArray(thresholdVec, 0, 0, [](Node& n) { return n.threshold; });
+    return thresholdVec;
+}
+
+template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+std::vector<FeatureIndexType> DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::GetFeatureIndexArray()
+{
+    int32_t depth = GetTreeDepth();
+    size_t vectorLength = static_cast<size_t>(std::pow(2, depth)) - 1;
+    std::vector<FeatureIndexType> featureIndexVec(vectorLength, -1);
+    assert (m_tilingDescriptor.MaxTileSize() == 1 && "Only size 1 tiles currently supported");
+
+    GetNodeAttributeArray(featureIndexVec, 0, 0, [](Node& n) { return n.featureIndex; });
+    return featureIndexVec;
+}
+
+// TODO This needs to also include the tiling of the tree
 template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
 std::string DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::Serialize() const
 {
@@ -182,6 +261,27 @@ ReturnType DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndex
     
     assert(m_reductionType == ReductionType::kAdd);
     return std::accumulate(predictions.begin(), predictions.end(), 0.0);
+}
+
+template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+void DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::GetDenseSerialization(
+                    std::vector<ThresholdType>& thresholds, std::vector<FeatureIndexType>& featureIndices,
+                    std::vector<int32_t>& offsets)
+{
+    int32_t currentOffset = 0;
+    for (auto& tree : m_trees) {
+        assert(currentOffset == static_cast<int32_t>(thresholds.size()));
+        offsets.push_back(currentOffset);
+        
+        auto treeThresholds = tree.GetThresholdArray();
+        auto treeFeatureIndices = tree.GetFeatureIndexArray();
+        
+        thresholds.insert(thresholds.end(), treeThresholds.begin(), treeThresholds.end());
+        featureIndices.insert(featureIndices.end(), treeFeatureIndices.begin(), treeFeatureIndices.end());
+
+        assert (treeThresholds.size() == treeFeatureIndices.size());
+        currentOffset += treeThresholds.size();
+    }
 }
 
 } // decisionforest

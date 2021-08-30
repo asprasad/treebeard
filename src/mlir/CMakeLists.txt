@@ -1,4 +1,5 @@
 target_sources(tree-heavy 
 PRIVATE 
 Dialect.cpp
-LowerToMidLevelIR.cpp)
+LowerToMidLevelIR.cpp
+LowerEnsembleToMemrefs.cpp)

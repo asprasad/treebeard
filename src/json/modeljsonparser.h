@@ -13,7 +13,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Verifier.h"
-
+#include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "llvm/ADT/STLExtras.h"
 
 using json = nlohmann::json;
@@ -114,7 +114,7 @@ protected:
         auto functionType = GetFunctionType();
         // TODO the function name needs to be an input or derived from the input
         // return mlir::FuncOp::create(location, std::string("Prediction_Function"), functionType);
-        return m_builder.create<mlir::FuncOp>(location, std::string("Prediction_Function"), functionType);
+        return m_builder.create<mlir::FuncOp>(location, std::string("Prediction_Function"), functionType, m_builder.getStringAttr("public"));
     }
 public:
     ModelJSONParser(mlir::MLIRContext& context, int32_t batchSize)
@@ -145,7 +145,7 @@ public:
         auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(m_builder.getUnknownLoc(), GetFunctionReturnType(),
                                                                                  forestAttribute, entryBlock.getArguments()[0]);
 
-        m_builder.create<mlir::decisionforest::ReturnOp>(m_builder.getUnknownLoc(), predictOp);
+        m_builder.create<mlir::ReturnOp>(m_builder.getUnknownLoc(), static_cast<mlir::Value>(predictOp));
         if (failed(mlir::verify(m_module))) {
             m_module.emitError("Module verification error");
             return nullptr;

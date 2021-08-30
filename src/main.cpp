@@ -14,6 +14,7 @@ namespace mlir
 namespace decisionforest
 {
 void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext& context, mlir::ModuleOp module);
+void LowerEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module);
 }
 }
 
@@ -22,6 +23,7 @@ int main(int argc, char *argv[]) {
   
   mlir::MLIRContext context;
   context.getOrLoadDialect<mlir::decisionforest::DecisionForestDialect>();
+  context.getOrLoadDialect<mlir::StandardOpsDialect>();
   const int32_t batchSize = 16;
   TreeHeavy::XGBoostJSONParser<> xgBoostParser(context, argv[1], batchSize);
   xgBoostParser.Parse();
@@ -30,6 +32,9 @@ int main(int argc, char *argv[]) {
 
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
 
+  module->dump();
+
+  mlir::decisionforest::LowerEnsembleToMemrefs(context, module);
   module->dump();
 
   std::vector<double> data(8);
