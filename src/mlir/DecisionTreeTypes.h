@@ -221,9 +221,12 @@ struct TreeEnsembleTypeKey {
 struct TreeTypeKey {
     Type resultType;
     TreeTilingDescriptor tilingDescriptor;
+    Type thresholdType;
+    Type featureIndexType;
     bool operator==(const TreeTypeKey& that) const
     {
-        return this->resultType==that.resultType && this->tilingDescriptor==that.tilingDescriptor;
+        return this->resultType==that.resultType && this->tilingDescriptor==that.tilingDescriptor &&
+               this->thresholdType==that.thresholdType && this->featureIndexType==that.featureIndexType;
     }
 };
 
@@ -295,44 +298,52 @@ public:
 };
 
 struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
-    TreeTypeStorage(Type resultType, const TreeTilingDescriptor& tilingDescriptor)
-        : m_resultType(resultType), m_tilingDescriptor(tilingDescriptor) {}
+    TreeTypeStorage(Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type thresholdType, Type featureIndexType)
+        : m_resultType(resultType), m_tilingDescriptor(tilingDescriptor), m_thresholdType(thresholdType), m_featureIndexType(featureIndexType) {}
 
     /// The hash key for this storage is a pair of the integer and type params.
     using KeyTy = TreeTypeKey;
 
     /// Define the comparison function for the key type.
     bool operator==(const KeyTy &key) const {
-        KeyTy myKey{ m_resultType, m_tilingDescriptor };
+        KeyTy myKey{ m_resultType, m_tilingDescriptor, m_thresholdType, m_featureIndexType };
         return key == myKey;
     }
 
     /// Define a hash function for the key type.
     static llvm::hash_code hashKey(const KeyTy &key) {
         std::string tilingDescStr = key.tilingDescriptor.ToHashString();
-        return llvm::hash_combine(key.resultType, tilingDescStr);
+        return llvm::hash_combine(key.resultType, tilingDescStr, key.thresholdType, key.featureIndexType);
     }
 
     /// Define a construction function for the key type.
     /// Note: This isn't necessary because KeyTy can be directly constructed with
     /// the given parameters.
     static KeyTy getKey(Type resultType) {
-        return KeyTy{ resultType, TreeTilingDescriptor() };
+        auto context = resultType.getContext();
+        return KeyTy{ resultType, TreeTilingDescriptor(), FloatType::getF64(context), IntegerType::get(context, 32) };
     }
 
     static KeyTy getKey(Type resultType, TreeTilingDescriptor tilingDescriptor) {
-        return KeyTy{ resultType, tilingDescriptor };
+        auto context = resultType.getContext();
+        return KeyTy{ resultType, tilingDescriptor, FloatType::getF64(context), IntegerType::get(context, 32) };
+    }
+
+    static KeyTy getKey(Type resultType, TreeTilingDescriptor tilingDescriptor, Type thresholdType, Type featureIndexType) {
+        return KeyTy{ resultType, tilingDescriptor, thresholdType, featureIndexType };
     }
 
     /// Define a construction method for creating a new instance of this storage.
     static TreeTypeStorage *construct(TypeStorageAllocator &allocator,
                                       const KeyTy &key) {
-        return new (allocator.allocate<TreeTypeStorage>()) TreeTypeStorage(key.resultType, key.tilingDescriptor);
+        return new (allocator.allocate<TreeTypeStorage>()) TreeTypeStorage(key.resultType, key.tilingDescriptor, key.thresholdType, key.featureIndexType);
     }
 
     /// The parametric data held by the storage class.
     Type m_resultType;
     TreeTilingDescriptor m_tilingDescriptor;
+    Type m_thresholdType;
+    Type m_featureIndexType;
 public:
     void print(mlir::DialectAsmPrinter &printer) override;
 };
@@ -358,8 +369,16 @@ public:
         return Base::get(ctx, resultType, tilingDescriptor);
     }
 
-    mlir::Type getResultType() { return getImpl()->m_resultType; }
+    static TreeType get(Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type thresholdType, Type featureIndexType)
+    {
+        mlir::MLIRContext *ctx = resultType.getContext();
+        return Base::get(ctx, resultType, tilingDescriptor, thresholdType, featureIndexType);
+    }
+
+    mlir::Type getResultType() const { return getImpl()->m_resultType; }
     const TreeTilingDescriptor& getTilingDescriptor() const { return getImpl()->m_tilingDescriptor; }
+    mlir::Type getThresholdType() const { return getImpl()->m_thresholdType; }
+    mlir::Type getFeatureIndexType() const { return getImpl()->m_featureIndexType; }
 
     void print(mlir::DialectAsmPrinter &printer) { getImpl()->print(printer); }
 };
