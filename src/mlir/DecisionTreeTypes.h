@@ -208,9 +208,21 @@ struct TreeEnsembleTypeKey {
     size_t numberOfTrees;
     Type rowType;
     ReductionType reductionType;
+    bool sameTypeTrees;
+    Type treeType;
+    std::vector<Type> treeTypes;
 
     bool operator==(const TreeEnsembleTypeKey& that) const
     {
+        // This maybe a problem if we don't enforce that the vector can't have the
+        // same type repeated
+        if (this->sameTypeTrees != that.sameTypeTrees)
+            return false;
+        
+        bool treesHaveSameType = sameTypeTrees ? treeType==that.treeType : treeTypes==that.treeTypes;
+        if (!treesHaveSameType)
+            return false;
+         
         return this->resultType == that.resultType && 
                this->numberOfTrees == that.numberOfTrees && 
                this->rowType == that.rowType && 
@@ -232,15 +244,18 @@ struct TreeTypeKey {
 
 //// Defines the type of a tree ensemble. 
 struct TreeEnsembleTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
-    TreeEnsembleTypeStorage(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType)
-        : m_resultType(resultType), m_numTrees(numTrees), m_rowType(rowType), m_reductionType(reductionType) {}
+    TreeEnsembleTypeStorage(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType, 
+                            bool treesHaveSameType, Type treeType, const std::vector<Type>& treeTypes)
+        : m_resultType(resultType), m_numTrees(numTrees), m_rowType(rowType), m_reductionType(reductionType),
+          m_treesHaveSameType(treesHaveSameType), m_treeType(treeType), m_treeTypes(treeTypes) 
+         {}
 
     /// The hash key for this storage is a pair of the integer and type params.
     using KeyTy = TreeEnsembleTypeKey;
 
     /// Define the comparison function for the key type.
     bool operator==(const KeyTy &key) const {
-        KeyTy myKey{ m_resultType, m_numTrees, m_rowType, m_reductionType };
+        KeyTy myKey{ m_resultType, m_numTrees, m_rowType, m_reductionType, m_treesHaveSameType, m_treeType, m_treeTypes };
         return key == myKey;
     }
 
@@ -248,21 +263,32 @@ struct TreeEnsembleTypeStorage : public TypeStorage, IDecisionForestTypePrintInt
     /// Note: This isn't necessary because std::pair, unsigned, and Type all have
     /// hash functions already available.
     static llvm::hash_code hashKey(const KeyTy &key) {
-        return llvm::hash_combine(key.resultType, key.numberOfTrees, key.rowType, key.reductionType);
+        std::vector<Type> treeTypes = key.sameTypeTrees ? std::vector<Type>(key.numberOfTrees, key.treeType) :
+                                                              key.treeTypes;
+        return llvm::hash_combine(key.resultType, key.numberOfTrees, key.rowType, key.reductionType, treeTypes);
     }
 
     /// Define a construction function for the key type.
-    /// Note: This isn't necessary because KeyTy can be directly constructed with
-    /// the given parameters.
-    static KeyTy getKey(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType) {
-        return KeyTy{ resultType, numTrees, rowType, reductionType};
+    // static KeyTy getKey(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType) {
+    //     return KeyTy{ resultType, numTrees, rowType, reductionType};
+    // }
+
+    static KeyTy getKey(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType,
+                        Type treeType) {
+        return KeyTy{ resultType, numTrees, rowType, reductionType, true, treeType, std::vector<Type>()};
+    }
+
+    static KeyTy getKey(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType,
+                        const std::vector<Type>& treeTypes) {
+        return KeyTy{ resultType, numTrees, rowType, reductionType, false, Type(), treeTypes};
     }
 
     /// Define a construction method for creating a new instance of this storage.
     static TreeEnsembleTypeStorage *construct(TypeStorageAllocator &allocator,
-                                        const KeyTy &key) {
+                                              const KeyTy &key) {
         return new (allocator.allocate<TreeEnsembleTypeStorage>())
-                    TreeEnsembleTypeStorage(key.resultType, key.numberOfTrees, key.rowType, key.reductionType);
+                    TreeEnsembleTypeStorage(key.resultType, key.numberOfTrees, key.rowType, key.reductionType,
+                                            key.sameTypeTrees, key.treeType, key.treeTypes);
     }
 
     /// The parametric data held by the storage class.
@@ -270,6 +296,9 @@ struct TreeEnsembleTypeStorage : public TypeStorage, IDecisionForestTypePrintInt
     size_t m_numTrees;
     Type m_rowType;
     ReductionType m_reductionType;
+    bool m_treesHaveSameType;
+    Type m_treeType;
+    std::vector<Type> m_treeTypes;
 public:
     void print(mlir::DialectAsmPrinter &printer) override;
 };
@@ -280,20 +309,28 @@ public:
     /// Inherit some necessary constructors from 'TypeBase'.
     using Base::Base;
 
-    static TreeEnsembleType get(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType)
-    {
-        // Call into a helper 'get' method in 'TypeBase' to get a uniqued instance
-        // of this type. The first parameter is the context to unique in. The
-        // parameters after the context are forwarded to the storage instance.
+    static TreeEnsembleType get(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType, Type treeType) {
         mlir::MLIRContext *ctx = resultType.getContext();
-        return Base::get(ctx, resultType, numTrees, rowType, reductionType);
+        return Base::get(ctx, resultType, numTrees, rowType, reductionType, treeType);
+    }
+    static TreeEnsembleType get(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType, 
+                                const std::vector<Type>& treeTypes) {
+        mlir::MLIRContext *ctx = resultType.getContext();
+        return Base::get(ctx, resultType, numTrees, rowType, reductionType, treeTypes);
     }
 
-    mlir::Type getResultType() { return getImpl()->m_resultType; }
-    size_t getNumberOfTrees() { return getImpl()->m_numTrees; }
-    mlir::Type getRowType() { return getImpl()->m_rowType; }
-    ReductionType getReductionType() { return getImpl()->m_reductionType; }
-
+    mlir::Type getResultType() const { return getImpl()->m_resultType; }
+    size_t getNumberOfTrees() const { return getImpl()->m_numTrees; }
+    mlir::Type getRowType() const { return getImpl()->m_rowType; }
+    ReductionType getReductionType() const { return getImpl()->m_reductionType; }
+    Type getTreeType(int32_t treeIndex) const { 
+        assert (static_cast<size_t>(treeIndex) < getNumberOfTrees());
+        if (getImpl()->m_treesHaveSameType)
+            return getImpl()->m_treeType;
+        else
+            return getImpl()->m_treeTypes[treeIndex];
+    }
+    bool doAllTreesHaveSameType() const { return getImpl()->m_treesHaveSameType; }
     void print(mlir::DialectAsmPrinter &printer) { getImpl()->print(printer); }
 };
 
@@ -354,23 +391,7 @@ public:
     /// Inherit some necessary constructors from 'TypeBase'.
     using Base::Base;
 
-    static TreeType get(Type resultType)
-    {
-        // Call into a helper 'get' method in 'TypeBase' to get a uniqued instance
-        // of this type. The first parameter is the context to unique in. The
-        // parameters after the context are forwarded to the storage instance.
-        mlir::MLIRContext *ctx = resultType.getContext();
-        return Base::get(ctx, resultType);
-    }
-
-    static TreeType get(Type resultType, const TreeTilingDescriptor& tilingDescriptor)
-    {
-        mlir::MLIRContext *ctx = resultType.getContext();
-        return Base::get(ctx, resultType, tilingDescriptor);
-    }
-
-    static TreeType get(Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type thresholdType, Type featureIndexType)
-    {
+    static TreeType get(Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type thresholdType, Type featureIndexType) {
         mlir::MLIRContext *ctx = resultType.getContext();
         return Base::get(ctx, resultType, tilingDescriptor, thresholdType, featureIndexType);
     }

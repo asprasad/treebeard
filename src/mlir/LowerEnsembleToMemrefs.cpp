@@ -105,9 +105,13 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     rewriter.setInsertionPoint(&module.front());
 
     auto forestType = ensembleConstOp.getResult().getType().cast<decisionforest::TreeEnsembleType>();
-    auto thresholdType = rewriter.getF64Type(); // TODO Need to implement forestType.getThresholdType();
-    auto featureIndexType = rewriter.getI32Type(); // TODO Need to implement forestType.getFeatureIndexType();
-    auto tileSize = 1; // TODO get the tile type from the ensemble type and use that to get tiling
+    assert (forestType.doAllTreesHaveSameType()); // There is still an assumption here that all trees have the same type
+    auto treeType = forestType.getTreeType(0).cast<decisionforest::TreeType>();
+
+    auto thresholdType = treeType.getThresholdType();
+    auto featureIndexType = treeType.getFeatureIndexType(); 
+    auto tileSize = treeType.getTilingDescriptor().MaxTileSize();
+    assert (tileSize == 1);
     Type memrefElementType = decisionforest::TiledNumericalNodeType::get(thresholdType, featureIndexType, tileSize);
 
     std::vector<ThresholdType> thresholds;
@@ -119,18 +123,17 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     
     auto modelMemrefSize = (int32_t)featureIndices.size();
     auto modelMemrefType = MemRefType::get({modelMemrefSize}, memrefElementType);
-    auto modelMemref = rewriter.create<memref::GlobalOp>(
-      location, "model",
-      /*sym_visibility=*/rewriter.getStringAttr("private"),
-      /*type=*/modelMemrefType,
-      /*initial_value=*/rewriter.getUnitAttr(),
-      /*constant=*/false);
+    rewriter.create<memref::GlobalOp>(location, "model",
+                                      /*sym_visibility=*/rewriter.getStringAttr("private"),
+                                      /*type=*/modelMemrefType,
+                                      /*initial_value=*/rewriter.getUnitAttr(),
+                                      /*constant=*/false);
     AddGlobalMemrefGetter(module, "model", modelMemrefType, rewriter, location);
     
     auto offsetSize = (int32_t)treeOffsets.size();
     auto offsetMemrefType = MemRefType::get({offsetSize}, rewriter.getIndexType());
-    auto offsetMemref = rewriter.create<memref::GlobalOp>(location, "offsets", rewriter.getStringAttr("private"),
-                                                          offsetMemrefType, rewriter.getUnitAttr(), false);
+    rewriter.create<memref::GlobalOp>(location, "offsets", rewriter.getStringAttr("private"),
+                                      offsetMemrefType, rewriter.getUnitAttr(), false);
     AddGlobalMemrefGetter(module, "offsets", offsetMemrefType, rewriter, location);
   }
   
@@ -171,8 +174,6 @@ struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLowe
 
     RewritePatternSet patterns(&getContext());
     patterns.add<EnsembleConstantOpLowering>(&getContext());
-
-    // loweredSparseConstants.clear();
 
     if (failed(applyPartialConversion(getFunction(), target, std::move(patterns))))
         signalPassFailure();

@@ -28,21 +28,33 @@ namespace TreeHeavy
 {
 
 template<typename T>
-mlir::Type GetMLIRFloatType(const T& val, mlir::OpBuilder& builder)
-{
+mlir::Type GetMLIRType(const T& val, mlir::OpBuilder& builder) {
     assert (false);
     return mlir::Type();
 }
 
 template<>
-mlir::Type GetMLIRFloatType(const float& val, mlir::OpBuilder& builder)
-{
+mlir::Type GetMLIRType(const int8_t& val, mlir::OpBuilder& builder) {
+    return builder.getIntegerType(8);
+}
+
+template<>
+mlir::Type GetMLIRType(const int16_t& val, mlir::OpBuilder& builder) {
+    return builder.getIntegerType(16);
+}
+
+template<>
+mlir::Type GetMLIRType(const int32_t& val, mlir::OpBuilder& builder) {
+    return builder.getI32Type();
+}
+
+template<>
+mlir::Type GetMLIRType(const float& val, mlir::OpBuilder& builder) {
     return builder.getF32Type();
 }
 
 template<>
-mlir::Type GetMLIRFloatType(const double& val, mlir::OpBuilder& builder)
-{
+mlir::Type GetMLIRType(const double& val, mlir::OpBuilder& builder) {
     return builder.getF64Type();
 }
 
@@ -100,7 +112,7 @@ protected:
     }
     mlir::Type GetFunctionReturnType()
     {
-        return mlir::RankedTensorType::get(m_batchSize, GetMLIRFloatType(ReturnType(), m_builder));
+        return mlir::RankedTensorType::get(m_batchSize, GetMLIRType(ReturnType(), m_builder));
     }
     mlir::FunctionType GetFunctionType()
     {
@@ -138,8 +150,15 @@ public:
 
         m_builder.setInsertionPointToStart(&entryBlock);
 
-        auto forestType = mlir::decisionforest::TreeEnsembleType::get(GetMLIRFloatType(ReturnType(), m_builder),
-                                                                      m_forest->NumTrees(), GetInputRowType(), mlir::decisionforest::ReductionType::kAdd);
+        // All trees have the default tiling to start with.
+        mlir::decisionforest::TreeTilingDescriptor tilingDescriptor;
+        auto treeType = mlir::decisionforest::TreeType::get(GetMLIRType(ReturnType(), m_builder), tilingDescriptor, 
+                                                            GetMLIRType(ThresholdType(), m_builder), 
+                                                            GetMLIRType(FeatureIndexType(), m_builder));
+
+        auto forestType = mlir::decisionforest::TreeEnsembleType::get(GetMLIRType(ReturnType(), m_builder),
+                                                                      m_forest->NumTrees(), GetInputRowType(), 
+                                                                      mlir::decisionforest::ReductionType::kAdd, treeType);
         auto forestAttribute = mlir::decisionforest::DecisionForestAttribute::get(forestType, *m_forest);
 
         auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(m_builder.getUnknownLoc(), GetFunctionReturnType(),

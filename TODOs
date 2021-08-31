@@ -1,6 +1,6 @@
 CodeGen for tile size == 1 for all trees
-    * Add threshold and feature index type to tree type
-    * Add tree types to forest type (list of individual tree types)
+    * [Done] Add threshold and feature index type to tree type
+    * [Done] Add tree types to forest type (list of individual tree types)
     * Write tiling helpers
         - Serialize model into file
         - Read model from file into buffer
