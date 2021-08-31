@@ -36,7 +36,9 @@ public:
 // Decision Forest Types
 //===----------------------------------------------------------------------===//
 
-
+//===----------------------------------------------------------------------===//
+// Node Types
+//===----------------------------------------------------------------------===//
 struct NumericalNodeTypeKey {
     Type thresholdType;
     Type indexType;
@@ -72,16 +74,10 @@ struct NumericalNodeTypeStorage : public TypeStorage, IDecisionForestTypePrintIn
         return key == myKey;
     }
 
-    /// Define a hash function for the key type.
-    /// Note: This isn't necessary because std::pair, unsigned, and Type all have
-    /// hash functions already available.
     static llvm::hash_code hashKey(const KeyTy &key) {
         return llvm::hash_combine(key.thresholdType, key.indexType);
     }
 
-    /// Define a construction function for the key type.
-    /// Note: This isn't necessary because KeyTy can be directly constructed with
-    /// the given parameters.
     static KeyTy getKey(Type thresholdType, Type indexType) {
         return KeyTy{thresholdType, indexType};
     }
@@ -93,7 +89,6 @@ struct NumericalNodeTypeStorage : public TypeStorage, IDecisionForestTypePrintIn
         NumericalNodeTypeStorage(key.thresholdType, key.indexType);
     }
 
-    /// The parametric data held by the storage class.
     Type m_thresholdType;
     Type m_indexType;
 public:
@@ -104,37 +99,27 @@ struct LeafNodeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterfa
     LeafNodeTypeStorage(Type returnType)
         : m_returnType(returnType) {}
 
-    /// The hash key for this storage is a pair of the integer and type params.
     using KeyTy = LeafNodeTypeKey;
 
-    /// Define the comparison function for the key type.
     bool operator==(const KeyTy &key) const {
         KeyTy myKey{m_returnType};
         return key == myKey;
     }
 
-    /// Define a hash function for the key type.
-    /// Note: This isn't necessary because std::pair, unsigned, and Type all have
-    /// hash functions already available.
     static llvm::hash_code hashKey(const KeyTy &key) {
         return llvm::hash_combine(key.returnType);
     }
 
-    /// Define a construction function for the key type.
-    /// Note: This isn't necessary because KeyTy can be directly constructed with
-    /// the given parameters.
     static KeyTy getKey(Type returnType) {
         return KeyTy{returnType};
     }
 
-    /// Define a construction method for creating a new instance of this storage.
     static LeafNodeTypeStorage *construct(TypeStorageAllocator &allocator,
                                         const KeyTy &key) {
     return new (allocator.allocate<LeafNodeTypeStorage>())
         LeafNodeTypeStorage(key.returnType);
     }
 
-    /// The parametric data held by the storage class.
     Type m_returnType;
 public:
     void print(mlir::DialectAsmPrinter &printer) override;
@@ -154,16 +139,9 @@ public:
 class NumericalNodeType : public mlir::Type::TypeBase<NumericalNodeType, NodeType,
                                                       NumericalNodeTypeStorage> {
 public:
-    /// Inherit some necessary constructors from 'TypeBase'.
     using Base::Base;
 
-    /// Create an instance of a `NumericalNodeType` with the given element types. There
-    /// *must* be atleast one element type.
-    static NumericalNodeType get(mlir::Type thresholdType, mlir::Type indexType)
-    {
-        // Call into a helper 'get' method in 'TypeBase' to get a uniqued instance
-        // of this type. The first parameter is the context to unique in. The
-        // parameters after the context are forwarded to the storage instance.
+    static NumericalNodeType get(mlir::Type thresholdType, mlir::Type indexType) {
         mlir::MLIRContext *ctx = thresholdType.getContext();
         assert (ctx == indexType.getContext());
         return Base::get(ctx, thresholdType, indexType);
@@ -178,14 +156,9 @@ public:
 class LeafNodeType : public mlir::Type::TypeBase<LeafNodeType, NodeType,
                                                  LeafNodeTypeStorage> {
 public:
-    /// Inherit some necessary constructors from 'TypeBase'.
     using Base::Base;
 
-    static LeafNodeType get(mlir::Type returnType)
-    {
-        // Call into a helper 'get' method in 'TypeBase' to get a uniqued instance
-        // of this type. The first parameter is the context to unique in. The
-        // parameters after the context are forwarded to the storage instance.
+    static LeafNodeType get(mlir::Type returnType) {
         mlir::MLIRContext *ctx = returnType.getContext();
         return Base::get(ctx, returnType);
     }
@@ -199,6 +172,86 @@ public:
 // class CategoricalNodeType : public mlir::Type::TypeBase<CategoricalNodeType, NodeType,
 //                                                         CategoricalNodeTypeStorage> {
 // };                
+
+//===----------------------------------------------------------------------===//
+// Tree Type
+//===----------------------------------------------------------------------===//
+struct TreeTypeKey {
+    Type resultType;
+    TreeTilingDescriptor tilingDescriptor;
+    Type thresholdType;
+    Type featureIndexType;
+    bool operator==(const TreeTypeKey& that) const
+    {
+        return this->resultType==that.resultType && this->tilingDescriptor==that.tilingDescriptor &&
+               this->thresholdType==that.thresholdType && this->featureIndexType==that.featureIndexType;
+    }
+};
+
+struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
+    TreeTypeStorage(Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type thresholdType, Type featureIndexType)
+        : m_resultType(resultType), m_tilingDescriptor(tilingDescriptor), m_thresholdType(thresholdType), m_featureIndexType(featureIndexType) {}
+
+    using KeyTy = TreeTypeKey;
+
+    bool operator==(const KeyTy &key) const {
+        KeyTy myKey{ m_resultType, m_tilingDescriptor, m_thresholdType, m_featureIndexType };
+        return key == myKey;
+    }
+
+    static llvm::hash_code hashKey(const KeyTy &key) {
+        std::string tilingDescStr = key.tilingDescriptor.ToHashString();
+        return llvm::hash_combine(key.resultType, tilingDescStr, key.thresholdType, key.featureIndexType);
+    }
+
+    static KeyTy getKey(Type resultType) {
+        auto context = resultType.getContext();
+        return KeyTy{ resultType, TreeTilingDescriptor(), FloatType::getF64(context), IntegerType::get(context, 32) };
+    }
+
+    static KeyTy getKey(Type resultType, TreeTilingDescriptor tilingDescriptor) {
+        auto context = resultType.getContext();
+        return KeyTy{ resultType, tilingDescriptor, FloatType::getF64(context), IntegerType::get(context, 32) };
+    }
+
+    static KeyTy getKey(Type resultType, TreeTilingDescriptor tilingDescriptor, Type thresholdType, Type featureIndexType) {
+        return KeyTy{ resultType, tilingDescriptor, thresholdType, featureIndexType };
+    }
+
+    static TreeTypeStorage *construct(TypeStorageAllocator &allocator,
+                                      const KeyTy &key) {
+        return new (allocator.allocate<TreeTypeStorage>()) TreeTypeStorage(key.resultType, key.tilingDescriptor, key.thresholdType, key.featureIndexType);
+    }
+
+    Type m_resultType;
+    TreeTilingDescriptor m_tilingDescriptor;
+    Type m_thresholdType;
+    Type m_featureIndexType;
+public:
+    void print(mlir::DialectAsmPrinter &printer) override;
+};
+
+class TreeType : public mlir::Type::TypeBase<TreeType, mlir::Type,
+                                             TreeTypeStorage> {
+public:
+    using Base::Base;
+
+    static TreeType get(Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type thresholdType, Type featureIndexType) {
+        mlir::MLIRContext *ctx = resultType.getContext();
+        return Base::get(ctx, resultType, tilingDescriptor, thresholdType, featureIndexType);
+    }
+
+    mlir::Type getResultType() const { return getImpl()->m_resultType; }
+    const TreeTilingDescriptor& getTilingDescriptor() const { return getImpl()->m_tilingDescriptor; }
+    mlir::Type getThresholdType() const { return getImpl()->m_thresholdType; }
+    mlir::Type getFeatureIndexType() const { return getImpl()->m_featureIndexType; }
+
+    void print(mlir::DialectAsmPrinter &printer) { getImpl()->print(printer); }
+};
+
+//===----------------------------------------------------------------------===//
+// Tree Ensemble Type
+//===----------------------------------------------------------------------===//
 
 // TODO We currently store the resultType here and including the "tensor type" due to the batch size.
 // Should it just be the numerical type? (f64 instead of Tensor<16xf64>)
@@ -230,19 +283,6 @@ struct TreeEnsembleTypeKey {
     }
 };
 
-struct TreeTypeKey {
-    Type resultType;
-    TreeTilingDescriptor tilingDescriptor;
-    Type thresholdType;
-    Type featureIndexType;
-    bool operator==(const TreeTypeKey& that) const
-    {
-        return this->resultType==that.resultType && this->tilingDescriptor==that.tilingDescriptor &&
-               this->thresholdType==that.thresholdType && this->featureIndexType==that.featureIndexType;
-    }
-};
-
-//// Defines the type of a tree ensemble. 
 struct TreeEnsembleTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
     TreeEnsembleTypeStorage(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType, 
                             bool treesHaveSameType, Type treeType, const std::vector<Type>& treeTypes)
@@ -250,28 +290,18 @@ struct TreeEnsembleTypeStorage : public TypeStorage, IDecisionForestTypePrintInt
           m_treesHaveSameType(treesHaveSameType), m_treeType(treeType), m_treeTypes(treeTypes) 
          {}
 
-    /// The hash key for this storage is a pair of the integer and type params.
     using KeyTy = TreeEnsembleTypeKey;
 
-    /// Define the comparison function for the key type.
     bool operator==(const KeyTy &key) const {
         KeyTy myKey{ m_resultType, m_numTrees, m_rowType, m_reductionType, m_treesHaveSameType, m_treeType, m_treeTypes };
         return key == myKey;
     }
 
-    /// Define a hash function for the key type.
-    /// Note: This isn't necessary because std::pair, unsigned, and Type all have
-    /// hash functions already available.
     static llvm::hash_code hashKey(const KeyTy &key) {
         std::vector<Type> treeTypes = key.sameTypeTrees ? std::vector<Type>(key.numberOfTrees, key.treeType) :
                                                               key.treeTypes;
         return llvm::hash_combine(key.resultType, key.numberOfTrees, key.rowType, key.reductionType, treeTypes);
     }
-
-    /// Define a construction function for the key type.
-    // static KeyTy getKey(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType) {
-    //     return KeyTy{ resultType, numTrees, rowType, reductionType};
-    // }
 
     static KeyTy getKey(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType,
                         Type treeType) {
@@ -283,7 +313,6 @@ struct TreeEnsembleTypeStorage : public TypeStorage, IDecisionForestTypePrintInt
         return KeyTy{ resultType, numTrees, rowType, reductionType, false, Type(), treeTypes};
     }
 
-    /// Define a construction method for creating a new instance of this storage.
     static TreeEnsembleTypeStorage *construct(TypeStorageAllocator &allocator,
                                               const KeyTy &key) {
         return new (allocator.allocate<TreeEnsembleTypeStorage>())
@@ -291,7 +320,6 @@ struct TreeEnsembleTypeStorage : public TypeStorage, IDecisionForestTypePrintInt
                                             key.sameTypeTrees, key.treeType, key.treeTypes);
     }
 
-    /// The parametric data held by the storage class.
     Type m_resultType;
     size_t m_numTrees;
     Type m_rowType;
@@ -331,76 +359,6 @@ public:
             return getImpl()->m_treeTypes[treeIndex];
     }
     bool doAllTreesHaveSameType() const { return getImpl()->m_treesHaveSameType; }
-    void print(mlir::DialectAsmPrinter &printer) { getImpl()->print(printer); }
-};
-
-struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
-    TreeTypeStorage(Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type thresholdType, Type featureIndexType)
-        : m_resultType(resultType), m_tilingDescriptor(tilingDescriptor), m_thresholdType(thresholdType), m_featureIndexType(featureIndexType) {}
-
-    /// The hash key for this storage is a pair of the integer and type params.
-    using KeyTy = TreeTypeKey;
-
-    /// Define the comparison function for the key type.
-    bool operator==(const KeyTy &key) const {
-        KeyTy myKey{ m_resultType, m_tilingDescriptor, m_thresholdType, m_featureIndexType };
-        return key == myKey;
-    }
-
-    /// Define a hash function for the key type.
-    static llvm::hash_code hashKey(const KeyTy &key) {
-        std::string tilingDescStr = key.tilingDescriptor.ToHashString();
-        return llvm::hash_combine(key.resultType, tilingDescStr, key.thresholdType, key.featureIndexType);
-    }
-
-    /// Define a construction function for the key type.
-    /// Note: This isn't necessary because KeyTy can be directly constructed with
-    /// the given parameters.
-    static KeyTy getKey(Type resultType) {
-        auto context = resultType.getContext();
-        return KeyTy{ resultType, TreeTilingDescriptor(), FloatType::getF64(context), IntegerType::get(context, 32) };
-    }
-
-    static KeyTy getKey(Type resultType, TreeTilingDescriptor tilingDescriptor) {
-        auto context = resultType.getContext();
-        return KeyTy{ resultType, tilingDescriptor, FloatType::getF64(context), IntegerType::get(context, 32) };
-    }
-
-    static KeyTy getKey(Type resultType, TreeTilingDescriptor tilingDescriptor, Type thresholdType, Type featureIndexType) {
-        return KeyTy{ resultType, tilingDescriptor, thresholdType, featureIndexType };
-    }
-
-    /// Define a construction method for creating a new instance of this storage.
-    static TreeTypeStorage *construct(TypeStorageAllocator &allocator,
-                                      const KeyTy &key) {
-        return new (allocator.allocate<TreeTypeStorage>()) TreeTypeStorage(key.resultType, key.tilingDescriptor, key.thresholdType, key.featureIndexType);
-    }
-
-    /// The parametric data held by the storage class.
-    Type m_resultType;
-    TreeTilingDescriptor m_tilingDescriptor;
-    Type m_thresholdType;
-    Type m_featureIndexType;
-public:
-    void print(mlir::DialectAsmPrinter &printer) override;
-};
-
-class TreeType : public mlir::Type::TypeBase<TreeType, mlir::Type,
-                                             TreeTypeStorage> {
-public:
-    /// Inherit some necessary constructors from 'TypeBase'.
-    using Base::Base;
-
-    static TreeType get(Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type thresholdType, Type featureIndexType) {
-        mlir::MLIRContext *ctx = resultType.getContext();
-        return Base::get(ctx, resultType, tilingDescriptor, thresholdType, featureIndexType);
-    }
-
-    mlir::Type getResultType() const { return getImpl()->m_resultType; }
-    const TreeTilingDescriptor& getTilingDescriptor() const { return getImpl()->m_tilingDescriptor; }
-    mlir::Type getThresholdType() const { return getImpl()->m_thresholdType; }
-    mlir::Type getFeatureIndexType() const { return getImpl()->m_featureIndexType; }
-
     void print(mlir::DialectAsmPrinter &printer) { getImpl()->print(printer); }
 };
 
