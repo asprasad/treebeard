@@ -6,10 +6,6 @@
 #include <string>
 
 // *. Enum to denote regular or irregular tiling
-// *. Utilities to verify that a tiling is valid
-//      - All nodes are covered, tiles are connected, # of nodes are within the limit, tiles are disjoint
-// *. Utilities to manage tiles -- for example, number of tile shapes with a given tile size and thier IDs, 
-//    child indices based on comparison outcomes etc.
 // *. Check if two tilings are equivalent
 
 namespace mlir

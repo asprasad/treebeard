@@ -2,6 +2,7 @@
 #define _DECISIONFOREST_H_
 
 #include <vector>
+#include <set>
 #include <string>
 #include <sstream>
 #include <numeric>
@@ -126,12 +127,21 @@ public:
         return m_reductionType==that.m_reductionType && m_trees==that.m_trees;
     }
 
-    int32_t GetDenseSerializationVectorLength() {
+    int32_t GetDenseSerializationVectorLength() const {
         int32_t size = 0;
         for (auto& tree : m_trees)
             size += tree.GetDenseSerializationVectorLength();
         return size; 
     }
+
+    std::set<int32_t> GetTileSizes() const {
+        std::set<int32_t> tileSizes;
+        for (auto& tree : m_trees) {
+            tileSizes.insert(m_trees.TilingDescriptor().MaxTileSize());
+        }
+        return tileSizes;
+    }
+
     // Get the serialized representation of the forest. Used to lower ensemble constants into memrefs.
     // TODO Currently assumes that all nodes are numerical
     void GetDenseSerialization(std::vector<ThresholdType>& thresholds, std::vector<FeatureIndexType>& featureIndices,
@@ -139,7 +149,7 @@ public:
 private:
     std::vector<Feature> m_features;
     std::vector<DecisionTreeType> m_trees;
-    ReductionType m_reductionType;
+    ReductionType m_reductionType = ReductionType::kAdd;
 };
 
 template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>

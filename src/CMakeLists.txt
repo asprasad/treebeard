@@ -31,3 +31,7 @@ add_subdirectory(include)
 #add_subdirectory(ast)
 add_subdirectory(mlir)
 add_subdirectory(utils)
+
+include_directories(include)
+include_directories(json)
+include_directories(mlir)

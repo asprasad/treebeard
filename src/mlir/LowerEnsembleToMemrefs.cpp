@@ -12,6 +12,7 @@
 
 #include "MemrefTypes.h"
 #include "Dialect.h"
+#include "TreeTilingUtils.h"
 
 /*
 Plan and issues
@@ -120,6 +121,7 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     forest.GetDenseSerialization(thresholds, featureIndices, treeOffsets);
     
     // TODO write the model values to a file.
+    PersistDecisionForest(forest, forestType);
     
     auto modelMemrefSize = (int32_t)featureIndices.size();
     auto modelMemrefType = MemRefType::get({modelMemrefSize}, memrefElementType);
