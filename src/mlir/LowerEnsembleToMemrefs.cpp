@@ -228,20 +228,18 @@ struct GetTreeOpLowering: public ConversionPattern {
 
     getTreeOperationMap[op] = static_cast<Value>(treeMemref);
 
-    rewriter.replaceOp(op, static_cast<Value>(treeMemref));
-    // rewriter.eraseOp(op);
+    rewriter.eraseOp(op);
 
     return mlir::success();
   }
 };
 
 Value GetTreeMemrefFromTreeOperand(Value treeValue) {
-  // auto getTreeOp = treeValue.getDefiningOp();
-  // AssertOpIsOfType<mlir::decisionforest::GetTreeFromEnsembleOp>(getTreeOp);
-  // auto getTreeOperationMapIter = getTreeOperationMap.find(getTreeOp);
-  // assert(getTreeOperationMapIter != getTreeOperationMap.end());
-  // auto treeMemref = getTreeOperationMapIter->second;
-  auto treeMemref = treeValue; // TODO This is just until we remove the "replaceOp" in the GetTree lowering rule
+  auto getTreeOp = treeValue.getDefiningOp();
+  AssertOpIsOfType<mlir::decisionforest::GetTreeFromEnsembleOp>(getTreeOp);
+  auto getTreeOperationMapIter = getTreeOperationMap.find(getTreeOp);
+  assert(getTreeOperationMapIter != getTreeOperationMap.end());
+  auto treeMemref = getTreeOperationMapIter->second;
   return treeMemref;
 }
 
@@ -374,7 +372,7 @@ struct GetLeafValueOpLowering : public ConversionPattern {
     // TODO Ideally, this should be a different op for when we deal with tile sizes != 1. We will then need to load 
     // a single threshold value and cast it the trees return type
     auto loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, thresholdType, treeMemref, static_cast<Value>(nodeIndex));
-
+    // TODO cast the loaded value to the correct result type of the tree. 
     rewriter.replaceOp(op, static_cast<Value>(loadThresholdOp));
     return mlir::success();
   }
