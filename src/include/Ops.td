@@ -52,6 +52,10 @@ def TreeEnsembleType :
     DialectType<DecisionForestDialect, CPred<"$_self.isa<TreeEnsembleType>()">,
     "TreeEnsembleType">;
 
+def TiledNumericalNodeType : 
+    DialectType<DecisionForestDialect, CPred<"$_self.isa<TiledNumericalNodeType>()">,
+    "TiledNumericalNodeType">;
+
 //-------   Attributes   ----------------------
 
 def DecisionTreeAttr : Attr<
@@ -117,6 +121,10 @@ def ReturnOp : DecisionForest_Op<"return", [NoSideEffect, HasParent<"FuncOp">,Te
 }
 
 // ----- Mid-level IR Ops ------
+
+def ThresholdValueType : AnyTypeOf<[F16, F32, F64]>;
+def FeatureIndexType : AnyTypeOf<[I8, I16, I32, I64]>;
+
 def TreeConstantOp : DecisionForest_Op<"tree", [NoSideEffect]> {
   let summary = "Tree constant operation";
   let description = "Represents a constant whose value is a single tree in the forest. Takes no arguments and gives a tree value out.";
@@ -162,7 +170,7 @@ def IsLeafOp : DecisionForest_Op<"isLeaf", [NoSideEffect]> {
 def GetLeafValueOp : DecisionForest_Op<"getLeafValue", [NoSideEffect]> {
   let summary = "Get value of passed leaf node.";
   let description = "Get value of passed leaf node.";
-  let arguments = (ins NodeType:$node);
+  let arguments = (ins TreeType:$tree, NodeType:$node);
 
   let results = (outs LeafNodeValueType);
 }
@@ -182,6 +190,43 @@ def TraverseTileOfConstTreeOp : DecisionForest_Op<"traverseTileOfConstTree", [No
 
   let results = (outs NodeType);
 }
+
+def TiledNumericalNodeMemRef  : MemRefOf<[TiledNumericalNodeType]>;
+def TileOfThresholdTypes : AnyTypeOf<[ThresholdValueType, VectorOf<[ThresholdValueType]>]>;
+def TileOfFeatureIndices : AnyTypeOf<[FeatureIndexType, VectorOf<[FeatureIndexType]>]>;
+
+def LoadTileThresholdsOp : DecisionForest_Op<"loadTileThresholds", [NoSideEffect]> {
+  let summary = "Load the thresholds from a tree tile.";
+  let description = "Load all the thresholds from a tile in a tree memref. Takes a memref and an index into the memref and returns a vector of floating point values.";
+  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex);
+
+  let results = (outs TileOfThresholdTypes);
+}
+
+def LoadTileFeatureIndicesOp : DecisionForest_Op<"loadTileFeatureIndices", [NoSideEffect]> {
+  let summary = "Load the feature indices from a tree tile.";
+  let description = "Load all the feature indices from a tile in a tree memref. Takes a memref and an index into the memref and returns a vector of floating point values.";
+  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex);
+
+  let results = (outs TileOfFeatureIndices);
+}
+
+def IndexToNodeOp : DecisionForest_Op<"indexToNode", [NoSideEffect]> {
+  let summary = "Casts an index into a tree memref into a node type.";
+  let description = "Casts an index into a tree memref into a node type. This is a hack so that we don't have to change any block arguments while lowering.";
+  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex);
+
+  let results = (outs NodeType);
+}
+
+def NodeToIndexOp : DecisionForest_Op<"nodeToIndex", [NoSideEffect]> {
+  let summary = "Casts a node into an index into a tree memref.";
+  let description = "Casts a node into an index into a tree memref. This is a hack so that we don't have to change too any block arguments while lowering.";
+  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, NodeType:$node);
+
+  let results = (outs Index);
+}
+
 // class NodeConstantOp<string mnemonic, list<OpTrait> traits = []> : 
 //   DecisionForest_Op<mnemonic, traits> {
 //     string myStr = "";

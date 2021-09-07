@@ -1,11 +1,13 @@
 CodeGen for tile size == 1 for all trees
     * [Done] Add threshold and feature index type to tree type
     * [Done] Add tree types to forest type (list of individual tree types)
-    * Write tiling helpers
-        - Serialize model into file
-        - Read model from file into buffer
+    * [Done] Write tiling helpers
+        - [Done] Serialize model into file
+        - [Done] Read model from file into buffer
      
-    * LoadOp for tiled trees stored as memrefs
+    * [Done] LoadOp for tiled trees stored as memrefs
+    * Write pass to replace node values flowing through the IR with index values
+        - Remove the NodeToIndex and IndexToNode ops
     * Lower custom tree ops to LLVM dialect
         - Non vector implementation
 

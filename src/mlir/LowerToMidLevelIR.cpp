@@ -135,7 +135,7 @@ struct PredictForestOpLowering: public ConversionPattern {
             rewriter.create<scf::YieldOp>(location, static_cast<Value>(traverseTile));
         }
         rewriter.setInsertionPointAfter(whileLoop);
-        auto treePrediction = rewriter.create<decisionforest::GetLeafValueOp>(location, treeType.getResultType(), whileLoop.results()[0]);
+        auto treePrediction = rewriter.create<decisionforest::GetLeafValueOp>(location, treeType.getResultType(), tree, whileLoop.results()[0]);
         
         // result[i]
         auto resultElementType = resultTensorType.getElementType();

@@ -195,11 +195,11 @@ int main(int argc, char *argv[]) {
   TreeHeavy::XGBoostJSONParser<> xgBoostParser(context, argv[1], batchSize);
   xgBoostParser.Parse();
   auto module = xgBoostParser.GetEvaluationFunction();
-  module->dump();
+  // module->dump();
 
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
 
-  module->dump();
+  // module->dump();
 
   mlir::decisionforest::LowerEnsembleToMemrefs(context, module);
   module->dump();
