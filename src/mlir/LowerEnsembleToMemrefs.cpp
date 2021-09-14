@@ -68,11 +68,10 @@ using FeatureIndexType = int32_t;
 struct EnsembleConstantLoweringInfo {
   Value modelGlobal;
   Value offsetGlobal;
+  Value lengthGlobal;
   Type modelGlobalType;
   Type offsetGlobaltype;
-  std::vector<ThresholdType> thresholds;
-  std::vector<FeatureIndexType> featureIndices;
-  std::vector<int32_t> offsets;
+  Type lengthGlobalType;
 };
 
 // Maps an ensemble constant operation to a model memref and an offsets memref
@@ -130,12 +129,16 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     
     // TODO the names of the model and offset global should be generated so they're unique for each ensemble constant
     // TODO the getter function names need to be persisted with the actual tree values in the JSON so the runtime can call them. 
-    auto memrefTypes = AddGlobalMemrefs(owningModule, ensembleConstOp, rewriter, location, featureIndices.size());
-    auto getModelGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<0>(memrefTypes), "model");
-    auto getOffsetGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<1>(memrefTypes), "offsets");
+    std::string modelMemrefName = "model";
+    std::string offsetMemrefName = "offsets";
+    std::string lengthMemrefName = "lengths";    
+    auto memrefTypes = AddGlobalMemrefs(owningModule, ensembleConstOp, rewriter, location, featureIndices.size(), modelMemrefName, offsetMemrefName, lengthMemrefName);
+    auto getModelGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<0>(memrefTypes), modelMemrefName);
+    auto getOffsetGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<1>(memrefTypes), offsetMemrefName);
+    auto getLengthGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<1>(memrefTypes), lengthMemrefName);
     
-    EnsembleConstantLoweringInfo info {static_cast<Value>(getModelGlobal), static_cast<Value>(getOffsetGlobal), std::get<0>(memrefTypes), std::get<1>(memrefTypes),
-                                       thresholds, featureIndices, treeOffsets};
+    EnsembleConstantLoweringInfo info {static_cast<Value>(getModelGlobal), static_cast<Value>(getOffsetGlobal), static_cast<Value>(getLengthGlobal),
+                                       std::get<0>(memrefTypes), std::get<1>(memrefTypes), std::get<1>(memrefTypes)};
     ensembleConstantToMemrefsMap[op] = info;
     
     // rewriter.replaceOp(op, static_cast<Value>(getModelGlobal));
@@ -159,9 +162,9 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     module.push_back(getGlobalMemrefFunc);
   }
   
-  // TODO we also need to write the serialized model to a file here.
   std::tuple<Type, Type> AddGlobalMemrefs(mlir::ModuleOp module, mlir::decisionforest::EnsembleConstantOp& ensembleConstOp,
-                                          ConversionPatternRewriter &rewriter, Location location, int32_t modelMemrefSize) const {
+                                          ConversionPatternRewriter &rewriter, Location location, int32_t modelMemrefSize,
+                                          const std::string& modelMemrefName, const std::string& offsetMemrefName, const std::string& lengthMemrefName) const {
     mlir::decisionforest::DecisionForestAttribute forestAttribute = ensembleConstOp.forest();
     mlir::decisionforest::DecisionForest<>& forest = forestAttribute.GetDecisionForest();
 
@@ -182,18 +185,22 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     
     // auto modelMemrefSize = (int32_t)featureIndices.size();
     auto modelMemrefType = MemRefType::get({modelMemrefSize}, memrefElementType);
-    rewriter.create<memref::GlobalOp>(location, "model",
+    rewriter.create<memref::GlobalOp>(location, modelMemrefName,
                                       /*sym_visibility=*/rewriter.getStringAttr("private"),
                                       /*type=*/modelMemrefType,
                                       /*initial_value=*/rewriter.getUnitAttr(),
                                       /*constant=*/false);
-    AddGlobalMemrefGetter(module, "model", modelMemrefType, rewriter, location);
+    AddGlobalMemrefGetter(module, modelMemrefName, modelMemrefType, rewriter, location);
     
     auto offsetSize = (int32_t)forest.NumTrees();
     auto offsetMemrefType = MemRefType::get({offsetSize}, rewriter.getIndexType());
-    rewriter.create<memref::GlobalOp>(location, "offsets", rewriter.getStringAttr("private"),
+    rewriter.create<memref::GlobalOp>(location, offsetMemrefName, rewriter.getStringAttr("private"),
                                       offsetMemrefType, rewriter.getUnitAttr(), false);
-    AddGlobalMemrefGetter(module, "offsets", offsetMemrefType, rewriter, location);
+    AddGlobalMemrefGetter(module, offsetMemrefName, offsetMemrefType, rewriter, location);
+    
+    rewriter.create<memref::GlobalOp>(location, lengthMemrefName, rewriter.getStringAttr("private"),
+                                      offsetMemrefType, rewriter.getUnitAttr(), false);
+    AddGlobalMemrefGetter(module, lengthMemrefName, offsetMemrefType, rewriter, location);
 
     return std::make_tuple(modelMemrefType, offsetMemrefType);
   }
@@ -222,9 +229,11 @@ struct GetTreeOpLowering: public ConversionPattern {
     Value treeIndex = operands[1];
 
     auto modelMemrefIndex = rewriter.create<memref::LoadOp>(location, ensembleInfo.offsetGlobal, treeIndex);
-    int32_t treeLength = 100; // TODO Need to put this into the map too
+    // TODO There is no way to infer the length of the tree memref here (since this could potentially be multiple trees.)
+    // The length of the memref needs to be a runtime value with the length of the tree. This may need an additional global.
+    auto treeLength = rewriter.create<memref::LoadOp>(location, ensembleInfo.lengthGlobal, treeIndex);; // TODO Need to put this into the map too
     auto treeMemref = rewriter.create<memref::SubViewOp>(location, ensembleInfo.modelGlobal, ArrayRef<OpFoldResult>({static_cast<Value>(modelMemrefIndex)}),
-                                                         ArrayRef<OpFoldResult>({rewriter.getIndexAttr(treeLength)}), ArrayRef<OpFoldResult>({rewriter.getIndexAttr(1)}));
+                                                         ArrayRef<OpFoldResult>({static_cast<Value>(treeLength)}), ArrayRef<OpFoldResult>({rewriter.getIndexAttr(1)}));
 
     getTreeOperationMap[op] = static_cast<Value>(treeMemref);
 

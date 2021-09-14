@@ -75,10 +75,13 @@ public:
                                 std::list<std::vector<FeatureIndexType>>& serializedFetureIndices,
                                 const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth);
     void InitializeBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets);
+    void InitializeOffsetBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets);
+    void InitializeLengthBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets);
     void ClearAllData();
     static ForestJSONReader& GetInstance() {
         return m_instance;
     }
+    static int32_t GetLengthOfTree(std::vector<int32_t>& offsets, int32_t treeIndex);
 };
 
 void PersistDecisionForest(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType);

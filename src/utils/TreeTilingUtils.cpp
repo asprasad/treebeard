@@ -8,6 +8,15 @@ namespace decisionforest
 
 ForestJSONReader ForestJSONReader::m_instance;
 
+int32_t ForestJSONReader::GetLengthOfTree(std::vector<int32_t>& offsets, int32_t treeIndex) {
+  auto startOffset = offsets[treeIndex];
+  ++treeIndex;
+  while (offsets[treeIndex] == -1)
+    ++treeIndex;
+  auto endOffset = offsets[treeIndex];
+  return endOffset - startOffset;
+}
+
 // Since this a tree compile time function, we don't really care about the actual 
 // type of threshold and index. We'll just write the widths to the file and make
 // sure we initialize the runtime buffer (model memrefs) with the correct types
@@ -232,6 +241,14 @@ void ForestJSONReader::InitializeBuffer(void* bufPtr, int32_t tileSize, int32_t 
     assert (listIter != m_tileSizeEntries.end() && "Given tileSize and bit width entry must be present!");
     auto modelCopier = GetModelCopier(tileSize, thresholdBitWidth, indexBitWidth);
     modelCopier->CopyElements(reinterpret_cast<char*>(bufPtr), treeOffsets, listIter->serializedThresholds, listIter->serializedFetureIndices, listIter->treeIndices);
+}
+
+void ForestJSONReader::InitializeOffsetBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets) {
+    assert(false && "Unimplemented");
+}
+
+void ForestJSONReader::InitializeLengthBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets) {
+    assert(false && "Unimplemented");
 }
 
 // Ultimately, this will write a JSON file. For now, we're just 
