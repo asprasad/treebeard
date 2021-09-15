@@ -15,6 +15,7 @@ namespace decisionforest
 {
 void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext& context, mlir::ModuleOp module);
 void LowerEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module);
+void ConvertNodeTypeToIndexType(mlir::MLIRContext& context, mlir::ModuleOp module);
 }
 }
 
@@ -198,10 +199,12 @@ int main(int argc, char *argv[]) {
   // module->dump();
 
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
-
   // module->dump();
 
   mlir::decisionforest::LowerEnsembleToMemrefs(context, module);
+  // module->dump();
+
+  mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   module->dump();
 
   std::vector<double> data(8);

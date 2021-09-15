@@ -7,8 +7,9 @@ CodeGen for tile size == 1 for all trees
      
     * [Done] LoadOp for tiled trees stored as memrefs
     * [Done] BUG The length of each tree needs to be passed to the memref subview op
-    * Write pass to replace node values flowing through the IR with index values
+    * [Done] Write pass to replace node values flowing through the IR with index values
         - Remove the NodeToIndex and IndexToNode ops
+    * Lower all other dialects to LLVM
     * Lower custom tree ops to LLVM dialect
         - Non vector implementation
     * Initialization routines for length and offset memrefs need to be implemented
