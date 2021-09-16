@@ -4,7 +4,6 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -331,10 +330,12 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     // Load feature index
     auto loadFeatureIndexOp = rewriter.create<decisionforest::LoadTileFeatureIndicesOp>(location, featureIndexType, treeMemref, static_cast<Value>(nodeIndex));
     // Load feature value
-    auto rowTensor = operands[2];
-    auto rowTensorType = rowTensor.getType().cast<RankedTensorType>();
+    auto rowMemref = operands[2];
+    auto rowMemrefType = rowMemref.getType().cast<MemRefType>();
     auto rowIndex = rewriter.create<IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadFeatureIndexOp));
-    auto feature = rewriter.create<tensor::ExtractOp>(location, rowTensorType.getElementType(), rowTensor, static_cast<Value>(rowIndex));
+    auto zeroIndex = rewriter.create<ConstantIndexOp>(location, 0);
+    auto feature = rewriter.create<memref::LoadOp>(location, rowMemrefType.getElementType(), rowMemref,
+                                                   ValueRange({static_cast<Value>(zeroIndex), static_cast<Value>(rowIndex)}));
     // 
     // result = Compare
     // TODO we need a cast here to make sure the threshold and the row element are the same type. The op expects both operands to be the same type.
@@ -389,12 +390,12 @@ struct GetLeafValueOpLowering : public ConversionPattern {
 
 struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLoweringPass, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, tensor::TensorDialect, StandardOpsDialect, scf::SCFDialect>();
+    registry.insert<AffineDialect, memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect>();
   }
   void runOnFunction() final {
     ConversionTarget target(getContext());
 
-    target.addLegalDialect<AffineDialect, memref::MemRefDialect, tensor::TensorDialect, StandardOpsDialect, scf::SCFDialect, decisionforest::DecisionForestDialect>();
+    target.addLegalDialect<AffineDialect, memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect, decisionforest::DecisionForestDialect>();
 
     target.addIllegalOp<decisionforest::EnsembleConstantOp,
                         decisionforest::GetTreeFromEnsembleOp,

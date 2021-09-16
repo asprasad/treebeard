@@ -91,7 +91,8 @@ class DecisionForest_Op<string mnemonic, list<OpTrait> traits = []> :
 //------- High level IR Ops ------------------
 // TODO Need to parameterize 
 // * The number of return values (may have multiple return probablities, class ID etc)
-def ReturnType : AnyTypeOf<[F16, F32, F64, F16Tensor, F32Tensor, F64Tensor]>;
+def InputDataType : AnyTypeOf<[F16MemRef, F32MemRef, F64MemRef]>;
+def ReturnType : AnyTypeOf<[F16, F32, F64, F16Tensor, F32Tensor, F64Tensor, F16MemRef, F32MemRef, F64MemRef]>;
 def LeafNodeValueType : AnyTypeOf<[F16, F32, F64]>;
 
 def PredictForestOp : DecisionForest_Op<"predict_ensemble"> {
@@ -99,26 +100,34 @@ def PredictForestOp : DecisionForest_Op<"predict_ensemble"> {
     let description = "Represents the actual inference computation on the forest. Takes a tensor operand and produces a result."
                       "Contains the actual forest as an attribute.";
 
-    let arguments = (ins DecisionForestAttr:$ensemble, F64Tensor:$data);
+    let arguments = (ins DecisionForestAttr:$ensemble, InputDataType:$data, InputDataType:$result);
 
-    let results = (outs ReturnType);
+    // Just returns its result argument after filling in the results
+    let results = (outs InputDataType);
 
     let extraClassDeclaration = [{
       int32_t getBatchSize() { 
-        auto tensorReturnType = data().getType().cast<mlir::RankedTensorType>();
-        if (!tensorReturnType)
-          return 1;
-        return tensorReturnType.getShape()[0];
+       
+        if (data().getType().isa<mlir::RankedTensorType>()) {
+          auto tensorReturnType = data().getType().cast<mlir::RankedTensorType>();
+          return tensorReturnType.getShape()[0];
+        }
+        else if (data().getType().isa<mlir::MemRefType>()) {
+          auto memrefReturnType = data().getType().cast<mlir::MemRefType>();
+          return memrefReturnType.getShape()[0];
+        }
+        return 1;
       }
     }];
 }
 
-def ReturnOp : DecisionForest_Op<"return", [NoSideEffect, HasParent<"FuncOp">,Terminator]> {
-  let summary = "return operation";
-  let description = "Represents function return operation. Takes optional tensor operand and produces no results.";
-  let arguments = (ins ReturnType:$input); 
-  // let verifier = [{return ::verify(*this); }];
-}
+// NOTE We will use the std.return op. We don't need our own. 
+// def ReturnOp : DecisionForest_Op<"return", [NoSideEffect, HasParent<"FuncOp">,Terminator]> {
+//   let summary = "return operation";
+//   let description = "Represents function return operation. Takes optional tensor operand and produces no results.";
+//   let arguments = (ins ReturnType:$input); 
+//   // let verifier = [{return ::verify(*this); }];
+// }
 
 // ----- Mid-level IR Ops ------
 
@@ -178,7 +187,7 @@ def GetLeafValueOp : DecisionForest_Op<"getLeafValue", [NoSideEffect]> {
 def TraverseTreeTileOp : DecisionForest_Op<"traverseTreeTile", [NoSideEffect]> {
   let summary = "Traverse one tile of tree.";
   let description = "Traverse one tile of the tree passed as argument starting from the node passed as argument. Returns the resultant node.";
-  let arguments = (ins TreeType:$tree, NodeType:$node, F64Tensor:$data);
+  let arguments = (ins TreeType:$tree, NodeType:$node, InputDataType:$data);
 
   let results = (outs NodeType);
 }
@@ -186,7 +195,7 @@ def TraverseTreeTileOp : DecisionForest_Op<"traverseTreeTile", [NoSideEffect]> {
 def TraverseTileOfConstTreeOp : DecisionForest_Op<"traverseTileOfConstTree", [NoSideEffect]> {
   let summary = "Traverse one tile of a constant tree.";
   let description = "Traverse one tile of a constant tree stored as an attribute starting from the node passed as argument. Returns the resultant node.";
-  let arguments = (ins DecisionTreeAttr:$tree, NodeType:$node, F64Tensor:$data);
+  let arguments = (ins DecisionTreeAttr:$tree, NodeType:$node, InputDataType:$data);
 
   let results = (outs NodeType);
 }

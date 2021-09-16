@@ -2,11 +2,6 @@
 #include "json/xgboostparser.h"
 #include "include/TreeTilingUtils.h"
 
-// #include "mlir/Dialect.h"
-
-// #include "mlir/DecisionTreeAttributes.h"
-// #include "mlir/DecisionTreeTypes.h"
-
 using namespace std;
 
 namespace mlir
@@ -16,6 +11,7 @@ namespace decisionforest
 void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext& context, mlir::ModuleOp module);
 void LowerEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module);
 void ConvertNodeTypeToIndexType(mlir::MLIRContext& context, mlir::ModuleOp module);
+void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module);
 }
 }
 
@@ -205,6 +201,9 @@ int main(int argc, char *argv[]) {
   // module->dump();
 
   mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
+  // module->dump();
+
+  mlir::decisionforest::LowerToLLVM(context, module);
   module->dump();
 
   std::vector<double> data(8);

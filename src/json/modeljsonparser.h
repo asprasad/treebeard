@@ -101,24 +101,24 @@ protected:
         const auto& features = m_forest->GetFeatures();
         mlir::Type elementType = GetMLIRTypeFromString(features.front().type, m_builder);
         int64_t shape[] = { static_cast<int64_t>(features.size()) };
-        return mlir::RankedTensorType::get(shape, elementType);
+        return mlir::MemRefType::get(shape, elementType);
     }
     mlir::Type GetFunctionArgumentType()
     {
         const auto& features = m_forest->GetFeatures();
         mlir::Type elementType = GetMLIRTypeFromString(features.front().type, m_builder);
         int64_t shape[] = { m_batchSize, static_cast<int64_t>(features.size())};
-        return mlir::RankedTensorType::get(shape, elementType);
+        return mlir::MemRefType::get(shape, elementType);
     }
-    mlir::Type GetFunctionReturnType()
+    mlir::Type GetFunctionResultType()
     {
-        return mlir::RankedTensorType::get(m_batchSize, GetMLIRType(ReturnType(), m_builder));
+        return mlir::MemRefType::get(m_batchSize, GetMLIRType(ReturnType(), m_builder));
     }
     mlir::FunctionType GetFunctionType()
     {
         auto argType = GetFunctionArgumentType();
-        auto returnType = GetFunctionReturnType();
-        return m_builder.getFunctionType(argType, returnType);
+        auto resultType = GetFunctionResultType();
+        return m_builder.getFunctionType({argType, resultType}, resultType);
     }
     mlir::FuncOp GetFunctionPrototype()
     {
@@ -161,8 +161,8 @@ public:
                                                                       mlir::decisionforest::ReductionType::kAdd, treeType);
         auto forestAttribute = mlir::decisionforest::DecisionForestAttribute::get(forestType, *m_forest);
 
-        auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(m_builder.getUnknownLoc(), GetFunctionReturnType(),
-                                                                                 forestAttribute, entryBlock.getArguments()[0]);
+        auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(m_builder.getUnknownLoc(), GetFunctionResultType(),
+                                                                                 forestAttribute, entryBlock.getArguments()[0], entryBlock.getArguments()[1]);
 
         m_builder.create<mlir::ReturnOp>(m_builder.getUnknownLoc(), static_cast<mlir::Value>(predictOp));
         if (failed(mlir::verify(m_module))) {

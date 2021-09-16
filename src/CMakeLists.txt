@@ -17,6 +17,9 @@ set(LIBS
         #MLIRSupport
         #MLIRTargetLLVMIRExport
         #MLIRTransforms
+        #MLIRTensorTransforms
+        #MLIRSCFTransforms
+        #MLIRLinalgTransforms
         )
 add_llvm_executable(tree-heavy
         main.cpp)
