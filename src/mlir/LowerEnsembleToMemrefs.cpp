@@ -148,7 +148,7 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
 
   void AddGlobalMemrefGetter(mlir::ModuleOp module, std::string globalName, Type memrefType, ConversionPatternRewriter &rewriter, Location location) const {
     SaveAndRestoreInsertionPoint saveAndRestoreEntryPoint(rewriter);
-    auto getMemrefFuncType = rewriter.getFunctionType(rewriter.getNoneType(), memrefType);
+    auto getMemrefFuncType = rewriter.getFunctionType(TypeRange({}), memrefType);
     std::string funcName = "Get_" + globalName;
     NamedAttribute visibilityAttribute{module.sym_visibilityAttrName(), rewriter.getStringAttr("public")};
     auto getGlobalMemrefFunc = FuncOp::create(location, funcName, getMemrefFuncType, ArrayRef<NamedAttribute>(visibilityAttribute));

@@ -27,39 +27,136 @@
 using namespace mlir;
 
 namespace {
+
+const int32_t kAlignedPointerIndexInMemrefStruct = 1;
+const int32_t kFeatureIndexElementNumberInTile = 1;
+
+struct LoadTileThresholdOpLowering: public ConversionPattern {
+  LoadTileThresholdOpLowering(LLVMTypeConverter& typeConverter)
+  : ConversionPattern(typeConverter, mlir::decisionforest::LoadTileThresholdsOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    assert (operands.size() == 2);
+    decisionforest::LoadTileThresholdsOpAdaptor loadTileThresholdAdaptor(operands);
+    auto location = op->getLoc();
+    
+    auto memrefType = loadTileThresholdAdaptor.treeMemref().getType();
+    auto memrefStructType = memrefType.cast<LLVM::LLVMStructType>();
+    auto alignedPtrType = memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct].cast<LLVM::LLVMPointerType>();
+    auto tileType = alignedPtrType.getElementType().cast<LLVM::LLVMStructType>();
+    
+    auto indexVal = loadTileThresholdAdaptor.nodeIndex();
+    auto indexType = indexVal.getType();
+    // type2 is the integer type corresponding to the mlir index type
+    assert (indexType.isa<IntegerType>());
+    
+    auto resultType = op->getResults()[0].getType();
+    auto typeConverter = this->getTypeConverter();
+    auto thresholdType = typeConverter->convertType(resultType);
+
+    // Extract the memref's aligned pointer
+    auto extractMemrefBufferPointer = rewriter.create<LLVM::ExtractValueOp>(location, alignedPtrType, loadTileThresholdAdaptor.treeMemref(),
+                                                                            rewriter.getI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
+
+    // Get pointer to i'th tile
+    auto elementPtr = rewriter.create<LLVM::GEPOp>(location, alignedPtrType, static_cast<Value>(extractMemrefBufferPointer), indexVal);
+
+    // Cast point to threshold type
+    auto thresholdPtrType = LLVM::LLVMPointerType::get(thresholdType);
+    assert(thresholdType == tileType.getBody()[0] && "The result type should be the same as the threshold type in the struct.");
+    auto thresholdPtr = rewriter.create<LLVM::BitcastOp>(location, thresholdPtrType, elementPtr);
+
+    // Load the threshold
+    auto thresholdVal = rewriter.create<LLVM::LoadOp>(location, thresholdType, static_cast<Value>(thresholdPtr));
+    
+    rewriter.replaceOp(op, static_cast<Value>(thresholdVal));
+
+    return mlir::success();
+  }
+};
+
+struct LoadTileFeatureIndicesOpLowering: public ConversionPattern {
+  LoadTileFeatureIndicesOpLowering(LLVMTypeConverter& typeConverter) 
+  : ConversionPattern(typeConverter, mlir::decisionforest::LoadTileFeatureIndicesOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    assert(operands.size() == 2);
+    decisionforest::LoadTileFeatureIndicesOpAdaptor loadTileFeatureIndicesAdaptor(operands);
+    auto location = op->getLoc();
+
+    auto memrefType = loadTileFeatureIndicesAdaptor.treeMemref().getType();
+    auto memrefStructType = memrefType.cast<LLVM::LLVMStructType>();
+    auto alignedPtrType = memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct].cast<LLVM::LLVMPointerType>();
+    auto tileType = alignedPtrType.getElementType().cast<LLVM::LLVMStructType>();
+    
+    auto indexVal = loadTileFeatureIndicesAdaptor.nodeIndex();
+    auto indexType = indexVal.getType();
+    // type2 is the integer type corresponding to the mlir index type
+    assert (indexType.isa<IntegerType>());
+    
+    auto resultType = op->getResults()[0].getType();
+    auto typeConverter = this->getTypeConverter();
+    auto featureIndexType = typeConverter->convertType(resultType);
+
+    // Extract the memref's aligned pointer
+    auto extractMemrefBufferPointer = rewriter.create<LLVM::ExtractValueOp>(location, alignedPtrType, loadTileFeatureIndicesAdaptor.treeMemref(),
+                                                                            rewriter.getI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
+
+    // Get pointer to i'th tile
+    auto elementPtr = rewriter.create<LLVM::GEPOp>(location, alignedPtrType, static_cast<Value>(extractMemrefBufferPointer), indexVal);
+
+    // Load the tile so we can extract the feature index
+    auto tileValue = rewriter.create<LLVM::LoadOp>(location, tileType, static_cast<Value>(elementPtr));
+
+    // Extract the feature index
+    auto featureIndex = rewriter.create<LLVM::ExtractValueOp>(location, featureIndexType, static_cast<Value>(tileValue),
+                                                              rewriter.getI64ArrayAttr(kFeatureIndexElementNumberInTile));
+    rewriter.replaceOp(op, static_cast<Value>(featureIndex));
+
+    return mlir::success();
+  }
+};
+
 struct DecisionForestToLLVMLoweringPass : public PassWrapper<DecisionForestToLLVMLoweringPass, OperationPass<ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect, memref::MemRefDialect, tensor::TensorDialect, StandardOpsDialect>();
   }
   void runOnOperation() final;
 };
-} // end anonymous namespace
 
 void DecisionForestToLLVMLoweringPass::runOnOperation() {
   // define the conversion target
-  // LowerToLLVMOptions options(&getContext());
+  LowerToLLVMOptions options(&getContext());
   // options.useBarePtrCallConv = true;
   // options.emitCWrappers = true;
   LLVMConversionTarget target(getContext());
   target.addLegalOp<ModuleOp>();
-  target.addIllegalDialect<memref::MemRefDialect>();
-  // target.addLegalOp<memref::GlobalOp>(), memref::GetGlobalOp, memref::SubViewOp, memref::LoadOp, memref::StoreOp>();
-  target.addLegalDialect<decisionforest::DecisionForestDialect>();
-  // target.addLegalOp<FuncOp, ReturnOp>();
 
-  // Convert our MemRef types to LLVM types
-  LLVMTypeConverter typeConverter(&getContext()); //, options);
+  auto& context = getContext();
+  LLVMTypeConverter typeConverter(&getContext(), options);
+  typeConverter.addConversion([&](decisionforest::TiledNumericalNodeType type) {
+                auto thresholdType = type.getThresholdType();
+                auto indexType = type.getIndexType();
+                return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType}, true);
+              });
 
   RewritePatternSet patterns(&getContext());
   populateAffineToStdConversionPatterns(patterns);
   populateLoopToStdConversionPatterns(patterns);
   populateMemRefToLLVMConversionPatterns(typeConverter, patterns);
+  populateStdToLLVMFuncOpConversionPattern(typeConverter, patterns);
   populateStdToLLVMConversionPatterns(typeConverter, patterns);
+  patterns.add<LoadTileFeatureIndicesOpLowering,
+               LoadTileThresholdOpLowering>(typeConverter);
 
   auto module = getOperation();
   if (failed(applyFullConversion(module, target, std::move(patterns))))
     signalPassFailure();  
 }
+
+} // end anonymous namespace
 
 namespace mlir
 {

@@ -52,6 +52,7 @@ struct NodeToIndexOpLowering : public ConversionPattern {
         rewriter.replaceOp(op, indexValue);
     }
     else {
+        assert (false && "Expected node value to be replaced by an index value by now!");
         auto definingOp = nodeValue.getDefiningOp();
         if (auto indexToNodeOp = llvm::dyn_cast<mlir::decisionforest::IndexToNodeOp>(definingOp)) {
             auto iter = indexToNodeOpToIndexValueMap.find(definingOp);
@@ -85,6 +86,7 @@ struct IndexToNodeOpLowering : public ConversionPattern {
     auto indexValue = operands[1];
     auto definingOp = indexValue.getDefiningOp();
     if (auto nodeToIndexOp = llvm::dyn_cast<decisionforest::NodeToIndexOp>(op)) {
+        assert (false && "The source of an index value should not be a NodeToIndexOp here!");
         auto iter = nodeToIndexOpToIndexValueMap.find(definingOp);
         assert (iter != nodeToIndexOpToIndexValueMap.end());
         auto replacementValue = iter->second;
