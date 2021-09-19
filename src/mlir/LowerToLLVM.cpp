@@ -18,6 +18,22 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/Sequence.h"
 
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Export.h"
+#include "mlir/Transforms/Passes.h"
+#include "mlir/ExecutionEngine/ExecutionEngine.h"
+#include "mlir/ExecutionEngine/OptUtils.h"
+#include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
+
+#include "llvm/ADT/StringRef.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorOr.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
+
 // #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 // #include "mlir/Dialect/SCF/Passes.h"
 // #include "mlir/Dialect/Tensor/Transforms/Passes.h"
@@ -59,13 +75,15 @@ struct LoadTileThresholdOpLowering: public ConversionPattern {
     auto extractMemrefBufferPointer = rewriter.create<LLVM::ExtractValueOp>(location, alignedPtrType, loadTileThresholdAdaptor.treeMemref(),
                                                                             rewriter.getI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
 
-    // Get pointer to i'th tile
-    auto elementPtr = rewriter.create<LLVM::GEPOp>(location, alignedPtrType, static_cast<Value>(extractMemrefBufferPointer), indexVal);
-
-    // Cast point to threshold type
+    // Get a pointer to i'th tile's threshold
     auto thresholdPtrType = LLVM::LLVMPointerType::get(thresholdType);
     assert(thresholdType == tileType.getBody()[0] && "The result type should be the same as the threshold type in the struct.");
-    auto thresholdPtr = rewriter.create<LLVM::BitcastOp>(location, thresholdPtrType, elementPtr);
+    auto zeroConst = rewriter.create<LLVM::ConstantOp>(location, rewriter.getI32Type(), rewriter.getIntegerAttr(rewriter.getI32Type(), int64_t(0)));
+    auto thresholdPtr = rewriter.create<LLVM::GEPOp>(location, thresholdPtrType, static_cast<Value>(extractMemrefBufferPointer), 
+                                                   ValueRange({indexVal, static_cast<Value>(zeroConst)}));
+
+    // Cast point to threshold type
+    // auto thresholdPtr = rewriter.create<LLVM::BitcastOp>(location, thresholdPtrType, elementPtr);
 
     // Load the threshold
     auto thresholdVal = rewriter.create<LLVM::LoadOp>(location, thresholdType, static_cast<Value>(thresholdPtr));
@@ -104,15 +122,23 @@ struct LoadTileFeatureIndicesOpLowering: public ConversionPattern {
     auto extractMemrefBufferPointer = rewriter.create<LLVM::ExtractValueOp>(location, alignedPtrType, loadTileFeatureIndicesAdaptor.treeMemref(),
                                                                             rewriter.getI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
 
-    // Get pointer to i'th tile
-    auto elementPtr = rewriter.create<LLVM::GEPOp>(location, alignedPtrType, static_cast<Value>(extractMemrefBufferPointer), indexVal);
+    // Get pointer to i'th tile's feature index
+    auto featureIndexPtrType = LLVM::LLVMPointerType::get(featureIndexType);
+    assert(featureIndexType == tileType.getBody()[1] && "The result type should be the same as the feature index type in the struct.");
+    auto oneConst = rewriter.create<LLVM::ConstantOp>(location, rewriter.getI32Type(), rewriter.getIntegerAttr(rewriter.getI32Type(), int64_t(1)));
+    auto featureIndexPtr = rewriter.create<LLVM::GEPOp>(location, featureIndexPtrType, static_cast<Value>(extractMemrefBufferPointer), 
+                                                        ValueRange({indexVal, static_cast<Value>(oneConst)}));
 
     // Load the tile so we can extract the feature index
-    auto tileValue = rewriter.create<LLVM::LoadOp>(location, tileType, static_cast<Value>(elementPtr));
+    // auto tileValue = rewriter.create<LLVM::LoadOp>(location, tileType, static_cast<Value>(elementPtr));
 
     // Extract the feature index
-    auto featureIndex = rewriter.create<LLVM::ExtractValueOp>(location, featureIndexType, static_cast<Value>(tileValue),
-                                                              rewriter.getI64ArrayAttr(kFeatureIndexElementNumberInTile));
+    // auto featureIndex = rewriter.create<LLVM::ExtractValueOp>(location, featureIndexType, static_cast<Value>(tileValue),
+    //                                                           rewriter.getI64ArrayAttr(kFeatureIndexElementNumberInTile));
+    
+    // Load the threshold
+    auto featureIndex = rewriter.create<LLVM::LoadOp>(location, featureIndexType, static_cast<Value>(featureIndexPtr));
+    
     rewriter.replaceOp(op, static_cast<Value>(featureIndex));
 
     return mlir::success();
@@ -148,6 +174,7 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
   populateMemRefToLLVMConversionPatterns(typeConverter, patterns);
   populateStdToLLVMFuncOpConversionPattern(typeConverter, patterns);
   populateStdToLLVMConversionPatterns(typeConverter, patterns);
+
   patterns.add<LoadTileFeatureIndicesOpLowering,
                LoadTileThresholdOpLowering>(typeConverter);
 
@@ -167,11 +194,32 @@ void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module) {
   mlir::PassManager pm(&context);
   // mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
   pm.addPass(std::make_unique<DecisionForestToLLVMLoweringPass>());
-
+  pm.addPass(createReconcileUnrealizedCastsPass());
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to LLVM failed.\n";
   }
 }
+
+int dumpLLVMIR(mlir::ModuleOp module) {
+  mlir::registerLLVMDialectTranslation(*module->getContext());
+
+  // Convert the module to LLVM IR in a new LLVM IR Context
+  llvm::LLVMContext llvmContext;
+  auto llvmModule = mlir::translateModuleToLLVMIR(module, llvmContext);
+  if (!llvmModule) {
+    llvm::errs() << "Failed to emit LLVM IR\n";
+    return -1;
+  }
+
+  // Init LLVM targets
+  llvm::InitializeNativeTarget();
+  llvm::InitializeNativeTargetAsmPrinter();
+  mlir::ExecutionEngine::setupTargetTriple(llvmModule.get());
+
+  llvm::errs() << *llvmModule << "\n";
+  return 0;
+}
+
 
 // The routine below lowers tensors to memrefs. We don't need it currently
 // as we're not using tensors. Commenting it out so we can remove some MLIR 

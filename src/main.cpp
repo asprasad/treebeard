@@ -12,6 +12,7 @@ void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext& context, mlir::ModuleOp m
 void LowerEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module);
 void ConvertNodeTypeToIndexType(mlir::MLIRContext& context, mlir::ModuleOp module);
 void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module);
+int dumpLLVMIR(mlir::ModuleOp module);
 }
 }
 
@@ -204,7 +205,9 @@ int main(int argc, char *argv[]) {
   // module->dump();
 
   mlir::decisionforest::LowerToLLVM(context, module);
-  module->dump();
+  // module->dump();
+
+  mlir::decisionforest::dumpLLVMIR(module);
 
   std::vector<double> data(8);
   auto decisionForest = xgBoostParser.GetForest();
