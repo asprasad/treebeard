@@ -4,4 +4,5 @@ Dialect.cpp
 LowerToMidLevelIR.cpp
 LowerEnsembleToMemrefs.cpp
 ConvertNodeTypeToIndexType.cpp
-LowerToLLVM.cpp)
+LowerToLLVM.cpp
+ExecutionHelpers.cpp)

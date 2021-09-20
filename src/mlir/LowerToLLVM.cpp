@@ -45,7 +45,43 @@ using namespace mlir;
 namespace {
 
 const int32_t kAlignedPointerIndexInMemrefStruct = 1;
+const int32_t kThresholdElementNumberInTile = 0;
 const int32_t kFeatureIndexElementNumberInTile = 1;
+
+void GenerateLoadStructElement(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter, 
+                               int64_t elementNumber, TypeConverter* typeConverter) {
+  const int32_t kTreeMemrefOperandNum = 0;
+  const int32_t kIndexOperandNum = 1;
+  auto location = op->getLoc();
+  
+  auto memrefType = operands[kTreeMemrefOperandNum].getType();
+  auto memrefStructType = memrefType.cast<LLVM::LLVMStructType>();
+  auto alignedPtrType = memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct].cast<LLVM::LLVMPointerType>();
+  auto tileType = alignedPtrType.getElementType().cast<LLVM::LLVMStructType>();
+  
+  auto indexVal = operands[kIndexOperandNum];
+  auto indexType = indexVal.getType();
+  assert (indexType.isa<IntegerType>());
+  
+  auto resultType = op->getResults()[0].getType();
+  auto elementType = typeConverter->convertType(resultType);
+
+  // Extract the memref's aligned pointer
+  auto extractMemrefBufferPointer = rewriter.create<LLVM::ExtractValueOp>(location, alignedPtrType, operands[kTreeMemrefOperandNum],
+                                                                          rewriter.getI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
+
+  // Get a pointer to i'th tile's threshold
+  auto elementPtrType = LLVM::LLVMPointerType::get(elementType);
+  assert(elementType == tileType.getBody()[elementNumber] && "The result type should be the same as the element type in the struct.");
+  auto elemIndexConst = rewriter.create<LLVM::ConstantOp>(location, rewriter.getI32Type(), rewriter.getIntegerAttr(rewriter.getI32Type(), elementNumber));
+  auto elementPtr = rewriter.create<LLVM::GEPOp>(location, elementPtrType, static_cast<Value>(extractMemrefBufferPointer), 
+                                                ValueRange({indexVal, static_cast<Value>(elemIndexConst)}));
+
+  // Load the threshold
+  auto elementVal = rewriter.create<LLVM::LoadOp>(location, elementType, static_cast<Value>(elementPtr));
+  
+  rewriter.replaceOp(op, static_cast<Value>(elementVal));
+}
 
 struct LoadTileThresholdOpLowering: public ConversionPattern {
   LoadTileThresholdOpLowering(LLVMTypeConverter& typeConverter)
@@ -54,42 +90,7 @@ struct LoadTileThresholdOpLowering: public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     assert (operands.size() == 2);
-    decisionforest::LoadTileThresholdsOpAdaptor loadTileThresholdAdaptor(operands);
-    auto location = op->getLoc();
-    
-    auto memrefType = loadTileThresholdAdaptor.treeMemref().getType();
-    auto memrefStructType = memrefType.cast<LLVM::LLVMStructType>();
-    auto alignedPtrType = memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct].cast<LLVM::LLVMPointerType>();
-    auto tileType = alignedPtrType.getElementType().cast<LLVM::LLVMStructType>();
-    
-    auto indexVal = loadTileThresholdAdaptor.nodeIndex();
-    auto indexType = indexVal.getType();
-    // type2 is the integer type corresponding to the mlir index type
-    assert (indexType.isa<IntegerType>());
-    
-    auto resultType = op->getResults()[0].getType();
-    auto typeConverter = this->getTypeConverter();
-    auto thresholdType = typeConverter->convertType(resultType);
-
-    // Extract the memref's aligned pointer
-    auto extractMemrefBufferPointer = rewriter.create<LLVM::ExtractValueOp>(location, alignedPtrType, loadTileThresholdAdaptor.treeMemref(),
-                                                                            rewriter.getI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
-
-    // Get a pointer to i'th tile's threshold
-    auto thresholdPtrType = LLVM::LLVMPointerType::get(thresholdType);
-    assert(thresholdType == tileType.getBody()[0] && "The result type should be the same as the threshold type in the struct.");
-    auto zeroConst = rewriter.create<LLVM::ConstantOp>(location, rewriter.getI32Type(), rewriter.getIntegerAttr(rewriter.getI32Type(), int64_t(0)));
-    auto thresholdPtr = rewriter.create<LLVM::GEPOp>(location, thresholdPtrType, static_cast<Value>(extractMemrefBufferPointer), 
-                                                   ValueRange({indexVal, static_cast<Value>(zeroConst)}));
-
-    // Cast point to threshold type
-    // auto thresholdPtr = rewriter.create<LLVM::BitcastOp>(location, thresholdPtrType, elementPtr);
-
-    // Load the threshold
-    auto thresholdVal = rewriter.create<LLVM::LoadOp>(location, thresholdType, static_cast<Value>(thresholdPtr));
-    
-    rewriter.replaceOp(op, static_cast<Value>(thresholdVal));
-
+    GenerateLoadStructElement(op, operands, rewriter, kThresholdElementNumberInTile, getTypeConverter());
     return mlir::success();
   }
 };
@@ -101,46 +102,7 @@ struct LoadTileFeatureIndicesOpLowering: public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     assert(operands.size() == 2);
-    decisionforest::LoadTileFeatureIndicesOpAdaptor loadTileFeatureIndicesAdaptor(operands);
-    auto location = op->getLoc();
-
-    auto memrefType = loadTileFeatureIndicesAdaptor.treeMemref().getType();
-    auto memrefStructType = memrefType.cast<LLVM::LLVMStructType>();
-    auto alignedPtrType = memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct].cast<LLVM::LLVMPointerType>();
-    auto tileType = alignedPtrType.getElementType().cast<LLVM::LLVMStructType>();
-    
-    auto indexVal = loadTileFeatureIndicesAdaptor.nodeIndex();
-    auto indexType = indexVal.getType();
-    // type2 is the integer type corresponding to the mlir index type
-    assert (indexType.isa<IntegerType>());
-    
-    auto resultType = op->getResults()[0].getType();
-    auto typeConverter = this->getTypeConverter();
-    auto featureIndexType = typeConverter->convertType(resultType);
-
-    // Extract the memref's aligned pointer
-    auto extractMemrefBufferPointer = rewriter.create<LLVM::ExtractValueOp>(location, alignedPtrType, loadTileFeatureIndicesAdaptor.treeMemref(),
-                                                                            rewriter.getI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
-
-    // Get pointer to i'th tile's feature index
-    auto featureIndexPtrType = LLVM::LLVMPointerType::get(featureIndexType);
-    assert(featureIndexType == tileType.getBody()[1] && "The result type should be the same as the feature index type in the struct.");
-    auto oneConst = rewriter.create<LLVM::ConstantOp>(location, rewriter.getI32Type(), rewriter.getIntegerAttr(rewriter.getI32Type(), int64_t(1)));
-    auto featureIndexPtr = rewriter.create<LLVM::GEPOp>(location, featureIndexPtrType, static_cast<Value>(extractMemrefBufferPointer), 
-                                                        ValueRange({indexVal, static_cast<Value>(oneConst)}));
-
-    // Load the tile so we can extract the feature index
-    // auto tileValue = rewriter.create<LLVM::LoadOp>(location, tileType, static_cast<Value>(elementPtr));
-
-    // Extract the feature index
-    // auto featureIndex = rewriter.create<LLVM::ExtractValueOp>(location, featureIndexType, static_cast<Value>(tileValue),
-    //                                                           rewriter.getI64ArrayAttr(kFeatureIndexElementNumberInTile));
-    
-    // Load the threshold
-    auto featureIndex = rewriter.create<LLVM::LoadOp>(location, featureIndexType, static_cast<Value>(featureIndexPtr));
-    
-    rewriter.replaceOp(op, static_cast<Value>(featureIndex));
-
+    GenerateLoadStructElement(op, operands, rewriter, kFeatureIndexElementNumberInTile, getTypeConverter());
     return mlir::success();
   }
 };

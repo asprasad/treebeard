@@ -9,8 +9,8 @@ CodeGen for tile size == 1 for all trees
     * [Done] BUG The length of each tree needs to be passed to the memref subview op
     * [Done] Write pass to replace node values flowing through the IR with index values
         - Remove the NodeToIndex and IndexToNode ops
-    * Lower all other dialects to LLVM
-    * Lower custom tree ops to LLVM dialect
+    * [Done] Lower all other dialects to LLVM
+    * [Done] Lower custom tree ops to LLVM dialect
         - Non vector implementation
     * Initialization routines for length and offset memrefs need to be implemented
 
@@ -23,9 +23,11 @@ Code gen for unequal tile size across trees
     - Generate >1 model memrefs
     - ??
 
+Generate method to initialize model memref that takes buffers containing actual values as arguments
+    - This will be safer than guessing the layout of the tile struct
 
-* Memref of memrefs, Memref of struct types
-* Initialization of the model memrefs
+* [Done] Memref of memrefs, Memref of struct types
+* [Done] Initialization of the model memrefs
     - Method to figure out the storage needed for each tree (number of nodes, size of each node)
     - Generate constants that can be used to initialize the model memref
 * Add SIMD and Pipeline Containers
