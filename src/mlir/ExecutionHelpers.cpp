@@ -1,79 +1,83 @@
 #include <iostream>
 
-#include "mlir/ExecutionEngine/ExecutionEngine.h"
-#include "mlir/ExecutionEngine/OptUtils.h"
-#include "mlir/IR/AsmState.h"
-#include "mlir/IR/BuiltinOps.h"
-#include "mlir/IR/MLIRContext.h"
-#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
-#include "mlir/Target/LLVMIR/Export.h"
-
-#include "llvm/Support/TargetSelect.h"
-
-namespace {
-
-template<typename T, int32_t Rank>
-struct Memref {
-  T *bufferPtr;
-  T *alignedPtr;
-  int64_t offset;
-  int64_t lengths[Rank];
-  int64_t strides[Rank];
-};
-
-using LengthMemrefType = Memref<int64_t, 1>;
-using OffsetMemrefType = Memref<int64_t, 1>;
-using ResultMemrefType = Memref<double, 1>;
-
-class InferenceRunner {
-  llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> m_maybeEngine;
-  std::unique_ptr<mlir::ExecutionEngine>& m_engine;
-  mlir::ModuleOp m_module;
-
-  static llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> CreateEngine(mlir::ModuleOp module) {
-    llvm::InitializeNativeTarget();
-    llvm::InitializeNativeTargetAsmPrinter();
-
-    mlir::registerLLVMDialectTranslation(*module->getContext());
-
-    // An optimization pipeline to use within the execution engine.
-    auto optPipeline = mlir::makeOptimizingTransformer(/*optLevel=*/ 0, /*sizeLevel=*/0, /*targetMachine=*/nullptr);
-
-    // Create an MLIR execution engine. The execution engine eagerly JIT-compiles
-    // the module.
-    auto maybeEngine = mlir::ExecutionEngine::create(module, /*llvmModuleBuilder=*/nullptr, optPipeline);
-    assert(maybeEngine && "failed to construct an execution engine");
-    return maybeEngine;
-  }
-public:
-  InferenceRunner(mlir::ModuleOp module) 
-    :m_maybeEngine(CreateEngine(module)), m_engine(m_maybeEngine.get()), m_module(module)
-  {   }
-
-  int32_t InitializeLengthsArray() {
-    auto& engine = m_engine;
-    Memref<int64_t, 1> lengthMemref;
-    void *args[] = { &lengthMemref };
-    auto invocationResult = engine->invokePacked("Get_lengths", args);
-    if (invocationResult) {
-      llvm::errs() << "JIT invocation failed\n";
-      return -1;
-    }
-    std::cout << lengthMemref.lengths[0] << std::endl;
-    return 0;
-  }
-};
-
-} //anonymous
+#include "ExecutionHelpers.h"
 
 namespace mlir
 {
 namespace decisionforest
 {
+llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> InferenceRunner::CreateEngine(mlir::ModuleOp module) {
+  llvm::InitializeNativeTarget();
+  llvm::InitializeNativeTargetAsmPrinter();
 
-int runJIT(mlir::ModuleOp module) {
-  InferenceRunner inferenceRunner(module);
-  inferenceRunner.InitializeLengthsArray();
+  mlir::registerLLVMDialectTranslation(*module->getContext());
+
+  // An optimization pipeline to use within the execution engine.
+  auto optPipeline = mlir::makeOptimizingTransformer(/*optLevel=*/ 0, /*sizeLevel=*/0, /*targetMachine=*/nullptr);
+
+  // Create an MLIR execution engine. The execution engine eagerly JIT-compiles
+  // the module.
+  auto maybeEngine = mlir::ExecutionEngine::create(module, /*llvmModuleBuilder=*/nullptr, optPipeline);
+  assert(maybeEngine && "failed to construct an execution engine");
+  return maybeEngine;
+}
+
+InferenceRunner::InferenceRunner(mlir::ModuleOp module) 
+  :m_maybeEngine(CreateEngine(module)), m_engine(m_maybeEngine.get()), m_module(module)
+{
+  InitializeLengthsArray();
+  InitializeOffsetsArray();
+  InitializeModelArray();
+}
+
+int32_t InferenceRunner::InitializeLengthsArray() {
+  // TODO The ForestJSONReader class needs to provide an interface to iterate over tile sizes and bit widths
+  // We need to construct the name of the getter function based on those. 
+  auto& engine = m_engine;
+  LengthMemrefType lengthMemref;
+  void *args[] = { &lengthMemref };
+  auto invocationResult = engine->invokePacked("Get_lengths", args);
+  if (invocationResult) {
+    llvm::errs() << "JIT invocation failed\n";
+    return -1;
+  }
+  std::cout << "Length memref length : " << lengthMemref.lengths[0] << std::endl;
+
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthMemref.alignedPtr, 1, 64, 32); 
+  return 0;
+}
+
+int32_t InferenceRunner::InitializeOffsetsArray() {
+  // TODO The ForestJSONReader class needs to provide an interface to iterate over tile sizes and bit widths
+  // We need to construct the name of the getter function based on those. 
+  auto& engine = m_engine;
+  OffsetMemrefType offsetMemref;
+  void *args[] = { &offsetMemref };
+  auto invocationResult = engine->invokePacked("Get_offsets", args);
+  if (invocationResult) {
+    llvm::errs() << "JIT invocation failed\n";
+    return -1;
+  }
+  std::cout << "Offset memref length : " << offsetMemref.lengths[0] << std::endl;
+
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(offsetMemref.alignedPtr, 1, 64, 32); 
+  return 0;
+}
+
+int32_t InferenceRunner::InitializeModelArray() {
+  // TODO The ForestJSONReader class needs to provide an interface to iterate over tile sizes and bit widths
+  // We need to construct the name of the getter function based on those. 
+  auto& engine = m_engine;
+  Memref<TileType<double, int32_t, 1>, 1> modelMemref;
+  void *args[] = { &modelMemref };
+  auto invocationResult = engine->invokePacked("Get_model", args);
+  if (invocationResult) {
+    llvm::errs() << "JIT invocation failed\n";
+    return -1;
+  }
+  std::cout << "Model memref length : " << modelMemref.lengths[0] << std::endl;
+  std::vector<int32_t> offsets(mlir::decisionforest::ForestJSONReader::GetInstance().GetNumberOfTrees(), -1);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeBuffer(modelMemref.alignedPtr, 1, 64, 32, offsets); 
   return 0;
 }
 

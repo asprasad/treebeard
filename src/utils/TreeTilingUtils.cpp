@@ -8,6 +8,8 @@ namespace decisionforest
 
 ForestJSONReader ForestJSONReader::m_instance;
 
+// TODO How does this work for the last tree? We need to also know the length of the full serialization to compute the length
+// of the last tree
 int32_t ForestJSONReader::GetLengthOfTree(std::vector<int32_t>& offsets, int32_t treeIndex) {
   auto startOffset = offsets[treeIndex];
   ++treeIndex;
@@ -70,7 +72,7 @@ void AppendAtEndOfList(std::list<T>& l, std::list<T>& newElements) {
     l.insert(std::end(l), std::begin(newElements), std::end(newElements));
 }
 
-void ForestJSONReader::AddSingleTileSizeEntry(std::list<int32_t>& treeIndices, std::list<std::vector<ThresholdType>>& serializedThresholds, 
+void ForestJSONReader::AddSingleTileSizeEntry(std::list<int32_t>& treeIndices, std::list<int32_t>& numTilesList, std::list<std::vector<ThresholdType>>& serializedThresholds, 
                                               std::list<std::vector<FeatureIndexType>>& serializedFetureIndices,
                                               const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth) {
     // Find if there is already an entry with the given tileSize, thresholdWidth and indexWidth.
@@ -81,23 +83,25 @@ void ForestJSONReader::AddSingleTileSizeEntry(std::list<int32_t>& treeIndices, s
         ++listIter;
     }
     if (listIter == m_tileSizeEntries.end()) {
-        SingleTileSizeEntry entry {tileSize, thresholdBitWidth, indexBitWidth, treeIndices, serializedThresholds, serializedFetureIndices};
+        SingleTileSizeEntry entry {tileSize, thresholdBitWidth, indexBitWidth, treeIndices, numTilesList, serializedThresholds, serializedFetureIndices};
         m_tileSizeEntries.push_back(entry);
     }
     else {
         AppendAtEndOfList(listIter->treeIndices, treeIndices);
+        AppendAtEndOfList(listIter->numberOfTiles, numTilesList);
         AppendAtEndOfList(listIter->serializedThresholds, serializedThresholds);
         AppendAtEndOfList(listIter->serializedFetureIndices, serializedFetureIndices);
     }
 }
 
-void ForestJSONReader::AddSingleTree(int32_t treeIndex, std::vector<ThresholdType>& serializedThresholds, std::vector<FeatureIndexType>& serializedFetureIndices,
+void ForestJSONReader::AddSingleTree(int32_t treeIndex, int32_t numTiles, std::vector<ThresholdType>& serializedThresholds, std::vector<FeatureIndexType>& serializedFetureIndices,
                                      const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth) {
     std::list<int32_t> treeIndices = { treeIndex };
+    std::list<int32_t> numTilesList = { numTiles };
     std::list<std::vector<ThresholdType>> serializedThresholdsList = { serializedThresholds };
     std::list<std::vector<FeatureIndexType>> serializedFetureIndicesList = { serializedFetureIndices };
 
-    AddSingleTileSizeEntry(treeIndices, serializedThresholdsList, serializedFetureIndicesList, tileSize, thresholdBitWidth, indexBitWidth);
+    AddSingleTileSizeEntry(treeIndices, numTilesList, serializedThresholdsList, serializedFetureIndicesList, tileSize, thresholdBitWidth, indexBitWidth);
 }
 
 void ForestJSONReader::ClearAllData() {
@@ -120,7 +124,7 @@ class CopyModelValuesIntoBufferInterface {
         ptr += bytesToIncrement;
     }
 public:
-    virtual void CopyElements(char* bufPtr, std::vector<int32_t>& offsets, std::list<std::vector<ThresholdType>>& thresholdVals, 
+    virtual void CopyElements(char* bufPtr, std::vector<int32_t>& offsets, std::list<int32_t>& numberOfTiles, std::list<std::vector<ThresholdType>>& thresholdVals, 
                               std::list<std::vector<FeatureIndexType>>& featureIndices, std::list<int32_t>& treeIndices) = 0;
 };
 
@@ -163,15 +167,21 @@ public:
          // m_thresholdSizeInBytes(thresholdSize), m_featureIndexSizeInBytes(featureIndexSize)
     {}
 
-    void CopyElements(char* bufPtr, std::vector<int32_t>& offsets, std::list<std::vector<ThresholdType>>& thresholdVals, 
+    void CopyElements(char* bufPtr, std::vector<int32_t>& offsets, std::list<int32_t>& numberOfTiles, std::list<std::vector<ThresholdType>>& thresholdVals, 
                       std::list<std::vector<FeatureIndexType>>& featureIndices, std::list<int32_t>& treeIndices) override {
         
+        // TODO this function assumes that all trees have non zero elements to write into the output buffer. 
+        // This may not be the case when we have multiple tile sizes. This function needs to check and 
+        // return early when a tree has no tiles to write for the current tile size (maybe offset[i] == offset[i+1]
+        // -- but how will this work for the last tree?)
+        // Actually, this is only going over tree indices that are non-empty. So maybe not a problem?
         assert (thresholdVals.size() == featureIndices.size());
         assert (treeIndices.size() == thresholdVals.size());
 
         auto thresholdIter = thresholdVals.begin();
         auto featureIndexIter = featureIndices.begin();
         auto treeIndexIter = treeIndices.begin();
+        auto numTilesIter = numberOfTiles.begin();
         // This is the offset into the buffer in terms of tiles
         int32_t currTileOffset = 0;
         while (thresholdIter != thresholdVals.end())
@@ -186,10 +196,11 @@ public:
             auto tilesWritten = CopySingleTree(bufPtr, *thresholdIter, *featureIndexIter);
 
             currTileOffset += tilesWritten;
-
+            assert(*numTilesIter == tilesWritten && "Number of tiles copied should match");
             ++thresholdIter;
             ++featureIndexIter;
             ++treeIndexIter;
+            ++numTilesIter;
         }
     }
 };
@@ -230,7 +241,7 @@ CopyModelValuesIntoBufferInterface* GetModelCopier(int32_t tileSize, int32_t thr
     return nullptr;
 }
 
-void ForestJSONReader::InitializeBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets) {
+std::list<ForestJSONReader::SingleTileSizeEntry>::iterator ForestJSONReader::FindEntry(int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth) {
     // Find if there is already an entry with the given tileSize, thresholdWidth and indexWidth.
     auto listIter = this->m_tileSizeEntries.begin();
     while (listIter != m_tileSizeEntries.end()) {
@@ -239,23 +250,60 @@ void ForestJSONReader::InitializeBuffer(void* bufPtr, int32_t tileSize, int32_t 
         ++listIter;
     }
     assert (listIter != m_tileSizeEntries.end() && "Given tileSize and bit width entry must be present!");
+    return listIter;
+}
+
+void ForestJSONReader::InitializeBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets) {
+    auto listIter = FindEntry(tileSize, thresholdBitWidth, indexBitWidth);
     auto modelCopier = GetModelCopier(tileSize, thresholdBitWidth, indexBitWidth);
-    modelCopier->CopyElements(reinterpret_cast<char*>(bufPtr), treeOffsets, listIter->serializedThresholds, listIter->serializedFetureIndices, listIter->treeIndices);
+    modelCopier->CopyElements(reinterpret_cast<char*>(bufPtr), treeOffsets, listIter->numberOfTiles, listIter->serializedThresholds, 
+                              listIter->serializedFetureIndices, listIter->treeIndices);
 }
 
-void ForestJSONReader::InitializeOffsetBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets) {
-    assert(false && "Unimplemented");
+void ForestJSONReader::InitializeOffsetBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth) {
+    IndexType *offsetBuffer = reinterpret_cast<IndexType*>(bufPtr);
+    auto listIter = FindEntry(tileSize, thresholdBitWidth, indexBitWidth);
+    assert (listIter->numberOfTiles.size() == listIter->treeIndices.size());
+    auto currentOffset = 0;
+    auto treeIndexIter = listIter->treeIndices.begin();
+    std::vector<bool> treeIndexPresent(m_numberOfTrees, false);
+    for (auto numTilesIter=listIter->numberOfTiles.begin() ; numTilesIter!=listIter->numberOfTiles.end() ; ++numTilesIter, ++treeIndexIter) {
+        offsetBuffer[*treeIndexIter] = currentOffset;
+        treeIndexPresent[*treeIndexIter] = true;
+        currentOffset += *numTilesIter;
+    }
+    for (size_t index=0 ; index<treeIndexPresent.size() ; ++index) {
+        if (treeIndexPresent[index] == false) {
+            offsetBuffer[index] = -1;
+        }
+    }
 }
 
-void ForestJSONReader::InitializeLengthBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets) {
-    assert(false && "Unimplemented");
+void ForestJSONReader::InitializeLengthBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth) {
+    IndexType *lengthBuffer = reinterpret_cast<IndexType*>(bufPtr);
+    auto listIter = FindEntry(tileSize, thresholdBitWidth, indexBitWidth);
+    assert (listIter->numberOfTiles.size() == listIter->treeIndices.size());
+    auto treeIndexIter = listIter->treeIndices.begin();
+    std::vector<bool> treeIndexPresent(m_numberOfTrees, false);
+    for (auto numTilesIter=listIter->numberOfTiles.begin() ; numTilesIter!=listIter->numberOfTiles.end() ; ++numTilesIter, ++treeIndexIter) {
+        lengthBuffer[*treeIndexIter] = *numTilesIter;
+        treeIndexPresent[*treeIndexIter] = true;
+    }
+    for (size_t index=0 ; index<treeIndexPresent.size() ; ++index) {
+        if (treeIndexPresent[index] == false) {
+            lengthBuffer[index] = 0;
+        }
+    }
 }
 
 // Ultimately, this will write a JSON file. For now, we're just 
 // storing it in memory assuming the compiler and inference 
 // will run in the same process. 
 void PersistDecisionForest(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) {
+    mlir::decisionforest::ForestJSONReader::GetInstance().ClearAllData();
+
     auto numTrees = forest.NumTrees();
+    mlir::decisionforest::ForestJSONReader::GetInstance().SetNumberOfTrees(numTrees);
     for (size_t i=0; i<numTrees ; ++i) {
         auto treeType = forestType.getTreeType(0).cast<decisionforest::TreeType>();
         
@@ -267,9 +315,11 @@ void PersistDecisionForest(mlir::decisionforest::DecisionForest<>& forest, mlir:
         auto& tree = forest.GetTree(static_cast<int64_t>(i));
         std::vector<ThresholdType> thresholds = tree.GetThresholdArray();
         std::vector<FeatureIndexType> featureIndices = tree.GetFeatureIndexArray();
+        int32_t numTiles = tree.GetNumberOfTiles();
         int32_t tileSize = tree.TilingDescriptor().MaxTileSize();
         
-        mlir::decisionforest::ForestJSONReader::GetInstance().AddSingleTree(i, thresholds, featureIndices, tileSize, thresholdType.getWidth(), featureIndexType.getWidth());
+        mlir::decisionforest::ForestJSONReader::GetInstance().AddSingleTree(i, numTiles, thresholds, featureIndices, tileSize, 
+                                                                            thresholdType.getWidth(), featureIndexType.getWidth());
     }
 }
 

@@ -1,6 +1,7 @@
 #include <iostream>
 #include "json/xgboostparser.h"
 #include "include/TreeTilingUtils.h"
+#include "mlir/ExecutionHelpers.h"
 
 using namespace std;
 
@@ -13,7 +14,6 @@ void LowerEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module);
 void ConvertNodeTypeToIndexType(mlir::MLIRContext& context, mlir::ModuleOp module);
 void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module);
 int dumpLLVMIR(mlir::ModuleOp module);
-int runJIT(mlir::ModuleOp module);
 }
 }
 
@@ -113,6 +113,14 @@ bool Test_BufferInitializationWithOneTree_RightHeavy(mlir::MLIRContext& context)
   mlir::decisionforest::ForestJSONReader::GetInstance().InitializeBuffer(serializedTree.data(), 1, 64, 32, offsets);
   assert(expectedArray == serializedTree);
   assert(offsets[0] == 0);
+  
+  std::vector<int64_t> offsetVec(1, -1);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(offsetVec.data(), 1, 64, 32);
+  assert(offsetVec[0] == 0);
+  
+  std::vector<int64_t> lengthVec(1, -1);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthVec.data(), 1, 64, 32);
+  assert(lengthVec[0] == 7);
 
   mlir::decisionforest::ClearPersistedForest();
 
@@ -140,6 +148,14 @@ bool Test_BufferInitializationWithOneTree_LeftHeavy(mlir::MLIRContext& context) 
   mlir::decisionforest::ForestJSONReader::GetInstance().InitializeBuffer(serializedTree.data(), 1, 64, 32, offsets);
   assert(expectedArray == serializedTree);
   assert(offsets[0] == 0);
+
+  std::vector<int64_t> offsetVec(1, -1);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(offsetVec.data(), 1, 64, 32);
+  assert(offsetVec[0] == 0);
+
+  std::vector<int64_t> lengthVec(1, -1);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthVec.data(), 1, 64, 32);
+  assert(lengthVec[0] == 7);
 
   mlir::decisionforest::ClearPersistedForest();
 
@@ -169,6 +185,16 @@ bool Test_BufferInitializationWithTwoTrees(mlir::MLIRContext& context) {
   assert(expectedArray == serializedTree);
   assert(offsets[0] == 0);
   assert(offsets[1] == 7);
+
+  std::vector<int64_t> offsetVec(2, -1);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(offsetVec.data(), 1, 64, 32);
+  assert(offsetVec[0] == 0);
+  assert(offsetVec[1] == 7);
+
+  std::vector<int64_t> lengthVec(2, -1);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthVec.data(), 1, 64, 32);
+  assert(lengthVec[0] == 7);
+  assert(lengthVec[1] == 7);
 
   mlir::decisionforest::ClearPersistedForest();
 
@@ -210,7 +236,7 @@ int main(int argc, char *argv[]) {
 
   mlir::decisionforest::dumpLLVMIR(module);
 
-  mlir::decisionforest::runJIT(module);
+  mlir::decisionforest::InferenceRunner inferenceRunner(module);
 
   std::vector<double> data(8);
   auto decisionForest = xgBoostParser.GetForest();

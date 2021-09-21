@@ -81,7 +81,7 @@ public:
     }
     std::vector<ThresholdType> GetThresholdArray();
     std::vector<FeatureIndexType> GetFeatureIndexArray();
-
+    int32_t GetNumberOfTiles();
 private:
     std::vector<Node> m_nodes;
     size_t m_numFeatures;
@@ -200,6 +200,15 @@ std::vector<FeatureIndexType> DecisionTree<ThresholdType, ReturnType, FeatureInd
 
     GetNodeAttributeArray(featureIndexVec, 0, 0, [](Node& n) { return n.featureIndex; });
     return featureIndexVec;
+}
+
+template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+int32_t DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::GetNumberOfTiles()
+{
+    assert (m_tilingDescriptor.MaxTileSize() == 1 && "Only size 1 tiles currently supported");
+    int32_t depth = GetTreeDepth();
+    size_t numTiles = static_cast<size_t>(std::pow(2, depth)) - 1;
+    return numTiles;
 }
 
 // TODO This needs to also include the tiling of the tree

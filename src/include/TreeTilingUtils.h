@@ -27,6 +27,7 @@ namespace decisionforest
 {
 using ThresholdType = double;
 using FeatureIndexType = int32_t;
+using IndexType = int64_t;
 
 class ForestJSONBuilder
 {
@@ -53,14 +54,15 @@ class ForestJSONReader
         int32_t thresholdBitWidth;
         int32_t indexBitWidth;
         std::list<int32_t> treeIndices;
+        std::list<int32_t> numberOfTiles;
         std::list<std::vector<ThresholdType>> serializedThresholds;
         std::list<std::vector<FeatureIndexType>> serializedFetureIndices;
     };
     std::list<SingleTileSizeEntry> m_tileSizeEntries;
     json m_json;
-
+    int32_t m_numberOfTrees;
     void ParseJSONFile();
-
+    std::list<SingleTileSizeEntry>::iterator FindEntry(int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth);
     static ForestJSONReader m_instance;
     ForestJSONReader() { }
 public:
@@ -69,15 +71,17 @@ public:
         fin >> m_json;
         ParseJSONFile();
     }
-    void AddSingleTree(int32_t treeIndex, std::vector<ThresholdType>& serializedThresholds, std::vector<FeatureIndexType>& serializedFetureIndices,
+    void AddSingleTree(int32_t treeIndex, int32_t numTiles, std::vector<ThresholdType>& serializedThresholds, std::vector<FeatureIndexType>& serializedFetureIndices,
                        const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth);
-    void AddSingleTileSizeEntry(std::list<int32_t>& treeIndices, std::list<std::vector<ThresholdType>>& serializedThresholds, 
+    void AddSingleTileSizeEntry(std::list<int32_t>& treeIndices, std::list<int32_t>& numTilesList, std::list<std::vector<ThresholdType>>& serializedThresholds, 
                                 std::list<std::vector<FeatureIndexType>>& serializedFetureIndices,
                                 const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth);
     void InitializeBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets);
-    void InitializeOffsetBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets);
-    void InitializeLengthBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets);
+    void InitializeOffsetBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth);
+    void InitializeLengthBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth);
     void ClearAllData();
+    void SetNumberOfTrees(int32_t val) { m_numberOfTrees = val; }
+    int32_t GetNumberOfTrees() { return m_numberOfTrees; }
     static ForestJSONReader& GetInstance() {
         return m_instance;
     }

@@ -12,7 +12,9 @@ CodeGen for tile size == 1 for all trees
     * [Done] Lower all other dialects to LLVM
     * [Done] Lower custom tree ops to LLVM dialect
         - Non vector implementation
-    * Initialization routines for length and offset memrefs need to be implemented
+    * [Done] Initialization routines for length and offset memrefs need to be implemented
+    * Seperate out the tests and write some basic test infrastructure
+    * Write a set of tests that generate small forests and test generated code against that
 
 CodeGen for tile size != 1
     - Serialization when tile sizes are not 1
@@ -23,8 +25,10 @@ Code gen for unequal tile size across trees
     - Generate >1 model memrefs
     - ??
 
-Generate method to initialize model memref that takes buffers containing actual values as arguments
-    - This will be safer than guessing the layout of the tile struct
+* Make the look-up in ForestJSONReader based on the name of a global rather than the tile size etc. We're unnecessarily constraining the IR to only have a single ensemble constant with a particular (tile size, threshold type, feature index type) combination now. Instead we should just generate a unique global name for each ensemble constant.
+
+* Generate method to initialize model memref that takes buffers containing actual values as arguments
+    - This will be safer than guessing the layout of the tile struct (since we'll pass the thresholds and indices as separate arrays)
 
 * [Done] Memref of memrefs, Memref of struct types
 * [Done] Initialization of the model memrefs
