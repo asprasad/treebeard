@@ -34,31 +34,31 @@ mlir::Type GetMLIRType(const T& val, mlir::OpBuilder& builder) {
 }
 
 template<>
-mlir::Type GetMLIRType(const int8_t& val, mlir::OpBuilder& builder) {
+inline mlir::Type GetMLIRType(const int8_t& val, mlir::OpBuilder& builder) {
     return builder.getIntegerType(8);
 }
 
 template<>
-mlir::Type GetMLIRType(const int16_t& val, mlir::OpBuilder& builder) {
+inline mlir::Type GetMLIRType(const int16_t& val, mlir::OpBuilder& builder) {
     return builder.getIntegerType(16);
 }
 
 template<>
-mlir::Type GetMLIRType(const int32_t& val, mlir::OpBuilder& builder) {
+inline mlir::Type GetMLIRType(const int32_t& val, mlir::OpBuilder& builder) {
     return builder.getI32Type();
 }
 
 template<>
-mlir::Type GetMLIRType(const float& val, mlir::OpBuilder& builder) {
+inline mlir::Type GetMLIRType(const float& val, mlir::OpBuilder& builder) {
     return builder.getF32Type();
 }
 
 template<>
-mlir::Type GetMLIRType(const double& val, mlir::OpBuilder& builder) {
+inline mlir::Type GetMLIRType(const double& val, mlir::OpBuilder& builder) {
     return builder.getF64Type();
 }
 
-mlir::Type GetMLIRTypeFromString(const std::string& typestr, mlir::OpBuilder& builder)
+inline mlir::Type GetMLIRTypeFromString(const std::string& typestr, mlir::OpBuilder& builder)
 {
     if (typestr == "float")
         return builder.getF64Type();

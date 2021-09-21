@@ -31,7 +31,7 @@ target_link_libraries(tree-heavy PRIVATE ${LIBS})
 mlir_check_all_link_libraries(tree-heavy)
 
 add_subdirectory(include)
-#add_subdirectory(ast)
+add_subdirectory(test)
 add_subdirectory(mlir)
 add_subdirectory(utils)
 
