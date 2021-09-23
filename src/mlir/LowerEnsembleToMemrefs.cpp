@@ -156,6 +156,12 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     rewriter.setInsertionPointToStart(&entryBlock);
 
     auto getGlobalOffsets = rewriter.create<memref::GetGlobalOp>(location, memrefType, globalName);
+    if (globalName == "lengths") {
+      auto index = rewriter.create<ConstantIndexOp>(location, int64_t(1));
+      auto subview = rewriter.create<memref::SubViewOp>(location, static_cast<Value>(getGlobalOffsets), ArrayRef<OpFoldResult>({rewriter.getIndexAttr(3)}),
+                                                        ArrayRef<OpFoldResult>({rewriter.getIndexAttr(2)}), ArrayRef<OpFoldResult>({rewriter.getIndexAttr(1)}));
+      auto loadOp = rewriter.create<memref::LoadOp>(location, static_cast<Value>(subview), static_cast<Value>(index));
+    }
     rewriter.create<mlir::ReturnOp>(location, static_cast<Value>(getGlobalOffsets));
 
     module.push_back(getGlobalMemrefFunc);
@@ -339,13 +345,16 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     // 
     // result = Compare
     // TODO we need a cast here to make sure the threshold and the row element are the same type. The op expects both operands to be the same type.
-    auto comparison = rewriter.create<CmpFOp>(location, mlir::CmpFPredicate::ULE, static_cast<Value>(feature), static_cast<Value>(loadThresholdOp));
-    
-    // index = 2*index + result
+    auto comparison = rewriter.create<CmpFOp>(location,  mlir::CmpFPredicate::UGT, static_cast<Value>(feature), static_cast<Value>(loadThresholdOp));
+    auto comparisonUnsigned = rewriter.create<ZeroExtendIOp>(location, rewriter.getI32Type(), static_cast<Value>(comparison));
+
+    // index = 2*index + 1 + result
+    auto oneConstant = rewriter.create<ConstantIndexOp>(location, 1);
     auto twoConstant = rewriter.create<ConstantIndexOp>(location, 2);
     auto twoTimesIndex = rewriter.create<MulIOp>(location, rewriter.getIndexType(), static_cast<Value>(nodeIndex), static_cast<Value>(twoConstant));
-    auto comparisonResultIndex = rewriter.create<IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(comparison));
-    auto newIndex = rewriter.create<AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(twoTimesIndex), static_cast<Value>(comparisonResultIndex));
+    auto twoTimesIndexPlus1 = rewriter.create<AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(twoTimesIndex), static_cast<Value>(oneConstant));
+    auto comparisonResultIndex = rewriter.create<IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(comparisonUnsigned));
+    auto newIndex = rewriter.create<AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(twoTimesIndexPlus1), static_cast<Value>(comparisonResultIndex));
     
     // node = indexToNode(index)
     auto newNode = rewriter.create<decisionforest::IndexToNodeOp>(location, traverseTileOp.getResult().getType(), treeMemref, static_cast<Value>(newIndex));

@@ -61,3 +61,8 @@ Code gen for unequal tile size across trees
 * [Done] Implement the tree attribute
 * [Done] Add TraverseTile for constant tree
 
+CHANGES FOR DEBUGGING
+1. BatchSize hardcoded to 2 in RunInference (executionHelper.h, modeljsonparser.h)
+2. Copying per tree output into result (rather than final result) (LowerToMidLevelIR.cpp)
+3. Lot of printing everywhere!
+

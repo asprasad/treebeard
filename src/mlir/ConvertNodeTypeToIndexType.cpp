@@ -148,7 +148,7 @@ struct ConvertNodeTypeToIndexTypePass : public PassWrapper<ConvertNodeTypeToInde
         for (auto result : op->getResults()) {
             if (result.getType().isa<decisionforest::NodeType>()) {
                 assert (llvm::dyn_cast<scf::WhileOp>(op) && "Expected op to be an scf::WhileOp");
-                std::cout << "Calling setType : " << op->getName().getStringRef().str() << std::endl;
+                // std::cout << "Calling setType : " << op->getName().getStringRef().str() << std::endl;
                 // TODO check that this is some op with non trivial control flow. 
                 // assert(op->getRegions().size() > 1);
                 // TODO Is there a way we can avoid calling setType here?

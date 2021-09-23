@@ -3,6 +3,7 @@
 #include <iostream>
 #include <exception>
 #include <stdexcept>
+#include <cmath>
 
 namespace test 
 {
@@ -38,6 +39,12 @@ struct TestDescriptor {
 };
 
 #define TEST_LIST_ENTRY(testName) { std::string(#testName), testName }
+
+template<typename FPType>
+inline bool FPEqual(FPType a, FPType b) {
+  const FPType threshold = 1e-9;
+  return std::fabs(a - b) < threshold;
+}
 
 } // test
 

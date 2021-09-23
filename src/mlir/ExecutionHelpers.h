@@ -43,13 +43,38 @@ class InferenceRunner {
   llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> m_maybeEngine;
   std::unique_ptr<mlir::ExecutionEngine>& m_engine;
   mlir::ModuleOp m_module;
-  static llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> CreateEngine(mlir::ModuleOp module);
 public:
+  static llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> CreateExecutionEngine(mlir::ModuleOp module);
   InferenceRunner(mlir::ModuleOp module);
 
   int32_t InitializeLengthsArray();
   int32_t InitializeOffsetsArray();
   int32_t InitializeModelArray();
+
+  void PrintLengthsArray();
+  void PrintOffsetsArray();
+  void PrintModelArray();
+
+  template<typename InputElementType, int32_t InputRowSize, int32_t BatchSize, typename ReturnType>
+  int32_t RunInference(InputElementType *input, ReturnType *returnValue) {
+    auto& engine = m_engine;
+    Memref<ReturnType, 1> resultMemref;
+    // Memref<InputElementType, 2> resultMemref;
+    InputElementType *ptr = input, *alignedPtr = input;
+    int64_t batchSize = BatchSize, rowSize = InputRowSize, offset = 0, stride = 1;
+    ReturnType *resultPtr = returnValue, *resultAlignedPtr = returnValue;
+    int64_t resultLen = 2;
+    void *args[] = { &ptr, &alignedPtr, &offset, &batchSize, &rowSize, &stride, &stride, // Input memref fields
+                     &resultPtr, &resultAlignedPtr, &offset, &resultLen, &stride, // Result memref fields 
+                     &resultMemref };
+    auto invocationResult = engine->invokePacked("Prediction_Function", args);
+    if (invocationResult) {
+      llvm::errs() << "JIT invocation failed\n";
+      return -1;
+    }
+    // std::cout << "Result memref length : " << resultMemref.lengths[0] << std::endl;
+    return 0;
+  }
 };
 
 } // decision forest

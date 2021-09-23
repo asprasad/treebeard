@@ -4,7 +4,7 @@
 #include "modeljsonparser.h"
 #include <fstream>
 
-namespace TreeHeavy
+namespace TreeBeard
 {
 
 template<typename ThresholdType=double, typename ReturnType=double, typename FeatureIndexType=int32_t, typename NodeIndexType=int32_t>

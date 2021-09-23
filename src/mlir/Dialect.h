@@ -19,5 +19,16 @@
 #define GET_OP_CLASSES
 #include "Ops.h.inc"
 
+namespace mlir
+{
+namespace decisionforest
+{
+void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext& context, mlir::ModuleOp module);
+void LowerEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module);
+void ConvertNodeTypeToIndexType(mlir::MLIRContext& context, mlir::ModuleOp module);
+void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module);
+int dumpLLVMIR(mlir::ModuleOp module);
+}
+}
 
 #endif // _DIALECT_H_

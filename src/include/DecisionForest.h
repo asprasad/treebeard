@@ -245,7 +245,7 @@ ReturnType DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexTy
     const Node* node = &m_nodes[0]; // root node
     while (!node->IsLeaf())
     {
-      if (node->threshold < data[node->featureIndex])
+      if (data[node->featureIndex] <= node->threshold)
         node = &m_nodes[node->leftChild];
       else
         node = &m_nodes[node->rightChild];

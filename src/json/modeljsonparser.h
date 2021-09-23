@@ -24,7 +24,7 @@ using json = nlohmann::json;
 // Also implements callbacks that construct the actual MLIR structures.
 //--
 */
-namespace TreeHeavy
+namespace TreeBeard
 {
 
 template<typename T>
@@ -112,7 +112,7 @@ protected:
     }
     mlir::Type GetFunctionResultType()
     {
-        return mlir::MemRefType::get(m_batchSize, GetMLIRType(ReturnType(), m_builder));
+        return mlir::MemRefType::get(2/*m_batchSize*/, GetMLIRType(ReturnType(), m_builder));
     }
     mlir::FunctionType GetFunctionType()
     {
