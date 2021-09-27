@@ -133,7 +133,7 @@ struct PredictForestOpLowering: public ConversionPattern {
         }
         rewriter.setInsertionPointAfter(whileLoop);
         auto treePrediction = rewriter.create<decisionforest::GetLeafValueOp>(location, treeType.getResultType(), tree, whileLoop.results()[0]);
-        rewriter.create<memref::StoreOp>(location, TypeRange({ }), static_cast<Value>(treePrediction), memrefResult, j);
+        // rewriter.create<memref::StoreOp>(location, TypeRange({ }), static_cast<Value>(treePrediction), memrefResult, j);
         // result[i]
         
         // auto readResultOfi = rewriter.create<memref::LoadOp>(location, resultElementType, memrefResult, i);
@@ -145,7 +145,7 @@ struct PredictForestOpLowering: public ConversionPattern {
 
         rewriter.setInsertionPointAfter(treeLoop);
         // result[i] = Accumulated value
-        // rewriter.create<memref::StoreOp>(location, TypeRange({ }), static_cast<Value>(treeLoop.results()[0]), memrefResult, i);
+        rewriter.create<memref::StoreOp>(location, TypeRange({ }), static_cast<Value>(treeLoop.results()[0]), memrefResult, i);
         // rewriter.create<scf::YieldOp>(location); //, static_cast<Value>(treeLoop.results()[0]));
 
         rewriter.replaceOp(op, static_cast<Value>(memrefResult));

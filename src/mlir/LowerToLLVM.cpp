@@ -45,6 +45,7 @@ using namespace mlir;
 namespace {
 
 const int32_t kAlignedPointerIndexInMemrefStruct = 1;
+const int32_t kOffsetIndexInMemrefStruct = 2;
 const int32_t kThresholdElementNumberInTile = 0;
 const int32_t kFeatureIndexElementNumberInTile = 1;
 
@@ -70,12 +71,17 @@ void GenerateLoadStructElement(Operation *op, ArrayRef<Value> operands, Conversi
   auto extractMemrefBufferPointer = rewriter.create<LLVM::ExtractValueOp>(location, alignedPtrType, operands[kTreeMemrefOperandNum],
                                                                           rewriter.getI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
 
+  auto extractMemrefOffset = rewriter.create<LLVM::ExtractValueOp>(location, indexType, operands[kTreeMemrefOperandNum],
+                                                                   rewriter.getI64ArrayAttr(kOffsetIndexInMemrefStruct));
+
+  auto actualIndex = rewriter.create<LLVM::AddOp>(location, indexType, static_cast<Value>(extractMemrefOffset), static_cast<Value>(indexVal));
+
   // Get a pointer to i'th tile's threshold
   auto elementPtrType = LLVM::LLVMPointerType::get(elementType);
   assert(elementType == tileType.getBody()[elementNumber] && "The result type should be the same as the element type in the struct.");
   auto elemIndexConst = rewriter.create<LLVM::ConstantOp>(location, rewriter.getI32Type(), rewriter.getIntegerAttr(rewriter.getI32Type(), elementNumber));
   auto elementPtr = rewriter.create<LLVM::GEPOp>(location, elementPtrType, static_cast<Value>(extractMemrefBufferPointer), 
-                                                ValueRange({indexVal, static_cast<Value>(elemIndexConst)}));
+                                                ValueRange({static_cast<Value>(actualIndex), static_cast<Value>(elemIndexConst)}));
 
   // Load the threshold
   auto elementVal = rewriter.create<LLVM::LoadOp>(location, elementType, static_cast<Value>(elementPtr));

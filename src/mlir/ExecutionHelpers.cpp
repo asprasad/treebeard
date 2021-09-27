@@ -95,7 +95,7 @@ void InferenceRunner::PrintOffsetsArray() {
     llvm::errs() << "JIT invocation failed\n";
     return;
   }
-  std::cout << "Length memref (size : " << offsetMemref.lengths[0] << ", ";
+  std::cout << "Offset memref (size : " << offsetMemref.lengths[0] << ", ";
   std::cout << "elements : {";
   for (int64_t i=0; i<offsetMemref.lengths[0]; ++i)
     std::cout << " " << offsetMemref.alignedPtr[i];

@@ -156,12 +156,6 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     rewriter.setInsertionPointToStart(&entryBlock);
 
     auto getGlobalOffsets = rewriter.create<memref::GetGlobalOp>(location, memrefType, globalName);
-    if (globalName == "lengths") {
-      auto index = rewriter.create<ConstantIndexOp>(location, int64_t(1));
-      auto subview = rewriter.create<memref::SubViewOp>(location, static_cast<Value>(getGlobalOffsets), ArrayRef<OpFoldResult>({rewriter.getIndexAttr(3)}),
-                                                        ArrayRef<OpFoldResult>({rewriter.getIndexAttr(2)}), ArrayRef<OpFoldResult>({rewriter.getIndexAttr(1)}));
-      auto loadOp = rewriter.create<memref::LoadOp>(location, static_cast<Value>(subview), static_cast<Value>(index));
-    }
     rewriter.create<mlir::ReturnOp>(location, static_cast<Value>(getGlobalOffsets));
 
     module.push_back(getGlobalMemrefFunc);

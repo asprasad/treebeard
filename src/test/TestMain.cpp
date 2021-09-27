@@ -15,6 +15,8 @@ namespace test
 // Codegen tests
 bool Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1(TestArgs_t& args);
 bool Test_LoadTileThresholdOp_DoubleInt32_TileSize1(TestArgs_t& args);
+bool Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args);
+bool Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args);
 
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
@@ -258,20 +260,20 @@ bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module);
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
-  module->dump();
+  // module->dump();
   mlir::decisionforest::LowerToLLVM(args.context, module);
-  module->dump();
-  mlir::decisionforest::dumpLLVMIR(module);
+  // module->dump();
+  // mlir::decisionforest::dumpLLVMIR(module);
   decisionforest::InferenceRunner inferenceRunner(module);
   
-  inferenceRunner.PrintLengthsArray();
-  inferenceRunner.PrintOffsetsArray();
+  // inferenceRunner.PrintLengthsArray();
+  // inferenceRunner.PrintOffsetsArray();
   
   for(auto& row : inputData) {
-    double result[] = {-1, -1};
-    inferenceRunner.RunInference<double, 5, 1, double>(row.data(), result);
+    double result = -1;
+    inferenceRunner.RunInference<double, 5, 1, double>(row.data(), &result);
     double expectedResult = irConstructor.GetForest().Predict(row);
-    // Test_ASSERT(FPEqual(result, expectedResult));
+    Test_ASSERT(FPEqual(result, expectedResult));
   }
   return true;
 }
@@ -298,20 +300,22 @@ bool Test_CodeGeneration_RightAndLeftHeavy_BatchSize1(TestArgs_t& args) {
   return Test_ForestCodeGen_BatchSize1(args, AddRightAndLeftHeavyTrees, data);
 }
 
-// TestDescriptor testList[] = {
-//   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy),
-//   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy),
-//   TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees),
-//   TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize1),
-//   TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize1),
-//   TEST_LIST_ENTRY(Test_CodeGeneration_RightAndLeftHeavy_BatchSize1),
-//   TEST_LIST_ENTRY(Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1),
-//   TEST_LIST_ENTRY(Test_LoadTileThresholdOp_DoubleInt32_TileSize1)
-// };
-
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_CodeGeneration_RightAndLeftHeavy_BatchSize1)
+  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy),
+  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy),
+  TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees),
+  TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_CodeGeneration_RightAndLeftHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1),
+  TEST_LIST_ENTRY(Test_LoadTileThresholdOp_DoubleInt32_TileSize1),
+  TEST_LIST_ENTRY(Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1),
+  TEST_LIST_ENTRY(Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1)
 };
+
+// TestDescriptor testList[] = {
+//   TEST_LIST_ENTRY(Test_CodeGeneration_RightAndLeftHeavy_BatchSize1)
+// };
 
 
 const size_t numTests = sizeof(testList) / sizeof(testList[0]);

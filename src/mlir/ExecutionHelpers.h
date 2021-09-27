@@ -63,7 +63,7 @@ public:
     InputElementType *ptr = input, *alignedPtr = input;
     int64_t batchSize = BatchSize, rowSize = InputRowSize, offset = 0, stride = 1;
     ReturnType *resultPtr = returnValue, *resultAlignedPtr = returnValue;
-    int64_t resultLen = 2;
+    int64_t resultLen = BatchSize;
     void *args[] = { &ptr, &alignedPtr, &offset, &batchSize, &rowSize, &stride, &stride, // Input memref fields
                      &resultPtr, &resultAlignedPtr, &offset, &resultLen, &stride, // Result memref fields 
                      &resultMemref };
