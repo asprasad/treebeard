@@ -5,4 +5,5 @@ LowerToMidLevelIR.cpp
 LowerEnsembleToMemrefs.cpp
 ConvertNodeTypeToIndexType.cpp
 LowerToLLVM.cpp
-ExecutionHelpers.cpp)
+ExecutionHelpers.cpp
+LowerDebugHelpers.cpp)

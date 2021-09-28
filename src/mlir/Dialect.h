@@ -21,15 +21,21 @@
 
 namespace mlir
 {
+
+class RewritePatternSet;
+class LLVMTypeConverter;
+
 namespace decisionforest
 {
 extern bool InsertDebugHelpers;
+void populateDebugOpLoweringPatterns(RewritePatternSet& patterns, LLVMTypeConverter& typeConverter);
 
 void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext& context, mlir::ModuleOp module);
 void LowerEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module);
 void ConvertNodeTypeToIndexType(mlir::MLIRContext& context, mlir::ModuleOp module);
 void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module);
 int dumpLLVMIR(mlir::ModuleOp module);
+
 }
 }
 

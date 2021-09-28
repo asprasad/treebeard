@@ -42,7 +42,7 @@ llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> InferenceRunner::CreateEx
   std::string debugSOPath;
   if (decisionforest::InsertDebugHelpers) {
     debugSOPath = GetDebugSOPath();
-    std::cout << "Calculated debug SO path : " << debugSOPath << std::endl;
+    // std::cout << "Calculated debug SO path : " << debugSOPath << std::endl;
     executionEngineLibs.push_back(debugSOPath.data());
   }
 
