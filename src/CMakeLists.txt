@@ -34,6 +34,7 @@ add_subdirectory(include)
 add_subdirectory(test)
 add_subdirectory(mlir)
 add_subdirectory(utils)
+add_subdirectory(debug-helpers)
 
 include_directories(include)
 include_directories(json)

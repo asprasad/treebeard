@@ -23,6 +23,8 @@ namespace mlir
 {
 namespace decisionforest
 {
+extern bool InsertDebugHelpers;
+
 void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext& context, mlir::ModuleOp module);
 void LowerEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module);
 void ConvertNodeTypeToIndexType(mlir::MLIRContext& context, mlir::ModuleOp module);

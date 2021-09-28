@@ -1,6 +1,27 @@
 #include <iostream>
+#include <unistd.h>
+#include <libgen.h>
+#include <climits>
 
 #include "ExecutionHelpers.h"
+#include "Dialect.h"
+
+namespace 
+{
+
+std::string GetDebugSOPath() { 
+  char exePath[PATH_MAX];
+  memset(exePath, 0, sizeof(exePath)); 
+  if (readlink("/proc/self/exe", exePath, PATH_MAX) == -1)
+    return std::string("");
+  // std::cout << "Calculated executable path : " << exePath << std::endl;
+  char *execDir = dirname(exePath);
+  char *buildDir = dirname(execDir);
+  std::string debugSOPath = std::string(buildDir) + "/src/debug-helpers/libtreebearddebug.so";
+  return debugSOPath;
+}
+
+}
 
 namespace mlir
 {
@@ -15,9 +36,19 @@ llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> InferenceRunner::CreateEx
   // An optimization pipeline to use within the execution engine.
   auto optPipeline = mlir::makeOptimizingTransformer(/*optLevel=*/ 0, /*sizeLevel=*/0, /*targetMachine=*/nullptr);
 
+  // Libraries that we'll pass to the ExecutionEngine for loading.
+  SmallVector<StringRef, 4> executionEngineLibs;
+
+  std::string debugSOPath;
+  if (decisionforest::InsertDebugHelpers) {
+    debugSOPath = GetDebugSOPath();
+    std::cout << "Calculated debug SO path : " << debugSOPath << std::endl;
+    executionEngineLibs.push_back(debugSOPath.data());
+  }
+
   // Create an MLIR execution engine. The execution engine eagerly JIT-compiles
   // the module.
-  auto maybeEngine = mlir::ExecutionEngine::create(module, /*llvmModuleBuilder=*/nullptr, optPipeline);
+  auto maybeEngine = mlir::ExecutionEngine::create(module, /*llvmModuleBuilder=*/nullptr, optPipeline, llvm::None, executionEngineLibs);
   assert(maybeEngine && "failed to construct an execution engine");
   return maybeEngine;
 }

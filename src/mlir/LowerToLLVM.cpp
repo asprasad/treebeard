@@ -113,6 +113,88 @@ struct LoadTileFeatureIndicesOpLowering: public ConversionPattern {
   }
 };
 
+struct PrintTreePredictionOpLowering: public ConversionPattern {
+  PrintTreePredictionOpLowering(LLVMTypeConverter& typeConverter)
+  : ConversionPattern(typeConverter, mlir::decisionforest::PrintTreePredictionOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
+
+  static FlatSymbolRefAttr getOrInsertPrintTreePrediction(PatternRewriter &rewriter,
+                                                          ModuleOp module) {
+    auto *context = module.getContext();
+    if (module.lookupSymbol<LLVM::LLVMFuncOp>("PrintTreePrediction"))
+      return SymbolRefAttr::get(context, "PrintTreePrediction");
+
+    // Create a function declaration for PrintTreePrediction, the signature is:
+    //   * `i64 (f64, i64)`
+    auto llvmF64Ty = FloatType::getF64(context);
+    auto llvmI64Ty = IntegerType::get(context, 64);
+    auto llvmFnType = LLVM::LLVMFunctionType::get(llvmI64Ty, {llvmF64Ty, llvmI64Ty});
+
+    // Insert the PrintTreePrediction function into the body of the parent module.
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(module.getBody());
+    rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), "PrintTreePrediction", llvmFnType);
+    return SymbolRefAttr::get(context, "PrintTreePrediction");
+  }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    assert (operands.size() == 2);
+    ModuleOp parentModule = op->getParentOfType<ModuleOp>();
+    auto printFunctionRef = getOrInsertPrintTreePrediction(rewriter, parentModule);
+    Value prediction = operands[0];
+    if (prediction.getType() != rewriter.getF64Type()) {
+      auto castOp = rewriter.create<LLVM::FPExtOp>(op->getLoc(), rewriter.getF64Type(), operands[0]);
+      prediction = static_cast<Value>(castOp);
+    }
+    Value treeIndex = operands[1];
+    if (treeIndex.getType() != rewriter.getI64Type()) {
+      auto sextOp = rewriter.create<LLVM::SExtOp>(op->getLoc(), rewriter.getI64Type(), treeIndex);
+      treeIndex = static_cast<Value>(sextOp);
+    }
+    auto callOp = rewriter.create<CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>({ prediction, treeIndex }));
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
+
+struct PrintTreeNodeOpLowering: public ConversionPattern {
+  PrintTreeNodeOpLowering(LLVMTypeConverter& typeConverter)
+  : ConversionPattern(typeConverter, mlir::decisionforest::PrintTreeNodeOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
+
+  static FlatSymbolRefAttr getOrInsertPrintTreeNode(PatternRewriter &rewriter,
+                                                    ModuleOp module) {
+    auto *context = module.getContext();
+    if (module.lookupSymbol<LLVM::LLVMFuncOp>("PrintNodeIndex"))
+      return SymbolRefAttr::get(context, "PrintNodeIndex");
+
+    // Create a function declaration for PrintNodeIndex, the signature is:
+    //   * `i64 (i64)`
+    auto llvmI64Ty = IntegerType::get(context, 64);
+    auto llvmFnType = LLVM::LLVMFunctionType::get(llvmI64Ty, {llvmI64Ty});
+
+    // Insert the PrintNodeIndex function into the body of the parent module.
+    PatternRewriter::InsertionGuard insertGuard(rewriter);
+    rewriter.setInsertionPointToStart(module.getBody());
+    rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), "PrintNodeIndex", llvmFnType);
+    return SymbolRefAttr::get(context, "PrintNodeIndex");
+  }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    assert (operands.size() == 1);
+    ModuleOp parentModule = op->getParentOfType<ModuleOp>();
+    auto printFunctionRef = getOrInsertPrintTreeNode(rewriter, parentModule);
+    Value nodeIndex = operands[0];
+    if (nodeIndex.getType() != rewriter.getI64Type()) {
+      auto sextOp = rewriter.create<LLVM::SExtOp>(op->getLoc(), rewriter.getI64Type(), nodeIndex);
+      nodeIndex = static_cast<Value>(sextOp);
+    }
+    auto callOp = rewriter.create<CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>({ nodeIndex }));
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
+
 struct DecisionForestToLLVMLoweringPass : public PassWrapper<DecisionForestToLLVMLoweringPass, OperationPass<ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect, memref::MemRefDialect, tensor::TensorDialect, StandardOpsDialect>();
@@ -144,7 +226,9 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
   populateStdToLLVMConversionPatterns(typeConverter, patterns);
 
   patterns.add<LoadTileFeatureIndicesOpLowering,
-               LoadTileThresholdOpLowering>(typeConverter);
+               LoadTileThresholdOpLowering,
+               PrintTreePredictionOpLowering,
+               PrintTreeNodeOpLowering>(typeConverter);
 
   auto module = getOperation();
   if (failed(applyFullConversion(module, target, std::move(patterns))))

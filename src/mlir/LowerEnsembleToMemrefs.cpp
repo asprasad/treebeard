@@ -325,6 +325,9 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
 
     auto node = operands[1];
     auto nodeIndex = rewriter.create<decisionforest::NodeToIndexOp>(location, rewriter.getIndexType(), treeMemref, node);
+    if (decisionforest::InsertDebugHelpers) {
+      rewriter.create<decisionforest::PrintTreeNodeOp>(location, nodeIndex);
+    }
     // Load threshold
     auto loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, thresholdType, treeMemref, static_cast<Value>(nodeIndex));
     // Load feature index
@@ -381,6 +384,9 @@ struct GetLeafValueOpLowering : public ConversionPattern {
 
     auto node = operands[1];
     auto nodeIndex = rewriter.create<decisionforest::NodeToIndexOp>(location, rewriter.getIndexType(), treeMemref, node);
+    if (decisionforest::InsertDebugHelpers) {
+      rewriter.create<decisionforest::PrintTreeNodeOp>(location, nodeIndex);
+    }
     // Load threshold
     // TODO Ideally, this should be a different op for when we deal with tile sizes != 1. We will then need to load 
     // a single threshold value and cast it the trees return type

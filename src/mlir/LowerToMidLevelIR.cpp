@@ -140,6 +140,10 @@ struct PredictForestOpLowering: public ConversionPattern {
         // Accumulate the tree prediction
         assert(forestType.getReductionType() == decisionforest::ReductionType::kAdd);
         auto accumulatedValue = rewriter.create<AddFOp>(location, resultElementType, treeLoop.getBody()->getArguments()[1], treePrediction);
+
+        if (mlir::decisionforest::InsertDebugHelpers) {
+          rewriter.create<decisionforest::PrintTreePredictionOp>(location, treePrediction, j);
+        }
         // auto updatedResultTensor = rewriter.create<tensor::InsertOp>(location, resultMemrefType, accumulatedValue, treeLoop.getBody()->getArguments()[1], i);
         rewriter.create<scf::YieldOp>(location, static_cast<Value>(accumulatedValue));
 

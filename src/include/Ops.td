@@ -256,4 +256,13 @@ def NodeToIndexOp : DecisionForest_Op<"nodeToIndex", [NoSideEffect]> {
 //   let results = (outs LeafNodeType);
 // }
 
+// ----- Debugging IR Ops ------
+def PrintTreePredictionOp : DecisionForest_Op<"printTreePrediction", [NoSideEffect]> {
+  let arguments = (ins F64:$treePrediction, Index:$treeIndex);
+}
+
+def PrintTreeNodeOp : DecisionForest_Op<"printTreeNode", [NoSideEffect]> {
+  let arguments = (ins Index:$nodeIndex);
+}
+
 #endif // TREE_HEAVY_OPS
