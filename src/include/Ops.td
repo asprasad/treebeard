@@ -257,12 +257,19 @@ def NodeToIndexOp : DecisionForest_Op<"nodeToIndex", [NoSideEffect]> {
 // }
 
 // ----- Debugging IR Ops ------
-def PrintTreePredictionOp : DecisionForest_Op<"printTreePrediction", [NoSideEffect]> {
+def PrintTreePredictionOp : DecisionForest_Op<"printTreePrediction", []> {
   let arguments = (ins F64:$treePrediction, Index:$treeIndex);
 }
 
-def PrintTreeNodeOp : DecisionForest_Op<"printTreeNode", [NoSideEffect]> {
+def PrintTreeNodeOp : DecisionForest_Op<"printTreeNode", []> {
   let arguments = (ins Index:$nodeIndex);
 }
 
+def PrintTreeToDOTFileOp : DecisionForest_Op<"printTreeToDOTFile", []> {
+  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$treeIndex);
+}
+
+def PrintInputRowOp : DecisionForest_Op<"printInputRow", []> {
+  let arguments = (ins InputDataType:$data, Index:$rowIndex);
+}
 #endif // TREE_HEAVY_OPS

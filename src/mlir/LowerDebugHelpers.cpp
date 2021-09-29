@@ -5,6 +5,7 @@
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -99,6 +100,133 @@ struct PrintTreeNodeOpLowering: public ConversionPattern {
   }
 };
 
+const int32_t kAlignedPointerIndexInMemrefStruct = 1;
+const int32_t kOffsetIndexInMemrefStruct = 2;
+const int32_t kLengthIndexInMemrefStruct = 3;
+
+struct PrintTreeToDOTFileOpLowering: public ConversionPattern {
+  PrintTreeToDOTFileOpLowering(LLVMTypeConverter& typeConverter)
+  : ConversionPattern(typeConverter, mlir::decisionforest::PrintTreeToDOTFileOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
+
+  static FlatSymbolRefAttr getOrInsertPrintTreeNode(PatternRewriter &rewriter,
+                                                    ModuleOp module, Type ptrType) {
+    auto *context = module.getContext();
+    std::string functionName = "PrintTreeToDOTFile";
+
+    // Create a function declaration for PrintNodeIndex, the signature is:
+    //   * `i64 (TileType*, i64, i64, i64)`
+    auto llvmI64Ty = IntegerType::get(context, 64);
+    auto llvmFnType = LLVM::LLVMFunctionType::get(llvmI64Ty, {ptrType, llvmI64Ty, llvmI64Ty, llvmI64Ty});
+
+    return getOrInsertFunction(functionName, llvmFnType, rewriter, module);
+  }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    assert (operands.size() == 2);
+    ModuleOp parentModule = op->getParentOfType<ModuleOp>();
+    const int32_t kTreeMemrefOperandNum = 0;
+    const int32_t kIndexOperandNum = 1;
+    auto location = op->getLoc();
+    
+    auto memrefType = operands[kTreeMemrefOperandNum].getType();
+    auto memrefStructType = memrefType.cast<LLVM::LLVMStructType>();
+    auto alignedPtrType = memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct].cast<LLVM::LLVMPointerType>();
+    auto tileType = alignedPtrType.getElementType().cast<LLVM::LLVMStructType>();
+    
+    auto indexVal = operands[kIndexOperandNum];
+    auto indexType = indexVal.getType();
+    assert (indexType.isa<IntegerType>());
+
+    // Get the pointer value
+    // Extract the memref's aligned pointer
+    auto extractMemrefBufferPointer = rewriter.create<LLVM::ExtractValueOp>(location, alignedPtrType, operands[kTreeMemrefOperandNum],
+                                                                            rewriter.getI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
+
+    auto extractMemrefOffset = rewriter.create<LLVM::ExtractValueOp>(location, indexType, operands[kTreeMemrefOperandNum],
+                                                                    rewriter.getI64ArrayAttr(kOffsetIndexInMemrefStruct));
+
+    // Get a pointer to first tile in this tree
+    auto elementPtr = rewriter.create<LLVM::GEPOp>(location, alignedPtrType, static_cast<Value>(extractMemrefBufferPointer), 
+                                                  ValueRange({ static_cast<Value>(extractMemrefOffset) }));
+
+    // Get the length of this tree memref
+    auto extractMemrefLength = rewriter.create<LLVM::ExtractValueOp>(location, indexType, operands[kTreeMemrefOperandNum],
+                                                                     rewriter.getI64ArrayAttr({ kLengthIndexInMemrefStruct, 0 }));
+
+    // Create a tile size constant
+    // TODO This needs to change once we have actual tiles.
+    int64_t tileSize = 1;
+    auto tileSizeConst = rewriter.create<LLVM::ConstantOp>(location, rewriter.getI64Type(), rewriter.getIntegerAttr(rewriter.getI64Type(), tileSize));
+    auto printFunctionRef = getOrInsertPrintTreeNode(rewriter, parentModule, alignedPtrType);
+
+    // int64_t PrintTreeToDOTFile(TreeTileType *treeBuf, int64_t length, int64_t treeIndex, int64_t tileSize)
+    rewriter.create<CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>({ elementPtr, extractMemrefLength, indexVal, tileSizeConst }));
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
+
+struct PrintInputRowOpLowering: public ConversionPattern {
+  PrintInputRowOpLowering(LLVMTypeConverter& typeConverter)
+  : ConversionPattern(typeConverter, mlir::decisionforest::PrintInputRowOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
+
+  static FlatSymbolRefAttr getOrInsertPrintRow(PatternRewriter &rewriter,
+                                                    ModuleOp module) {
+    auto *context = module.getContext();
+    std::string functionName = "PrintInputRow";
+
+    // Create a function declaration for PrintInputRow, the signature is:
+    //   * `i64 (TileType*, i64, i64)`
+    auto llvmI64Ty = IntegerType::get(context, 64);
+    auto llvmF64PtrTy = LLVM::LLVMPointerType::get(FloatType::getF64(context));
+    auto llvmFnType = LLVM::LLVMFunctionType::get(llvmI64Ty, {llvmF64PtrTy, llvmI64Ty, llvmI64Ty});
+
+    return getOrInsertFunction(functionName, llvmFnType, rewriter, module);
+  }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    assert (operands.size() == 2);
+    ModuleOp parentModule = op->getParentOfType<ModuleOp>();
+    const int32_t kRowMemrefOperandNum = 0;
+    const int32_t kIndexOperandNum = 1;
+    auto location = op->getLoc();
+    
+    auto memrefType = operands[kRowMemrefOperandNum].getType();
+    auto memrefStructType = memrefType.cast<LLVM::LLVMStructType>();
+    auto alignedPtrType = memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct].cast<LLVM::LLVMPointerType>();
+    
+    auto indexVal = operands[kIndexOperandNum];
+    auto indexType = indexVal.getType();
+    assert (indexType.isa<IntegerType>());
+
+    // Get the pointer value
+    // Extract the memref's aligned pointer
+    auto extractMemrefBufferPointer = rewriter.create<LLVM::ExtractValueOp>(location, alignedPtrType, operands[kRowMemrefOperandNum],
+                                                                            rewriter.getI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
+
+    auto extractMemrefOffset = rewriter.create<LLVM::ExtractValueOp>(location, indexType, operands[kRowMemrefOperandNum],
+                                                                    rewriter.getI64ArrayAttr(kOffsetIndexInMemrefStruct));
+
+    // Get a pointer to the first element of this row
+    auto elementPtr = rewriter.create<LLVM::GEPOp>(location, alignedPtrType, static_cast<Value>(extractMemrefBufferPointer), 
+                                                  ValueRange({ static_cast<Value>(extractMemrefOffset) }));
+
+    // Get the length of this memref (since its a 2D memref, get the second element of the length array to get number of cols)
+    auto extractMemrefLength = rewriter.create<LLVM::ExtractValueOp>(location, indexType, operands[kRowMemrefOperandNum],
+                                                                     rewriter.getI64ArrayAttr({ kLengthIndexInMemrefStruct, 1 }));
+
+    auto printFunctionRef = getOrInsertPrintRow(rewriter, parentModule);
+
+    // int64_t PrintInputRow(double *treeBuf, int64_t length, int64_t rowIndex)
+    rewriter.create<CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>({ elementPtr, extractMemrefLength, indexVal }));
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
+
+
 } // anonymous namespace
 
 namespace mlir
@@ -109,7 +237,9 @@ namespace decisionforest
 void populateDebugOpLoweringPatterns(RewritePatternSet& patterns, LLVMTypeConverter& typeConverter) {
   if (InsertDebugHelpers)
     patterns.add<PrintTreePredictionOpLowering,
-                 PrintTreeNodeOpLowering>(typeConverter);
+                 PrintTreeNodeOpLowering,
+                 PrintTreeToDOTFileOpLowering,
+                 PrintInputRowOpLowering>(typeConverter);
 }  
 
 } // decisionforest

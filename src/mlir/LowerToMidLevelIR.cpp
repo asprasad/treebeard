@@ -87,6 +87,9 @@ struct PredictForestOpLowering: public ConversionPattern {
         auto rowSizeAttr = rewriter.getIndexAttr(rowType.getShape()[0]);
         auto row = rewriter.create<memref::SubViewOp>(location, static_cast<Value>(data), ArrayRef<OpFoldResult>({i, zeroIndexAttr}),
                                                       ArrayRef<OpFoldResult>({oneIndexAttr, rowSizeAttr}), ArrayRef<OpFoldResult>({oneIndexAttr, oneIndexAttr}));
+        if (decisionforest::InsertDebugHelpers) {
+          rewriter.create<decisionforest::PrintInputRowOp>(location, row, i);
+        }
 
         // Create a for loop over the trees
         auto resultElementType = resultMemrefType.getElementType();

@@ -314,7 +314,7 @@ TestDescriptor testList[] = {
 };
 
 // TestDescriptor testList[] = {
-//   TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize1)
+//   TEST_LIST_ENTRY(Test_CodeGeneration_RightAndLeftHeavy_BatchSize1)
 // };
 
 
