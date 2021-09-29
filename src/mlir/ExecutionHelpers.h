@@ -55,15 +55,15 @@ public:
   void PrintOffsetsArray();
   void PrintModelArray();
 
-  template<typename InputElementType, int32_t InputRowSize, int32_t BatchSize, typename ReturnType>
-  int32_t RunInference(InputElementType *input, ReturnType *returnValue) {
+  template<typename InputElementType, typename ReturnType>
+  int32_t RunInference(InputElementType *input, ReturnType *returnValue, int32_t inputRowSize, int32_t batchSize) {
     auto& engine = m_engine;
     Memref<ReturnType, 1> resultMemref;
     // Memref<InputElementType, 2> resultMemref;
     InputElementType *ptr = input, *alignedPtr = input;
-    int64_t batchSize = BatchSize, rowSize = InputRowSize, offset = 0, stride = 1;
+    int64_t rowSize = inputRowSize, offset = 0, stride = 1;
     ReturnType *resultPtr = returnValue, *resultAlignedPtr = returnValue;
-    int64_t resultLen = BatchSize;
+    int64_t resultLen = batchSize;
     void *args[] = { &ptr, &alignedPtr, &offset, &batchSize, &rowSize, &stride, &stride, // Input memref fields
                      &resultPtr, &resultAlignedPtr, &offset, &resultLen, &stride, // Result memref fields 
                      &resultMemref };

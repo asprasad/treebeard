@@ -342,7 +342,11 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     auto zeroIndex = rewriter.create<ConstantIndexOp>(location, 0);
     auto feature = rewriter.create<memref::LoadOp>(location, rowMemrefType.getElementType(), rowMemref,
                                                    ValueRange({static_cast<Value>(zeroIndex), static_cast<Value>(rowIndex)}));
-    // 
+
+    if(decisionforest::InsertDebugHelpers) {
+      rewriter.create<decisionforest::PrintComparisonOp>(location, feature, loadThresholdOp, loadFeatureIndexOp);
+    }
+
     // result = Compare
     // TODO we need a cast here to make sure the threshold and the row element are the same type. The op expects both operands to be the same type.
     auto comparison = rewriter.create<CmpFOp>(location,  mlir::CmpFPredicate::UGT, static_cast<Value>(feature), static_cast<Value>(loadThresholdOp));

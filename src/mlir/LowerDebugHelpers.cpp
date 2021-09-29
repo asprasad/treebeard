@@ -100,6 +100,50 @@ struct PrintTreeNodeOpLowering: public ConversionPattern {
   }
 };
 
+struct PrintComparisonOpLowering: public ConversionPattern {
+  PrintComparisonOpLowering(LLVMTypeConverter& typeConverter)
+  : ConversionPattern(typeConverter, mlir::decisionforest::PrintComparisonOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
+
+  static FlatSymbolRefAttr getOrInsertPrintComparison(PatternRewriter &rewriter,
+                                                      ModuleOp module) {
+    auto *context = module.getContext();
+    std::string functionName = "PrintComparison";
+
+    // Create a function declaration for PrintComparison, the signature is:
+    //   * `i64 (double, double, i64)`
+    auto llvmF64Ty = FloatType::getF64(context);
+    auto llvmI64Ty = IntegerType::get(context, 64);
+    auto llvmFnType = LLVM::LLVMFunctionType::get(llvmI64Ty, {llvmF64Ty, llvmF64Ty, llvmI64Ty});
+
+    return getOrInsertFunction(functionName, llvmFnType, rewriter, module);
+  }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    assert (operands.size() == 3);
+    ModuleOp parentModule = op->getParentOfType<ModuleOp>();
+    auto printFunctionRef = getOrInsertPrintComparison(rewriter, parentModule);
+    Value feature = operands[0];
+    if (feature.getType() != rewriter.getF64Type()) {
+      auto castOp = rewriter.create<LLVM::FPExtOp>(op->getLoc(), rewriter.getF64Type(), operands[0]);
+      feature = static_cast<Value>(castOp);
+    }
+    Value threshold = operands[1];
+    if (threshold.getType() != rewriter.getF64Type()) {
+      auto castOp = rewriter.create<LLVM::FPExtOp>(op->getLoc(), rewriter.getF64Type(), operands[0]);
+      threshold = static_cast<Value>(castOp);
+    }
+    Value nodeIndex = operands[2];
+    if (nodeIndex.getType() != rewriter.getI64Type()) {
+      auto sextOp = rewriter.create<LLVM::SExtOp>(op->getLoc(), rewriter.getI64Type(), nodeIndex);
+      nodeIndex = static_cast<Value>(sextOp);
+    }
+    rewriter.create<CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>({ feature, threshold, nodeIndex }));
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
+
 const int32_t kAlignedPointerIndexInMemrefStruct = 1;
 const int32_t kOffsetIndexInMemrefStruct = 2;
 const int32_t kLengthIndexInMemrefStruct = 3;
@@ -239,7 +283,8 @@ void populateDebugOpLoweringPatterns(RewritePatternSet& patterns, LLVMTypeConver
     patterns.add<PrintTreePredictionOpLowering,
                  PrintTreeNodeOpLowering,
                  PrintTreeToDOTFileOpLowering,
-                 PrintInputRowOpLowering>(typeConverter);
+                 PrintInputRowOpLowering,
+                 PrintComparisonOpLowering>(typeConverter);
 }  
 
 } // decisionforest

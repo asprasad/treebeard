@@ -108,6 +108,8 @@ protected:
         const auto& features = m_forest->GetFeatures();
         mlir::Type elementType = GetMLIRTypeFromString(features.front().type, m_builder);
         int64_t shape[] = { m_batchSize, static_cast<int64_t>(features.size())};
+        // auto affineMap = mlir::makeStridedLinearLayoutMap(mlir::ArrayRef<int64_t>({ static_cast<int64_t>(features.size()), 1 }), 0, elementType.getContext());
+        // return mlir::MemRefType::get(shape, elementType, affineMap);
         return mlir::MemRefType::get(shape, elementType);
     }
     mlir::Type GetFunctionResultType()
@@ -149,7 +151,15 @@ public:
         auto &entryBlock = *function.addEntryBlock();
 
         m_builder.setInsertionPointToStart(&entryBlock);
+        auto zeroIndexAttr = m_builder.getIndexAttr(0);
+        auto oneIndexAttr = m_builder.getIndexAttr(1);
+        auto rowSizeAttr = m_builder.getIndexAttr(m_forest->GetFeatures().size());
+        auto batchSizeAttr = m_builder.getIndexAttr(m_batchSize);
 
+        auto subviewOfArg = m_builder.create<mlir::memref::SubViewOp>(m_builder.getUnknownLoc(), static_cast<mlir::Value>(entryBlock.getArguments()[0]), 
+                                                                mlir::ArrayRef<mlir::OpFoldResult>({zeroIndexAttr, zeroIndexAttr}),
+                                                                mlir::ArrayRef<mlir::OpFoldResult>({batchSizeAttr, rowSizeAttr}), 
+                                                                mlir::ArrayRef<mlir::OpFoldResult>({oneIndexAttr, oneIndexAttr}));
         // All trees have the default tiling to start with.
         mlir::decisionforest::TreeTilingDescriptor tilingDescriptor;
         auto treeType = mlir::decisionforest::TreeType::get(GetMLIRType(ReturnType(), m_builder), tilingDescriptor, 
@@ -162,7 +172,7 @@ public:
         auto forestAttribute = mlir::decisionforest::DecisionForestAttribute::get(forestType, *m_forest);
 
         auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(m_builder.getUnknownLoc(), GetFunctionResultType(),
-                                                                                 forestAttribute, entryBlock.getArguments()[0], entryBlock.getArguments()[1]);
+                                                                                 forestAttribute, subviewOfArg, entryBlock.getArguments()[1]);
 
         m_builder.create<mlir::ReturnOp>(m_builder.getUnknownLoc(), static_cast<mlir::Value>(predictOp));
         if (failed(mlir::verify(m_module))) {

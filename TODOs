@@ -13,8 +13,12 @@ CodeGen for tile size == 1 for all trees
     * [Done] Lower custom tree ops to LLVM dialect
         - Non vector implementation
     * [Done] Initialization routines for length and offset memrefs need to be implemented
-    * Seperate out the tests and write some basic test infrastructure
-    * Write a set of tests that generate small forests and test generated code against that
+    * [Done] Seperate out the tests and write some basic test infrastructure
+    * [Done] Write a set of tests that generate small forests and test generated code against that
+    * [Done] Write some basic debugging infrastructure for JIT'ed code
+    * [Done] Tests with batch size > 1
+    * Compare results with XGBoost for small models
+    * Compare results with XGBoost for full models
 
 CodeGen for tile size != 1
     - Serialization when tile sizes are not 1
@@ -61,8 +65,4 @@ Code gen for unequal tile size across trees
 * [Done] Implement the tree attribute
 * [Done] Add TraverseTile for constant tree
 
-CHANGES FOR DEBUGGING
-1. BatchSize hardcoded to 2 in RunInference (executionHelper.h, modeljsonparser.h)
-2. Copying per tree output into result (rather than final result) (LowerToMidLevelIR.cpp)
-3. Lot of printing everywhere!
 

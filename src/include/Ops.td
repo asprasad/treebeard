@@ -272,4 +272,8 @@ def PrintTreeToDOTFileOp : DecisionForest_Op<"printTreeToDOTFile", []> {
 def PrintInputRowOp : DecisionForest_Op<"printInputRow", []> {
   let arguments = (ins InputDataType:$data, Index:$rowIndex);
 }
+
+def PrintComparisonOp : DecisionForest_Op<"printComparison", []> {
+  let arguments = (ins TileOfThresholdTypes:$data, TileOfThresholdTypes:$threshold, TileOfFeatureIndices:$nodeIndex);
+}
 #endif // TREE_HEAVY_OPS
