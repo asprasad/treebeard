@@ -201,7 +201,7 @@ void GenerateRandomModelJSONs(const std::string& dirname, int32_t numberOfModels
     for(int32_t i=0 ; i<numberOfModels ; ++i) {
       std::string filename = "TestModel_Size" + std::to_string(maxNumTrees) + "_" + std::to_string(i+2) + ".json";
       std::string filepath = dirname + "/" + filename;
-      auto numTrees = GetRandomInt(1, maxNumTrees);
+      auto numTrees = maxNumTrees; // GetRandomInt(1, maxNumTrees);
       std::cout << "Number of trees : " << numTrees << std::endl;
       auto numFeatures = GetRandomInt(1, maxNumFeatures);
 

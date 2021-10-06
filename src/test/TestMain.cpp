@@ -408,9 +408,9 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
   return true;
 }
 
-bool Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(TestArgs_t& args, int32_t batchSize) {
+bool Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize(TestArgs_t& args, int32_t batchSize, const std::string& modelDirRelativePath) {
   auto repoPath = GetTreeBeardRepoPath();
-  auto testModelsDir = repoPath + "/xgb_models/test/Random_1Tree";
+  auto testModelsDir = repoPath + "/" + modelDirRelativePath;
   auto modelListFile = testModelsDir + "/ModelList.txt";
   std::ifstream fin(modelListFile);
   if (!fin)
@@ -425,6 +425,14 @@ bool Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(TestArgs_t& args, int32_t b
   return true;
 }
 
+bool Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(TestArgs_t& args, int32_t batchSize) {
+  return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize(args, batchSize, "xgb_models/test/Random_1Tree");
+}
+
+bool Test_RandomXGBoostJSONs_2Trees_VariableBatchSize(TestArgs_t& args, int32_t batchSize) {
+  return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize(args, batchSize, "xgb_models/test/Random_2Tree");
+}
+
 bool Test_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args) {
   return Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(args, 1);
 }
@@ -435,6 +443,18 @@ bool Test_RandomXGBoostJSONs_1Tree_BatchSize2(TestArgs_t& args) {
 
 bool Test_RandomXGBoostJSONs_1Tree_BatchSize4(TestArgs_t& args) {
   return Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(args, 4);
+}
+
+bool Test_RandomXGBoostJSONs_2Trees_BatchSize1(TestArgs_t& args) {
+  return Test_RandomXGBoostJSONs_2Trees_VariableBatchSize(args, 1);
+}
+
+bool Test_RandomXGBoostJSONs_2Trees_BatchSize2(TestArgs_t& args) {
+  return Test_RandomXGBoostJSONs_2Trees_VariableBatchSize(args, 2);
+}
+
+bool Test_RandomXGBoostJSONs_2Trees_BatchSize4(TestArgs_t& args) {
+  return Test_RandomXGBoostJSONs_2Trees_VariableBatchSize(args, 4);
 }
 
 TestDescriptor testList[] = {
@@ -453,12 +473,16 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1),
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4),
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize2),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize1)
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize1),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize1),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize2),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4)
 };
 
 // TestDescriptor testList[] = {
-//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4),
-//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize1)
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize1),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize2),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4),
 // };
 
 const size_t numTests = sizeof(testList) / sizeof(testList[0]);
