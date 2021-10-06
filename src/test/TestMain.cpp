@@ -44,15 +44,17 @@ void InitializeVectorWithRandValues(std::vector<double>& vec) {
 }
 
 #pragma pack(push, 1)
-struct TileType {
-  double threshold;
-  int32_t index;
-  bool operator==(const TileType& other) const {
+template<typename ThresholdType, typename IndexType>
+struct NumericalTileType {
+  ThresholdType threshold;
+  IndexType index;
+  bool operator==(const NumericalTileType<ThresholdType, IndexType>& other) const {
     return threshold==other.threshold && index==other.index;
   }
 };
 #pragma pack(pop)
 
+template<typename TileType>
 std::vector<TileType> AddLeftHeavyTree(mlir::decisionforest::DecisionForest<>& forest) {
   // Add tree one
   auto& firstTree = forest.NewTree();
@@ -86,6 +88,7 @@ std::vector<TileType> AddLeftHeavyTree(mlir::decisionforest::DecisionForest<>& f
   return expectedArray;
 }
 
+template<typename TileType>
 std::vector<TileType> AddRightHeavyTree(mlir::decisionforest::DecisionForest<>& forest) {
   // Add tree one
   auto& firstTree = forest.NewTree();
@@ -119,13 +122,15 @@ std::vector<TileType> AddRightHeavyTree(mlir::decisionforest::DecisionForest<>& 
   return expectedArray;
 }
 
+template<typename TileType>
 std::vector<TileType> AddRightAndLeftHeavyTrees(decisionforest::DecisionForest<>& forest) {
-  auto expectedArray = AddRightHeavyTree(forest);
-  auto expectedArray2 = AddLeftHeavyTree(forest);
+  auto expectedArray = AddRightHeavyTree<TileType>(forest);
+  auto expectedArray2 = AddLeftHeavyTree<TileType>(forest);
   expectedArray.insert(std::end(expectedArray), std::begin(expectedArray2), std::end(expectedArray2));
   return expectedArray;
 }
 
+template<typename TileType>
 void AddFeaturesToForest(decisionforest::DecisionForest<>& forest, std::vector<TileType>& serializedForest, std::string featureType) {
   int32_t numFeatures = -1;
   for (auto& tile : serializedForest) {
@@ -140,34 +145,39 @@ void AddFeaturesToForest(decisionforest::DecisionForest<>& forest, std::vector<T
   }
 }
 
-bool Test_BufferInitializationWithOneTree_RightHeavy(TestArgs_t& args) {
+template<typename ThresholdType, typename IndexType>
+bool Test_BufferInit_RightHeavy(TestArgs_t& args) {
+  using TileType = NumericalTileType<ThresholdType, IndexType>;
   auto& context = args.context;
+  mlir::OpBuilder builder(&context);
   mlir::decisionforest::DecisionForest<> forest;
-  auto expectedArray = AddRightHeavyTree(forest);
+  auto expectedArray = AddRightHeavyTree<TileType>(forest);
 
   // Construct basic tree types for the tree
   // (Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type thresholdType, Type featureIndexType
-  auto doubleType = mlir::Float64Type::get(&context);
-  auto int32Type = mlir::IntegerType::get(&context, 32);
+  auto thresholdType = TreeBeard::GetMLIRType(ThresholdType(), builder);
+  auto indexType = TreeBeard::GetMLIRType(IndexType(), builder);
   mlir::decisionforest::TreeTilingDescriptor tilingDescriptor;
-  auto treeType = mlir::decisionforest::TreeType::get(doubleType, tilingDescriptor, doubleType, int32Type);
+  auto treeType = mlir::decisionforest::TreeType::get(thresholdType, tilingDescriptor, thresholdType, indexType);
   //(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType, Type treeType)
-  auto forestType = mlir::decisionforest::TreeEnsembleType::get(doubleType, 1, doubleType /*HACK type doesn't matter for this test*/,
+  auto forestType = mlir::decisionforest::TreeEnsembleType::get(thresholdType, 1, thresholdType /*HACK type doesn't matter for this test*/,
                                                                 mlir::decisionforest::ReductionType::kAdd, treeType);
   mlir::decisionforest::PersistDecisionForest(forest, forestType);
   std::vector<TileType> serializedTree(std::pow(2, 3) - 1); //Depth of the tree is 3, so this is the size of the dense array
   // InitializeBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets)
   std::vector<int32_t> offsets(1, -1);
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeBuffer(serializedTree.data(), 1, 64, 32, offsets);
+  int32_t thresholdSize = sizeof(ThresholdType)*8;
+  int32_t indexSize = sizeof(IndexType)*8;
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeBuffer(serializedTree.data(), 1, thresholdSize, indexSize, offsets);
   Test_ASSERT(expectedArray == serializedTree);
   Test_ASSERT(offsets[0] == 0);
   
   std::vector<int64_t> offsetVec(1, -1);
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(offsetVec.data(), 1, 64, 32);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(offsetVec.data(), 1, thresholdSize, indexSize);
   Test_ASSERT(offsetVec[0] == 0);
   
   std::vector<int64_t> lengthVec(1, -1);
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthVec.data(), 1, 64, 32);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthVec.data(), 1, thresholdSize, indexSize);
   Test_ASSERT(lengthVec[0] == 7);
 
   mlir::decisionforest::ClearPersistedForest();
@@ -175,10 +185,81 @@ bool Test_BufferInitializationWithOneTree_RightHeavy(TestArgs_t& args) {
   return true;
 }
 
+bool Test_BufferInitializationWithOneTree_RightHeavy(TestArgs_t& args) {
+  return Test_BufferInit_RightHeavy<double, int32_t>(args);
+}
+
+bool Test_BufferInitializationWithOneTree_RightHeavy_Int16(TestArgs_t& args) {
+  return Test_BufferInit_RightHeavy<double, int16_t>(args);
+}
+
+bool Test_BufferInitializationWithOneTree_RightHeavy_Int8(TestArgs_t& args) {
+  return Test_BufferInit_RightHeavy<double, int8_t>(args);
+}
+
+bool Test_BufferInitializationWithOneTree_RightHeavy_Float(TestArgs_t& args) {
+  return Test_BufferInit_RightHeavy<float, int32_t>(args);
+}
+
+bool Test_BufferInitializationWithOneTree_RightHeavy_FloatInt16(TestArgs_t& args) {
+  return Test_BufferInit_RightHeavy<float, int16_t>(args);
+}
+
+bool Test_BufferInitializationWithOneTree_RightHeavy_FloatInt8(TestArgs_t& args) {
+  return Test_BufferInit_RightHeavy<float, int8_t>(args);
+}
+
+template<typename ThresholdType, typename IndexType>
+bool Test_BufferInitialization_TwoTrees(TestArgs_t& args) {
+  using TileType = NumericalTileType<ThresholdType, IndexType>;
+  auto& context = args.context;
+  mlir::OpBuilder builder(&context);
+  mlir::decisionforest::DecisionForest<> forest;
+  auto expectedArray = AddRightHeavyTree<TileType>(forest);
+  auto expectedArray2 = AddLeftHeavyTree<TileType>(forest);
+  expectedArray.insert(std::end(expectedArray), std::begin(expectedArray2), std::end(expectedArray2));
+
+  // Construct basic tree types for the tree
+  // (Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type thresholdType, Type featureIndexType
+  auto thresholdType = TreeBeard::GetMLIRType(ThresholdType(), builder);
+  auto indexType = TreeBeard::GetMLIRType(IndexType(), builder);
+  mlir::decisionforest::TreeTilingDescriptor tilingDescriptor;
+  auto treeType = mlir::decisionforest::TreeType::get(thresholdType, tilingDescriptor, thresholdType, indexType);
+  //(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType, Type treeType)
+  auto forestType = mlir::decisionforest::TreeEnsembleType::get(thresholdType, 1, thresholdType /*HACK type doesn't matter for this test*/,
+                                                                mlir::decisionforest::ReductionType::kAdd, treeType);
+  mlir::decisionforest::PersistDecisionForest(forest, forestType);
+  std::vector<TileType> serializedTree(2*(std::pow(2, 3) - 1)); //Depth of the tree is 3, so this is the size of the dense array
+  // InitializeBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets)
+  int32_t thresholdSize = sizeof(ThresholdType)*8;
+  int32_t indexSize = sizeof(IndexType)*8;
+  std::vector<int32_t> offsets(2, -1);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeBuffer(serializedTree.data(), 1, thresholdSize, indexSize, offsets);
+  Test_ASSERT(expectedArray == serializedTree);
+  Test_ASSERT(offsets[0] == 0);
+  Test_ASSERT(offsets[1] == 7);
+
+  std::vector<int64_t> offsetVec(2, -1);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(offsetVec.data(), 1, thresholdSize, indexSize);
+  Test_ASSERT(offsetVec[0] == 0);
+  Test_ASSERT(offsetVec[1] == 7);
+
+  std::vector<int64_t> lengthVec(2, -1);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthVec.data(), 1, thresholdSize, indexSize);
+  Test_ASSERT(lengthVec[0] == 7);
+  Test_ASSERT(lengthVec[1] == 7);
+
+  mlir::decisionforest::ClearPersistedForest();
+
+  return true;
+}
+
+using DoubleInt32Tile = NumericalTileType<double, int32_t>;
+
 bool Test_BufferInitializationWithOneTree_LeftHeavy(TestArgs_t& args) {
   mlir::MLIRContext& context = args.context;
   mlir::decisionforest::DecisionForest<> forest;
-  auto expectedArray = AddLeftHeavyTree(forest);  
+  auto expectedArray = AddLeftHeavyTree<DoubleInt32Tile>(forest);  
 
   // Construct basic tree types for the tree
   // (Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type thresholdType, Type featureIndexType
@@ -190,7 +271,7 @@ bool Test_BufferInitializationWithOneTree_LeftHeavy(TestArgs_t& args) {
   auto forestType = mlir::decisionforest::TreeEnsembleType::get(doubleType, 1, doubleType /*HACK type doesn't matter for this test*/,
                                                                 mlir::decisionforest::ReductionType::kAdd, treeType);
   mlir::decisionforest::PersistDecisionForest(forest, forestType);
-  std::vector<TileType> serializedTree(std::pow(2, 3) - 1); //Depth of the tree is 3, so this is the size of the dense array
+  std::vector<DoubleInt32Tile> serializedTree(std::pow(2, 3) - 1); //Depth of the tree is 3, so this is the size of the dense array
 
   // InitializeBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets)
   std::vector<int32_t> offsets(1, -1);
@@ -212,43 +293,27 @@ bool Test_BufferInitializationWithOneTree_LeftHeavy(TestArgs_t& args) {
 }
 
 bool Test_BufferInitializationWithTwoTrees(TestArgs_t& args) {
-  mlir::MLIRContext& context = args.context;
-  mlir::decisionforest::DecisionForest<> forest;
-  auto expectedArray = AddRightHeavyTree(forest);
-  auto expectedArray2 = AddLeftHeavyTree(forest);
-  expectedArray.insert(std::end(expectedArray), std::begin(expectedArray2), std::end(expectedArray2));
+  return Test_BufferInitialization_TwoTrees<double, int32_t>(args);
+}
 
-  // Construct basic tree types for the tree
-  // (Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type thresholdType, Type featureIndexType
-  auto doubleType = mlir::Float64Type::get(&context);
-  auto int32Type = mlir::IntegerType::get(&context, 32);
-  mlir::decisionforest::TreeTilingDescriptor tilingDescriptor;
-  auto treeType = mlir::decisionforest::TreeType::get(doubleType, tilingDescriptor, doubleType, int32Type);
-  //(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType, Type treeType)
-  auto forestType = mlir::decisionforest::TreeEnsembleType::get(doubleType, 2, doubleType /*HACK type doesn't matter for this test*/,
-                                                                mlir::decisionforest::ReductionType::kAdd, treeType);
-  mlir::decisionforest::PersistDecisionForest(forest, forestType);
-  std::vector<TileType> serializedTree(2*(std::pow(2, 3) - 1)); //Depth of the tree is 3, so this is the size of the dense array
-  // InitializeBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets)
-  std::vector<int32_t> offsets(2, -1);
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeBuffer(serializedTree.data(), 1, 64, 32, offsets);
-  Test_ASSERT(expectedArray == serializedTree);
-  Test_ASSERT(offsets[0] == 0);
-  Test_ASSERT(offsets[1] == 7);
+bool Test_BufferInitializationWithTwoTrees_Int16(TestArgs_t& args) {
+  return Test_BufferInitialization_TwoTrees<double, int16_t>(args);
+}
 
-  std::vector<int64_t> offsetVec(2, -1);
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(offsetVec.data(), 1, 64, 32);
-  Test_ASSERT(offsetVec[0] == 0);
-  Test_ASSERT(offsetVec[1] == 7);
+bool Test_BufferInitializationWithTwoTrees_Int8(TestArgs_t& args) {
+  return Test_BufferInitialization_TwoTrees<double, int8_t>(args);
+}
 
-  std::vector<int64_t> lengthVec(2, -1);
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthVec.data(), 1, 64, 32);
-  Test_ASSERT(lengthVec[0] == 7);
-  Test_ASSERT(lengthVec[1] == 7);
+bool Test_BufferInitializationWithTwoTrees_Float(TestArgs_t& args) {
+  return Test_BufferInitialization_TwoTrees<float, int32_t>(args);
+}
 
-  mlir::decisionforest::ClearPersistedForest();
+bool Test_BufferInitializationWithTwoTrees_FloatInt16(TestArgs_t& args) {
+  return Test_BufferInitialization_TwoTrees<float, int16_t>(args);
+}
 
-  return true;
+bool Test_BufferInitializationWithTwoTrees_FloatInt8(TestArgs_t& args) {
+  return Test_BufferInitialization_TwoTrees<float, int8_t>(args);
 }
 
 // IR Tests
@@ -257,10 +322,11 @@ using ReturnType = double;
 using FeatureIndexType = int32_t;
 using NodeIndexType = int32_t;
 using InputElementType = double;
-typedef std::vector<TileType> (*ForestConstructor_t)(decisionforest::DecisionForest<>& forest);
+
+typedef std::vector<DoubleInt32Tile> (*ForestConstructor_t)(decisionforest::DecisionForest<>& forest);
 
 class FixedTreeIRConstructor : public TreeBeard::ModelJSONParser<double, double, int32_t, int32_t, double> {
-  std::vector<TileType> m_treeSerialization;
+  std::vector<DoubleInt32Tile> m_treeSerialization;
   ForestConstructor_t m_constructForest;
 public:
   FixedTreeIRConstructor(MLIRContext& context, int32_t batchSize, ForestConstructor_t constructForest)
@@ -349,38 +415,48 @@ std::vector<std::vector<double>> GetBatchSize2Data() {
 
 bool Test_CodeGeneration_LeftHeavy_BatchSize1(TestArgs_t& args) {
   auto data = GetBatchSize1Data();
-  return Test_ForestCodeGen_BatchSize1(args, AddLeftHeavyTree, data);
+  return Test_ForestCodeGen_BatchSize1(args, AddLeftHeavyTree<DoubleInt32Tile>, data);
 }
 
 bool Test_CodeGeneration_RightHeavy_BatchSize1(TestArgs_t& args) {
   auto data = GetBatchSize1Data();
-  return Test_ForestCodeGen_BatchSize1(args, AddRightHeavyTree, data);
+  return Test_ForestCodeGen_BatchSize1(args, AddRightHeavyTree<DoubleInt32Tile>, data);
 }
 
 bool Test_CodeGeneration_RightAndLeftHeavy_BatchSize1(TestArgs_t& args) {
   auto data = GetBatchSize1Data();
-  return Test_ForestCodeGen_BatchSize1(args, AddRightAndLeftHeavyTrees, data);
+  return Test_ForestCodeGen_BatchSize1(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, data);
 }
 
 bool Test_CodeGeneration_LeftHeavy_BatchSize2(TestArgs_t& args) {
   auto data = GetBatchSize2Data();
-  return Test_ForestCodeGen_VariableBatchSize(args, AddLeftHeavyTree, 2, data);
+  return Test_ForestCodeGen_VariableBatchSize(args, AddLeftHeavyTree<DoubleInt32Tile>, 2, data);
 }
 
 bool Test_CodeGeneration_RightHeavy_BatchSize2(TestArgs_t& args) {
   auto data = GetBatchSize2Data();
-  return Test_ForestCodeGen_VariableBatchSize(args, AddRightHeavyTree, 2, data);
+  return Test_ForestCodeGen_VariableBatchSize(args, AddRightHeavyTree<DoubleInt32Tile>, 2, data);
 }
 
 bool Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2(TestArgs_t& args) {
   auto data = GetBatchSize2Data();
-  return Test_ForestCodeGen_VariableBatchSize(args, AddRightAndLeftHeavyTrees, 2, data);
+  return Test_ForestCodeGen_VariableBatchSize(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 2, data);
 }
 
 TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy),
+  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Int16),
+  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Int8),
+  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Float),
+  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_FloatInt16),
+  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_FloatInt8),
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy),
   TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees),
+  TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_Int16),
+  TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_Int8),
+  TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_Float),
+  TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_FloatInt16),
+  TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_FloatInt8),
   TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_CodeGeneration_RightAndLeftHeavy_BatchSize1),
