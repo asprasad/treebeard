@@ -199,7 +199,7 @@ void SaveToXGBoostJSON(DecisionForest<>& forest, const std::string& filename) {
 void GenerateRandomModelJSONs(const std::string& dirname, int32_t numberOfModels, int32_t maxNumTrees, 
                               int32_t maxNumFeatures, double thresholdMin, double thresholdMax, int32_t maxDepth) {
     for(int32_t i=0 ; i<numberOfModels ; ++i) {
-      std::string filename = "TestModel_Size" + std::to_string(maxNumTrees) + "_" + std::to_string(i+2) + ".json";
+      std::string filename = "TestModel_Size" + std::to_string(maxNumTrees) + "_" + std::to_string(i+1) + ".json";
       std::string filepath = dirname + "/" + filename;
       auto numTrees = maxNumTrees; // GetRandomInt(1, maxNumTrees);
       std::cout << "Number of trees : " << numTrees << std::endl;

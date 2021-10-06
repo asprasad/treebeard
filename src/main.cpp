@@ -25,9 +25,9 @@ void SetInsertDebugHelpers(int argc, char *argv[]) {
 bool RunGenerationIfNeeded(int argc, char *argv[]) {
   for (int32_t i=0 ; i<argc ; ++i)
     if (std::string(argv[i]).find(std::string("--genJSONs")) != std::string::npos) {
-      std::string modelsDir = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/xgb_models/test/Random_2Tree";
+      std::string modelsDir = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/xgb_models/test/Random_4Tree";
       std::cout << "Generating random models into directory : " << modelsDir << std::endl;
-      TreeBeard::test::GenerateRandomModelJSONs(modelsDir, 25, 2, 20, -10.0, 10.0, 10);
+      TreeBeard::test::GenerateRandomModelJSONs(modelsDir, 25, 4, 20, -10.0, 10.0, 10);
       return true;
     }
   return false;

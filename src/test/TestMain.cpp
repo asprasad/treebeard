@@ -433,6 +433,10 @@ bool Test_RandomXGBoostJSONs_2Trees_VariableBatchSize(TestArgs_t& args, int32_t 
   return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize(args, batchSize, "xgb_models/test/Random_2Tree");
 }
 
+bool Test_RandomXGBoostJSONs_4Trees_VariableBatchSize(TestArgs_t& args, int32_t batchSize) {
+  return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize(args, batchSize, "xgb_models/test/Random_4Tree");
+}
+
 bool Test_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args) {
   return Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(args, 1);
 }
@@ -457,6 +461,18 @@ bool Test_RandomXGBoostJSONs_2Trees_BatchSize4(TestArgs_t& args) {
   return Test_RandomXGBoostJSONs_2Trees_VariableBatchSize(args, 4);
 }
 
+bool Test_RandomXGBoostJSONs_4Trees_BatchSize1(TestArgs_t& args) {
+  return Test_RandomXGBoostJSONs_4Trees_VariableBatchSize(args, 1);
+}
+
+bool Test_RandomXGBoostJSONs_4Trees_BatchSize2(TestArgs_t& args) {
+  return Test_RandomXGBoostJSONs_4Trees_VariableBatchSize(args, 2);
+}
+
+bool Test_RandomXGBoostJSONs_4Trees_BatchSize4(TestArgs_t& args) {
+  return Test_RandomXGBoostJSONs_4Trees_VariableBatchSize(args, 4);
+}
+
 TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy),
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy),
@@ -476,13 +492,14 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize1),
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize1),
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize2),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4)
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize1),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize2),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4)
 };
 
 // TestDescriptor testList[] = {
-//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize1),
-//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize2),
-//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize1),
 // };
 
 const size_t numTests = sizeof(testList) / sizeof(testList[0]);

@@ -6,7 +6,7 @@ from xgboost import plot_tree
 import matplotlib.pyplot as plt
 from glob import glob
 
-model_file_dir = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/xgb_models/test/Random_2Tree"
+model_file_dir = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/xgb_models/test/Random_4Tree"
 model_list_file = os.path.join(model_file_dir, "ModelList.txt")
 model_list = open(model_list_file, "w")
 
