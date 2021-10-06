@@ -2,12 +2,16 @@
 #include "json/xgboostparser.h"
 #include "include/TreeTilingUtils.h"
 #include "mlir/ExecutionHelpers.h"
+#include "TestUtilsCommon.h"
 
 using namespace std;
 
+namespace TreeBeard
+{
 namespace test
 {
-void RunTests();
+void TestRandomForestGeneration();
+}
 }
 
 void SetInsertDebugHelpers(int argc, char *argv[]) {
@@ -53,8 +57,10 @@ void RunCompilerPasses(int argc, char *argv[]) {
 int main(int argc, char *argv[]) {
   cout << "TreeBeard: A compiler for gradient boosting tree inference.\n";
   SetInsertDebugHelpers(argc, argv);
-  test::RunTests();
+  TreeBeard::test::RunTests();
   // RunCompilerPasses(argc, argv);
+  // TreeBeard::test::TestRandomForestGeneration();
+  // TreeBeard::test::GenerateRandomModelJSONs("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/xgb_models/test/Random_1Tree", 25, 1, 20, -10.0, 10.0, 10);
 
   return 0;
 }

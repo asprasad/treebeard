@@ -17,6 +17,8 @@
 
 using namespace mlir;
 
+namespace TreeBeard
+{
 namespace test
 {
 
@@ -304,4 +306,5 @@ bool Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1(TestArgs_t& arg
   return true;
 }
 
+}
 }

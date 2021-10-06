@@ -6,6 +6,8 @@
 #include <string>
 #include <sstream>
 #include <numeric>
+#include <cassert>
+#include <cmath>
 #include "TreeTilingDescriptor.h"
 
 namespace mlir
@@ -82,6 +84,10 @@ public:
     std::vector<ThresholdType> GetThresholdArray();
     std::vector<FeatureIndexType> GetFeatureIndexArray();
     int32_t GetNumberOfTiles();
+    void WriteToDOTFile(std::ostream& fout);
+    void WriteToDOTFile(const std::string& filename);
+
+    const std::vector<Node>& GetNodes() { return m_nodes; }
 private:
     std::vector<Node> m_nodes;
     size_t m_numFeatures;
@@ -198,7 +204,7 @@ std::vector<FeatureIndexType> DecisionTree<ThresholdType, ReturnType, FeatureInd
     std::vector<FeatureIndexType> featureIndexVec(vectorLength, -1);
     assert (m_tilingDescriptor.MaxTileSize() == 1 && "Only size 1 tiles currently supported");
 
-    GetNodeAttributeArray(featureIndexVec, 0, 0, [](Node& n) { return n.featureIndex; });
+    GetNodeAttributeArray(featureIndexVec, 0, 0, [](Node& n) { return n.IsLeaf() ? -1 : n.featureIndex; });
     return featureIndexVec;
 }
 
@@ -251,6 +257,26 @@ ReturnType DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexTy
         node = &m_nodes[node->rightChild];
     }    
     return node->threshold;
+}
+
+template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+void DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::WriteToDOTFile(std::ostream& fout)
+{
+  fout << "digraph {\n";
+  for (size_t i=0 ; i<m_nodes.size() ; ++i) {
+    int64_t parentIndex = m_nodes[i].parent;
+    fout << "\t\"node" << i << "\" [ label = \"Id:" << i << ", Thres:" << m_nodes[i].threshold << ", FeatIdx:" << m_nodes[i].featureIndex << "\"];\n";
+    if (parentIndex != INVALID_NODE_INDEX)
+      fout << "\t\"node" << parentIndex << "\" -> \"node" << i << "\";\n";
+  }
+  fout << "}\n";
+}
+
+template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+void DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::WriteToDOTFile(const std::string& filename)
+{
+    std::ofstream fout(filename);
+    WriteToDOTFile(fout);
 }
 
 template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>

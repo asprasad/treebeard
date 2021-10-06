@@ -9,6 +9,8 @@
 
 using namespace mlir;
 
+namespace TreeBeard
+{
 namespace test
 {
 
@@ -258,7 +260,9 @@ bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   auto module = irConstructor.GetEvaluationFunction();
   // module->dump();
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  // module->dump();
   mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module);
+  // module->dump();
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
   mlir::decisionforest::LowerToLLVM(args.context, module);
@@ -354,6 +358,85 @@ bool Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2(TestArgs_t& args) 
   return Test_ForestCodeGen_VariableBatchSize(args, AddRightAndLeftHeavyTrees, 2, data);
 }
 
+bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, const std::string& modelJsonPath) {
+  TestCSVReader csvReader(modelJsonPath + ".csv");
+  TreeBeard::XGBoostJSONParser<> xgBoostParser(args.context, modelJsonPath, batchSize);
+  xgBoostParser.Parse();
+  auto module = xgBoostParser.GetEvaluationFunction();
+  // module->dump();
+  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module);
+  mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  // module->dump();
+  mlir::decisionforest::LowerToLLVM(args.context, module);
+  // module->dump();
+  // mlir::decisionforest::dumpLLVMIR(module);
+  decisionforest::InferenceRunner inferenceRunner(module);
+  
+  // inferenceRunner.PrintLengthsArray();
+  // inferenceRunner.PrintOffsetsArray();
+  std::vector<std::vector<double>> inputData;
+  std::vector<std::vector<double>> xgBoostPredictions;
+  for (size_t i=batchSize  ; i<csvReader.NumberOfRows()-1 ; i += batchSize) {
+    std::vector<double> batch, preds;
+    for (int32_t j=0 ; j<batchSize ; ++j) {
+      auto rowIndex = (i-batchSize) + j;
+      auto row = csvReader.GetRow(rowIndex);
+      auto xgBoostPrediction = row.back();
+      row.pop_back();
+      preds.push_back(xgBoostPrediction);
+      batch.insert(batch.end(), row.begin(), row.end());
+    }
+    inputData.push_back(batch);
+    xgBoostPredictions.push_back(preds);
+  }
+  size_t rowSize = csvReader.GetRow(0).size() - 1; // The last entry is the xgboost prediction
+  auto currentPredictionsIter = xgBoostPredictions.begin();
+  for(auto& batch : inputData) {
+    assert (batch.size() % batchSize == 0);
+    std::vector<double> result(batchSize, -1);
+    inferenceRunner.RunInference<double, double>(batch.data(), result.data(), rowSize, batchSize);
+    for(int64_t rowIdx=0 ; rowIdx<batchSize ; ++rowIdx) {
+      std::vector<double> row(batch.begin() + rowIdx*rowSize, batch.begin() + (rowIdx+1)*rowSize);
+      double expectedResult = (*currentPredictionsIter)[rowIdx];
+      double forestPrediction = xgBoostParser.GetForest()->Predict(row);
+      Test_ASSERT(FPEqual(forestPrediction + 0.5, expectedResult));
+      Test_ASSERT(FPEqual(result[rowIdx] + 0.5, expectedResult));
+    }
+    ++currentPredictionsIter;
+  }
+  return true;
+}
+
+bool Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(TestArgs_t& args, int32_t batchSize) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models/test/Random_1Tree";
+  auto modelListFile = testModelsDir + "/ModelList.txt";
+  std::ifstream fin(modelListFile);
+  if (!fin)
+    return false;
+  while(!fin.eof()) {
+    std::string modelJSONName;
+    std::getline(fin, modelJSONName);
+    auto modelJSONPath = testModelsDir + "/" + modelJSONName;
+    // std::cout << "Model file : " << modelJSONPath << std::endl;
+    Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize(args, batchSize, modelJSONPath));
+  }
+  return true;
+}
+
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args) {
+  return Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(args, 1);
+}
+
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize2(TestArgs_t& args) {
+  return Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(args, 2);
+}
+
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize4(TestArgs_t& args) {
+  return Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(args, 4);
+}
+
 TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy),
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy),
@@ -367,13 +450,16 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1),
   TEST_LIST_ENTRY(Test_LoadTileThresholdOp_DoubleInt32_TileSize1),
   TEST_LIST_ENTRY(Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1),
-  TEST_LIST_ENTRY(Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1)
+  TEST_LIST_ENTRY(Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize2),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize1)
 };
 
 // TestDescriptor testList[] = {
-//   TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize2)
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize1)
 // };
-
 
 const size_t numTests = sizeof(testList) / sizeof(testList[0]);
 
@@ -396,7 +482,7 @@ bool RunTest(TestDescriptor test, TestArgs_t& args) {
 	{
 		pass = test.m_testFunc(args);
 	}
-	// catch (...)
+	// catch s(...)
 	// {
 	// 	std::exception_ptr eptr = std::current_exception();
 	// 	std::cout << "Crashed with exception ";
@@ -425,4 +511,32 @@ void RunTests() {
   std::cout << (overallPass ? "\nTest Suite Passed" : "\nTest Suite Failed") << std::endl << std::endl;
 }
 
+void TestRandomForestGeneration() {
+  mlir::MLIRContext context;
+  context.getOrLoadDialect<mlir::decisionforest::DecisionForestDialect>();
+  context.getOrLoadDialect<mlir::StandardOpsDialect>();
+
+  const int32_t batchSize = 16;
+  // auto forest = TreeBeard::test::GenerateRandomDecisionForest(1, 5, 0.0, 1.0, 3);
+  // forest.GetTree(0).WriteToDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/testRandomTree.dot");
+  // TreeBeard::test::SaveToXGBoostJSON(forest, "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/testJSON.json");
+  std::string jsonFileName = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/xgb_models/test/Random_1Tree/TestModel_Size1_0.json";
+  TestCSVReader csvReader(jsonFileName + ".csv");
+  TreeBeard::XGBoostJSONParser<> xgBoostParser(context, jsonFileName, batchSize);
+  xgBoostParser.Parse();
+  std::cout << csvReader.NumberOfRows() << std::endl;
+  double totalError = 0;
+  for (size_t i=0  ; i<csvReader.NumberOfRows()-1 ; ++i) {
+    auto row = csvReader.GetRow(i);
+    auto xgBoostPrediction = row.back();
+    row.pop_back();
+    auto prediction = xgBoostParser.GetForest()->Predict(row) + 0.5;
+    auto error = fabs(prediction - xgBoostPrediction);
+    std::cout << "Prediction : " << prediction << " Error : " << error << std::endl;
+    totalError += error*error;
+  }
+  std::cout << "Total Square Error : " << totalError << std::endl;
+}
+
 } // test
+} // TreeBeard

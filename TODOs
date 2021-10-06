@@ -18,7 +18,12 @@ CodeGen for tile size == 1 for all trees
     * [Done] Write some basic debugging infrastructure for JIT'ed code
     * [Done] Tests with batch size > 1
     * Compare results with XGBoost for small models
+        * Write a script to generate test cases that have the following : 
+            - JSON file
+            - Input and output CSV
+        * Write tests in C++ that read these, compile and check results
     * Compare results with XGBoost for full models
+
 
 CodeGen for tile size != 1
     - Serialization when tile sizes are not 1
@@ -66,3 +71,5 @@ Code gen for unequal tile size across trees
 * [Done] Add TraverseTile for constant tree
 
 
+ISSUES
+1. How do we know which loop is the batch loop(s) and which loop is the tree loop(s) in the mid-level IR? For example, say we want to tile, we've already lost the information about which loop we're dealing with -- we'll have to infer it from what the loop index is being used for!

@@ -4,7 +4,17 @@
 #include <exception>
 #include <stdexcept>
 #include <cmath>
+#include <random>
+#include <functional>
+#include "DecisionForest.h"
 
+namespace mlir
+{
+class MLIRContext;
+}
+
+namespace TreeBeard
+{
 namespace test 
 {
 
@@ -23,6 +33,7 @@ using TestException = std::runtime_error;
   bool predicateVal = predicate; \
   if (!predicateVal) {\
     std::cout << "\nTest_ASSERT Failed : " << #predicate << std::endl; \
+    assert(false); \
     return false; \
   } \
 }
@@ -42,11 +53,48 @@ struct TestDescriptor {
 
 template<typename FPType>
 inline bool FPEqual(FPType a, FPType b) {
-  const FPType threshold = 1e-9;
-  return std::fabs(a - b) < threshold;
+  const FPType threshold = 1e-6;
+  auto sqDiff = (a-b) * (a-b);
+  return sqDiff < threshold;
 }
 
-} // test
+using RandomIntGenerator = std::function<int32_t()>;
+using RandomRealGenerator = std::function<double()>;
 
+inline int32_t GetRandomInt(int32_t min, int32_t max) {
+    std::random_device dev;
+    std::mt19937 rng(dev());
+    std::uniform_int_distribution<int32_t> dist(min, max);
+    return dist(dev);
+}
+
+inline double GetRandomReal(double min, double max) {
+    std::random_device dev;
+    std::mt19937 rng(dev());
+    std::uniform_real_distribution<> dist(min, max);
+    return dist(dev);
+}
+
+class TestCSVReader {
+  std::vector<std::vector<double>> m_data;
+  std::string m_filename;
+public:
+  TestCSVReader(const std::string& filename);
+  std::vector<double>& GetRow(size_t index) { return m_data[index]; }
+  size_t NumberOfRows() { return m_data.size(); }
+};
+
+std::string GetTreeBeardRepoPath();
+
+mlir::decisionforest::DecisionForest<> GenerateRandomDecisionForest(int32_t numTrees, int32_t numFeatures, double thresholdMin,
+                                                                    double thresholdMax, int32_t maxDepth);
+void SaveToXGBoostJSON(mlir::decisionforest::DecisionForest<>& forest, const std::string& filename);
+void GenerateRandomModelJSONs(const std::string& dirname, int32_t numberOfModels, int32_t maxNumTrees, 
+                              int32_t maxNumFeatures, double thresholdMin, double thresholdMax, int32_t maxDepth);
+
+void RunTests();
+
+} // test
+} // TreeBeard
 
 #endif // _TESTUTILS_COMMON_H_

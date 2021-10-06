@@ -19,11 +19,40 @@ public:
         :ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>(context, batchSize)
     {
         std::ifstream fin(filename);
+        assert (fin);
         fin >> m_json;
     }
     void Parse() override;
 };
-
+/*
+TOP LEVEL : 
+  "required": [
+    "version",
+    "learner"
+  ]
+LEARNER (Also includes an objective that is ignored here)
+ "learner": {
+      "type": "object",
+      "properties": {
+        "feature_names": {
+          "type": "array",
+          "items": {
+              "type": "string"
+          }
+        },
+        "feature_types": {
+          "type": "array",
+          "items": {
+              "type": "string"
+          }
+        },
+        "gradient_booster": {
+            {
+              "$ref": "#/definitions/gbtree"
+            }
+        }
+    }
+*/
 template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
 void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::Parse()
 {
@@ -31,16 +60,29 @@ void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexTyp
     auto& featureNamesJSON = learnerJSON["feature_names"];
     auto& featureTypesJSON = learnerJSON["feature_types"];
 
-    assert(featureNamesJSON.size() == featureTypesJSON.size());
-    for (size_t i = 0; i<featureNamesJSON.size() ; ++i)
+    // Assert is not valid since feature_names is not required. 
+    // assert(featureNamesJSON.size() == featureTypesJSON.size());
+    for (size_t i = 0; i<featureTypesJSON.size() ; ++i)
     {
-        auto name = featureNamesJSON[i].get<std::string>();
+        std::string name;
+        if (featureNamesJSON.size() == 0)
+            name = std::to_string(i);
+        else
+            name = featureNamesJSON[i].get<std::string>();
         auto featureType = featureTypesJSON[i].get<std::string>();
         this->AddFeature(name, featureType); //TODO hardcoded feature type
     }
 
     ConstructTreesFromBooster(learnerJSON["gradient_booster"]);
 }
+// We asumme the gradient booster is a gbtree
+/*
+    "required": [
+    "name",
+    "model"
+    ]
+*/
+// Name is a const string string "gbtree"
 
 template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
 void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::ConstructTreesFromBooster(json& boosterJSON)
@@ -71,7 +113,7 @@ void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexTyp
     auto& parents = treeJSON["parents"];
     auto& split_conditions = treeJSON["split_conditions"];
     auto& split_indices = treeJSON["split_indices"];
-    auto& split_type = treeJSON["split_type"]; // 0 is Numerical and 1 is Categorical
+    // auto& split_type = treeJSON["split_type"]; // 0 is Numerical and 1 is Categorical
     auto num_features = std::stoi(treeJSON["tree_param"]["num_feature"].get<std::string>());
     auto num_nodes = static_cast<size_t>(std::stoi(treeJSON["tree_param"]["num_nodes"].get<std::string>()));
     assert (numNodes == num_nodes);
@@ -82,7 +124,7 @@ void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexTyp
     std::vector<NodeIndexType> nodes;
     for (size_t i=0 ; i< num_nodes ; ++i)
     {
-        assert (split_type[i].get<int>() == 0); // only numerical splits for now
+        // assert (split_type[i].get<int>() == 0); // only numerical splits for now
         auto node = this->NewNode(split_conditions[i].get<ThresholdType>(), split_indices[i].get<FeatureIndexType>());
         nodes.push_back(node);
     }
