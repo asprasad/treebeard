@@ -7,8 +7,9 @@
 namespace TreeBeard
 {
 
-template<typename ThresholdType=double, typename ReturnType=double, typename FeatureIndexType=int32_t, typename NodeIndexType=int32_t>
-class XGBoostJSONParser : public ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>
+template<typename ThresholdType=double, typename ReturnType=double, typename FeatureIndexType=int32_t, 
+         typename NodeIndexType=int32_t, typename InputElementType=double>
+class XGBoostJSONParser : public ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>
 {
     json m_json;
     void ConstructSingleTree(json& treeJSON);
@@ -16,7 +17,7 @@ class XGBoostJSONParser : public ModelJSONParser<ThresholdType, ReturnType, Feat
 
 public:
     XGBoostJSONParser(mlir::MLIRContext& context, const std::string& filename, int32_t batchSize)
-        :ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>(context, batchSize)
+        :ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(context, batchSize)
     {
         std::ifstream fin(filename);
         assert (fin);
@@ -53,8 +54,8 @@ LEARNER (Also includes an objective that is ignored here)
         }
     }
 */
-template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::Parse()
+template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType, typename InputElementType>
+void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>::Parse()
 {
     auto& learnerJSON = m_json["learner"];
     auto& featureNamesJSON = learnerJSON["feature_names"];
@@ -84,8 +85,8 @@ void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexTyp
 */
 // Name is a const string string "gbtree"
 
-template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::ConstructTreesFromBooster(json& boosterJSON)
+template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType, typename InputElementType>
+void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>::ConstructTreesFromBooster(json& boosterJSON)
 {
     auto& modelJSON = boosterJSON["model"];
     size_t numTrees = static_cast<size_t>(std::stoi(modelJSON["gbtree_model_param"]["num_trees"].get<std::string>()));
@@ -99,8 +100,8 @@ void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexTyp
     }
 }
 
-template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::ConstructSingleTree(json& treeJSON)
+template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType, typename InputElementType>
+void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>::ConstructSingleTree(json& treeJSON)
 {
     // TODO what is "base_weights", "categories", "categories_nodes", 
     // "categories_segments", "categories_sizes"?

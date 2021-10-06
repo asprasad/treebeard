@@ -67,7 +67,7 @@ inline mlir::Type GetMLIRTypeFromString(const std::string& typestr, mlir::OpBuil
     return mlir::Type();
 }
 
-template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType, typename InputElementType>
 class ModelJSONParser
 {
 protected:
@@ -106,7 +106,7 @@ protected:
     mlir::Type GetFunctionArgumentType()
     {
         const auto& features = m_forest->GetFeatures();
-        mlir::Type elementType = GetMLIRTypeFromString(features.front().type, m_builder);
+        mlir::Type elementType = GetMLIRType(InputElementType(), m_builder); //GetMLIRTypeFromString(features.front().type, m_builder);
         int64_t shape[] = { m_batchSize, static_cast<int64_t>(features.size())};
         // auto affineMap = mlir::makeStridedLinearLayoutMap(mlir::ArrayRef<int64_t>({ static_cast<int64_t>(features.size()), 1 }), 0, elementType.getContext());
         // return mlir::MemRefType::get(shape, elementType, affineMap);

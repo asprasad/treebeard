@@ -17,11 +17,11 @@ CodeGen for tile size == 1 for all trees
     * [Done] Write a set of tests that generate small forests and test generated code against that
     * [Done] Write some basic debugging infrastructure for JIT'ed code
     * [Done] Tests with batch size > 1
-    * Compare results with XGBoost for small models
-        * Write a script to generate test cases that have the following : 
+    * [Done] Compare results with XGBoost for small models
+        * [Done] Write a script to generate test cases that have the following : 
             - JSON file
             - Input and output CSV
-        * Write tests in C++ that read these, compile and check results
+        * [Done] Write tests in C++ that read these, compile and check results
     * Compare results with XGBoost for full models
 
 
