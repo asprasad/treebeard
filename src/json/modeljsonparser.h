@@ -99,7 +99,7 @@ protected:
     mlir::Type GetInputRowType()
     {
         const auto& features = m_forest->GetFeatures();
-        mlir::Type elementType = GetMLIRTypeFromString(features.front().type, m_builder);
+        mlir::Type elementType = GetMLIRType(InputElementType(), m_builder); // GetMLIRTypeFromString(features.front().type, m_builder);
         int64_t shape[] = { static_cast<int64_t>(features.size()) };
         return mlir::MemRefType::get(shape, elementType);
     }

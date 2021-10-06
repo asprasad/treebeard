@@ -53,8 +53,9 @@ llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> InferenceRunner::CreateEx
   return maybeEngine;
 }
 
-InferenceRunner::InferenceRunner(mlir::ModuleOp module) 
-  :m_maybeEngine(CreateExecutionEngine(module)), m_engine(m_maybeEngine.get()), m_module(module)
+InferenceRunner::InferenceRunner(mlir::ModuleOp module, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize) 
+  :m_maybeEngine(CreateExecutionEngine(module)), m_engine(m_maybeEngine.get()), m_module(module), 
+   m_tileSize(tileSize), m_thresholdSize(thresholdSize), m_featureIndexSize(featureIndexSize)
 {
   InitializeLengthsArray();
   InitializeOffsetsArray();
@@ -74,7 +75,7 @@ int32_t InferenceRunner::InitializeLengthsArray() {
   }
   // std::cout << "Length memref length : " << lengthMemref.lengths[0] << std::endl;
 
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthMemref.alignedPtr, 1, 64, 32); 
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthMemref.alignedPtr, m_tileSize, m_thresholdSize, m_featureIndexSize); 
   return 0;
 }
 
@@ -111,7 +112,7 @@ int32_t InferenceRunner::InitializeOffsetsArray() {
   }
   // std::cout << "Offset memref length : " << offsetMemref.lengths[0] << std::endl;
 
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(offsetMemref.alignedPtr, 1, 64, 32); 
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(offsetMemref.alignedPtr, m_tileSize, m_thresholdSize, m_featureIndexSize); 
   return 0;
 }
 
@@ -148,7 +149,7 @@ int32_t InferenceRunner::InitializeModelArray() {
   }
   // std::cout << "Model memref length : " << modelMemref.lengths[0] << std::endl;
   std::vector<int32_t> offsets(mlir::decisionforest::ForestJSONReader::GetInstance().GetNumberOfTrees(), -1);
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeBuffer(modelMemref.alignedPtr, 1, 64, 32, offsets); 
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeBuffer(modelMemref.alignedPtr, m_tileSize, m_thresholdSize, m_featureIndexSize, offsets); 
   return 0;
 }
 

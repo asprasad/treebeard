@@ -28,6 +28,15 @@ bool Test_RandomXGBoostJSONs_2Trees_BatchSize4(TestArgs_t& args);
 bool Test_RandomXGBoostJSONs_4Trees_BatchSize1(TestArgs_t& args);
 bool Test_RandomXGBoostJSONs_4Trees_BatchSize2(TestArgs_t& args);
 bool Test_RandomXGBoostJSONs_4Trees_BatchSize4(TestArgs_t& args);
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize1_Float(TestArgs_t& args);
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize2_Float(TestArgs_t& args);
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize4_Float(TestArgs_t& args);
+bool Test_RandomXGBoostJSONs_2Trees_BatchSize1_Float(TestArgs_t& args);
+bool Test_RandomXGBoostJSONs_2Trees_BatchSize2_Float(TestArgs_t& args);
+bool Test_RandomXGBoostJSONs_2Trees_BatchSize4_Float(TestArgs_t& args);
+bool Test_RandomXGBoostJSONs_4Trees_BatchSize1_Float(TestArgs_t& args);
+bool Test_RandomXGBoostJSONs_4Trees_BatchSize2_Float(TestArgs_t& args);
+bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float(TestArgs_t& args);
 
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
@@ -278,7 +287,7 @@ bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   mlir::decisionforest::LowerToLLVM(args.context, module);
   // module->dump();
   // mlir::decisionforest::dumpLLVMIR(module);
-  decisionforest::InferenceRunner inferenceRunner(module);
+  decisionforest::InferenceRunner inferenceRunner(module, 1, 64, 32);
   
   // inferenceRunner.PrintLengthsArray();
   // inferenceRunner.PrintOffsetsArray();
@@ -305,7 +314,7 @@ bool Test_ForestCodeGen_VariableBatchSize(TestArgs_t& args, ForestConstructor_t 
   mlir::decisionforest::LowerToLLVM(args.context, module);
   // module->dump();
   // mlir::decisionforest::dumpLLVMIR(module);
-  decisionforest::InferenceRunner inferenceRunner(module);
+  decisionforest::InferenceRunner inferenceRunner(module, 1, 64, 32);
   
   // inferenceRunner.PrintLengthsArray();
   // inferenceRunner.PrintOffsetsArray();
@@ -390,11 +399,22 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4),
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize1),
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize2),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4)
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize1_Float),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize2_Float),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_Float),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize1_Float),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize2_Float),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_Float),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize1_Float),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize2_Float),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float),
 };
 
 // TestDescriptor testList[] = {
-//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize1),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize1_Float),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize2_Float),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_Float),
 // };
 
 const size_t numTests = sizeof(testList) / sizeof(testList[0]);

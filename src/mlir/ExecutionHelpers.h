@@ -37,15 +37,18 @@ struct Memref {
 
 using LengthMemrefType = Memref<int64_t, 1>;
 using OffsetMemrefType = Memref<int64_t, 1>;
-using ResultMemrefType = Memref<double, 1>;
+// using ResultMemrefType = Memref<double, 1>;
 
 class InferenceRunner {
   llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> m_maybeEngine;
   std::unique_ptr<mlir::ExecutionEngine>& m_engine;
   mlir::ModuleOp m_module;
+  int32_t m_tileSize;
+  int32_t m_thresholdSize;
+  int32_t m_featureIndexSize;
 public:
   static llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> CreateExecutionEngine(mlir::ModuleOp module);
-  InferenceRunner(mlir::ModuleOp module);
+  InferenceRunner(mlir::ModuleOp module, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize);
 
   int32_t InitializeLengthsArray();
   int32_t InitializeOffsetsArray();

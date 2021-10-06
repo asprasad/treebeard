@@ -307,9 +307,10 @@ bool Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1(TestArgs_t& arg
   return true;
 }
 
+template<typename FloatType>
 bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, const std::string& modelJsonPath) {
   TestCSVReader csvReader(modelJsonPath + ".csv");
-  TreeBeard::XGBoostJSONParser<> xgBoostParser(args.context, modelJsonPath, batchSize);
+  TreeBeard::XGBoostJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType> xgBoostParser(args.context, modelJsonPath, batchSize);
   xgBoostParser.Parse();
   auto module = xgBoostParser.GetEvaluationFunction();
   // module->dump();
@@ -320,17 +321,17 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
   mlir::decisionforest::LowerToLLVM(args.context, module);
   // module->dump();
   // mlir::decisionforest::dumpLLVMIR(module);
-  decisionforest::InferenceRunner inferenceRunner(module);
+  decisionforest::InferenceRunner inferenceRunner(module, 1, sizeof(FloatType)*8, sizeof(int32_t)*8);
   
   // inferenceRunner.PrintLengthsArray();
   // inferenceRunner.PrintOffsetsArray();
-  std::vector<std::vector<double>> inputData;
-  std::vector<std::vector<double>> xgBoostPredictions;
+  std::vector<std::vector<FloatType>> inputData;
+  std::vector<std::vector<FloatType>> xgBoostPredictions;
   for (size_t i=batchSize  ; i<csvReader.NumberOfRows()-1 ; i += batchSize) {
-    std::vector<double> batch, preds;
+    std::vector<FloatType> batch, preds;
     for (int32_t j=0 ; j<batchSize ; ++j) {
       auto rowIndex = (i-batchSize) + j;
-      auto row = csvReader.GetRow(rowIndex);
+      auto row = csvReader.GetRowOfType<FloatType>(rowIndex);
       auto xgBoostPrediction = row.back();
       row.pop_back();
       preds.push_back(xgBoostPrediction);
@@ -343,20 +344,22 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
   auto currentPredictionsIter = xgBoostPredictions.begin();
   for(auto& batch : inputData) {
     assert (batch.size() % batchSize == 0);
-    std::vector<double> result(batchSize, -1);
-    inferenceRunner.RunInference<double, double>(batch.data(), result.data(), rowSize, batchSize);
+    std::vector<FloatType> result(batchSize, -1);
+    inferenceRunner.RunInference<FloatType, FloatType>(batch.data(), result.data(), rowSize, batchSize);
     for(int64_t rowIdx=0 ; rowIdx<batchSize ; ++rowIdx) {
+      // This needs to be a vector of doubles because the type is hardcoded for Forest::Predict
       std::vector<double> row(batch.begin() + rowIdx*rowSize, batch.begin() + (rowIdx+1)*rowSize);
-      double expectedResult = (*currentPredictionsIter)[rowIdx];
-      double forestPrediction = xgBoostParser.GetForest()->Predict(row);
-      Test_ASSERT(FPEqual(forestPrediction + 0.5, expectedResult));
-      Test_ASSERT(FPEqual(result[rowIdx] + 0.5, expectedResult));
+      FloatType expectedResult = (*currentPredictionsIter)[rowIdx];
+      FloatType forestPrediction = xgBoostParser.GetForest()->Predict(row);
+      Test_ASSERT(FPEqual<FloatType>(forestPrediction + (FloatType)0.5, expectedResult));
+      Test_ASSERT(FPEqual<FloatType>(result[rowIdx] + (FloatType)0.5, expectedResult));
     }
     ++currentPredictionsIter;
   }
   return true;
 }
 
+template<typename FloatType>
 bool Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize(TestArgs_t& args, int32_t batchSize, const std::string& modelDirRelativePath) {
   auto repoPath = GetTreeBeardRepoPath();
   auto testModelsDir = repoPath + "/" + modelDirRelativePath;
@@ -369,21 +372,24 @@ bool Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize(TestArgs_t& args, i
     std::getline(fin, modelJSONName);
     auto modelJSONPath = testModelsDir + "/" + modelJSONName;
     // std::cout << "Model file : " << modelJSONPath << std::endl;
-    Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize(args, batchSize, modelJSONPath));
+    Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FloatType>(args, batchSize, modelJSONPath));
   }
   return true;
 }
 
+template<typename FloatType=double>
 bool Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(TestArgs_t& args, int32_t batchSize) {
-  return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize(args, batchSize, "xgb_models/test/Random_1Tree");
+  return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize<FloatType>(args, batchSize, "xgb_models/test/Random_1Tree");
 }
 
+template<typename FloatType=double>
 bool Test_RandomXGBoostJSONs_2Trees_VariableBatchSize(TestArgs_t& args, int32_t batchSize) {
-  return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize(args, batchSize, "xgb_models/test/Random_2Tree");
+  return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize<FloatType>(args, batchSize, "xgb_models/test/Random_2Tree");
 }
 
+template<typename FloatType=double>
 bool Test_RandomXGBoostJSONs_4Trees_VariableBatchSize(TestArgs_t& args, int32_t batchSize) {
-  return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize(args, batchSize, "xgb_models/test/Random_4Tree");
+  return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize<FloatType>(args, batchSize, "xgb_models/test/Random_4Tree");
 }
 
 bool Test_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args) {
@@ -420,6 +426,42 @@ bool Test_RandomXGBoostJSONs_4Trees_BatchSize2(TestArgs_t& args) {
 
 bool Test_RandomXGBoostJSONs_4Trees_BatchSize4(TestArgs_t& args) {
   return Test_RandomXGBoostJSONs_4Trees_VariableBatchSize(args, 4);
+}
+
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize1_Float(TestArgs_t& args) {
+  return Test_RandomXGBoostJSONs_1Tree_VariableBatchSize<float>(args, 1);
+}
+
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize2_Float(TestArgs_t& args) {
+  return Test_RandomXGBoostJSONs_1Tree_VariableBatchSize<float>(args, 2);
+}
+
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize4_Float(TestArgs_t& args) {
+  return Test_RandomXGBoostJSONs_1Tree_VariableBatchSize<float>(args, 4);
+}
+
+bool Test_RandomXGBoostJSONs_2Trees_BatchSize1_Float(TestArgs_t& args) {
+  return Test_RandomXGBoostJSONs_2Trees_VariableBatchSize<float>(args, 1);
+}
+
+bool Test_RandomXGBoostJSONs_2Trees_BatchSize2_Float(TestArgs_t& args) {
+  return Test_RandomXGBoostJSONs_2Trees_VariableBatchSize<float>(args, 2);
+}
+
+bool Test_RandomXGBoostJSONs_2Trees_BatchSize4_Float(TestArgs_t& args) {
+  return Test_RandomXGBoostJSONs_2Trees_VariableBatchSize<float>(args, 4);
+}
+
+bool Test_RandomXGBoostJSONs_4Trees_BatchSize1_Float(TestArgs_t& args) {
+  return Test_RandomXGBoostJSONs_4Trees_VariableBatchSize<float>(args, 1);
+}
+
+bool Test_RandomXGBoostJSONs_4Trees_BatchSize2_Float(TestArgs_t& args) {
+  return Test_RandomXGBoostJSONs_4Trees_VariableBatchSize<float>(args, 2);
+}
+
+bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float(TestArgs_t& args) {
+  return Test_RandomXGBoostJSONs_4Trees_VariableBatchSize<float>(args, 4);
 }
 
 }

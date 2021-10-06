@@ -81,6 +81,15 @@ class TestCSVReader {
 public:
   TestCSVReader(const std::string& filename);
   std::vector<double>& GetRow(size_t index) { return m_data[index]; }
+  
+  template<typename T>
+  std::vector<T> GetRowOfType(size_t index) {
+    auto& doubleRow = GetRow(index);
+    std::vector<T> row(doubleRow.size());
+    std::copy(std::begin(doubleRow), std::end(doubleRow), std::begin(row));
+    return row;
+  }
+
   size_t NumberOfRows() { return m_data.size(); }
 };
 

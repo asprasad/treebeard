@@ -95,7 +95,13 @@ struct PredictForestOpLowering: public ConversionPattern {
         auto resultElementType = resultMemrefType.getElementType();
         int64_t numTrees = static_cast<int64_t>(forestType.getNumberOfTrees());
         auto ensembleSizeConst = rewriter.create<ConstantIndexOp>(location, numTrees); 
-        auto zeroResultConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat(0.0), resultElementType.cast<FloatType>());
+        Value zeroResultConst;
+        if (resultElementType.isa<mlir::Float64Type>())
+          zeroResultConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat(0.0), resultElementType.cast<FloatType>());
+        else if(resultElementType.isa<mlir::Float32Type>())
+          zeroResultConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat((float)0.0), resultElementType.cast<FloatType>());
+        else
+          assert(false && "Unsupported floating point type");
         // auto oneIndexConst2 = rewriter.create<ConstantIndexOp>(location, 1);
         auto treeLoop = rewriter.create<scf::ForOp>(location, zeroConst, ensembleSizeConst, oneIndexConst, static_cast<Value>(zeroResultConst));
         
