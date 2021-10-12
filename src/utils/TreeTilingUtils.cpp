@@ -1,5 +1,8 @@
+#include <queue>
 #include "TreeTilingDescriptor.h"
 #include "TreeTilingUtils.h"
+#include "TiledTree.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace mlir
 {
@@ -327,6 +330,403 @@ void ClearPersistedForest() {
     mlir::decisionforest::ForestJSONReader::GetInstance().ClearAllData();
 }
 
+// -----------------------------------------------
+// Construction of Tile Tree
+// -----------------------------------------------
+bool TiledTreeNode::AreNodesInSameTile(int32_t node1, int32_t node2) {
+    auto& tilingDescriptor = m_tiledTree.m_modifiedTree.TilingDescriptor();
+    if(tilingDescriptor.TileIDs().at(node1) == tilingDescriptor.TileIDs().at(node2)) {
+        assert (tilingDescriptor.TileIDs().at(node1) == m_tileID);
+        return true;
+    }
+    return false;
+}
+
+int32_t TiledTreeNode::FindTileEntryNode() {
+    int32_t entryNode = DecisionTree<>::INVALID_NODE_INDEX;
+    for (auto nodeIdx : m_nodeIndices) {
+        auto& node = m_tiledTree.m_modifiedTree.GetNodes().at(nodeIdx);
+        auto parentIdx = node.parent;
+        // Figure out if the parent is in this tile
+        bool isRoot = (parentIdx == DecisionTree<>::INVALID_NODE_INDEX);
+        bool parentInTile = !isRoot && AreNodesInSameTile(parentIdx, nodeIdx);
+        if (!parentInTile) {
+            assert (entryNode == DecisionTree<>::INVALID_NODE_INDEX);
+            entryNode = nodeIdx;
+            // NOT breaking here so we check the rest of the nodes. We should never get back in here.
+        }
+    }
+    assert (entryNode != DecisionTree<>::INVALID_NODE_INDEX);
+    return entryNode;
+}
+
+void TiledTreeNode::SortTileNodes() {
+    std::vector<int32_t> levelOrderSorted;
+    levelOrderSorted.reserve(m_nodeIndices.size());
+    std::queue<int32_t> traversalQ;
+    auto entryNodeIndex = FindTileEntryNode();
+    traversalQ.push(entryNodeIndex);
+    while (!traversalQ.empty()) {
+        int32_t nodeIndex = traversalQ.front();
+        auto& node = m_tiledTree.m_modifiedTree.GetNodes().at(nodeIndex);
+        traversalQ.pop();
+        assert (AreNodesInSameTile(entryNodeIndex, nodeIndex));
+        levelOrderSorted.push_back(nodeIndex);
+        // If the node is not a leaf, then it must have two valid children
+        if (node.IsLeaf()) 
+            continue;
+        if (AreNodesInSameTile(node.leftChild, nodeIndex)) {
+            assert (std::find(m_nodeIndices.begin(), m_nodeIndices.end(), node.leftChild) != m_nodeIndices.end());
+            traversalQ.push(node.leftChild);
+        }
+        if (AreNodesInSameTile(node.rightChild, nodeIndex)) {
+            assert (std::find(m_nodeIndices.begin(), m_nodeIndices.end(), node.rightChild) != m_nodeIndices.end());
+            traversalQ.push(node.rightChild);
+        }
+    }
+    assert(m_nodeIndices.size() == levelOrderSorted.size());
+    m_nodeIndices = levelOrderSorted;
+}
+
+void TiledTreeNode::AddExtraNodesIfNeeded() {
+    // How do we add the extra nodes in the right places in the vector? We need
+    // to maintain level order!
+    if (static_cast<int32_t>(m_nodeIndices.size()) == m_tiledTree.m_modifiedTree.TilingDescriptor().MaxTileSize())
+        return;
+    // If the only node in the tile is a leaf, then just return
+    if (static_cast<int32_t>(m_nodeIndices.size()) == 1 && 
+        m_tiledTree.m_modifiedTree.GetNodes().at(m_nodeIndices.at(0)).IsLeaf()) {
+        return;
+    }
+    m_hasExtraNodes = true;
+    assert (static_cast<int32_t>(m_nodeIndices.size()) < m_tiledTree.m_modifiedTree.TilingDescriptor().MaxTileSize());
+    int32_t numberOfNodesToAdd = m_tiledTree.m_modifiedTree.TilingDescriptor().MaxTileSize() - static_cast<int32_t>(m_nodeIndices.size());
+    // TODO Must there be at least one node where both children are leaves?
+    // This must be true
+    // 1. The child of any node must either be in the same tile or must be a leaf (if it were not, the tile could have been larger)
+    // 2. Since the tile can't grow indefinitely, #1 => there is at least one node with both children being leaves
+    std::list<int32_t> candidateNodes;
+    for (auto nodeIndex : m_nodeIndices) {
+        auto& node = m_tiledTree.m_modifiedTree.GetNodes().at(nodeIndex);
+        auto leftChildIndex = node.leftChild;
+        auto rightChildIndex = node.rightChild;
+        auto& leftChild = m_tiledTree.m_modifiedTree.GetNodes().at(leftChildIndex);
+        auto& rightChild = m_tiledTree.m_modifiedTree.GetNodes().at(rightChildIndex);
+        assert (AreNodesInSameTile(nodeIndex, leftChildIndex) || leftChild.IsLeaf());
+        assert (AreNodesInSameTile(nodeIndex, rightChildIndex) || rightChild.IsLeaf());
+        if (leftChild.IsLeaf() && rightChild.IsLeaf())
+            candidateNodes.push_front(nodeIndex);
+    }
+    assert (candidateNodes.size() > 0);
+    // TODO How do we determine the shape of this tile once we add new nodes? Maybe some kind of look up based on the positions of the nodes in the 
+    // full dense serialization?
+    // TODO How do we decide which of the candidate nodes to use as the parent of the new node(s)? For now, picking from the first candidate, which will 
+    // be the right most node on the bottom most level. 
+    auto candidateIter = candidateNodes.begin();
+    for (int32_t i=0 ; i<numberOfNodesToAdd ; i+=2) { // We can add two dummy nodes for every candidate node
+        // TODO How do we decide where to add the new nodes? Maybe just add them somewhere and call sort again?
+        auto candidateIndex = *candidateIter;
+        auto& candidateNode = m_tiledTree.m_modifiedTree.GetNodes().at(candidateIndex);
+        {
+          auto leafIndex = candidateNode.rightChild;
+          auto &leafNode = m_tiledTree.m_modifiedTree.GetNodes().at(leafIndex);
+          assert(leafNode.IsLeaf());
+          // Add the dummy node as the right child of the candidate
+          auto dummyNode = m_tiledTree.m_modifiedTree.NewNode(candidateNode.threshold, candidateNode.featureIndex, m_tileID);
+          
+          m_tiledTree.m_modifiedTree.SetNodeLeftChild(dummyNode, leafIndex);
+          m_tiledTree.m_modifiedTree.SetNodeRightChild(dummyNode, leafIndex);
+          m_tiledTree.m_modifiedTree.SetNodeParent(leafIndex, dummyNode);
+          
+          m_tiledTree.m_modifiedTree.SetNodeParent(dummyNode, candidateIndex);
+          m_tiledTree.m_modifiedTree.SetNodeRightChild(candidateIndex, dummyNode);
+
+          m_tiledTree.AddNodeToTile(m_tileIndex, dummyNode);
+        }
+        if (i+1 == numberOfNodesToAdd)
+            break;
+        {
+          auto leafIndex = candidateNode.leftChild;
+          auto &leafNode = m_tiledTree.m_modifiedTree.GetNodes().at(leafIndex);
+          assert(leafNode.IsLeaf());
+          // Add the dummy node as the left child of the candidate
+          auto dummyNode = m_tiledTree.m_modifiedTree.NewNode(candidateNode.threshold, candidateNode.featureIndex, m_tileID);
+          m_tiledTree.m_modifiedTree.SetNodeLeftChild(dummyNode, leafIndex);
+          m_tiledTree.m_modifiedTree.SetNodeRightChild(dummyNode, leafIndex);
+          m_tiledTree.m_modifiedTree.SetNodeParent(leafIndex, dummyNode);
+
+          m_tiledTree.m_modifiedTree.SetNodeParent(dummyNode, candidateIndex);
+          m_tiledTree.m_modifiedTree.SetNodeLeftChild(candidateIndex, dummyNode);
+          
+          m_tiledTree.AddNodeToTile(m_tileIndex, dummyNode);
+        }
+        ++candidateIter;
+    }
+    SortTileNodes();
+    m_tiledTree.SetChildrenForTile(*this);
+}
+
+TiledTree::TiledTree(DecisionTree<>& owningTree)
+ : m_owningTree(owningTree), m_modifiedTree(owningTree)
+{
+    ConstructTiledTree();
+}
+
+void TiledTree::SetChildrenHelper(TiledTreeNode& tile, int32_t nodeIndex, std::vector<int32_t>& children) {
+    auto &node = m_modifiedTree.GetNodes().at(nodeIndex);
+    if (node.IsLeaf()) return;
+    if (tile.AreNodesInSameTile(nodeIndex, node.leftChild))
+        SetChildrenHelper(tile, node.leftChild, children);
+    else
+        children.push_back(GetNodeTileIndex(node.leftChild));
+    if (tile.AreNodesInSameTile(nodeIndex, node.rightChild))
+        SetChildrenHelper(tile, node.rightChild, children);
+    else
+        children.push_back(GetNodeTileIndex(node.rightChild));
+}
+
+void TiledTree::SetChildrenForTile(TiledTreeNode& tile) {
+    tile.m_children.clear();
+    SetChildrenHelper(tile, tile.GetEntryNode(), tile.m_children);
+}
+
+void TiledTree::ConstructTiledTree() {
+    const TreeTilingDescriptor& tilingDescriptor = m_modifiedTree.TilingDescriptor();
+    auto& tileIDs = tilingDescriptor.TileIDs();
+    std::map<int32_t, int32_t> tileIDToTileIndexMap;
+    assert(m_modifiedTree.GetNodes().size() == tileIDs.size());
+    // First, split the nodes among tiles
+    int32_t nodeIndex=0;
+    for (auto tileID : tileIDs) {
+        auto tileIDMapIter = tileIDToTileIndexMap.find(tileID);
+        int32_t tileIndex = -1;
+        if (tileIDMapIter == tileIDToTileIndexMap.end()) {
+            tileIndex = NewTiledTreeNode(tileID);
+            tileIDToTileIndexMap[tileID] = tileIndex;
+        }
+        else {
+            tileIndex = tileIDMapIter->second;
+        }
+        AddNodeToTile(tileIndex, nodeIndex);
+        ++nodeIndex;
+    }
+    // Sort the nodes in each tile
+    for (auto& tile : m_tiles)
+        tile.SortTileNodes();
+    // Set the parents and the children of each tile
+    for (auto& tile : m_tiles) {
+        auto entryNode = tile.GetEntryNode();
+        auto parentNode = m_modifiedTree.GetNodes().at(entryNode).parent;
+        auto parentTileIndex = GetNodeTileIndex(parentNode);
+        tile.SetParent(parentTileIndex);
+
+        SetChildrenForTile(tile);
+    }
+    // Expand the tiles that aren't full with dummy nodes (TODO how do you represent this?)
+    for (auto& tile : m_tiles)
+        tile.AddExtraNodesIfNeeded();
+    
+    assert(Validate());
+}
+
+bool TiledTree::Validate() {
+    // Checks
+    //  - All nodes in the owning tree are covered and contained in exactly one tile
+    //  - All tiles are the same size or are leaves (with size == 1)
+    //  - Leaves are not part of tiles
+    //  - TODO Tiles are connected (traverse from entry tile and assert all nodes are reachable)
+    std::vector<int32_t> nodeCounts(m_modifiedTree.GetNodes().size(), 0);
+    for (auto& tile: m_tiles) {
+        auto& tileNodeIndices = tile.GetNodeIndices();
+        for (auto nodeIndex : tileNodeIndices) {
+            if (nodeIndex >= static_cast<int32_t>(nodeCounts.size()))
+                continue;
+            nodeCounts.at(nodeIndex)++;
+        }
+        int32_t maxTileSize = m_modifiedTree.TilingDescriptor().MaxTileSize();
+        if (tileNodeIndices.size() == 1) {
+            if (!m_modifiedTree.GetNodes().at(tileNodeIndices.front()).IsLeaf()) {
+                assert (false && "Node in tile with a single node must be a leaf");
+                return false;
+            }
+        }
+        else {
+            if (static_cast<int32_t>(tileNodeIndices.size()) != maxTileSize) {
+                assert (false && "Tile sizes must be equal except for leaf nodes");
+                return false;
+            }
+            for (auto nodeIndex : tileNodeIndices) {
+                // A node that is a non-unit tile must not be a leaf
+                if (m_modifiedTree.GetNodes().at(nodeIndex).IsLeaf()) {
+                    assert(false && "A node that is a non-unit tile must not be a leaf");
+                    return false;
+                }
+            }
+        }
+    }
+    for (auto nodeCount : nodeCounts) {
+        if (nodeCount!=1) {
+            assert (false && "Node must be in exactly one tile");
+            return false;
+        }
+    }
+    return true;
+}
+
+void TiledTreeNode::WriteDOTSubGraph(std::ofstream& fout) {
+    std::vector<std::string> colors = { "aquamarine3", "darkolivegreen4", "deepskyblue", "firebrick", "grey80", "teal"};
+    std::string& color = colors[m_tileID % colors.size()];
+
+    fout << "subgraph tile_" << m_tileID << " {\n";
+    fout << "\tnode [style=filled, ";
+    fout << "color=" << color << "];\n";
+    for (size_t i=0 ; i<m_nodeIndices.size() ; ++i) {
+        auto nodeIndex = m_nodeIndices.at(i);
+        auto& node = m_tiledTree.m_modifiedTree.GetNodes().at(nodeIndex);
+        int64_t parentIndex = node.parent;
+        auto& parentNode = m_tiledTree.m_modifiedTree.GetNodes().at(parentIndex);
+        fout << "\t\"node" << nodeIndex << "\" [ label = \"Id:" << nodeIndex << ", Thres:" << node.threshold << ", FeatIdx:" << node.featureIndex << "\"];\n";
+        if (parentIndex != DecisionTree<>::INVALID_NODE_INDEX) {
+            std::string edgeColor = parentNode.leftChild == nodeIndex ? "green" : "red";
+            if (parentNode.leftChild == parentNode.rightChild)
+                edgeColor = "black";
+            fout << "\t\"node" << parentIndex << "\" -> \"node" << nodeIndex << "\"[style=bold,color=" << edgeColor << "];\n";
+        }
+    }
+    fout << "}\n";
+}
+
+void TiledTree::EmitNodeDOT(std::ofstream& fout, int32_t nodeIndex) {
+    std::vector<std::string> colors = { "aquamarine3", "darkolivegreen4", "deepskyblue", "firebrick", "grey80", "teal"};
+
+    auto& node = m_modifiedTree.GetNodes().at(nodeIndex);
+    int32_t tileID = this->GetNodeTileIndex(nodeIndex);
+    std::string& color = colors[tileID % colors.size()];
+
+    int64_t parentIndex = node.parent;
+    fout << "\t\"node" << nodeIndex << "\" [ label = \"Id:" << nodeIndex
+        << ", Thres:" << node.threshold
+        << ", FeatIdx:" << node.featureIndex << "\", style=bold, color=" << color << "];\n";
+    if (parentIndex != decisionforest::DecisionTree<>::INVALID_NODE_INDEX) {
+        auto& parentNode = m_modifiedTree.GetNodes().at(parentIndex);
+        std::string edgeColor = parentNode.leftChild == nodeIndex ? "green" : "red";
+        if (parentNode.leftChild == parentNode.rightChild)
+            edgeColor = "black";
+        fout << "\t\"node" << parentIndex << "\" -> \"node" << nodeIndex << "\"[style=bold,color=" << edgeColor << "];\n";
+        // fout << "\t\"node" << parentIndex << "\" -> \"node" << nodeIndex << "\";\n";
+    }
+    if (node.leftChild != decisionforest::DecisionTree<>::INVALID_NODE_INDEX)
+        EmitNodeDOT(fout, node.leftChild);
+    if (node.rightChild != decisionforest::DecisionTree<>::INVALID_NODE_INDEX)
+        EmitNodeDOT(fout, node.rightChild);
+}
+
+// Routines to output DOT files for the tiled tree
+void TiledTree::WriteDOTFile(const std::string& filename) {
+    std::ofstream fout(filename);
+#ifdef EMIT_TILES_AS_SUBGRAPHS
+    fout << "digraph {\n";
+    for (size_t i=0 ; i<m_tiles.size() ; ++i) {
+        m_tiles[i].WriteDOTSubGraph(fout);
+    }
+    fout << "}\n";
+#else // EMIT_TILES_AS_SUBGRAPHS
+    fout << "digraph {\n";
+    // TODO This assumes the root is the first node
+    EmitNodeDOT(fout, 0);
+    fout << "}\n";
+
+#endif // EMIT_TILES_AS_SUBGRAPHS
+}
+
+void TiledTreeNode::GetThresholds(std::vector<double>::iterator beginIter) {
+    if (m_nodeIndices.size() == 1) {
+        // This is a leaf tile
+        auto& node = m_tiledTree.m_modifiedTree.GetNodes().at(m_nodeIndices.front());
+        assert (node.IsLeaf() && "A tile with a single node can only contain a leaf");
+        int32_t tileSize = m_tiledTree.m_modifiedTree.TilingDescriptor().MaxTileSize();
+        auto threshold = node.threshold;
+        for (int32_t i=0; i<tileSize ; ++i) {
+            *beginIter = threshold;
+            ++beginIter;
+        }
+        return;
+    }
+    assert (static_cast<int32_t>(m_nodeIndices.size()) == m_tiledTree.m_modifiedTree.TilingDescriptor().MaxTileSize());
+    for (auto nodeIndex : m_nodeIndices) {
+        auto threshold = m_tiledTree.m_modifiedTree.GetNodes().at(nodeIndex).threshold;
+        *beginIter = threshold;
+        ++beginIter;
+    }
+}
+
+void TiledTreeNode::GetFeatureIndices(std::vector<int32_t>::iterator beginIter) {
+    if (m_nodeIndices.size() == 1) {
+        // This is a leaf tile
+        auto& node = m_tiledTree.m_modifiedTree.GetNodes().at(m_nodeIndices.front());
+        assert (node.IsLeaf() && "A tile with a single node can only contain a leaf");
+        int32_t tileSize = m_tiledTree.m_modifiedTree.TilingDescriptor().MaxTileSize();
+        auto featureIndex = node.featureIndex;
+        for (int32_t i=0; i<tileSize ; ++i) {
+            *beginIter = featureIndex;
+            ++beginIter;
+        }
+        return;
+    }
+    assert (static_cast<int32_t>(m_nodeIndices.size()) == m_tiledTree.m_modifiedTree.TilingDescriptor().MaxTileSize());
+    for (auto nodeIndex : m_nodeIndices) {
+        auto featureIndex = m_tiledTree.m_modifiedTree.GetNodes().at(nodeIndex).featureIndex;
+        *beginIter = featureIndex;
+        ++beginIter;
+    }
+}
+
+int32_t TiledTree::GetTreeDepthHelper(int32_t tileIndex) {
+    auto& tile = m_tiles.at(tileIndex);
+    int32_t depth = 0;
+    for (auto child : tile.GetChildren()) {
+        depth = std::max(depth, GetTreeDepthHelper(child));
+    }
+    return 1+depth;
+}
+
+template <typename AttribType, typename GetterType>
+void TiledTree::GetTileAttributeArray(std::vector<AttribType>& attributeVec,
+                                      size_t vecIndex, size_t tileIndex, GetterType get)
+{
+    auto& tile = m_tiles.at(tileIndex);
+    assert(vecIndex < attributeVec.size());
+    // TODO What is the type we set on leaf nodes?
+    // assert(node.featureType == FeatureType::kNumerical || node.IsLeaf());
+    auto tileSize = m_owningTree.TilingDescriptor().MaxTileSize();
+    get(tile, attributeVec.begin() + vecIndex*tileSize);
+    const auto& children = tile.GetChildren();
+    int32_t numChildren = tileSize + 1;
+    for (size_t i=0 ; i<children.size() ; ++i) {
+        int32_t childIndex = children[i];
+        GetTileAttributeArray<AttribType, GetterType>(attributeVec, numChildren*vecIndex+i+1, childIndex, get);
+    }
+}
+
+std::vector<double> TiledTree::SerializeThresholds() {
+    int32_t tiledTreeDepth = GetTreeDepth();
+    int32_t numChildrenPerTile = m_owningTree.TilingDescriptor().MaxTileSize() + 1;
+    int32_t numberOfTiles = (std::pow(numChildrenPerTile, tiledTreeDepth) - 1)/(numChildrenPerTile - 1);
+    int32_t vectorLength = numberOfTiles * m_owningTree.TilingDescriptor().MaxTileSize();
+    std::vector<double> thresholds(vectorLength, -1);
+    GetTileAttributeArray(thresholds, 0, 0, [&](TiledTreeNode& t, std::vector<double>::iterator iter){ t.GetThresholds(iter); } );
+    return thresholds;
+}
+
+std::vector<int32_t> TiledTree::SerializeFeatureIndices() {
+    int32_t tiledTreeDepth = GetTreeDepth();
+    int32_t numChildrenPerTile = m_owningTree.TilingDescriptor().MaxTileSize() + 1;
+    int32_t numberOfTiles = (std::pow(numChildrenPerTile, tiledTreeDepth) - 1)/(numChildrenPerTile - 1);
+    int32_t vectorLength = numberOfTiles * m_owningTree.TilingDescriptor().MaxTileSize();
+    std::vector<int32_t> thresholds(vectorLength, -1);
+    GetTileAttributeArray(thresholds, 0, 0, [&](TiledTreeNode& t, std::vector<int32_t>::iterator iter){ t.GetFeatureIndices(iter); } );
+    return thresholds;
+}
 
 } // decisionforest
 } // mlir

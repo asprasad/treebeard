@@ -6,7 +6,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "xgboostparser.h"
-
+#include "TiledTree.h"
 using namespace mlir;
 
 namespace TreeBeard
@@ -119,6 +119,52 @@ std::vector<TileType> AddRightHeavyTree(mlir::decisionforest::DecisionForest<>& 
   }
   assert (firstTree.GetTreeDepth() == 3);
   std::vector<TileType> expectedArray{ {0.5, 2}, {0.85, -1}, {0.3, 4}, {0, -1}, {0, -1}, {0.15, -1}, {0.25, -1} };
+  return expectedArray;
+}
+
+template<typename TileType>
+std::vector<TileType> AddBalancedTree(mlir::decisionforest::DecisionForest<>& forest) {
+  // Add tree one
+  auto& firstTree = forest.NewTree();
+  auto rootNode = firstTree.NewNode(0.5, 2);
+  // Add right child
+  {
+    auto node = firstTree.NewNode(0.3, 4);
+    firstTree.SetNodeParent(node, rootNode);
+    firstTree.SetNodeRightChild(rootNode, node);
+    {
+      // Leaf
+      auto subTreeRoot = node;
+      auto leftChild = firstTree.NewNode(0.15, -1);
+      firstTree.SetNodeParent(leftChild, subTreeRoot);
+      firstTree.SetNodeLeftChild(subTreeRoot, leftChild);
+      
+      // Leaf
+      auto rightChild = firstTree.NewNode(0.25, -1);
+      firstTree.SetNodeParent(rightChild, subTreeRoot);
+      firstTree.SetNodeRightChild(subTreeRoot, rightChild);
+    }
+  }
+  // Add left child
+  {
+    auto node = firstTree.NewNode(0.1, 1);
+    firstTree.SetNodeParent(node, rootNode);
+    firstTree.SetNodeLeftChild(rootNode, node);
+    {
+      // Leaf
+      auto subTreeRoot = node;
+      auto leftChild = firstTree.NewNode(0.75, -1);
+      firstTree.SetNodeParent(leftChild, subTreeRoot);
+      firstTree.SetNodeLeftChild(subTreeRoot, leftChild);
+      
+      // Leaf
+      auto rightChild = firstTree.NewNode(0.85, -1);
+      firstTree.SetNodeParent(rightChild, subTreeRoot);
+      firstTree.SetNodeRightChild(subTreeRoot, rightChild);
+    }
+  }
+  assert (firstTree.GetTreeDepth() == 3);
+  std::vector<TileType> expectedArray{ {0.5, 2}, {0.1, 1}, {0.3, 4}, {0.75, -1}, {0.85, -1}, {0.15, -1}, {0.25, -1} };
   return expectedArray;
 }
 
@@ -443,6 +489,53 @@ bool Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2(TestArgs_t& args) 
   return Test_ForestCodeGen_VariableBatchSize(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 2, data);
 }
 
+bool Test_TiledTreeConstruction_LeftHeavy_Simple(TestArgs_t& args) {
+  decisionforest::DecisionForest<> forest;
+  AddLeftHeavyTree<DoubleInt32Tile>(forest);
+  auto& tree = forest.GetTree(0);
+  
+  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 3 };
+  decisionforest::TreeTilingDescriptor tilingDescriptor(3, 4, tileIDs, decisionforest::TilingType::kRegular);
+  tree.SetTilingDescriptor(tilingDescriptor);
+
+  decisionforest::TiledTree tiledTree(tree);
+  tiledTree.WriteDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/tiledTree.dot");
+  auto thresholds = tiledTree.SerializeThresholds();
+  auto featureIndices = tiledTree.SerializeFeatureIndices();
+  return true;
+}
+
+bool Test_TiledTreeConstruction_RightHeavy_Simple(TestArgs_t& args) {
+  decisionforest::DecisionForest<> forest;
+  AddRightHeavyTree<DoubleInt32Tile>(forest);
+  auto& tree = forest.GetTree(0);
+  
+  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 3 };
+  decisionforest::TreeTilingDescriptor tilingDescriptor(3, 4, tileIDs, decisionforest::TilingType::kRegular);
+  tree.SetTilingDescriptor(tilingDescriptor);
+
+  decisionforest::TiledTree tiledTree(tree);
+  tiledTree.WriteDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/tiledTree.dot");
+  auto thresholds = tiledTree.SerializeThresholds();
+  auto featureIndices = tiledTree.SerializeFeatureIndices();
+  return true;
+}
+
+bool Test_TiledTreeConstruction_Balanced_Simple(TestArgs_t& args) {
+  decisionforest::DecisionForest<> forest;
+  AddBalancedTree<DoubleInt32Tile>(forest);
+  auto& tree = forest.GetTree(0);
+  
+  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 0, 3, 4 };
+  decisionforest::TreeTilingDescriptor tilingDescriptor(3, 5, tileIDs, decisionforest::TilingType::kRegular);
+  tree.SetTilingDescriptor(tilingDescriptor);
+
+  decisionforest::TiledTree tiledTree(tree);
+  tiledTree.WriteDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/tiledTree.dot");
+  auto thresholds = tiledTree.SerializeThresholds();
+  auto featureIndices = tiledTree.SerializeFeatureIndices();
+  return true;
+}
 TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy),
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Int16),
@@ -488,9 +581,8 @@ TestDescriptor testList[] = {
 };
 
 // TestDescriptor testList[] = {
-//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize1_Float),
-//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize2_Float),
-//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_Float),
+//   TEST_LIST_ENTRY(Test_TiledTreeConstruction_Balanced_Simple),
+//   // TEST_LIST_ENTRY(Test_TiledTreeConstruction_LeftHeavy_Simple)
 // };
 
 const size_t numTests = sizeof(testList) / sizeof(testList[0]);
@@ -541,33 +633,6 @@ void RunTests() {
     overallPass = overallPass && pass;
   }
   std::cout << (overallPass ? "\nTest Suite Passed" : "\nTest Suite Failed") << std::endl << std::endl;
-}
-
-void TestRandomForestGeneration() {
-  mlir::MLIRContext context;
-  context.getOrLoadDialect<mlir::decisionforest::DecisionForestDialect>();
-  context.getOrLoadDialect<mlir::StandardOpsDialect>();
-
-  const int32_t batchSize = 16;
-  // auto forest = TreeBeard::test::GenerateRandomDecisionForest(1, 5, 0.0, 1.0, 3);
-  // forest.GetTree(0).WriteToDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/testRandomTree.dot");
-  // TreeBeard::test::SaveToXGBoostJSON(forest, "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/testJSON.json");
-  std::string jsonFileName = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/xgb_models/test/Random_1Tree/TestModel_Size1_0.json";
-  TestCSVReader csvReader(jsonFileName + ".csv");
-  TreeBeard::XGBoostJSONParser<> xgBoostParser(context, jsonFileName, batchSize);
-  xgBoostParser.Parse();
-  std::cout << csvReader.NumberOfRows() << std::endl;
-  double totalError = 0;
-  for (size_t i=0  ; i<csvReader.NumberOfRows()-1 ; ++i) {
-    auto row = csvReader.GetRow(i);
-    auto xgBoostPrediction = row.back();
-    row.pop_back();
-    auto prediction = xgBoostParser.GetForest()->Predict(row) + 0.5;
-    auto error = fabs(prediction - xgBoostPrediction);
-    std::cout << "Prediction : " << prediction << " Error : " << error << std::endl;
-    totalError += error*error;
-  }
-  std::cout << "Total Square Error : " << totalError << std::endl;
 }
 
 } // test

@@ -53,6 +53,14 @@ public:
         m_nodes.push_back(node);
         return m_nodes.size() - 1;
     }
+    // Create a new node in the current tree, and add it to a specified tile
+    NodeIndexType NewNode(ThresholdType threshold, FeatureIndexType featureIndex, int32_t tileID)
+    { 
+        auto nodeIndex = NewNode(threshold, featureIndex);
+        m_tilingDescriptor.TileIDs().push_back(tileID);
+        return nodeIndex;
+    }
+
     // Set the parent of a node
     void SetNodeParent(NodeIndexType node, NodeIndexType parent) { m_nodes[node].parent = parent; }
     // Set right child of a node
@@ -71,6 +79,7 @@ public:
     ReturnType PredictTree(std::vector<ThresholdType>& data) const;
     TreeTilingDescriptor& TilingDescriptor() { return m_tilingDescriptor; }
     const TreeTilingDescriptor& TilingDescriptor() const { return m_tilingDescriptor; }
+    void SetTilingDescriptor(const TreeTilingDescriptor& descriptor) { m_tilingDescriptor = descriptor; }
 
     int32_t GetTreeDepth() {
         return GetTreeDepthHelper(0);
