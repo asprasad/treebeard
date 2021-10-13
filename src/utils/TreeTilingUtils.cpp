@@ -728,5 +728,61 @@ std::vector<int32_t> TiledTree::SerializeFeatureIndices() {
     return thresholds;
 }
 
+// Routines to compute combinatorial properties of tiles
+class TileShapeToTileIDMap
+{
+    int32_t m_tileSize;
+    std::map<std::string, int32_t> m_tileStringToTileIDMap;
+    int32_t m_currentTileID = 0;
+    void TileStringGenerator(std::string& str, int32_t currentIndex, int32_t numNodes);
+    void InitMap();
+public:
+    TileShapeToTileIDMap(int32_t tileSize) 
+     : m_tileSize(tileSize)
+    {
+        InitMap();
+    }
+};
+
+void TileShapeToTileIDMap::InitMap() {
+
+}
+
+void TileShapeToTileIDMap::TileStringGenerator(std::string& str, int32_t currentIndex, int32_t numNodes) {
+    
+}
+
+class TileShapeUtils
+{
+    static std::map<int32_t, int32_t> tileSizeToNumberOfShapesMap;
+public:
+    static int32_t NumberOfTileShapes(int32_t tileSize);
+    // Serialize into a string of 0's and 1's and then use that to lookup an integer
+    static int32_t GetTileShapeID(TiledTreeNode& tile);
+    // Use the recursive strategy used to compute number of tile shapes to enumerate all tree shapes
+    static void InitTileShapeToTileIDMap(int32_t tileSize);
+    // Index is (tileShapeID, comparison result)
+    static std::vector<std::vector<int32_t>> ComputeTileLookUpTable(int32_t tileSize);
+};
+
+std::map<int32_t, int32_t> TileShapeUtils::tileSizeToNumberOfShapesMap;
+
+int32_t TileShapeUtils::NumberOfTileShapes(int32_t tileSize) {
+    assert(tileSize >= 0);
+    if (tileSize==0 || tileSize == 1) return 1;
+    if (tileSize == 2) return 2;
+    
+    auto iter = tileSizeToNumberOfShapesMap.find(tileSize);
+    if (iter != tileSizeToNumberOfShapesMap.end())
+        return iter->second;
+    
+    int32_t numShapes=0;
+    for (int32_t leftSubTreeSize=0 ; leftSubTreeSize<tileSize ; ++leftSubTreeSize) {
+        numShapes += NumberOfTileShapes(leftSubTreeSize)*NumberOfTileShapes(tileSize-1-leftSubTreeSize);
+    }
+    tileSizeToNumberOfShapesMap[tileSize] = numShapes;
+    return numShapes;
+}
+
 } // decisionforest
 } // mlir
