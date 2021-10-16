@@ -65,56 +65,6 @@ DecisionForest<> GenerateRandomDecisionForest(int32_t numTrees, int32_t numFeatu
   return forest;
 }
 
-using NodeType = mlir::decisionforest::DecisionTree<>::Node;
-
-class LevelOrderTraversal {
-  using QueueEntry = std::pair<int32_t, NodeType>;
-  std::vector<NodeType> m_levelOrder;
-  std::queue<QueueEntry> m_queue;
-  std::map<int32_t, int32_t> m_nodeIndexMap;
-  
-  void DoLevelOrderTraversal(const std::vector<NodeType>& nodes) {
-    int32_t invalidIndex = DecisionTree<>::INVALID_NODE_INDEX;
-    m_nodeIndexMap[invalidIndex] = invalidIndex;
-    // Assume the root is the first node.
-    assert (nodes[0].parent == -1);
-    m_queue.push(QueueEntry(0, nodes[0]));
-    while(!m_queue.empty()) {
-      auto entry = m_queue.front();
-      m_queue.pop();
-      auto index = entry.first;
-      auto& node = entry.second;
-      m_levelOrder.push_back(node);
-      assert (m_nodeIndexMap.find(index) == m_nodeIndexMap.end());
-      m_nodeIndexMap[index] = m_levelOrder.size() - 1;
-      if (node.IsLeaf())
-        continue;
-      m_queue.push(QueueEntry(node.leftChild, nodes[node.leftChild]));
-      m_queue.push(QueueEntry(node.rightChild, nodes[node.rightChild]));
-    }
-  }
-
-  int32_t GetNewIndex(int32_t oldIndex) {
-    auto iter = m_nodeIndexMap.find(oldIndex);
-    assert (iter != m_nodeIndexMap.end());
-    return iter->second;
-  }
-
-  void RewriteIndices() {
-    for (auto& node : m_levelOrder) {
-      node.parent = GetNewIndex(node.parent);
-      node.leftChild = GetNewIndex(node.leftChild);
-      node.rightChild = GetNewIndex(node.rightChild);
-    }
-  }
-public:
-  LevelOrderTraversal(const std::vector<NodeType>& nodes) {
-    DoLevelOrderTraversal(nodes);
-    RewriteIndices();
-  }
-  std::vector<NodeType>& LevelOrderNodes() { return m_levelOrder; }
-};
-
 json CreateTreeJSON(DecisionTree<>& tree, int32_t id, int32_t numFeatures) {
   json treeJSON;
   treeJSON["id"] = id;
@@ -134,7 +84,7 @@ json CreateTreeJSON(DecisionTree<>& tree, int32_t id, int32_t numFeatures) {
 
   std::vector<int32_t> leftChildren, rightChildren, parents, splitIndices;
   std::vector<double> splitConditions;
-  LevelOrderTraversal levelOrder(tree.GetNodes());
+  mlir::decisionforest::LevelOrderTraversal levelOrder(tree.GetNodes());
   const auto& nodes = levelOrder.LevelOrderNodes();
   for (size_t i=0 ; i<nodes.size() ; ++i) {
     const auto& node = nodes[i];

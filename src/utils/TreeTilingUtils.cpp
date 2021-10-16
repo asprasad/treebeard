@@ -1,4 +1,5 @@
 #include <queue>
+#include <iostream>
 #include "TreeTilingDescriptor.h"
 #include "TreeTilingUtils.h"
 #include "TiledTree.h"
@@ -728,46 +729,111 @@ std::vector<int32_t> TiledTree::SerializeFeatureIndices() {
     return thresholds;
 }
 
-// Routines to compute combinatorial properties of tiles
-class TileShapeToTileIDMap
-{
-    int32_t m_tileSize;
-    std::map<std::string, int32_t> m_tileStringToTileIDMap;
-    int32_t m_currentTileID = 0;
-    void TileStringGenerator(std::string& str, int32_t currentIndex, int32_t numNodes);
-    void InitMap();
-public:
-    TileShapeToTileIDMap(int32_t tileSize) 
-     : m_tileSize(tileSize)
-    {
-        InitMap();
-    }
-};
-
 void TileShapeToTileIDMap::InitMap() {
-
+    TileStringGenerator(m_tileSize);
 }
 
-void TileShapeToTileIDMap::TileStringGenerator(std::string& str, int32_t currentIndex, int32_t numNodes) {
-    
-}
-
-class TileShapeUtils
-{
-    static std::map<int32_t, int32_t> tileSizeToNumberOfShapesMap;
-public:
-    static int32_t NumberOfTileShapes(int32_t tileSize);
-    // Serialize into a string of 0's and 1's and then use that to lookup an integer
-    static int32_t GetTileShapeID(TiledTreeNode& tile);
-    // Use the recursive strategy used to compute number of tile shapes to enumerate all tree shapes
-    static void InitTileShapeToTileIDMap(int32_t tileSize);
-    // Index is (tileShapeID, comparison result)
-    static std::vector<std::vector<int32_t>> ComputeTileLookUpTable(int32_t tileSize);
+struct TileGenState {
+    int32_t numberOfNodes = -1;
+    // int32_t rootIndex = -1;
+    bool updateLeftTreeSize = true;
+    // int32_t leftTreeSize = -1;
+    bool updateLeftTree = true;
+    bool lastLeftSubtreeOfCurrentSize = false;
+    bool lastLeftSubtree = false;
 };
 
-std::map<int32_t, int32_t> TileShapeUtils::tileSizeToNumberOfShapesMap;
+enum class SubtreeUpdateState { kContinue, kDone };
 
-int32_t TileShapeUtils::NumberOfTileShapes(int32_t tileSize) {
+void CopySubtree(std::string& newStr, std::string& oldStr, int32_t root) {
+    if (root >= static_cast<int32_t>(newStr.size()))
+        return;
+    assert (newStr.size() == oldStr.size());
+    newStr.at(root) = oldStr[root];
+    CopySubtree(newStr, oldStr, 2*root+1);
+    CopySubtree(newStr, oldStr, 2*root+2);
+}
+
+void ResetStates(std::vector<TileGenState>& states, int32_t root) {
+    if (root >= static_cast<int32_t>(states.size()))
+        return;
+    states.at(root) = TileGenState();
+    ResetStates(states, 2*root+1);
+    ResetStates(states, 2*root+2);
+}
+
+SubtreeUpdateState UpdateTileString(std::string& str, std::string& oldStr, std::vector<TileGenState>& states, int32_t nodeIndex) {
+    TileGenState& state = states.at(nodeIndex);
+    assert (state.numberOfNodes > -1 && "Uninitialized state!");
+    if (state.numberOfNodes == 0)
+        return SubtreeUpdateState::kDone;
+    
+    str.at(nodeIndex) = '1';
+    if (state.numberOfNodes == 1)
+        return SubtreeUpdateState::kDone;
+    
+    int32_t leftChild = 2*nodeIndex+1;
+    int32_t rightChild = 2*nodeIndex+2;
+    auto& leftSubtreeState = states[leftChild];
+    auto& rightSubtreeState = states[rightChild];
+    // TODO Return if these are out of bounds (Actually can they be?)
+    if (state.updateLeftTreeSize) {
+        assert (state.updateLeftTree);
+        auto leftTreeSize = leftSubtreeState.numberOfNodes;
+        ResetStates(states, leftChild);
+        leftSubtreeState.numberOfNodes = leftTreeSize + 1;
+        rightSubtreeState.numberOfNodes = state.numberOfNodes - 1 - leftSubtreeState.numberOfNodes;
+        state.updateLeftTreeSize = false;
+    }
+    if (state.updateLeftTree) {
+        auto leftSubtreeUpdateState = UpdateTileString(str, oldStr, states, leftChild);
+        // We've reached the last left subtree if all the nodes are in the left subtree and we've generate all possible trees of that size
+        state.lastLeftSubtree = leftSubtreeUpdateState == SubtreeUpdateState::kDone && leftSubtreeState.numberOfNodes == state.numberOfNodes-1;
+        state.lastLeftSubtreeOfCurrentSize = leftSubtreeUpdateState == SubtreeUpdateState::kDone;
+        state.updateLeftTree = false;
+        // Reset the states of the right tree
+        ResetStates(states, rightChild);
+        rightSubtreeState.numberOfNodes =  state.numberOfNodes - 1 - leftSubtreeState.numberOfNodes;
+    }
+    else {
+        // TODO How do we restore the old tree? Maybe copy the required parts from the old string?
+        CopySubtree(str, oldStr, leftChild);
+    }
+    auto rightSubtreeUpdateState = UpdateTileString(str, oldStr, states, rightChild);
+    if (state.lastLeftSubtree && rightSubtreeUpdateState==SubtreeUpdateState::kDone)
+        return SubtreeUpdateState::kDone;
+    else if (state.lastLeftSubtreeOfCurrentSize && rightSubtreeUpdateState==SubtreeUpdateState::kDone) {
+        state.updateLeftTreeSize = true;
+        state.updateLeftTree = true;
+    }
+    else if (rightSubtreeUpdateState==SubtreeUpdateState::kDone){
+        state.updateLeftTree = true;
+    }
+    return SubtreeUpdateState::kContinue;
+}
+
+void TileShapeToTileIDMap::TileStringGenerator(int32_t numNodes) {
+    int32_t maxTreeSize = std::pow(2, numNodes) - 1;
+    std::string oldStr = std::string(maxTreeSize, '0');;
+    std::vector<TileGenState> states(maxTreeSize);
+    states.at(0).numberOfNodes = numNodes;
+    SubtreeUpdateState updateState;
+    do {
+        std::string str = std::string(maxTreeSize, '0');
+        updateState = UpdateTileString(str, oldStr, states, 0);
+        oldStr = str;
+        std::cout << str << std::endl;
+        assert(m_tileStringToTileIDMap.find(str) == m_tileStringToTileIDMap.end());
+        m_tileStringToTileIDMap[str] = m_currentTileID;
+        ++m_currentTileID;
+    } while (updateState == SubtreeUpdateState::kContinue);
+    std::cout << m_tileStringToTileIDMap.size() << std::endl;
+    assert (static_cast<int32_t>(m_tileStringToTileIDMap.size()) == TileShapeToTileIDMap::NumberOfTileShapes(m_tileSize));
+}
+
+std::map<int32_t, int32_t> TileShapeToTileIDMap::tileSizeToNumberOfShapesMap;
+
+int32_t TileShapeToTileIDMap::NumberOfTileShapes(int32_t tileSize) {
     assert(tileSize >= 0);
     if (tileSize==0 || tileSize == 1) return 1;
     if (tileSize == 2) return 2;
@@ -782,6 +848,122 @@ int32_t TileShapeUtils::NumberOfTileShapes(int32_t tileSize) {
     }
     tileSizeToNumberOfShapesMap[tileSize] = numShapes;
     return numShapes;
+}
+
+int32_t ConstructTreeForTile(const std::string& tileStr, int32_t root, DecisionTree<>& tree) {
+    if (root >= static_cast<int32_t>(tileStr.size()))
+        return -1;
+    if (tileStr.at(root) == '0')
+        return -1;
+    auto node = tree.NewNode(-1, -(root+1)); // Adding the node index as the feature index for debugging
+    auto leftChild = ConstructTreeForTile(tileStr, 2*root+1, tree);
+    auto rightChild = ConstructTreeForTile(tileStr, 2*root+2, tree);
+
+    if (rightChild != -1) {
+        tree.SetNodeParent(rightChild, node);
+        tree.SetNodeRightChild(node, rightChild);
+    }
+    if (leftChild != -1) {
+        tree.SetNodeParent(leftChild, node);
+        tree.SetNodeLeftChild(node, leftChild);
+    }
+    return node;
+}
+
+void AddTileChildren(DecisionTree<>& tree, int32_t nodeNumber, int32_t& childNumber) {
+    if (nodeNumber == -1)
+        return;
+    auto& node = tree.GetNodes().at(nodeNumber);
+    if (node.leftChild != -1)
+        AddTileChildren(tree, node.leftChild, childNumber);
+    else {
+        auto childNode = tree.NewNode(-1, childNumber);
+        tree.SetNodeParent(childNode, nodeNumber);
+        tree.SetNodeLeftChild(nodeNumber, childNode);
+        ++childNumber;
+    }
+    if (node.rightChild != -1)
+        AddTileChildren(tree, node.rightChild, childNumber);
+    else {
+        auto childNode = tree.NewNode(-1, childNumber);
+        tree.SetNodeParent(childNode, nodeNumber);
+        tree.SetNodeRightChild(nodeNumber, childNode);
+        ++childNumber;
+    }
+}
+
+void ComputeLUTHelper(DecisionTree<>& tree, size_t root, std::vector<int32_t>& outcomes, std::map<int32_t, std::vector<int32_t>>& childIndexToOutcomesMap) {
+    assert(root < tree.GetNodes().size());
+    auto& node = tree.GetNodes().at(root);
+    if (node.featureIndex >= 0) {
+        // We've reached a node that corresponds to the a child of the tile
+        childIndexToOutcomesMap[node.featureIndex] = outcomes;
+        return;
+    }
+    auto oldNodeOutcome = outcomes.at(root);
+    assert (oldNodeOutcome == -1 && "We shouldn't depend on this nodes outcome unless we've gone through it!");
+    outcomes.at(root) = 1;
+    ComputeLUTHelper(tree, node.leftChild, outcomes, childIndexToOutcomesMap);
+    outcomes.at(root) = 0;
+    ComputeLUTHelper(tree, node.rightChild, outcomes, childIndexToOutcomesMap);
+    outcomes.at(root) = oldNodeOutcome;
+}
+
+void SetLUTEntries(std::vector<int32_t>& lut, int32_t childIndex, const std::vector<int32_t>& outcomes, size_t currentIndex, int32_t outcomeBits) {
+    if (currentIndex >= outcomes.size()) {
+        lut.at(outcomeBits) = childIndex;
+        return;
+    }
+    auto currentOutcome = outcomes.at(currentIndex);
+    if (currentOutcome == -1 || currentOutcome == 0) {
+        // This node's outcome is a don't care.. So it could be either 0 or 1.
+        auto newOutcomeBits = outcomeBits << 1;
+        SetLUTEntries(lut, childIndex, outcomes, currentIndex+1, newOutcomeBits);
+    }
+    if (currentOutcome == -1 || currentOutcome == 1) {
+        auto newOutcomeBits = outcomeBits << 1;
+        newOutcomeBits |= 1;
+        SetLUTEntries(lut, childIndex, outcomes, currentIndex+1, newOutcomeBits); 
+    }
+}
+
+std::vector<int32_t> ComputeLookUpTableForSingleShape(DecisionTree<>& tree, int32_t tileSize) {
+    std::vector<int32_t> outcomes(tileSize, -1);
+    std::map<int32_t, std::vector<int32_t>> childIndexToOutcomesMap;
+    ComputeLUTHelper(tree, 0, outcomes, childIndexToOutcomesMap);
+
+    int32_t numOutcomes = std::pow(2, tileSize);
+    std::vector<int32_t> lut(numOutcomes, -1);
+    for (auto indexOutcomePair : childIndexToOutcomesMap) {
+        SetLUTEntries(lut, indexOutcomePair.first, indexOutcomePair.second, 0, 0);
+    }
+    return lut;
+}
+
+// Assume that the children of the tile are stored left to right
+std::vector<std::vector<int32_t>> TileShapeToTileIDMap::ComputeTileLookUpTable() {
+    std::vector<std::vector<int32_t>> tileLUT(m_currentTileID);
+    for (auto mapPair : m_tileStringToTileIDMap) {
+        // First construct a tree that represents the tile
+        DecisionTree<> tree;
+        ConstructTreeForTile(mapPair.first, 0, tree);
+        
+        // TODO make this a method on DecisionTree (can't do it now because level order traversal is not templatized)
+        LevelOrderTraversal levelOrderTraversal(tree.GetNodes());
+        tree.SetNodes(levelOrderTraversal.LevelOrderNodes());
+        
+        int32_t childNumber = 0;
+        AddTileChildren(tree, 0, childNumber);
+        // tree.WriteToDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/treeForTile.dot");
+
+        tileLUT.at(mapPair.second) = ComputeLookUpTableForSingleShape(tree, m_tileSize);
+    }
+    return tileLUT;
+}
+
+void TestTileStringGen() {
+    TileShapeToTileIDMap tileMap(3);
+    tileMap.ComputeTileLookUpTable();
 }
 
 } // decisionforest

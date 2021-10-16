@@ -8,6 +8,8 @@
 #include <numeric>
 #include <cassert>
 #include <cmath>
+#include <queue>
+#include <map>
 #include "TreeTilingDescriptor.h"
 
 namespace mlir
@@ -97,6 +99,7 @@ public:
     void WriteToDOTFile(const std::string& filename);
 
     const std::vector<Node>& GetNodes() { return m_nodes; }
+    void SetNodes(const std::vector<Node>& nodes) { m_nodes=nodes; }
 private:
     std::vector<Node> m_nodes;
     size_t m_numFeatures;
@@ -275,8 +278,11 @@ void DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::W
   for (size_t i=0 ; i<m_nodes.size() ; ++i) {
     int64_t parentIndex = m_nodes[i].parent;
     fout << "\t\"node" << i << "\" [ label = \"Id:" << i << ", Thres:" << m_nodes[i].threshold << ", FeatIdx:" << m_nodes[i].featureIndex << "\"];\n";
-    if (parentIndex != INVALID_NODE_INDEX)
-      fout << "\t\"node" << parentIndex << "\" -> \"node" << i << "\";\n";
+    if (parentIndex != INVALID_NODE_INDEX) {
+      auto& parentNode = m_nodes.at(parentIndex);
+      std::string color = (parentNode.leftChild == static_cast<int32_t>(i)) ? "green" : "red";
+      fout << "\t\"node" << parentIndex << "\" -> \"node" << i << "\" [color=" << color << "];\n";
+    }
   }
   fout << "}\n";
 }
@@ -337,6 +343,60 @@ void DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>:
         currentOffset += treeThresholds.size();
     }
 }
+
+// Level Order Sorter
+using LevelOrderSorterNodeType = mlir::decisionforest::DecisionTree<>::Node;
+
+class LevelOrderTraversal {
+  using QueueEntry = std::pair<int32_t, LevelOrderSorterNodeType>;
+  std::vector<LevelOrderSorterNodeType> m_levelOrder;
+  std::queue<QueueEntry> m_queue;
+  std::map<int32_t, int32_t> m_nodeIndexMap;
+  
+  void DoLevelOrderTraversal(const std::vector<LevelOrderSorterNodeType>& nodes) {
+    int32_t invalidIndex = DecisionTree<>::INVALID_NODE_INDEX;
+    m_nodeIndexMap[invalidIndex] = invalidIndex;
+    // Assume the root is the first node.
+    assert (nodes[0].parent == -1);
+    m_queue.push(QueueEntry(0, nodes[0]));
+    while(!m_queue.empty()) {
+      auto entry = m_queue.front();
+      m_queue.pop();
+      auto index = entry.first;
+      auto& node = entry.second;
+      m_levelOrder.push_back(node);
+      assert (m_nodeIndexMap.find(index) == m_nodeIndexMap.end());
+      m_nodeIndexMap[index] = m_levelOrder.size() - 1;
+      if (node.IsLeaf())
+        continue;
+      if (node.leftChild != DecisionTree<>::INVALID_NODE_INDEX)
+        m_queue.push(QueueEntry(node.leftChild, nodes.at(node.leftChild)));
+      if (node.rightChild != DecisionTree<>::INVALID_NODE_INDEX)
+        m_queue.push(QueueEntry(node.rightChild, nodes.at(node.rightChild)));
+    }
+  }
+
+  int32_t GetNewIndex(int32_t oldIndex) {
+    auto iter = m_nodeIndexMap.find(oldIndex);
+    assert (iter != m_nodeIndexMap.end());
+    return iter->second;
+  }
+
+  void RewriteIndices() {
+    for (auto& node : m_levelOrder) {
+      node.parent = GetNewIndex(node.parent);
+      node.leftChild = GetNewIndex(node.leftChild);
+      node.rightChild = GetNewIndex(node.rightChild);
+    }
+  }
+public:
+  LevelOrderTraversal(const std::vector<LevelOrderSorterNodeType>& nodes) {
+    DoLevelOrderTraversal(nodes);
+    RewriteIndices();
+  }
+  std::vector<LevelOrderSorterNodeType>& LevelOrderNodes() { return m_levelOrder; }
+};
+
 
 } // decisionforest
 } // mlir
