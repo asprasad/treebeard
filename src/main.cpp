@@ -14,6 +14,14 @@ void TestRandomForestGeneration();
 }
 }
 
+namespace mlir
+{
+namespace decisionforest
+{
+void TestTileStringGen();
+}
+}
+
 void SetInsertDebugHelpers(int argc, char *argv[]) {
   for (int32_t i=0 ; i<argc ; ++i)
     if (std::string(argv[i]).find(std::string("--debugJIT")) != std::string::npos) {
@@ -72,6 +80,7 @@ int main(int argc, char *argv[]) {
     return 0;
   else  
     TreeBeard::test::RunTests();
+    // mlir::decisionforest::TestTileStringGen();
   // RunCompilerPasses(argc, argv);
   // TreeBeard::test::TestRandomForestGeneration();
   return 0;
