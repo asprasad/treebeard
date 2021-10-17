@@ -101,6 +101,13 @@ public:
     TiledTreeNode& GetTile(int32_t index) {
         return m_tiles[index];
     }
+    int32_t GetNumberOfTiles() {
+        int32_t depth = GetTreeDepth();
+        int32_t tileSize = m_owningTree.TilingDescriptor().MaxTileSize();
+        int32_t numChildren = tileSize + 1;
+        size_t numTiles = static_cast<size_t>((std::pow(numChildren, depth) - 1)/(numChildren-1));
+        return numTiles;
+    }
     size_t NumTiles() { return m_tiles.size(); }
     int32_t GetNodeTileIndex(int32_t nodeIndex) {
         if (nodeIndex == DecisionTree<>::INVALID_NODE_INDEX)

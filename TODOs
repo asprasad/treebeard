@@ -34,15 +34,20 @@ CodeGen for tile size != 1
             - All tiles except leaves have equal size
         - [Done] Implementations in class DecisionTree to serialize thresholds and indices
             - [Done] Construct a tree of the tiles
-        - Tile support in buffer initialization routines (ForestJSONReader)
+        - [Done] Tile support in buffer initialization routines (ForestJSONReader)
+        - Write the tileID with each tile's value
     - Vector implementations of tree ops
     - Change codegen 
         - Generate buffers to hold the lookup tables
         - Initialization routines for the lookup tables
-        - Generate lookups rather than just computing next tile indices
+        - Generate lookups rather than computing next tile indices using (2*i + x)
+        - Compact comparison outcomes into an integer to use as a lookup index
     - Utils
-        - Number of tiles of a given size
-        - Generate lookup tables for child tile indices given tile comparison outcomes
+        - [Done] Number of tiles of a given size
+        - [Done] Generate lookup tables for child tile indices given tile comparison outcomes
+
+Pipeline container
+SIMD container
 
 Code gen for unequal tile size across trees
     - Serialization when tile sizes are unequal across trees

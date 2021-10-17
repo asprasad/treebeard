@@ -317,13 +317,26 @@ void PersistDecisionForest(mlir::decisionforest::DecisionForest<>& forest, mlir:
         auto featureIndexType = treeType.getFeatureIndexType().cast<IntegerType>(); 
 
         auto& tree = forest.GetTree(static_cast<int64_t>(i));
-        std::vector<ThresholdType> thresholds = tree.GetThresholdArray();
-        std::vector<FeatureIndexType> featureIndices = tree.GetFeatureIndexArray();
-        int32_t numTiles = tree.GetNumberOfTiles();
-        int32_t tileSize = tree.TilingDescriptor().MaxTileSize();
-        
-        mlir::decisionforest::ForestJSONReader::GetInstance().AddSingleTree(i, numTiles, thresholds, featureIndices, tileSize, 
-                                                                            thresholdType.getWidth(), featureIndexType.getWidth());
+        if (tree.TilingDescriptor().MaxTileSize() == 1) {
+            std::vector<ThresholdType> thresholds = tree.GetThresholdArray();
+            std::vector<FeatureIndexType> featureIndices = tree.GetFeatureIndexArray();
+            int32_t numTiles = tree.GetNumberOfTiles();
+            int32_t tileSize = tree.TilingDescriptor().MaxTileSize();
+            
+            mlir::decisionforest::ForestJSONReader::GetInstance().AddSingleTree(i, numTiles, thresholds, featureIndices, tileSize, 
+                                                                                thresholdType.getWidth(), featureIndexType.getWidth());
+        }
+        else {
+            TiledTree tiledTree(tree);
+            std::vector<ThresholdType> thresholds = tiledTree.SerializeThresholds();
+            std::vector<FeatureIndexType> featureIndices = tiledTree.SerializeFeatureIndices();
+            int32_t numTiles = tiledTree.GetNumberOfTiles();
+            int32_t tileSize = tree.TilingDescriptor().MaxTileSize();
+            
+            mlir::decisionforest::ForestJSONReader::GetInstance().AddSingleTree(i, numTiles, thresholds, featureIndices, tileSize, 
+                                                                                thresholdType.getWidth(), featureIndexType.getWidth());
+
+        }
     }
 }
 
@@ -959,11 +972,6 @@ std::vector<std::vector<int32_t>> TileShapeToTileIDMap::ComputeTileLookUpTable()
         tileLUT.at(mapPair.second) = ComputeLookUpTableForSingleShape(tree, m_tileSize);
     }
     return tileLUT;
-}
-
-void TestTileStringGen() {
-    TileShapeToTileIDMap tileMap(3);
-    tileMap.ComputeTileLookUpTable();
 }
 
 } // decisionforest

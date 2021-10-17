@@ -10,14 +10,6 @@ namespace TreeBeard
 {
 namespace test
 {
-void TestRandomForestGeneration();
-}
-}
-
-namespace mlir
-{
-namespace decisionforest
-{
 void TestTileStringGen();
 }
 }
@@ -82,6 +74,5 @@ int main(int argc, char *argv[]) {
     TreeBeard::test::RunTests();
     // mlir::decisionforest::TestTileStringGen();
   // RunCompilerPasses(argc, argv);
-  // TreeBeard::test::TestRandomForestGeneration();
   return 0;
 }
