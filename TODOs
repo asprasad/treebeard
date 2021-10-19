@@ -35,13 +35,15 @@ CodeGen for tile size != 1
         - [Done] Implementations in class DecisionTree to serialize thresholds and indices
             - [Done] Construct a tree of the tiles
         - [Done] Tile support in buffer initialization routines (ForestJSONReader)
-        - Write the tileID with each tile's value
-    - Vector implementations of tree ops
+        - [Done] Write the tileID with each tile's value
     - Change codegen 
-        - Generate buffers to hold the lookup tables
-        - Initialization routines for the lookup tables
-        - Generate lookups rather than computing next tile indices using (2*i + x)
-        - Compact comparison outcomes into an integer to use as a lookup index
+        - Ensemble to Memref Lowering
+            - Generate buffers to hold the lookup tables
+            - Initialization routines for the lookup tables
+            - Compact comparison outcomes into an integer to use as a lookup index
+            - Generate lookups rather than computing next tile indices using (2*i + x)
+        - LLVM Lowering
+            - Vector implementations of tree Load* ops
     - Utils
         - [Done] Number of tiles of a given size
         - [Done] Generate lookup tables for child tile indices given tile comparison outcomes

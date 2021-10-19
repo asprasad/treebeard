@@ -59,11 +59,12 @@ template<typename ThresholdType, typename IndexType, int32_t VectorSize>
 struct NumericalVectorTileType {
   ThresholdType threshold[VectorSize];
   IndexType index[VectorSize];
+  int16_t tileShapeID;
   bool operator==(const NumericalVectorTileType<ThresholdType, IndexType, VectorSize>& other) const {
     for (int32_t i=0; i<VectorSize ; ++i)
       if (threshold[i]!=other.threshold[i] || index[i]!=other.index[i])
         return false;
-    return true;
+    return tileShapeID==other.tileShapeID;
   }
 };
 #pragma pack(pop)
@@ -534,6 +535,7 @@ bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t fore
   std::vector<VectorTileType> serializedTree(numTiles);
   auto thresholds = tiledTree.SerializeThresholds();
   auto featureIndices = tiledTree.SerializeFeatureIndices();
+  auto tileShapeIDs = tiledTree.SerializeTileShapeIDs();
 
   std::vector<int32_t> offsets(1, -1);
   int32_t thresholdSize = sizeof(ThresholdType)*8;
@@ -544,6 +546,8 @@ bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t fore
       Test_ASSERT(FPEqual(serializedTree[i].threshold[j], thresholds[i*tileSize + j]));
       Test_ASSERT(serializedTree[i].index[j] == featureIndices[i*tileSize + j]);
     }
+    std::cout << tileShapeIDs[i] << std::endl;
+    Test_ASSERT(tileShapeIDs[i] == serializedTree[i].tileShapeID);
   }
   Test_ASSERT(offsets[0] == 0);
   
@@ -556,7 +560,7 @@ bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t fore
   Test_ASSERT(lengthVec[0] == numTiles);
 
   mlir::decisionforest::ClearPersistedForest();
-
+  std::cout << "**********\n";
   return true;
 }
 
@@ -679,8 +683,9 @@ TestDescriptor testList[] = {
 };
 
 // TestDescriptor testList[] = {
-//   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Tiled),
-//   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy_Tiled)
+//    TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Tiled),
+//    TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy_Tiled),
+//    TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_Balanced_Tiled)
 // };
 
 const size_t numTests = sizeof(testList) / sizeof(testList[0]);

@@ -77,7 +77,7 @@ void AppendAtEndOfList(std::list<T>& l, std::list<T>& newElements) {
 }
 
 void ForestJSONReader::AddSingleTileSizeEntry(std::list<int32_t>& treeIndices, std::list<int32_t>& numTilesList, std::list<std::vector<ThresholdType>>& serializedThresholds, 
-                                              std::list<std::vector<FeatureIndexType>>& serializedFetureIndices,
+                                              std::list<std::vector<FeatureIndexType>>& serializedFetureIndices, std::list<std::vector<int32_t>>& serializedTileShapeIDs,
                                               const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth) {
     // Find if there is already an entry with the given tileSize, thresholdWidth and indexWidth.
     auto listIter = this->m_tileSizeEntries.begin();
@@ -87,7 +87,8 @@ void ForestJSONReader::AddSingleTileSizeEntry(std::list<int32_t>& treeIndices, s
         ++listIter;
     }
     if (listIter == m_tileSizeEntries.end()) {
-        SingleTileSizeEntry entry {tileSize, thresholdBitWidth, indexBitWidth, treeIndices, numTilesList, serializedThresholds, serializedFetureIndices};
+        SingleTileSizeEntry entry {tileSize, thresholdBitWidth, indexBitWidth, treeIndices, numTilesList, 
+                                   serializedThresholds, serializedFetureIndices, serializedTileShapeIDs};
         m_tileSizeEntries.push_back(entry);
     }
     else {
@@ -95,17 +96,21 @@ void ForestJSONReader::AddSingleTileSizeEntry(std::list<int32_t>& treeIndices, s
         AppendAtEndOfList(listIter->numberOfTiles, numTilesList);
         AppendAtEndOfList(listIter->serializedThresholds, serializedThresholds);
         AppendAtEndOfList(listIter->serializedFetureIndices, serializedFetureIndices);
+        AppendAtEndOfList(listIter->serializedTileShapeIDs, serializedTileShapeIDs);
     }
 }
 
-void ForestJSONReader::AddSingleTree(int32_t treeIndex, int32_t numTiles, std::vector<ThresholdType>& serializedThresholds, std::vector<FeatureIndexType>& serializedFetureIndices,
+void ForestJSONReader::AddSingleTree(int32_t treeIndex, int32_t numTiles, std::vector<ThresholdType>& serializedThresholds,
+                                     std::vector<FeatureIndexType>& serializedFetureIndices, std::vector<int32_t>& tileShapeIDs,
                                      const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth) {
     std::list<int32_t> treeIndices = { treeIndex };
     std::list<int32_t> numTilesList = { numTiles };
     std::list<std::vector<ThresholdType>> serializedThresholdsList = { serializedThresholds };
     std::list<std::vector<FeatureIndexType>> serializedFetureIndicesList = { serializedFetureIndices };
+    std::list<std::vector<int32_t>> serializedTileShapeIDs = { tileShapeIDs };
 
-    AddSingleTileSizeEntry(treeIndices, numTilesList, serializedThresholdsList, serializedFetureIndicesList, tileSize, thresholdBitWidth, indexBitWidth);
+    AddSingleTileSizeEntry(treeIndices, numTilesList, serializedThresholdsList, serializedFetureIndicesList, serializedTileShapeIDs, 
+                           tileSize, thresholdBitWidth, indexBitWidth);
 }
 
 void ForestJSONReader::ClearAllData() {
@@ -129,7 +134,8 @@ class CopyModelValuesIntoBufferInterface {
     }
 public:
     virtual void CopyElements(char* bufPtr, std::vector<int32_t>& offsets, std::list<int32_t>& numberOfTiles, std::list<std::vector<ThresholdType>>& thresholdVals, 
-                              std::list<std::vector<FeatureIndexType>>& featureIndices, std::list<int32_t>& treeIndices) = 0;
+                              std::list<std::vector<FeatureIndexType>>& featureIndices, std::list<std::vector<int32_t>>& tileShapeIDs,
+                              std::list<int32_t>& treeIndices) = 0;
 };
 
 template<typename CopyThreshold, typename CopyFeatureIndex>
@@ -138,15 +144,18 @@ class CopyModelValuesIntoBuffer : public CopyModelValuesIntoBufferInterface {
     // int32_t m_thresholdSizeInBytes;
     // int32_t m_featureIndexSizeInBytes;
     int32_t m_featureIndexStartOffsetInBytes;
-    int32_t m_nodeSizeInBytes;
+    int32_t m_tileShapeIDOffsetInBytes;
+    int32_t m_tileSizeInBytes;
     CopyThreshold m_copyThreshold;
     CopyFeatureIndex m_copyFeatureIndex;
+    bool m_writeTileShapeID;
 
-    int32_t CopySingleTree(char* &bufPtr, std::vector<ThresholdType>& thresholds, std::vector<FeatureIndexType>& featureIndices) {
+    int32_t CopySingleTree(char* &bufPtr, std::vector<ThresholdType>& thresholds, std::vector<FeatureIndexType>& featureIndices, 
+                           std::vector<int32_t>& tileShapeIDs) {
         int32_t numTilesWritten = 0;
         assert (thresholds.size() == featureIndices.size());
         
-        for (size_t i=0 ; i<thresholds.size() ; i+=m_tileSize) {
+        for (size_t i=0, tileIndex=0 ; i<thresholds.size() ; i+=m_tileSize, ++tileIndex) {
             // Copy a single tile
             // First the thresholds
             char *currPtr = bufPtr;
@@ -160,19 +169,26 @@ class CopyModelValuesIntoBuffer : public CopyModelValuesIntoBufferInterface {
                 m_copyFeatureIndex.copyElement(currPtr, featureIndices[i+j]);
                 m_copyFeatureIndex.incrementPtr(currPtr);
             }
-            bufPtr += m_nodeSizeInBytes;
+
+            if (m_writeTileShapeID) {
+                currPtr = bufPtr + m_tileShapeIDOffsetInBytes;
+                *reinterpret_cast<int16_t*>(currPtr) = static_cast<int16_t>(tileShapeIDs.at(tileIndex));
+            }
+            bufPtr += m_tileSizeInBytes;
             numTilesWritten += 1;
         }
         return numTilesWritten;
     }
 public:
-    CopyModelValuesIntoBuffer(int32_t tileSize, int32_t featureIndexStart, int32_t nodeSize)
-        :m_tileSize(tileSize), m_featureIndexStartOffsetInBytes(featureIndexStart), m_nodeSizeInBytes(nodeSize)  
+    CopyModelValuesIntoBuffer(int32_t tileSize, int32_t featureIndexStart, int32_t tileSizeInBytes, int32_t tileShapeIDStart, bool writeTileShapeID)
+        :m_tileSize(tileSize), m_featureIndexStartOffsetInBytes(featureIndexStart), m_tileShapeIDOffsetInBytes(tileShapeIDStart), 
+        m_tileSizeInBytes(tileSizeInBytes), m_writeTileShapeID(writeTileShapeID)
          // m_thresholdSizeInBytes(thresholdSize), m_featureIndexSizeInBytes(featureIndexSize)
     {}
 
     void CopyElements(char* bufPtr, std::vector<int32_t>& offsets, std::list<int32_t>& numberOfTiles, std::list<std::vector<ThresholdType>>& thresholdVals, 
-                      std::list<std::vector<FeatureIndexType>>& featureIndices, std::list<int32_t>& treeIndices) override {
+                      std::list<std::vector<FeatureIndexType>>& featureIndices, std::list<std::vector<int32_t>>& tileShapeIDs, 
+                      std::list<int32_t>& treeIndices) override {
         
         // TODO this function assumes that all trees have non zero elements to write into the output buffer. 
         // This may not be the case when we have multiple tile sizes. This function needs to check and 
@@ -181,9 +197,11 @@ public:
         // Actually, this is only going over tree indices that are non-empty. So maybe not a problem?
         assert (thresholdVals.size() == featureIndices.size());
         assert (treeIndices.size() == thresholdVals.size());
+        assert (tileShapeIDs.size() == thresholdVals.size());
 
         auto thresholdIter = thresholdVals.begin();
         auto featureIndexIter = featureIndices.begin();
+        auto tileShapeIDsIter = tileShapeIDs.begin();
         auto treeIndexIter = treeIndices.begin();
         auto numTilesIter = numberOfTiles.begin();
         // This is the offset into the buffer in terms of tiles
@@ -197,12 +215,13 @@ public:
             offsets[treeIndex] = currTileOffset;
 
             // Copy the tiles of the current tree into the buffer
-            auto tilesWritten = CopySingleTree(bufPtr, *thresholdIter, *featureIndexIter);
+            auto tilesWritten = CopySingleTree(bufPtr, *thresholdIter, *featureIndexIter, *tileShapeIDsIter);
 
             currTileOffset += tilesWritten;
             assert(*numTilesIter == tilesWritten && "Number of tiles copied should match");
             ++thresholdIter;
             ++featureIndexIter;
+            ++tileShapeIDsIter;
             ++treeIndexIter;
             ++numTilesIter;
         }
@@ -213,16 +232,29 @@ CopyModelValuesIntoBufferInterface* GetModelCopier(int32_t tileSize, int32_t thr
     // TODO we need a better way to allocate these copiers. Maybe add a base class for the copiers so we can allocate them separately?
     
     // TODO We need to take care of alignment here. For now just copying things with 1 byte packing
+    // TODO We're always copying the tileShapeID when tile size != 1. This should be a more configurable decision.
+    // For example, we shouldn't copy it if the tiles in a forest are all the same shape. 
     int32_t featureIndexStart = (tileSize * thresholdBitWidth/8); // Tile is written as <thresholds X tileSize, featureIndices X tileSize>
     int32_t tileSizeInBytes = ((thresholdBitWidth + indexBitWidth) * tileSize)/8;
+    int32_t tileShapeIDOffsetInBytes = -1;
+    bool copyTileShapeID = false;
+    if (tileSize != 1) {
+        tileShapeIDOffsetInBytes = tileSizeInBytes;
+        tileSizeInBytes += sizeof(int16_t);
+        copyTileShapeID = true;
+    }
+
     if (thresholdBitWidth == 32) {
         using ThresholdCopier = ElementCopier<float, ThresholdType>;
         if (indexBitWidth == 8)
-            return new CopyModelValuesIntoBuffer<ThresholdCopier, ElementCopier<int8_t, FeatureIndexType>>(tileSize, featureIndexStart, tileSizeInBytes);
+            return new CopyModelValuesIntoBuffer<ThresholdCopier, ElementCopier<int8_t, FeatureIndexType>>(tileSize, featureIndexStart, tileSizeInBytes, 
+                                                                                                           tileShapeIDOffsetInBytes, copyTileShapeID);
         else if(indexBitWidth == 16)
-            return new CopyModelValuesIntoBuffer<ThresholdCopier, ElementCopier<int16_t, FeatureIndexType>>(tileSize, featureIndexStart, tileSizeInBytes);
+            return new CopyModelValuesIntoBuffer<ThresholdCopier, ElementCopier<int16_t, FeatureIndexType>>(tileSize, featureIndexStart, tileSizeInBytes,
+                                                                                                            tileShapeIDOffsetInBytes, copyTileShapeID);
         else if(indexBitWidth == 32)
-            return new CopyModelValuesIntoBuffer<ThresholdCopier, ElementCopier<int32_t, FeatureIndexType>>(tileSize, featureIndexStart, tileSizeInBytes);
+            return new CopyModelValuesIntoBuffer<ThresholdCopier, ElementCopier<int32_t, FeatureIndexType>>(tileSize, featureIndexStart, tileSizeInBytes,
+                                                                                                            tileShapeIDOffsetInBytes, copyTileShapeID);
         else {
             assert (false && "unsupported feature index bitwidth");
             return nullptr;
@@ -232,11 +264,14 @@ CopyModelValuesIntoBufferInterface* GetModelCopier(int32_t tileSize, int32_t thr
     else if (thresholdBitWidth == 64) {
         using ThresholdCopier = ElementCopier<double, ThresholdType>;
         if (indexBitWidth == 8)
-            return new CopyModelValuesIntoBuffer<ThresholdCopier, ElementCopier<int8_t, FeatureIndexType>>(tileSize, featureIndexStart, tileSizeInBytes);
+            return new CopyModelValuesIntoBuffer<ThresholdCopier, ElementCopier<int8_t, FeatureIndexType>>(tileSize, featureIndexStart, tileSizeInBytes,
+                                                                                                           tileShapeIDOffsetInBytes, copyTileShapeID);
         else if(indexBitWidth == 16)
-            return new CopyModelValuesIntoBuffer<ThresholdCopier, ElementCopier<int16_t, FeatureIndexType>>(tileSize, featureIndexStart, tileSizeInBytes);
+            return new CopyModelValuesIntoBuffer<ThresholdCopier, ElementCopier<int16_t, FeatureIndexType>>(tileSize, featureIndexStart, tileSizeInBytes,
+                                                                                                            tileShapeIDOffsetInBytes, copyTileShapeID);
         else if(indexBitWidth == 32)
-            return new CopyModelValuesIntoBuffer<ThresholdCopier, ElementCopier<int32_t, FeatureIndexType>>(tileSize, featureIndexStart, tileSizeInBytes);
+            return new CopyModelValuesIntoBuffer<ThresholdCopier, ElementCopier<int32_t, FeatureIndexType>>(tileSize, featureIndexStart, tileSizeInBytes,
+                                                                                                            tileShapeIDOffsetInBytes, copyTileShapeID);
         else {
             assert (false && "unsupported feature index bitwidth");
             return nullptr;
@@ -261,7 +296,7 @@ void ForestJSONReader::InitializeBuffer(void* bufPtr, int32_t tileSize, int32_t 
     auto listIter = FindEntry(tileSize, thresholdBitWidth, indexBitWidth);
     auto modelCopier = GetModelCopier(tileSize, thresholdBitWidth, indexBitWidth);
     modelCopier->CopyElements(reinterpret_cast<char*>(bufPtr), treeOffsets, listIter->numberOfTiles, listIter->serializedThresholds, 
-                              listIter->serializedFetureIndices, listIter->treeIndices);
+                              listIter->serializedFetureIndices, listIter->serializedTileShapeIDs, listIter->treeIndices);
 }
 
 void ForestJSONReader::InitializeOffsetBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth) {
@@ -320,20 +355,20 @@ void PersistDecisionForest(mlir::decisionforest::DecisionForest<>& forest, mlir:
         if (tree.TilingDescriptor().MaxTileSize() == 1) {
             std::vector<ThresholdType> thresholds = tree.GetThresholdArray();
             std::vector<FeatureIndexType> featureIndices = tree.GetFeatureIndexArray();
+            std::vector<int32_t> tileShapeIDs = { };
             int32_t numTiles = tree.GetNumberOfTiles();
             int32_t tileSize = tree.TilingDescriptor().MaxTileSize();
-            
-            mlir::decisionforest::ForestJSONReader::GetInstance().AddSingleTree(i, numTiles, thresholds, featureIndices, tileSize, 
+            mlir::decisionforest::ForestJSONReader::GetInstance().AddSingleTree(i, numTiles, thresholds, featureIndices, tileShapeIDs, tileSize, 
                                                                                 thresholdType.getWidth(), featureIndexType.getWidth());
         }
         else {
             TiledTree tiledTree(tree);
             std::vector<ThresholdType> thresholds = tiledTree.SerializeThresholds();
             std::vector<FeatureIndexType> featureIndices = tiledTree.SerializeFeatureIndices();
+            std::vector<int32_t> tileShapeIDs = tiledTree.SerializeTileShapeIDs();
             int32_t numTiles = tiledTree.GetNumberOfTiles();
             int32_t tileSize = tree.TilingDescriptor().MaxTileSize();
-            
-            mlir::decisionforest::ForestJSONReader::GetInstance().AddSingleTree(i, numTiles, thresholds, featureIndices, tileSize, 
+            mlir::decisionforest::ForestJSONReader::GetInstance().AddSingleTree(i, numTiles, thresholds, featureIndices, tileShapeIDs, tileSize, 
                                                                                 thresholdType.getWidth(), featureIndexType.getWidth());
 
         }
@@ -345,8 +380,20 @@ void ClearPersistedForest() {
 }
 
 // -----------------------------------------------
-// Construction of Tile Tree
+// Construction of Tiled Tree
 // -----------------------------------------------
+
+// -----------------------------------------------
+// Methods for class TiledTreeNode
+// -----------------------------------------------
+DecisionTree<>& TiledTreeNode::GetTree() { 
+    return m_tiledTree.m_modifiedTree;
+}
+
+const DecisionTree<>::Node& TiledTreeNode::GetNode(int32_t index) { 
+    return m_tiledTree.m_modifiedTree.GetNodes().at(index);
+}
+
 bool TiledTreeNode::AreNodesInSameTile(int32_t node1, int32_t node2) {
     auto& tilingDescriptor = m_tiledTree.m_modifiedTree.TilingDescriptor();
     if(tilingDescriptor.TileIDs().at(node1) == tilingDescriptor.TileIDs().at(node2)) {
@@ -359,7 +406,7 @@ bool TiledTreeNode::AreNodesInSameTile(int32_t node1, int32_t node2) {
 int32_t TiledTreeNode::FindTileEntryNode() {
     int32_t entryNode = DecisionTree<>::INVALID_NODE_INDEX;
     for (auto nodeIdx : m_nodeIndices) {
-        auto& node = m_tiledTree.m_modifiedTree.GetNodes().at(nodeIdx);
+        auto& node = GetNode(nodeIdx);
         auto parentIdx = node.parent;
         // Figure out if the parent is in this tile
         bool isRoot = (parentIdx == DecisionTree<>::INVALID_NODE_INDEX);
@@ -382,7 +429,7 @@ void TiledTreeNode::SortTileNodes() {
     traversalQ.push(entryNodeIndex);
     while (!traversalQ.empty()) {
         int32_t nodeIndex = traversalQ.front();
-        auto& node = m_tiledTree.m_modifiedTree.GetNodes().at(nodeIndex);
+        auto& node = GetNode(nodeIndex);
         traversalQ.pop();
         assert (AreNodesInSameTile(entryNodeIndex, nodeIndex));
         levelOrderSorted.push_back(nodeIndex);
@@ -409,7 +456,7 @@ void TiledTreeNode::AddExtraNodesIfNeeded() {
         return;
     // If the only node in the tile is a leaf, then just return
     if (static_cast<int32_t>(m_nodeIndices.size()) == 1 && 
-        m_tiledTree.m_modifiedTree.GetNodes().at(m_nodeIndices.at(0)).IsLeaf()) {
+        GetNode(m_nodeIndices.at(0)).IsLeaf()) {
         return;
     }
     m_hasExtraNodes = true;
@@ -421,11 +468,11 @@ void TiledTreeNode::AddExtraNodesIfNeeded() {
     // 2. Since the tile can't grow indefinitely, #1 => there is at least one node with both children being leaves
     std::list<int32_t> candidateNodes;
     for (auto nodeIndex : m_nodeIndices) {
-        auto& node = m_tiledTree.m_modifiedTree.GetNodes().at(nodeIndex);
+        auto& node = GetNode(nodeIndex);
         auto leftChildIndex = node.leftChild;
         auto rightChildIndex = node.rightChild;
-        auto& leftChild = m_tiledTree.m_modifiedTree.GetNodes().at(leftChildIndex);
-        auto& rightChild = m_tiledTree.m_modifiedTree.GetNodes().at(rightChildIndex);
+        auto& leftChild = GetNode(leftChildIndex);
+        auto& rightChild = GetNode(rightChildIndex);
         assert (AreNodesInSameTile(nodeIndex, leftChildIndex) || leftChild.IsLeaf());
         assert (AreNodesInSameTile(nodeIndex, rightChildIndex) || rightChild.IsLeaf());
         if (leftChild.IsLeaf() && rightChild.IsLeaf())
@@ -440,10 +487,10 @@ void TiledTreeNode::AddExtraNodesIfNeeded() {
     for (int32_t i=0 ; i<numberOfNodesToAdd ; i+=2) { // We can add two dummy nodes for every candidate node
         // TODO How do we decide where to add the new nodes? Maybe just add them somewhere and call sort again?
         auto candidateIndex = *candidateIter;
-        auto& candidateNode = m_tiledTree.m_modifiedTree.GetNodes().at(candidateIndex);
+        auto& candidateNode = GetNode(candidateIndex);
         {
           auto leafIndex = candidateNode.rightChild;
-          auto &leafNode = m_tiledTree.m_modifiedTree.GetNodes().at(leafIndex);
+          auto &leafNode = GetNode(leafIndex);
           assert(leafNode.IsLeaf());
           // Add the dummy node as the right child of the candidate
           auto dummyNode = m_tiledTree.m_modifiedTree.NewNode(candidateNode.threshold, candidateNode.featureIndex, m_tileID);
@@ -461,7 +508,7 @@ void TiledTreeNode::AddExtraNodesIfNeeded() {
             break;
         {
           auto leafIndex = candidateNode.leftChild;
-          auto &leafNode = m_tiledTree.m_modifiedTree.GetNodes().at(leafIndex);
+          auto &leafNode = GetNode(leafIndex);
           assert(leafNode.IsLeaf());
           // Add the dummy node as the left child of the candidate
           auto dummyNode = m_tiledTree.m_modifiedTree.NewNode(candidateNode.threshold, candidateNode.featureIndex, m_tileID);
@@ -480,8 +527,97 @@ void TiledTreeNode::AddExtraNodesIfNeeded() {
     m_tiledTree.SetChildrenForTile(*this);
 }
 
+void TiledTreeNode::GetThresholds(std::vector<double>::iterator beginIter) {
+    if (m_nodeIndices.size() == 1) {
+        // This is a leaf tile
+        auto& node = GetNode(m_nodeIndices.front());
+        assert (node.IsLeaf() && "A tile with a single node can only contain a leaf");
+        int32_t tileSize = m_tiledTree.m_modifiedTree.TilingDescriptor().MaxTileSize();
+        auto threshold = node.threshold;
+        for (int32_t i=0; i<tileSize ; ++i) {
+            *beginIter = threshold;
+            ++beginIter;
+        }
+        return;
+    }
+    assert (static_cast<int32_t>(m_nodeIndices.size()) == m_tiledTree.m_modifiedTree.TilingDescriptor().MaxTileSize());
+    for (auto nodeIndex : m_nodeIndices) {
+        auto threshold = GetNode(nodeIndex).threshold;
+        *beginIter = threshold;
+        ++beginIter;
+    }
+}
+
+void TiledTreeNode::GetFeatureIndices(std::vector<int32_t>::iterator beginIter) {
+    if (m_nodeIndices.size() == 1) {
+        // This is a leaf tile
+        auto& node = GetNode(m_nodeIndices.front());
+        assert (node.IsLeaf() && "A tile with a single node can only contain a leaf");
+        int32_t tileSize = m_tiledTree.m_modifiedTree.TilingDescriptor().MaxTileSize();
+        auto featureIndex = node.featureIndex;
+        for (int32_t i=0; i<tileSize ; ++i) {
+            *beginIter = featureIndex;
+            ++beginIter;
+        }
+        return;
+    }
+    assert (static_cast<int32_t>(m_nodeIndices.size()) == m_tiledTree.m_modifiedTree.TilingDescriptor().MaxTileSize());
+    for (auto nodeIndex : m_nodeIndices) {
+        auto featureIndex = GetNode(nodeIndex).featureIndex;
+        *beginIter = featureIndex;
+        ++beginIter;
+    }
+}
+
+void TiledTreeNode::ComputeTileShapeString(std::string& str, int32_t tileNodeIndex, int32_t stringIndex) {
+    str.at(stringIndex) = '1';
+    auto& node = GetNode(tileNodeIndex);
+    if (node.leftChild!=DecisionTree<>::INVALID_NODE_INDEX && AreNodesInSameTile(tileNodeIndex, node.leftChild)) {
+        ComputeTileShapeString(str, node.leftChild, 2*stringIndex + 1);
+    }
+    if (node.rightChild!=DecisionTree<>::INVALID_NODE_INDEX && AreNodesInSameTile(tileNodeIndex, node.rightChild)) {
+        ComputeTileShapeString(str, node.rightChild, 2*stringIndex + 2);
+    }
+    return;
+}
+
+std::string TiledTreeNode::GetTileShapeString() {
+    auto tileSize = m_tiledTree.m_modifiedTree.TilingDescriptor().MaxTileSize();
+    auto stringSize = std::pow(2, tileSize) - 1;
+    std::string tileShapeStr(stringSize, '0');
+    ComputeTileShapeString(tileShapeStr, GetEntryNode(), 0);
+    return tileShapeStr;
+}
+
+void TiledTreeNode::WriteDOTSubGraph(std::ofstream& fout) {
+    std::vector<std::string> colors = { "aquamarine3", "darkolivegreen4", "deepskyblue", "firebrick", "grey80", "teal"};
+    std::string& color = colors[m_tileID % colors.size()];
+
+    fout << "subgraph tile_" << m_tileID << " {\n";
+    fout << "\tnode [style=filled, ";
+    fout << "color=" << color << "];\n";
+    for (size_t i=0 ; i<m_nodeIndices.size() ; ++i) {
+        auto nodeIndex = m_nodeIndices.at(i);
+        auto& node = GetNode(nodeIndex);
+        int64_t parentIndex = node.parent;
+        auto& parentNode = GetNode(parentIndex);
+        fout << "\t\"node" << nodeIndex << "\" [ label = \"Id:" << nodeIndex << ", Thres:" << node.threshold << ", FeatIdx:" << node.featureIndex << "\"];\n";
+        if (parentIndex != DecisionTree<>::INVALID_NODE_INDEX) {
+            std::string edgeColor = parentNode.leftChild == nodeIndex ? "green" : "red";
+            if (parentNode.leftChild == parentNode.rightChild)
+                edgeColor = "black";
+            fout << "\t\"node" << parentIndex << "\" -> \"node" << nodeIndex << "\"[style=bold,color=" << edgeColor << "];\n";
+        }
+    }
+    fout << "}\n";
+}
+
+// -----------------------------------------------
+// Methods for class TiledTree
+// -----------------------------------------------
+
 TiledTree::TiledTree(DecisionTree<>& owningTree)
- : m_owningTree(owningTree), m_modifiedTree(owningTree)
+ : m_owningTree(owningTree), m_modifiedTree(owningTree), m_tileShapeToTileIDMap(m_owningTree.TilingDescriptor().MaxTileSize())
 {
     ConstructTiledTree();
 }
@@ -536,9 +672,13 @@ void TiledTree::ConstructTiledTree() {
 
         SetChildrenForTile(tile);
     }
-    // Expand the tiles that aren't full with dummy nodes (TODO how do you represent this?)
+    // Expand the tiles that aren't full with dummy nodes
     for (auto& tile : m_tiles)
         tile.AddExtraNodesIfNeeded();
+    
+    // Set the shape ID of all the tiles in the tree
+    for (auto& tile : m_tiles)
+        tile.m_tileShapeID = m_tileShapeToTileIDMap.GetTileID(tile);
     
     assert(Validate());
 }
@@ -587,29 +727,6 @@ bool TiledTree::Validate() {
     return true;
 }
 
-void TiledTreeNode::WriteDOTSubGraph(std::ofstream& fout) {
-    std::vector<std::string> colors = { "aquamarine3", "darkolivegreen4", "deepskyblue", "firebrick", "grey80", "teal"};
-    std::string& color = colors[m_tileID % colors.size()];
-
-    fout << "subgraph tile_" << m_tileID << " {\n";
-    fout << "\tnode [style=filled, ";
-    fout << "color=" << color << "];\n";
-    for (size_t i=0 ; i<m_nodeIndices.size() ; ++i) {
-        auto nodeIndex = m_nodeIndices.at(i);
-        auto& node = m_tiledTree.m_modifiedTree.GetNodes().at(nodeIndex);
-        int64_t parentIndex = node.parent;
-        auto& parentNode = m_tiledTree.m_modifiedTree.GetNodes().at(parentIndex);
-        fout << "\t\"node" << nodeIndex << "\" [ label = \"Id:" << nodeIndex << ", Thres:" << node.threshold << ", FeatIdx:" << node.featureIndex << "\"];\n";
-        if (parentIndex != DecisionTree<>::INVALID_NODE_INDEX) {
-            std::string edgeColor = parentNode.leftChild == nodeIndex ? "green" : "red";
-            if (parentNode.leftChild == parentNode.rightChild)
-                edgeColor = "black";
-            fout << "\t\"node" << parentIndex << "\" -> \"node" << nodeIndex << "\"[style=bold,color=" << edgeColor << "];\n";
-        }
-    }
-    fout << "}\n";
-}
-
 void TiledTree::EmitNodeDOT(std::ofstream& fout, int32_t nodeIndex) {
     std::vector<std::string> colors = { "aquamarine3", "darkolivegreen4", "deepskyblue", "firebrick", "grey80", "teal"};
 
@@ -653,48 +770,6 @@ void TiledTree::WriteDOTFile(const std::string& filename) {
 #endif // EMIT_TILES_AS_SUBGRAPHS
 }
 
-void TiledTreeNode::GetThresholds(std::vector<double>::iterator beginIter) {
-    if (m_nodeIndices.size() == 1) {
-        // This is a leaf tile
-        auto& node = m_tiledTree.m_modifiedTree.GetNodes().at(m_nodeIndices.front());
-        assert (node.IsLeaf() && "A tile with a single node can only contain a leaf");
-        int32_t tileSize = m_tiledTree.m_modifiedTree.TilingDescriptor().MaxTileSize();
-        auto threshold = node.threshold;
-        for (int32_t i=0; i<tileSize ; ++i) {
-            *beginIter = threshold;
-            ++beginIter;
-        }
-        return;
-    }
-    assert (static_cast<int32_t>(m_nodeIndices.size()) == m_tiledTree.m_modifiedTree.TilingDescriptor().MaxTileSize());
-    for (auto nodeIndex : m_nodeIndices) {
-        auto threshold = m_tiledTree.m_modifiedTree.GetNodes().at(nodeIndex).threshold;
-        *beginIter = threshold;
-        ++beginIter;
-    }
-}
-
-void TiledTreeNode::GetFeatureIndices(std::vector<int32_t>::iterator beginIter) {
-    if (m_nodeIndices.size() == 1) {
-        // This is a leaf tile
-        auto& node = m_tiledTree.m_modifiedTree.GetNodes().at(m_nodeIndices.front());
-        assert (node.IsLeaf() && "A tile with a single node can only contain a leaf");
-        int32_t tileSize = m_tiledTree.m_modifiedTree.TilingDescriptor().MaxTileSize();
-        auto featureIndex = node.featureIndex;
-        for (int32_t i=0; i<tileSize ; ++i) {
-            *beginIter = featureIndex;
-            ++beginIter;
-        }
-        return;
-    }
-    assert (static_cast<int32_t>(m_nodeIndices.size()) == m_tiledTree.m_modifiedTree.TilingDescriptor().MaxTileSize());
-    for (auto nodeIndex : m_nodeIndices) {
-        auto featureIndex = m_tiledTree.m_modifiedTree.GetNodes().at(nodeIndex).featureIndex;
-        *beginIter = featureIndex;
-        ++beginIter;
-    }
-}
-
 int32_t TiledTree::GetTreeDepthHelper(int32_t tileIndex) {
     auto& tile = m_tiles.at(tileIndex);
     int32_t depth = 0;
@@ -706,19 +781,19 @@ int32_t TiledTree::GetTreeDepthHelper(int32_t tileIndex) {
 
 template <typename AttribType, typename GetterType>
 void TiledTree::GetTileAttributeArray(std::vector<AttribType>& attributeVec,
-                                      size_t vecIndex, size_t tileIndex, GetterType get)
+                                      size_t vecIndex, size_t tileIndex, GetterType get, bool singleAttribute)
 {
     auto& tile = m_tiles.at(tileIndex);
     assert(vecIndex < attributeVec.size());
     // TODO What is the type we set on leaf nodes?
     // assert(node.featureType == FeatureType::kNumerical || node.IsLeaf());
     auto tileSize = m_owningTree.TilingDescriptor().MaxTileSize();
-    get(tile, attributeVec.begin() + vecIndex*tileSize);
+    get(tile, attributeVec.begin() + vecIndex * (singleAttribute ? 1 : tileSize));
     const auto& children = tile.GetChildren();
     int32_t numChildren = tileSize + 1;
     for (size_t i=0 ; i<children.size() ; ++i) {
         int32_t childIndex = children[i];
-        GetTileAttributeArray<AttribType, GetterType>(attributeVec, numChildren*vecIndex+i+1, childIndex, get);
+        GetTileAttributeArray<AttribType, GetterType>(attributeVec, numChildren*vecIndex+i+1, childIndex, get, singleAttribute);
     }
 }
 
@@ -728,7 +803,7 @@ std::vector<double> TiledTree::SerializeThresholds() {
     int32_t numberOfTiles = (std::pow(numChildrenPerTile, tiledTreeDepth) - 1)/(numChildrenPerTile - 1);
     int32_t vectorLength = numberOfTiles * m_owningTree.TilingDescriptor().MaxTileSize();
     std::vector<double> thresholds(vectorLength, -1);
-    GetTileAttributeArray(thresholds, 0, 0, [&](TiledTreeNode& t, std::vector<double>::iterator iter){ t.GetThresholds(iter); } );
+    GetTileAttributeArray(thresholds, 0, 0, [&](TiledTreeNode& t, std::vector<double>::iterator iter){ t.GetThresholds(iter); }, false /*singleAttribute*/ );
     return thresholds;
 }
 
@@ -737,10 +812,23 @@ std::vector<int32_t> TiledTree::SerializeFeatureIndices() {
     int32_t numChildrenPerTile = m_owningTree.TilingDescriptor().MaxTileSize() + 1;
     int32_t numberOfTiles = (std::pow(numChildrenPerTile, tiledTreeDepth) - 1)/(numChildrenPerTile - 1);
     int32_t vectorLength = numberOfTiles * m_owningTree.TilingDescriptor().MaxTileSize();
-    std::vector<int32_t> thresholds(vectorLength, -1);
-    GetTileAttributeArray(thresholds, 0, 0, [&](TiledTreeNode& t, std::vector<int32_t>::iterator iter){ t.GetFeatureIndices(iter); } );
-    return thresholds;
+    std::vector<int32_t> featureIndices(vectorLength, -1);
+    GetTileAttributeArray(featureIndices, 0, 0, [&](TiledTreeNode& t, std::vector<int32_t>::iterator iter){ t.GetFeatureIndices(iter); }, false /*singleAttribute*/ );
+    return featureIndices;
 }
+
+std::vector<int32_t> TiledTree::SerializeTileShapeIDs() {
+    int32_t tiledTreeDepth = GetTreeDepth();
+    int32_t numChildrenPerTile = m_owningTree.TilingDescriptor().MaxTileSize() + 1;
+    int32_t numberOfTiles = (std::pow(numChildrenPerTile, tiledTreeDepth) - 1)/(numChildrenPerTile - 1);
+    std::vector<int32_t> tileShapeIDs(numberOfTiles, -1);
+    GetTileAttributeArray(tileShapeIDs, 0, 0, [&](TiledTreeNode& t, std::vector<int32_t>::iterator iter){ *iter=t.GetTileShapeID(); }, true /*singleAttribute*/ );
+    return tileShapeIDs;
+}
+
+// -----------------------------------------------
+// Methods for class TileShapeToTileIDMap
+// -----------------------------------------------
 
 void TileShapeToTileIDMap::InitMap() {
     TileStringGenerator(m_tileSize);
@@ -835,13 +923,21 @@ void TileShapeToTileIDMap::TileStringGenerator(int32_t numNodes) {
         std::string str = std::string(maxTreeSize, '0');
         updateState = UpdateTileString(str, oldStr, states, 0);
         oldStr = str;
-        std::cout << str << std::endl;
+        // std::cout << str << std::endl;
         assert(m_tileStringToTileIDMap.find(str) == m_tileStringToTileIDMap.end());
         m_tileStringToTileIDMap[str] = m_currentTileID;
         ++m_currentTileID;
     } while (updateState == SubtreeUpdateState::kContinue);
-    std::cout << m_tileStringToTileIDMap.size() << std::endl;
-    assert (static_cast<int32_t>(m_tileStringToTileIDMap.size()) == TileShapeToTileIDMap::NumberOfTileShapes(m_tileSize));
+    
+    // Add an entry for tiles with leaves
+    std::string str = std::string(maxTreeSize, '0');
+    str[0] = '1';
+    m_tileStringToTileIDMap[str] = m_currentTileID;
+    ++m_currentTileID;
+
+    // std::cout << m_tileStringToTileIDMap.size() << std::endl;
+    // The map should have all full tiles plus 1 for the tile shape with a single leaf
+    assert (static_cast<int32_t>(m_tileStringToTileIDMap.size()) == (TileShapeToTileIDMap::NumberOfTileShapes(m_tileSize)+1));
 }
 
 std::map<int32_t, int32_t> TileShapeToTileIDMap::tileSizeToNumberOfShapesMap;
@@ -972,6 +1068,13 @@ std::vector<std::vector<int32_t>> TileShapeToTileIDMap::ComputeTileLookUpTable()
         tileLUT.at(mapPair.second) = ComputeLookUpTableForSingleShape(tree, m_tileSize);
     }
     return tileLUT;
+}
+
+int32_t TileShapeToTileIDMap::GetTileID(TiledTreeNode& tile) {
+    auto shapeString = tile.GetTileShapeString();
+    auto mapIter = m_tileStringToTileIDMap.find(shapeString);
+    assert (mapIter != std::end(m_tileStringToTileIDMap));
+    return mapIter->second;
 }
 
 } // decisionforest

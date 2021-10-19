@@ -57,6 +57,7 @@ class ForestJSONReader
         std::list<int32_t> numberOfTiles;
         std::list<std::vector<ThresholdType>> serializedThresholds;
         std::list<std::vector<FeatureIndexType>> serializedFetureIndices;
+        std::list<std::vector<int32_t>> serializedTileShapeIDs;
     };
     std::list<SingleTileSizeEntry> m_tileSizeEntries;
     json m_json;
@@ -71,10 +72,11 @@ public:
         fin >> m_json;
         ParseJSONFile();
     }
-    void AddSingleTree(int32_t treeIndex, int32_t numTiles, std::vector<ThresholdType>& serializedThresholds, std::vector<FeatureIndexType>& serializedFetureIndices,
+    void AddSingleTree(int32_t treeIndex, int32_t numTiles, std::vector<ThresholdType>& serializedThresholds, 
+                       std::vector<FeatureIndexType>& serializedFetureIndices, std::vector<int32_t>& tileShapeIDs,
                        const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth);
     void AddSingleTileSizeEntry(std::list<int32_t>& treeIndices, std::list<int32_t>& numTilesList, std::list<std::vector<ThresholdType>>& serializedThresholds, 
-                                std::list<std::vector<FeatureIndexType>>& serializedFetureIndices,
+                                std::list<std::vector<FeatureIndexType>>& serializedFetureIndices, std::list<std::vector<int32_t>>& serializedTileShapeIDs,
                                 const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth);
     void InitializeBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets);
     void InitializeOffsetBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth);
@@ -90,32 +92,6 @@ public:
 
 void PersistDecisionForest(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType);
 void ClearPersistedForest();
-
-class TiledTreeNode;
-
-// Routines to compute combinatorial properties of tiles
-class TileShapeToTileIDMap
-{
-    static std::map<int32_t, int32_t> tileSizeToNumberOfShapesMap;
-
-    int32_t m_tileSize;
-    std::map<std::string, int32_t> m_tileStringToTileIDMap;
-    int32_t m_currentTileID = 0;
-    void TileStringGenerator(int32_t numNodes);
-    void InitMap();
-public:
-    TileShapeToTileIDMap(int32_t tileSize) 
-     : m_tileSize(tileSize)
-    {
-        InitMap();
-    }
-    int32_t GetTileID(TiledTreeNode& tile);
-    // Index is (tileShapeID, comparison result)
-    std::vector<std::vector<int32_t>> ComputeTileLookUpTable();
-    // Number of tile shapes with the given tile size
-    static int32_t NumberOfTileShapes(int32_t tileSize);
-};
-
 
 } // decisionforest
 } // mlir
