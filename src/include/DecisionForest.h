@@ -116,6 +116,9 @@ template <typename ThresholdType=double, typename ReturnType=double, typename Fe
 class DecisionForest
 {
 public:
+    DecisionForest(ReturnType initialValue) : m_initialValue(initialValue) {}
+    DecisionForest() : DecisionForest(0.0) {}
+
     struct Feature
     {
         std::string name;
@@ -168,6 +171,7 @@ private:
     std::vector<Feature> m_features;
     std::vector<DecisionTreeType> m_trees;
     ReductionType m_reductionType = ReductionType::kAdd;
+    const ReturnType m_initialValue;
 };
 
 template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
@@ -320,7 +324,7 @@ ReturnType DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndex
         predictions.push_back(tree.PredictTree(data));
     
     assert(m_reductionType == ReductionType::kAdd);
-    return std::accumulate(predictions.begin(), predictions.end(), 0.0);
+    return std::accumulate(predictions.begin(), predictions.end(), m_initialValue);
 }
 
 template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>

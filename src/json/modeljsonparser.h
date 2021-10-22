@@ -80,6 +80,7 @@ protected:
     mlir::ModuleOp m_module;
     mlir::OpBuilder m_builder;
     int32_t m_batchSize;
+    double_t m_predictionOffset;
 
     void SetReductionType(mlir::decisionforest::ReductionType reductionType) { m_forest->SetReductionType(reductionType); }
     void AddFeature(const std::string& featureName, const std::string& type) { m_forest->AddFeature(featureName, type); }
@@ -131,11 +132,17 @@ protected:
         return m_builder.create<mlir::FuncOp>(location, std::string("Prediction_Function"), functionType, m_builder.getStringAttr("public"));
     }
 public:
-    ModelJSONParser(mlir::MLIRContext& context, int32_t batchSize)
-        : m_forest(new DecisionForestType), m_currentTree(nullptr), m_context(context), m_builder(&context), m_batchSize(batchSize)
+    ModelJSONParser(mlir::MLIRContext& context, int32_t batchSize, double_t predictionOffset)
+        : m_forest(new DecisionForestType(predictionOffset)), m_currentTree(nullptr), m_context(context), m_builder(&context), m_batchSize(batchSize), m_predictionOffset(predictionOffset)
     {
         m_module = mlir::ModuleOp::create(m_builder.getUnknownLoc(), llvm::StringRef("MyModule"));
     }
+
+    ModelJSONParser(mlir::MLIRContext& context, int32_t batchSize)
+        : ModelJSONParser(context, batchSize, 0.0)
+    {
+    }
+    
     virtual void Parse() = 0;
 
     // Get the forest pointer
@@ -171,8 +178,15 @@ public:
                                                                       mlir::decisionforest::ReductionType::kAdd, treeType);
         auto forestAttribute = mlir::decisionforest::DecisionForestAttribute::get(forestType, *m_forest);
 
-        auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(m_builder.getUnknownLoc(), GetFunctionResultType(),
-                                                                                 forestAttribute, subviewOfArg, entryBlock.getArguments()[1]);
+        auto floatType = mlir::Float64Type::get(&m_context);
+        auto predictOffsetAttribute = mlir::decisionforest::PredictionOffsetAttribute::get(floatType, m_predictionOffset);
+
+        auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(
+            m_builder.getUnknownLoc(),GetFunctionResultType(),
+            forestAttribute,
+            predictOffsetAttribute,
+            subviewOfArg,
+            entryBlock.getArguments()[1]);
 
         m_builder.create<mlir::ReturnOp>(m_builder.getUnknownLoc(), static_cast<mlir::Value>(predictOp));
         if (failed(mlir::verify(m_module))) {

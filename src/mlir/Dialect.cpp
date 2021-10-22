@@ -37,7 +37,7 @@ void DecisionForestDialect::initialize() {
 #include "Ops.cpp.inc"
       >();
   addTypes<TreeEnsembleType, TreeType, NodeType, LeafNodeType, NumericalNodeType, TiledNumericalNodeType>();
-  addAttributes<DecisionTreeAttribute, DecisionForestAttribute>();
+  addAttributes<DecisionTreeAttribute, DecisionForestAttribute, PredictionOffsetAttribute>();
 }
 
 /// Parse a type registered to this dialect.
@@ -103,6 +103,11 @@ void DecisionForestDialect::printAttribute(::mlir::Attribute attr,
     {
         DecisionTreeAttribute decisionTreeAttr = attr.cast<DecisionTreeAttribute>();
         decisionTreeAttr.Print(os);
+    }
+    else if (attr.isa<PredictionOffsetAttribute>())
+    {
+        auto predictionOffsetAttribute = attr.cast<PredictionOffsetAttribute>();
+        predictionOffsetAttribute.Print(os);
     }
     else
     {

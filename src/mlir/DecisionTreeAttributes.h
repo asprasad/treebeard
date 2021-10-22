@@ -89,6 +89,41 @@ struct DecisionForestAttrStorage : public ::mlir::AttributeStorage
     DecisionForest<> m_forest;
 };
 
+struct PredictionOffsetAttrStorage : public ::mlir::AttributeStorage
+{
+    PredictionOffsetAttrStorage(::mlir::Type type, double_t predictionOffset)
+      : ::mlir::AttributeStorage(type), m_predictionOffset(predictionOffset) { }
+
+    /// The hash key is a tuple of the parameter types.
+    using KeyTy = std::tuple<::mlir::Type, double_t>;
+
+    bool operator==(const KeyTy &tblgenKey) const {
+        if (getType() != std::get<0>(tblgenKey))
+            return false;
+
+        if (m_predictionOffset != std::get<1>(tblgenKey))
+            return false;
+
+        return true;
+    }
+    
+    static ::llvm::hash_code hashKey(const KeyTy &tblgenKey) {
+        auto predictionOffset = std::get<1>(tblgenKey);
+        return ::llvm::hash_combine(std::get<0>(tblgenKey), std::to_string(predictionOffset));
+    }
+
+    /// Define a construction method for creating a new instance of this
+    /// storage.
+    static PredictionOffsetAttrStorage *construct(::mlir::AttributeStorageAllocator &allocator,
+                          const KeyTy &tblgenKey) {
+        auto type = std::get<0>(tblgenKey);
+        auto predictionOffset = std::get<1>(tblgenKey);
+        return new (allocator.allocate<PredictionOffsetAttrStorage>()) PredictionOffsetAttrStorage(type, predictionOffset);
+    }
+
+    double_t m_predictionOffset;
+};
+
 } // namespace detail
 
 class DecisionTreeAttribute : public ::mlir::Attribute::AttrBase<DecisionTreeAttribute, ::mlir::Attribute,
@@ -135,6 +170,29 @@ public:
     }
     DecisionForest<>& GetDecisionForest() {
         return getImpl()->m_forest;
+    }
+};
+
+class PredictionOffsetAttribute : public ::mlir::Attribute::AttrBase<PredictionOffsetAttribute, ::mlir::Attribute,
+                                                                   detail::PredictionOffsetAttrStorage>
+{
+public:
+    /// Inherit some necessary constructors from 'AttrBase'.
+    using Base::Base;
+
+    static PredictionOffsetAttribute get(Type type, double_t offset) {
+        return Base::get(type.getContext(), type, offset);
+    }
+    std::string Serialize() {
+        return std::to_string(getImpl()->m_predictionOffset);
+    }
+    void Print(::mlir::DialectAsmPrinter &os) {
+        std::string offsetStr = std::to_string(getImpl()->m_predictionOffset);
+        os << "PredictionOffset = ( " << offsetStr << " ) ";
+    }
+
+    double_t GetPredictionOffset() {
+        return getImpl()->m_predictionOffset;
     }
 };
 
