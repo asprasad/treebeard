@@ -141,6 +141,7 @@ public:
     size_t NumTrees() { return m_trees.size(); }
     DecisionTreeType& GetTree(int64_t index) { return m_trees[index]; }
     const std::vector<Feature>& GetFeatures() const { return m_features; }
+    ReturnType GetInitialOffset() const { return m_initialValue; }
     std::string Serialize() const;
     std::string PrintToString() const;
     ReturnType Predict(std::vector<ThresholdType>& data) const;
@@ -302,7 +303,7 @@ template <typename ThresholdType, typename ReturnType, typename FeatureIndexType
 std::string DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::Serialize() const
 {
     std::stringstream strStream;
-    strStream << (int32_t)m_reductionType << m_trees.size();
+    strStream << (int32_t)m_reductionType << m_trees.size() << m_initialValue;
     for (auto& tree : m_trees)
         strStream << tree.Serialize();
     return strStream.str();
@@ -312,7 +313,7 @@ template <typename ThresholdType, typename ReturnType, typename FeatureIndexType
 std::string DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::PrintToString() const
 {
     std::stringstream strStream;
-    strStream << "ReductionType = " << (int32_t)m_reductionType << ", #Trees = " << m_trees.size();
+    strStream << "ReductionType = " << (int32_t)m_reductionType << ", #Trees = " << m_trees.size() << ", InitialValue=" << m_initialValue;
     return strStream.str();
 }
 

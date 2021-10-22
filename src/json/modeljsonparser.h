@@ -178,13 +178,9 @@ public:
                                                                       mlir::decisionforest::ReductionType::kAdd, treeType);
         auto forestAttribute = mlir::decisionforest::DecisionForestAttribute::get(forestType, *m_forest);
 
-        auto floatType = mlir::Float64Type::get(&m_context);
-        auto predictOffsetAttribute = mlir::decisionforest::PredictionOffsetAttribute::get(floatType, m_predictionOffset);
-
         auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(
             m_builder.getUnknownLoc(),GetFunctionResultType(),
             forestAttribute,
-            predictOffsetAttribute,
             subviewOfArg,
             entryBlock.getArguments()[1]);
 

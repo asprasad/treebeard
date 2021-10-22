@@ -97,7 +97,7 @@ struct PredictForestOpLowering: public ConversionPattern {
         auto ensembleSizeConst = rewriter.create<ConstantIndexOp>(location, numTrees); 
         
         Value predictionOffsetConst;
-        double_t predictionOffsetValue = forestOp.predictionOffsetAttr().GetPredictionOffset();
+        double_t predictionOffsetValue = forestAttribute.GetDecisionForest().GetInitialOffset();
 
         if (resultElementType.isa<mlir::Float64Type>())
           predictionOffsetConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat(predictionOffsetValue), resultElementType.cast<FloatType>());

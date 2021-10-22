@@ -82,18 +82,6 @@ def DecisionForestAttr : Attr<
   let convertFromStorage = "$_self";
 }
 
-def PredictionOffsetAttr : Attr<
-  CPred<"$_self.isa<::mlir::decisionforest::PredictionOffsetAttribute>()">,
-  "Decision forest attribute"> {
-
-  let storageType = [{ ::mlir::decisionforest::PredictionOffsetAttribute }];
-  let returnType = [{ ::mlir::decisionforest::PredictionOffsetAttribute }];
-  
-  // Note that this is only constructing scalar elements attribute.
-  let constBuilderCall = "::mlir::decisionforest::PredictionOffsetAttribute::get()";
-  let convertFromStorage = "$_self";
-}
-
 //-------   Operations   ----------------------
 
 class DecisionForest_Op<string mnemonic, list<OpTrait> traits = []> : 
@@ -112,7 +100,7 @@ def PredictForestOp : DecisionForest_Op<"predict_ensemble"> {
     let description = "Represents the actual inference computation on the forest. Takes a tensor operand and produces a result."
                       "Contains the actual forest as an attribute.";
 
-    let arguments = (ins DecisionForestAttr:$ensemble, PredictionOffsetAttr:$predictionOffset, InputDataType:$data, InputDataType:$result);
+    let arguments = (ins DecisionForestAttr:$ensemble, InputDataType:$data, InputDataType:$result);
 
     // Just returns its result argument after filling in the results
     let results = (outs InputDataType);
