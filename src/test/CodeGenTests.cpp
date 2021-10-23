@@ -15,6 +15,9 @@
 
 #include "xgboostparser.h"
 #include "ExecutionHelpers.h"
+#include "TreeTilingDescriptor.h"
+#include "TreeTilingUtils.h"
+#include "ForestTestUtils.h"
 
 using namespace mlir;
 
@@ -462,6 +465,68 @@ bool Test_RandomXGBoostJSONs_4Trees_BatchSize2_Float(TestArgs_t& args) {
 
 bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float(TestArgs_t& args) {
   return Test_RandomXGBoostJSONs_4Trees_VariableBatchSize<float>(args, 4);
+}
+
+// Tests for Tiled trees
+
+class FixedTiledTreeIRConstructor : public TreeBeard::ModelJSONParser<double, double, int32_t, int32_t, double> {
+  using ThresholdType = double;
+  using ReturnType = double;
+  using FeatureIndexType = int32_t;
+  using NodeIndexType = int32_t;
+  using InputElementType = double;
+
+  std::vector<DoubleInt32Tile> m_treeSerialization;
+  ForestConstructor_t m_constructForest;
+  std::vector<decisionforest::TreeTilingDescriptor>& m_tilingDescriptors;
+
+  decisionforest::TreeEnsembleType GetEnsembleType() override {
+    assert (m_forest->NumTrees() == m_tilingDescriptors.size());
+    
+    std::vector<Type> treeTypes;
+    for (size_t i=0 ; i<m_forest->NumTrees() ; ++i) {
+      auto treeType = mlir::decisionforest::TreeType::get(GetMLIRType(ReturnType(), m_builder), m_tilingDescriptors[i], 
+                                                          GetMLIRType(ThresholdType(), m_builder), 
+                                                          GetMLIRType(FeatureIndexType(), m_builder));
+      treeTypes.push_back(treeType);
+    }
+
+    auto forestType = mlir::decisionforest::TreeEnsembleType::get(GetMLIRType(ReturnType(), m_builder),
+                                                                  m_forest->NumTrees(), GetInputRowType(), 
+                                                                  mlir::decisionforest::ReductionType::kAdd, treeTypes);
+    return forestType;
+
+  }
+public:
+  FixedTiledTreeIRConstructor(mlir::MLIRContext& context, int32_t batchSize, ForestConstructor_t constructForest,
+                              std::vector<decisionforest::TreeTilingDescriptor>& tilingDescriptors)
+    : TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(context, batchSize),
+      m_constructForest(constructForest), m_tilingDescriptors(tilingDescriptors)
+  {  }
+  void Parse() override {
+    m_treeSerialization = m_constructForest(*m_forest);
+    AddFeaturesToForest(*m_forest, m_treeSerialization, "float");
+    assert (m_tilingDescriptors.size() == m_forest->NumTrees());
+    for (size_t i=0 ; i<m_forest->NumTrees() ; ++i) {
+      m_forest->GetTree(i).SetTilingDescriptor(m_tilingDescriptors[i]);
+    }
+  }
+  decisionforest::DecisionForest<>& GetForest() { return *m_forest; }
+};
+
+bool Test_CodeGeneration_Balanced_TileSize3(TestArgs_t& args) {
+  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 0, 3, 4 };
+  decisionforest::TreeTilingDescriptor tilingDescriptor(3, 5, tileIDs, decisionforest::TilingType::kRegular);
+  std::vector<decisionforest::TreeTilingDescriptor> tilingDescriptors = { tilingDescriptor };
+
+  FixedTiledTreeIRConstructor irGenerator(args.context, 1, AddBalancedTree<DoubleInt32Tile>, tilingDescriptors);
+  irGenerator.Parse();
+  auto module = irGenerator.GetEvaluationFunction();
+  decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  decisionforest::LowerEnsembleToMemrefs(args.context, module);
+  module->dump();
+
+  return true;
 }
 
 }

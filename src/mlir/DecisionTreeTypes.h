@@ -359,6 +359,17 @@ public:
             return getImpl()->m_treeTypes[treeIndex];
     }
     bool doAllTreesHaveSameType() const { return getImpl()->m_treesHaveSameType; }
+    bool doAllTreesHaveSameTileSize() const {
+        if (doAllTreesHaveSameType())
+            return true;
+        auto firstTreeTileSize = getImpl()->m_treeTypes.at(0).cast<TreeType>().getTilingDescriptor().MaxTileSize();
+        for (size_t i=1; i<getNumberOfTrees() ; ++i) {
+            auto treeTileSize = getImpl()->m_treeTypes.at(i).cast<TreeType>().getTilingDescriptor().MaxTileSize();
+            if (firstTreeTileSize != treeTileSize)
+                return false;
+        }
+        return true;
+    }
     void print(mlir::DialectAsmPrinter &printer) { getImpl()->print(printer); }
 };
 

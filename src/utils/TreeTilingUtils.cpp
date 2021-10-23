@@ -335,6 +335,15 @@ void ForestJSONReader::InitializeLengthBuffer(void* bufPtr, int32_t tileSize, in
     }
 }
 
+int32_t ForestJSONReader::GetTotalNumberOfTiles() {
+    assert (this->m_tileSizeEntries.size() == 1 && "Only a single (tile size, threshold type, feature index type) configuration is supported");
+    auto& tileSizeEntry = m_tileSizeEntries.front();
+    int32_t numTiles = 0;
+    for (auto singleTreeNumTiles : tileSizeEntry.numberOfTiles)
+        numTiles += singleTreeNumTiles;
+    return numTiles;
+}
+
 // Ultimately, this will write a JSON file. For now, we're just 
 // storing it in memory assuming the compiler and inference 
 // will run in the same process. 
@@ -377,6 +386,10 @@ void PersistDecisionForest(mlir::decisionforest::DecisionForest<>& forest, mlir:
 
 void ClearPersistedForest() {
     mlir::decisionforest::ForestJSONReader::GetInstance().ClearAllData();
+}
+
+int32_t GetTotalNumberOfTiles() {
+    return mlir::decisionforest::ForestJSONReader::GetInstance().GetTotalNumberOfTiles();
 }
 
 // -----------------------------------------------

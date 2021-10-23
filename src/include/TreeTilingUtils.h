@@ -84,6 +84,7 @@ public:
     void ClearAllData();
     void SetNumberOfTrees(int32_t val) { m_numberOfTrees = val; }
     int32_t GetNumberOfTrees() { return m_numberOfTrees; }
+    int32_t GetTotalNumberOfTiles();
     static ForestJSONReader& GetInstance() {
         return m_instance;
     }
@@ -92,6 +93,7 @@ public:
 
 void PersistDecisionForest(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType);
 void ClearPersistedForest();
+int32_t GetTotalNumberOfTiles();
 
 } // decisionforest
 } // mlir

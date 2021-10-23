@@ -1,13 +1,14 @@
 #include <vector>
 #include <sstream>
 #include "TreeTilingUtils.h"
-#include "TestUtilsCommon.h"
 #include "ExecutionHelpers.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "xgboostparser.h"
 #include "TiledTree.h"
-using namespace mlir;
+
+#include "TestUtilsCommon.h"
+#include "ForestTestUtils.h"
 
 namespace TreeBeard
 {
@@ -38,173 +39,12 @@ bool Test_RandomXGBoostJSONs_4Trees_BatchSize1_Float(TestArgs_t& args);
 bool Test_RandomXGBoostJSONs_4Trees_BatchSize2_Float(TestArgs_t& args);
 bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float(TestArgs_t& args);
 
+// Tiled Codegen tests 
+bool Test_CodeGeneration_Balanced_TileSize3(TestArgs_t& args);
+
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
     vec[i] = (double)rand()/RAND_MAX;
-}
-
-#pragma pack(push, 1)
-template<typename ThresholdType, typename IndexType>
-struct NumericalTileType {
-  ThresholdType threshold;
-  IndexType index;
-  bool operator==(const NumericalTileType<ThresholdType, IndexType>& other) const {
-    return threshold==other.threshold && index==other.index;
-  }
-};
-#pragma pack(pop)
-
-#pragma pack(push, 1)
-template<typename ThresholdType, typename IndexType, int32_t VectorSize>
-struct NumericalVectorTileType {
-  ThresholdType threshold[VectorSize];
-  IndexType index[VectorSize];
-  int16_t tileShapeID;
-  bool operator==(const NumericalVectorTileType<ThresholdType, IndexType, VectorSize>& other) const {
-    for (int32_t i=0; i<VectorSize ; ++i)
-      if (threshold[i]!=other.threshold[i] || index[i]!=other.index[i])
-        return false;
-    return tileShapeID==other.tileShapeID;
-  }
-};
-#pragma pack(pop)
-
-
-template<typename TileType>
-std::vector<TileType> AddLeftHeavyTree(mlir::decisionforest::DecisionForest<>& forest) {
-  // Add tree one
-  auto& firstTree = forest.NewTree();
-  auto rootNode = firstTree.NewNode(0.5, 2);
-  // Add left child
-  {
-    auto node = firstTree.NewNode(0.3, 4);
-    firstTree.SetNodeParent(node, rootNode);
-    firstTree.SetNodeLeftChild(rootNode, node);
-    {
-      // Leaf
-      auto subTreeRoot = node;
-      auto leftChild = firstTree.NewNode(0.1, -1);
-      firstTree.SetNodeParent(leftChild, subTreeRoot);
-      firstTree.SetNodeLeftChild(subTreeRoot, leftChild);
-      
-      // Leaf
-      auto rightChild = firstTree.NewNode(0.2, -1);
-      firstTree.SetNodeParent(rightChild, subTreeRoot);
-      firstTree.SetNodeRightChild(subTreeRoot, rightChild);
-    }
-  }
-  // Add right child (leaf)
-  {
-    auto node = firstTree.NewNode(0.8, -1);
-    firstTree.SetNodeParent(node, rootNode);
-    firstTree.SetNodeRightChild(rootNode, node);
-  }
-  assert (firstTree.GetTreeDepth() == 3);
-  std::vector<TileType> expectedArray{ {0.5, 2}, {0.3, 4}, {0.8, -1}, {0.1, -1}, {0.2, -1}, {0, -1}, {0, -1}};
-  return expectedArray;
-}
-
-template<typename TileType>
-std::vector<TileType> AddRightHeavyTree(mlir::decisionforest::DecisionForest<>& forest) {
-  // Add tree one
-  auto& firstTree = forest.NewTree();
-  auto rootNode = firstTree.NewNode(0.5, 2);
-  // Add right child
-  {
-    auto node = firstTree.NewNode(0.3, 4);
-    firstTree.SetNodeParent(node, rootNode);
-    firstTree.SetNodeRightChild(rootNode, node);
-    {
-      // Leaf
-      auto subTreeRoot = node;
-      auto leftChild = firstTree.NewNode(0.15, -1);
-      firstTree.SetNodeParent(leftChild, subTreeRoot);
-      firstTree.SetNodeLeftChild(subTreeRoot, leftChild);
-      
-      // Leaf
-      auto rightChild = firstTree.NewNode(0.25, -1);
-      firstTree.SetNodeParent(rightChild, subTreeRoot);
-      firstTree.SetNodeRightChild(subTreeRoot, rightChild);
-    }
-  }
-  // Add left child (leaf)
-  {
-    auto node = firstTree.NewNode(0.85, -1);
-    firstTree.SetNodeParent(node, rootNode);
-    firstTree.SetNodeLeftChild(rootNode, node);
-  }
-  assert (firstTree.GetTreeDepth() == 3);
-  std::vector<TileType> expectedArray{ {0.5, 2}, {0.85, -1}, {0.3, 4}, {0, -1}, {0, -1}, {0.15, -1}, {0.25, -1} };
-  return expectedArray;
-}
-
-template<typename TileType>
-std::vector<TileType> AddBalancedTree(mlir::decisionforest::DecisionForest<>& forest) {
-  // Add tree one
-  auto& firstTree = forest.NewTree();
-  auto rootNode = firstTree.NewNode(0.5, 2);
-  // Add right child
-  {
-    auto node = firstTree.NewNode(0.3, 4);
-    firstTree.SetNodeParent(node, rootNode);
-    firstTree.SetNodeRightChild(rootNode, node);
-    {
-      // Leaf
-      auto subTreeRoot = node;
-      auto leftChild = firstTree.NewNode(0.15, -1);
-      firstTree.SetNodeParent(leftChild, subTreeRoot);
-      firstTree.SetNodeLeftChild(subTreeRoot, leftChild);
-      
-      // Leaf
-      auto rightChild = firstTree.NewNode(0.25, -1);
-      firstTree.SetNodeParent(rightChild, subTreeRoot);
-      firstTree.SetNodeRightChild(subTreeRoot, rightChild);
-    }
-  }
-  // Add left child
-  {
-    auto node = firstTree.NewNode(0.1, 1);
-    firstTree.SetNodeParent(node, rootNode);
-    firstTree.SetNodeLeftChild(rootNode, node);
-    {
-      // Leaf
-      auto subTreeRoot = node;
-      auto leftChild = firstTree.NewNode(0.75, -1);
-      firstTree.SetNodeParent(leftChild, subTreeRoot);
-      firstTree.SetNodeLeftChild(subTreeRoot, leftChild);
-      
-      // Leaf
-      auto rightChild = firstTree.NewNode(0.85, -1);
-      firstTree.SetNodeParent(rightChild, subTreeRoot);
-      firstTree.SetNodeRightChild(subTreeRoot, rightChild);
-    }
-  }
-  assert (firstTree.GetTreeDepth() == 3);
-  std::vector<TileType> expectedArray{ {0.5, 2}, {0.1, 1}, {0.3, 4}, {0.75, -1}, {0.85, -1}, {0.15, -1}, {0.25, -1} };
-  return expectedArray;
-}
-
-template<typename TileType>
-std::vector<TileType> AddRightAndLeftHeavyTrees(decisionforest::DecisionForest<>& forest) {
-  auto expectedArray = AddRightHeavyTree<TileType>(forest);
-  auto expectedArray2 = AddLeftHeavyTree<TileType>(forest);
-  expectedArray.insert(std::end(expectedArray), std::begin(expectedArray2), std::end(expectedArray2));
-  return expectedArray;
-}
-
-template<typename TileType>
-void AddFeaturesToForest(decisionforest::DecisionForest<>& forest, std::vector<TileType>& serializedForest, std::string featureType) {
-  int32_t numFeatures = -1;
-  for (auto& tile : serializedForest) {
-    if (tile.index > numFeatures)
-      numFeatures = tile.index;
-  }
-  numFeatures++; // Index --> Length
-  for (int32_t i=0 ; i<numFeatures ; ++i) {
-    std::stringstream strStream;
-    strStream << "x_" << i;
-    forest.AddFeature(strStream.str(), featureType);
-  }
 }
 
 template<typename ThresholdType, typename IndexType>
@@ -316,9 +156,8 @@ bool Test_BufferInitialization_TwoTrees(TestArgs_t& args) {
   return true;
 }
 
-using DoubleInt32Tile = NumericalTileType<double, int32_t>;
-
 bool Test_BufferInitializationWithOneTree_LeftHeavy(TestArgs_t& args) {
+  using DoubleInt32Tile = NumericalTileType<double, int32_t>;
   mlir::MLIRContext& context = args.context;
   mlir::decisionforest::DecisionForest<> forest;
   auto expectedArray = AddLeftHeavyTree<DoubleInt32Tile>(forest);  
@@ -379,28 +218,6 @@ bool Test_BufferInitializationWithTwoTrees_FloatInt8(TestArgs_t& args) {
 }
 
 // IR Tests
-using ThresholdType = double;
-using ReturnType = double;
-using FeatureIndexType = int32_t;
-using NodeIndexType = int32_t;
-using InputElementType = double;
-
-typedef std::vector<DoubleInt32Tile> (*ForestConstructor_t)(decisionforest::DecisionForest<>& forest);
-
-class FixedTreeIRConstructor : public TreeBeard::ModelJSONParser<double, double, int32_t, int32_t, double> {
-  std::vector<DoubleInt32Tile> m_treeSerialization;
-  ForestConstructor_t m_constructForest;
-public:
-  FixedTreeIRConstructor(MLIRContext& context, int32_t batchSize, ForestConstructor_t constructForest)
-    : TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(context, batchSize), m_constructForest(constructForest)
-  {  }
-  void Parse() override {
-    m_treeSerialization = m_constructForest(*m_forest);
-    AddFeaturesToForest(*m_forest, m_treeSerialization, "float");
-  }
-  decisionforest::DecisionForest<>& GetForest() { return *m_forest; }
-};
-
 bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestConstructor, std::vector< std::vector<double> >& inputData) {
   FixedTreeIRConstructor irConstructor(args.context, 1, forestConstructor);
   irConstructor.Parse();
@@ -683,9 +500,9 @@ TestDescriptor testList[] = {
 };
 
 // TestDescriptor testList[] = {
-//    TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Tiled),
-//    TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy_Tiled),
-//    TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_Balanced_Tiled)
+//    TEST_LIST_ENTRY(Test_CodeGeneration_Balanced_TileSize3),
+  //  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy_Tiled),
+  //  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_Balanced_Tiled)
 // };
 
 const size_t numTests = sizeof(testList) / sizeof(testList[0]);
@@ -731,6 +548,7 @@ void RunTests() {
     context.getOrLoadDialect<mlir::StandardOpsDialect>();
     context.getOrLoadDialect<mlir::scf::SCFDialect>();
     context.getOrLoadDialect<mlir::memref::MemRefDialect>();
+    context.getOrLoadDialect<mlir::vector::VectorDialect>();
     TestArgs_t args = { context };    
     bool pass = RunTest(testList[i], args);
     overallPass = overallPass && pass;

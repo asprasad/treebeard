@@ -11,6 +11,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "mlir/Dialect/Vector/VectorOps.h"
 
 namespace mlir
 {
@@ -89,9 +90,23 @@ public:
         return Base::get(ctx, thresholdType, indexType, tileSize);
     }
 
-    mlir::Type getThresholdType() const { return getImpl()->m_thresholdType; }
-    mlir::Type getIndexType() const { return getImpl()->m_indexType; }
+    mlir::Type getThresholdElementType() const { return getImpl()->m_thresholdType; }
+    mlir::Type getIndexElementType() const { return getImpl()->m_indexType; }
     int32_t getTileSize() const { return getImpl()->m_tileSize; }
+    
+    mlir::Type getThresholdFieldType() const { 
+        if (getTileSize() == 1)
+            return getThresholdElementType();
+        else
+            return mlir::VectorType::get({ getTileSize() }, getThresholdElementType());
+    }
+
+    mlir::Type getIndexFieldType() const { 
+        if (getTileSize() == 1)
+            return getIndexElementType();
+        else
+            return mlir::VectorType::get({ getTileSize() }, getIndexElementType());
+    }
 
     void print(mlir::DialectAsmPrinter &printer) { getImpl()->print(printer); }
 
@@ -105,8 +120,8 @@ public:
     unsigned getTypeSizeInBits(const DataLayout &layout,
                                DataLayoutEntryListRef params) const {
         // TODO We need to take care of padding here so the alignment for whatever we store second is satisfied!
-        unsigned thresholdSize = layout.getTypeSizeInBits(getThresholdType());
-        unsigned indexSize = layout.getTypeSizeInBits(getIndexType());
+        unsigned thresholdSize = layout.getTypeSizeInBits(getThresholdElementType());
+        unsigned indexSize = layout.getTypeSizeInBits(getIndexElementType());
         return (thresholdSize+indexSize) * getTileSize();
     }
     // InterfaceMethod<
@@ -119,8 +134,8 @@ public:
     // >,
     unsigned getABIAlignment(const DataLayout &layout,
                             DataLayoutEntryListRef params) const {
-        unsigned thresholdAlignment = layout.getTypeABIAlignment(getThresholdType());
-        unsigned indexAlignment = layout.getTypeABIAlignment(getIndexType());
+        unsigned thresholdAlignment = layout.getTypeABIAlignment(getThresholdElementType());
+        unsigned indexAlignment = layout.getTypeABIAlignment(getIndexElementType());
         return std::max(thresholdAlignment, indexAlignment);
     }
     // InterfaceMethod<
@@ -133,8 +148,8 @@ public:
     // >
     unsigned getPreferredAlignment(const DataLayout &layout,
                             DataLayoutEntryListRef params) const {
-        unsigned thresholdAlignment = layout.getTypePreferredAlignment(getThresholdType());
-        unsigned indexAlignment = layout.getTypePreferredAlignment(getIndexType());
+        unsigned thresholdAlignment = layout.getTypePreferredAlignment(getThresholdElementType());
+        unsigned indexAlignment = layout.getTypePreferredAlignment(getIndexElementType());
         return std::max(thresholdAlignment, indexAlignment);
     }
 };

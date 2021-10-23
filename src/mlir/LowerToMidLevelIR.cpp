@@ -111,7 +111,7 @@ struct PredictForestOpLowering: public ConversionPattern {
         // TODO The forest shouldn't contain the tree type because each tree may have a different type, 
         // but the tree type should have more information -- tiling for example. We need to construct 
         // the default tiling here.
-        assert (forestType.doAllTreesHaveSameType());
+        assert (forestType.doAllTreesHaveSameTileSize());
         auto treeType = forestType.getTreeType(0).cast<mlir::decisionforest::TreeType>();
         auto tree = rewriter.create<decisionforest::GetTreeFromEnsembleOp>(location, treeType, forestConst, j);
 

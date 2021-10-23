@@ -132,8 +132,8 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
   auto& context = getContext();
   LLVMTypeConverter typeConverter(&getContext(), options);
   typeConverter.addConversion([&](decisionforest::TiledNumericalNodeType type) {
-                auto thresholdType = type.getThresholdType();
-                auto indexType = type.getIndexType();
+                auto thresholdType = type.getThresholdElementType();
+                auto indexType = type.getIndexElementType();
                 return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType}, true);
               });
 

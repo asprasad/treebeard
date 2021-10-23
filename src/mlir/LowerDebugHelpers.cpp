@@ -176,7 +176,6 @@ struct PrintTreeToDOTFileOpLowering: public ConversionPattern {
     auto memrefType = operands[kTreeMemrefOperandNum].getType();
     auto memrefStructType = memrefType.cast<LLVM::LLVMStructType>();
     auto alignedPtrType = memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct].cast<LLVM::LLVMPointerType>();
-    auto tileType = alignedPtrType.getElementType().cast<LLVM::LLVMStructType>();
     
     auto indexVal = operands[kIndexOperandNum];
     auto indexType = indexVal.getType();

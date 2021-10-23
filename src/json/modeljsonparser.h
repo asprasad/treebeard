@@ -130,6 +130,19 @@ protected:
         // return mlir::FuncOp::create(location, std::string("Prediction_Function"), functionType);
         return m_builder.create<mlir::FuncOp>(location, std::string("Prediction_Function"), functionType, m_builder.getStringAttr("public"));
     }
+    virtual mlir::decisionforest::TreeEnsembleType GetEnsembleType()
+    {
+        // All trees have the default tiling to start with.
+        mlir::decisionforest::TreeTilingDescriptor tilingDescriptor;
+        auto treeType = mlir::decisionforest::TreeType::get(GetMLIRType(ReturnType(), m_builder), tilingDescriptor, 
+                                                            GetMLIRType(ThresholdType(), m_builder), 
+                                                            GetMLIRType(FeatureIndexType(), m_builder));
+
+        auto forestType = mlir::decisionforest::TreeEnsembleType::get(GetMLIRType(ReturnType(), m_builder),
+                                                                      m_forest->NumTrees(), GetInputRowType(), 
+                                                                      mlir::decisionforest::ReductionType::kAdd, treeType);
+        return forestType;
+    }
 public:
     ModelJSONParser(mlir::MLIRContext& context, int32_t batchSize)
         : m_forest(new DecisionForestType), m_currentTree(nullptr), m_context(context), m_builder(&context), m_batchSize(batchSize)
@@ -160,15 +173,7 @@ public:
                                                                 mlir::ArrayRef<mlir::OpFoldResult>({zeroIndexAttr, zeroIndexAttr}),
                                                                 mlir::ArrayRef<mlir::OpFoldResult>({batchSizeAttr, rowSizeAttr}), 
                                                                 mlir::ArrayRef<mlir::OpFoldResult>({oneIndexAttr, oneIndexAttr}));
-        // All trees have the default tiling to start with.
-        mlir::decisionforest::TreeTilingDescriptor tilingDescriptor;
-        auto treeType = mlir::decisionforest::TreeType::get(GetMLIRType(ReturnType(), m_builder), tilingDescriptor, 
-                                                            GetMLIRType(ThresholdType(), m_builder), 
-                                                            GetMLIRType(FeatureIndexType(), m_builder));
-
-        auto forestType = mlir::decisionforest::TreeEnsembleType::get(GetMLIRType(ReturnType(), m_builder),
-                                                                      m_forest->NumTrees(), GetInputRowType(), 
-                                                                      mlir::decisionforest::ReductionType::kAdd, treeType);
+        auto forestType = GetEnsembleType();
         auto forestAttribute = mlir::decisionforest::DecisionForestAttribute::get(forestType, *m_forest);
 
         auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(m_builder.getUnknownLoc(), GetFunctionResultType(),
