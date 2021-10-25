@@ -220,6 +220,14 @@ def LoadTileFeatureIndicesOp : DecisionForest_Op<"loadTileFeatureIndices", [NoSi
   let results = (outs TileOfFeatureIndices);
 }
 
+def LoadTileShapeOp : DecisionForest_Op<"loadTileShape", [NoSideEffect]> {
+  let summary = "Load the shape of a tree tile.";
+  let description = "Load the shape ID from a tile in a tree memref. Takes a memref and an index into the memref and returns an integer.";
+  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex);
+
+  let results = (outs I32);
+}
+
 def IndexToNodeOp : DecisionForest_Op<"indexToNode", [NoSideEffect]> {
   let summary = "Casts an index into a tree memref into a node type.";
   let description = "Casts an index into a tree memref into a node type. This is a hack so that we don't have to change any block arguments while lowering.";

@@ -296,6 +296,18 @@ Value GetTreeMemrefFromTreeOperand(Value treeValue) {
   return treeMemref;
 }
 
+Value GetLUTFromTreeOperand(Value treeValue) {
+  auto getTreeOp = treeValue.getDefiningOp();
+  auto getTreeFromEnsembleOp = AssertOpIsOfType<mlir::decisionforest::GetTreeFromEnsembleOp>(getTreeOp);
+  auto ensembleVal = getTreeFromEnsembleOp.getOperand(0);
+  
+  auto ensembleConstOp = AssertOpIsOfType<mlir::decisionforest::EnsembleConstantOp>(ensembleVal.getDefiningOp());
+  auto mapIter = ensembleConstantToMemrefsMap.find(ensembleConstOp);
+  assert (mapIter != ensembleConstantToMemrefsMap.end());
+  auto& ensembleInfo = mapIter->second;
+  return ensembleInfo.lutGlobal;
+}
+
 struct GetRootOpLowering: public ConversionPattern {
   GetRootOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::GetRootOp::getOperationName(), 1 /*benefit*/, ctx) {}
 
@@ -433,62 +445,106 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     rewriter.replaceOp(op, static_cast<Value>(newNode));
   }
 
+  Value ReduceComparisonResultVectorToInt(Value comparisonResult, int32_t tileSize, ConversionPatternRewriter &rewriter, Location location) const {
+    auto i32VectorType = VectorType::get(tileSize, rewriter.getI32Type());
+    auto comparisonExtended = rewriter.create<ZeroExtendIOp>(location, i32VectorType, comparisonResult);
+
+    auto zeroI32Const = rewriter.create<ConstantIntOp>(location, int64_t(0), rewriter.getI32Type());
+    auto shiftVector = static_cast<Value>(rewriter.create<vector::BroadcastOp>(location, i32VectorType, zeroI32Const));
+    for (int32_t shift=0, pos=tileSize-1 ; shift<tileSize; ++shift, --pos) {
+      auto shiftValConst = rewriter.create<ConstantIntOp>(location, int64_t(shift), rewriter.getI32Type());
+      shiftVector = rewriter.create<vector::InsertOp>(location, static_cast<Value>(shiftValConst), 
+                                                      static_cast<Value>(shiftVector), ArrayRef<int64_t>({ pos }));
+    }
+
+    auto leftShift = rewriter.create<ShiftLeftOp>(location, i32VectorType, comparisonExtended, shiftVector);
+    auto kind = rewriter.getStringAttr("add");
+    auto sum = rewriter.create<vector::ReductionOp>(location, rewriter.getI32Type(), kind, static_cast<Value>(leftShift), ValueRange{ });
+    auto index = rewriter.create<IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(sum));
+    return index;
+  }
+
   void LowerOpForVectorTile(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const {
-    // auto traverseTileOp = AssertOpIsOfType<mlir::decisionforest::TraverseTreeTileOp>(op);
-    // auto location = op->getLoc();
+    auto traverseTileOp = AssertOpIsOfType<mlir::decisionforest::TraverseTreeTileOp>(op);
+    auto location = op->getLoc();
     
-    // auto treeMemref = GetTreeMemrefFromTreeOperand(operands[0]);
-    // auto treeMemrefType = treeMemref.getType().cast<MemRefType>();
-    // assert (treeMemrefType);
+    auto treeMemref = GetTreeMemrefFromTreeOperand(operands[0]);
+    auto treeMemrefType = treeMemref.getType().cast<MemRefType>();
+    assert (treeMemrefType);
 
-    // auto treeTileType = treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
-    // auto featureIndexType = treeTileType.getIndexFieldType();
-    // auto featureIndexVectorType = featureIndexType.cast<VectorType>();
-    // assert(featureIndexVectorType);
-    // auto thresholdType = treeTileType.getThresholdFieldType();
-    // auto thresholdVectorType = thresholdType.cast<VectorType>();
-    // assert(thresholdVectorType);
+    auto treeTileType = treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
+    auto featureIndexType = treeTileType.getIndexFieldType();
+    auto featureIndexVectorType = featureIndexType.cast<VectorType>();
+    assert(featureIndexVectorType);
+    auto thresholdType = treeTileType.getThresholdFieldType();
+    auto thresholdVectorType = thresholdType.cast<VectorType>();
+    assert(thresholdVectorType);
 
-    // assert (treeTileType.getTileSize() > 1);
+    assert (treeTileType.getTileSize() > 1);
+    auto tileSize = treeTileType.getTileSize();
+    auto node = operands[1];
+    auto nodeIndex = rewriter.create<decisionforest::NodeToIndexOp>(location, rewriter.getIndexType(), treeMemref, node);
+    if (decisionforest::InsertDebugHelpers) {
+      rewriter.create<decisionforest::PrintTreeNodeOp>(location, nodeIndex);
+    }
+    // Load threshold
+    auto loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, thresholdType, treeMemref, static_cast<Value>(nodeIndex));
+    // Load feature index
+    auto loadFeatureIndexOp = rewriter.create<decisionforest::LoadTileFeatureIndicesOp>(location, featureIndexType, treeMemref, static_cast<Value>(nodeIndex));
+    // Load the tile shape
+    auto loadTileShapeOp = rewriter.create<decisionforest::LoadTileShapeOp>(location, rewriter.getI32Type(), treeMemref, static_cast<Value>(nodeIndex));
+    auto tileShapeIndex = rewriter.create<IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadTileShapeOp));
+    // Load feature value
+    auto rowMemref = operands[2];
+    auto rowMemrefType = rowMemref.getType().cast<MemRefType>();
+    auto vectorIndexType = VectorType::get({ tileSize }, rewriter.getIndexType());
+    auto rowIndex = rewriter.create<IndexCastOp>(location, vectorIndexType, static_cast<Value>(loadFeatureIndexOp));
+    auto zeroIndex = rewriter.create<ConstantIndexOp>(location, 0);
+    // auto zeroIndexVector = rewriter.create<vector::BroadcastOp>(location, vectorIndexType, zeroIndex);
 
-    // auto node = operands[1];
-    // auto nodeIndex = rewriter.create<decisionforest::NodeToIndexOp>(location, rewriter.getIndexType(), treeMemref, node);
-    // if (decisionforest::InsertDebugHelpers) {
-    //   rewriter.create<decisionforest::PrintTreeNodeOp>(location, nodeIndex);
-    // }
-    // // Load threshold
-    // auto loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, thresholdType, treeMemref, static_cast<Value>(nodeIndex));
-    // // Load feature index
-    // auto loadFeatureIndexOp = rewriter.create<decisionforest::LoadTileFeatureIndicesOp>(location, featureIndexType, treeMemref, static_cast<Value>(nodeIndex));
-    // // Load feature value
-    // auto rowMemref = operands[2];
-    // auto rowMemrefType = rowMemref.getType().cast<MemRefType>();
-    // auto rowIndex = rewriter.create<IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadFeatureIndexOp));
-    // auto zeroIndex = rewriter.create<ConstantIndexOp>(location, 0);
-    // auto feature = rewriter.create<memref::LoadOp>(location, rowMemrefType.getElementType(), rowMemref,
-    //                                                ValueRange({static_cast<Value>(zeroIndex), static_cast<Value>(rowIndex)}));
+    auto featuresVectorType = VectorType::get({ tileSize }, rowMemrefType.getElementType());
+    auto oneI1Const = rewriter.create<ConstantIntOp>(location, 1, rewriter.getI1Type());
+    auto i1VectorType = VectorType::get(tileSize, rewriter.getI1Type());
+    auto mask = rewriter.create<vector::BroadcastOp>(location, i1VectorType, oneI1Const);
 
+    Value zeroPassThruConst;
+    if (rowMemrefType.getElementType().isa<mlir::Float64Type>())
+      zeroPassThruConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat(0.0), rowMemrefType.getElementType().cast<FloatType>());
+    else if(rowMemrefType.getElementType().isa<mlir::Float32Type>())
+      zeroPassThruConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat((float)0.0), rowMemrefType.getElementType().cast<FloatType>());
+    else
+      assert(false && "Unsupported floating point type");
+    auto zeroPassThruVector = rewriter.create<vector::BroadcastOp>(location, featuresVectorType, zeroPassThruConst);
+    
+    auto features = rewriter.create<vector::GatherOp>(location, featuresVectorType, rowMemref,
+                                                      ValueRange({static_cast<Value>(zeroIndex), static_cast<Value>(zeroIndex)}),
+                                                      rowIndex, mask, zeroPassThruVector);
+
+    // TODO This needs a different print routine!
     // if(decisionforest::InsertDebugHelpers) {
     //   rewriter.create<decisionforest::PrintComparisonOp>(location, feature, loadThresholdOp, loadFeatureIndexOp);
     // }
 
-    // // result = Compare
-    // // TODO we need a cast here to make sure the threshold and the row element are the same type. The op expects both operands to be the same type.
-    // auto comparison = rewriter.create<CmpFOp>(location,  mlir::CmpFPredicate::UGT, static_cast<Value>(feature), static_cast<Value>(loadThresholdOp));
-    // auto comparisonUnsigned = rewriter.create<ZeroExtendIOp>(location, rewriter.getI32Type(), static_cast<Value>(comparison));
+    // result = Compare
+    // TODO we need a cast here to make sure the threshold and the row element are the same type. The op expects both operands to be the same type.
+    auto comparison = rewriter.create<CmpFOp>(location,  mlir::CmpFPredicate::UGT, static_cast<Value>(features), static_cast<Value>(loadThresholdOp));
+    auto comparisonIndex = ReduceComparisonResultVectorToInt(comparison, tileSize, rewriter, location);
 
-    // // index = 2*index + 1 + result
-    // auto oneConstant = rewriter.create<ConstantIndexOp>(location, 1);
-    // auto twoConstant = rewriter.create<ConstantIndexOp>(location, 2);
-    // auto twoTimesIndex = rewriter.create<MulIOp>(location, rewriter.getIndexType(), static_cast<Value>(nodeIndex), static_cast<Value>(twoConstant));
-    // auto twoTimesIndexPlus1 = rewriter.create<AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(twoTimesIndex), static_cast<Value>(oneConstant));
-    // auto comparisonResultIndex = rewriter.create<IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(comparisonUnsigned));
-    // auto newIndex = rewriter.create<AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(twoTimesIndexPlus1), static_cast<Value>(comparisonResultIndex));
+    // Load the child index from the LUT
+    auto lutValue = GetLUTFromTreeOperand(operands[0]);
+    auto childIndexInt = rewriter.create<memref::LoadOp>(location, lutValue, ValueRange{tileShapeIndex, comparisonIndex});
+    auto childIndex = rewriter.create<IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(childIndexInt));
+
+    // index = 2*index + 1 + result
+    auto oneConstant = rewriter.create<ConstantIndexOp>(location, 1);
+    auto tileSizeConstant = rewriter.create<ConstantIndexOp>(location, tileSize+1);
+    auto tileSizeTimesIndex = rewriter.create<MulIOp>(location, rewriter.getIndexType(), static_cast<Value>(nodeIndex), static_cast<Value>(tileSizeConstant));
+    auto twoTimesIndexPlus1 = rewriter.create<AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(tileSizeTimesIndex), static_cast<Value>(oneConstant));
+    auto newIndex = rewriter.create<AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(twoTimesIndexPlus1), static_cast<Value>(childIndex));
     
-    // // node = indexToNode(index)
-    // auto newNode = rewriter.create<decisionforest::IndexToNodeOp>(location, traverseTileOp.getResult().getType(), treeMemref, static_cast<Value>(newIndex));
-
-    // rewriter.replaceOp(op, static_cast<Value>(newNode));
+    // node = indexToNode(index)
+    auto newNode = rewriter.create<decisionforest::IndexToNodeOp>(location, traverseTileOp.getResult().getType(), treeMemref, static_cast<Value>(newIndex));
+    rewriter.replaceOp(op, static_cast<Value>(newNode));
   }
 };
 
