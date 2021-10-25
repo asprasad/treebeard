@@ -80,7 +80,6 @@ protected:
     mlir::ModuleOp m_module;
     mlir::OpBuilder m_builder;
     int32_t m_batchSize;
-    double_t m_predictionOffset;
 
     void SetReductionType(mlir::decisionforest::ReductionType reductionType) { m_forest->SetReductionType(reductionType); }
     void AddFeature(const std::string& featureName, const std::string& type) { m_forest->AddFeature(featureName, type); }
@@ -132,8 +131,8 @@ protected:
         return m_builder.create<mlir::FuncOp>(location, std::string("Prediction_Function"), functionType, m_builder.getStringAttr("public"));
     }
 public:
-    ModelJSONParser(mlir::MLIRContext& context, int32_t batchSize, double_t predictionOffset)
-        : m_forest(new DecisionForestType(predictionOffset)), m_currentTree(nullptr), m_context(context), m_builder(&context), m_batchSize(batchSize), m_predictionOffset(predictionOffset)
+    ModelJSONParser(mlir::MLIRContext& context, int32_t batchSize, double_t initialValue)
+        : m_forest(new DecisionForestType(initialValue)), m_currentTree(nullptr), m_context(context), m_builder(&context), m_batchSize(batchSize)
     {
         m_module = mlir::ModuleOp::create(m_builder.getUnknownLoc(), llvm::StringRef("MyModule"));
     }

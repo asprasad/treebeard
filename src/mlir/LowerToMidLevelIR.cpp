@@ -96,13 +96,13 @@ struct PredictForestOpLowering: public ConversionPattern {
         int64_t numTrees = static_cast<int64_t>(forestType.getNumberOfTrees());
         auto ensembleSizeConst = rewriter.create<ConstantIndexOp>(location, numTrees); 
         
-        Value predictionOffsetConst;
-        double_t predictionOffsetValue = forestAttribute.GetDecisionForest().GetInitialOffset();
+        Value initialValueConst;
+        double_t initialValueValue = forestAttribute.GetDecisionForest().GetInitialOffset();
 
         if (resultElementType.isa<mlir::Float64Type>())
-          predictionOffsetConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat(predictionOffsetValue), resultElementType.cast<FloatType>());
+          initialValueConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat(initialValueValue), resultElementType.cast<FloatType>());
         else if(resultElementType.isa<mlir::Float32Type>())
-          predictionOffsetConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat((float)predictionOffsetValue), resultElementType.cast<FloatType>());
+          initialValueConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat((float)initialValueValue), resultElementType.cast<FloatType>());
         else
           assert(false && "Unsupported floating point type");
         // auto oneIndexConst2 = rewriter.create<ConstantIndexOp>(location, 1);
@@ -112,7 +112,7 @@ struct PredictForestOpLowering: public ConversionPattern {
           zeroConst,
           ensembleSizeConst,
           oneIndexConst,
-          static_cast<Value>(predictionOffsetConst));
+          static_cast<Value>(initialValueConst));
         
         rewriter.setInsertionPointToStart(treeLoop.getBody());
         auto j = treeLoop.getInductionVar();
