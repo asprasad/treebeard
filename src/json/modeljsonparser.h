@@ -144,11 +144,17 @@ protected:
         return forestType;
     }
 public:
-    ModelJSONParser(mlir::MLIRContext& context, int32_t batchSize)
-        : m_forest(new DecisionForestType), m_currentTree(nullptr), m_context(context), m_builder(&context), m_batchSize(batchSize)
+    ModelJSONParser(mlir::MLIRContext& context, int32_t batchSize, double_t initialValue)
+        : m_forest(new DecisionForestType(initialValue)), m_currentTree(nullptr), m_context(context), m_builder(&context), m_batchSize(batchSize)
     {
         m_module = mlir::ModuleOp::create(m_builder.getUnknownLoc(), llvm::StringRef("MyModule"));
     }
+
+    ModelJSONParser(mlir::MLIRContext& context, int32_t batchSize)
+        : ModelJSONParser(context, batchSize, 0.0)
+    {
+    }
+    
     virtual void Parse() = 0;
 
     // Get the forest pointer
@@ -176,8 +182,11 @@ public:
         auto forestType = GetEnsembleType();
         auto forestAttribute = mlir::decisionforest::DecisionForestAttribute::get(forestType, *m_forest);
 
-        auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(m_builder.getUnknownLoc(), GetFunctionResultType(),
-                                                                                 forestAttribute, subviewOfArg, entryBlock.getArguments()[1]);
+        auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(
+            m_builder.getUnknownLoc(),GetFunctionResultType(),
+            forestAttribute,
+            subviewOfArg,
+            entryBlock.getArguments()[1]);
 
         m_builder.create<mlir::ReturnOp>(m_builder.getUnknownLoc(), static_cast<mlir::Value>(predictOp));
         if (failed(mlir::verify(m_module))) {

@@ -116,6 +116,9 @@ template <typename ThresholdType=double, typename ReturnType=double, typename Fe
 class DecisionForest
 {
 public:
+    DecisionForest(ReturnType initialValue) : m_initialValue(initialValue) {}
+    DecisionForest() : DecisionForest(0.0) {}
+
     struct Feature
     {
         std::string name;
@@ -138,6 +141,7 @@ public:
     size_t NumTrees() { return m_trees.size(); }
     DecisionTreeType& GetTree(int64_t index) { return m_trees[index]; }
     const std::vector<Feature>& GetFeatures() const { return m_features; }
+    ReturnType GetInitialOffset() const { return m_initialValue; }
     std::string Serialize() const;
     std::string PrintToString() const;
     ReturnType Predict(std::vector<ThresholdType>& data) const;
@@ -168,6 +172,7 @@ private:
     std::vector<Feature> m_features;
     std::vector<DecisionTreeType> m_trees;
     ReductionType m_reductionType = ReductionType::kAdd;
+    const ReturnType m_initialValue;
 };
 
 template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
@@ -298,7 +303,7 @@ template <typename ThresholdType, typename ReturnType, typename FeatureIndexType
 std::string DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::Serialize() const
 {
     std::stringstream strStream;
-    strStream << (int32_t)m_reductionType << m_trees.size();
+    strStream << (int32_t)m_reductionType << m_trees.size() << m_initialValue;
     for (auto& tree : m_trees)
         strStream << tree.Serialize();
     return strStream.str();
@@ -308,7 +313,7 @@ template <typename ThresholdType, typename ReturnType, typename FeatureIndexType
 std::string DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::PrintToString() const
 {
     std::stringstream strStream;
-    strStream << "ReductionType = " << (int32_t)m_reductionType << ", #Trees = " << m_trees.size();
+    strStream << "ReductionType = " << (int32_t)m_reductionType << ", #Trees = " << m_trees.size() << ", InitialValue=" << m_initialValue;
     return strStream.str();
 }
 
@@ -320,7 +325,7 @@ ReturnType DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndex
         predictions.push_back(tree.PredictTree(data));
     
     assert(m_reductionType == ReductionType::kAdd);
-    return std::accumulate(predictions.begin(), predictions.end(), 0.0);
+    return std::accumulate(predictions.begin(), predictions.end(), m_initialValue);
 }
 
 template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
