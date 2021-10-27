@@ -105,6 +105,20 @@ public:
   }
 };
 
+void InsertPrintVectorOp(ConversionPatternRewriter &rewriter, Location location, int32_t kind, int32_t bitWidth, 
+                         int32_t tileSize, Value vectorValue) {
+  auto tileSizeConst = rewriter.create<ConstantIntOp>(location, tileSize, rewriter.getI32Type());
+  auto kindConst = rewriter.create<ConstantIntOp>(location, kind, rewriter.getI32Type());
+  auto bitWidthConst = rewriter.create<ConstantIntOp>(location, bitWidth, rewriter.getI32Type());
+  std::vector<Value> vectorValues;
+  for (int32_t i=0; i<tileSize ; ++i) {
+    auto ithValue = rewriter.create<vector::ExtractElementOp>(location, vectorValue, int64_t(i));
+    vectorValues.push_back(ithValue);
+  }
+  rewriter.create<decisionforest::PrintVectorOp>(location, kindConst, bitWidthConst, tileSizeConst, ValueRange(vectorValues));
+}
+
+
 struct EnsembleConstantOpLowering: public ConversionPattern {
   EnsembleConstantOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::EnsembleConstantOp::getOperationName(), 1 /*benefit*/, ctx) {}
 
@@ -362,6 +376,11 @@ struct IsLeafOpLowering: public ConversionPattern {
     }
     auto minusOneConstant = rewriter.create<ConstantIntOp>(location, int64_t(-1), treeTileType.getIndexElementType());
     auto comparison = rewriter.create<CmpIOp>(location, mlir::CmpIPredicate::eq, featureIndexValue, static_cast<Value>(minusOneConstant));
+    
+    if (decisionforest::InsertDebugHelpers) {
+      Value outcome = rewriter.create<mlir::ZeroExtendIOp>(location, rewriter.getI32Type(), static_cast<Value>(comparison));
+      rewriter.create<decisionforest::PrintIsLeafOp>(location, nodeIndex, featureIndexValue, outcome);
+    }
     rewriter.replaceOp(op, static_cast<Value>(comparison));
 
     return mlir::success();
@@ -489,8 +508,17 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     }
     // Load threshold
     auto loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, thresholdType, treeMemref, static_cast<Value>(nodeIndex));
+    if (decisionforest::InsertDebugHelpers) {
+      InsertPrintVectorOp(rewriter, location, 0 /*fp kind*/, thresholdVectorType.getElementType().getIntOrFloatBitWidth(), 
+                          tileSize, static_cast<Value>(loadThresholdOp));
+    }
     // Load feature index
     auto loadFeatureIndexOp = rewriter.create<decisionforest::LoadTileFeatureIndicesOp>(location, featureIndexType, treeMemref, static_cast<Value>(nodeIndex));
+    if (decisionforest::InsertDebugHelpers) {
+      InsertPrintVectorOp(rewriter, location, 1 /*int kind*/, featureIndexVectorType.getElementType().getIntOrFloatBitWidth(), 
+                          tileSize, static_cast<Value>(loadFeatureIndexOp));
+    }
+
     // Load the tile shape
     auto loadTileShapeOp = rewriter.create<decisionforest::LoadTileShapeOp>(location, rewriter.getI32Type(), treeMemref, static_cast<Value>(nodeIndex));
     auto tileShapeIndex = rewriter.create<IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadTileShapeOp));
@@ -520,6 +548,11 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
                                                       ValueRange({static_cast<Value>(zeroIndex), static_cast<Value>(zeroIndex)}),
                                                       rowIndex, mask, zeroPassThruVector);
 
+    if (decisionforest::InsertDebugHelpers) {
+      InsertPrintVectorOp(rewriter, location, 0 /*fp kind*/, featuresVectorType.getElementType().getIntOrFloatBitWidth(), 
+                          tileSize, static_cast<Value>(features));
+    }
+
     // TODO This needs a different print routine!
     // if(decisionforest::InsertDebugHelpers) {
     //   rewriter.create<decisionforest::PrintComparisonOp>(location, feature, loadThresholdOp, loadFeatureIndexOp);
@@ -527,7 +560,7 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
 
     // result = Compare
     // TODO we need a cast here to make sure the threshold and the row element are the same type. The op expects both operands to be the same type.
-    auto comparison = rewriter.create<CmpFOp>(location,  mlir::CmpFPredicate::UGT, static_cast<Value>(features), static_cast<Value>(loadThresholdOp));
+    auto comparison = rewriter.create<CmpFOp>(location,  mlir::CmpFPredicate::ULE, static_cast<Value>(features), static_cast<Value>(loadThresholdOp));
     auto comparisonIndex = ReduceComparisonResultVectorToInt(comparison, tileSize, rewriter, location);
 
     // Load the child index from the LUT

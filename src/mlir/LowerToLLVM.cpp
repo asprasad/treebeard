@@ -8,10 +8,13 @@
 #include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
+#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
+
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
+
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -48,6 +51,7 @@ const int32_t kAlignedPointerIndexInMemrefStruct = 1;
 const int32_t kOffsetIndexInMemrefStruct = 2;
 const int32_t kThresholdElementNumberInTile = 0;
 const int32_t kFeatureIndexElementNumberInTile = 1;
+const int32_t kTileShapeElementNumberInTile = 2;
 
 void GenerateLoadStructElement(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter, 
                                int64_t elementNumber, TypeConverter* typeConverter) {
@@ -113,6 +117,17 @@ struct LoadTileFeatureIndicesOpLowering: public ConversionPattern {
   }
 };
 
+struct LoadTileShapeOpLowering : public ConversionPattern {
+  LoadTileShapeOpLowering(LLVMTypeConverter& typeConverter) 
+  : ConversionPattern(typeConverter, mlir::decisionforest::LoadTileShapeOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    assert(operands.size() == 2);
+    GenerateLoadStructElement(op, operands, rewriter, kTileShapeElementNumberInTile, getTypeConverter());
+    return mlir::success();
+  }
+};
 
 struct DecisionForestToLLVMLoweringPass : public PassWrapper<DecisionForestToLLVMLoweringPass, OperationPass<ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -132,9 +147,15 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
   auto& context = getContext();
   LLVMTypeConverter typeConverter(&getContext(), options);
   typeConverter.addConversion([&](decisionforest::TiledNumericalNodeType type) {
-                auto thresholdType = type.getThresholdElementType();
-                auto indexType = type.getIndexElementType();
-                return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType}, true);
+                auto thresholdType = type.getThresholdFieldType();
+                auto indexType = type.getIndexFieldType();
+                if (type.getTileSize() == 1) {
+                  return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType}, true);
+                }
+                else {
+                  auto tileShapeIDType = mlir::IntegerType::get(&context, 32);
+                  return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType}, true);
+                }
               });
 
   RewritePatternSet patterns(&getContext());
@@ -143,9 +164,11 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
   populateMemRefToLLVMConversionPatterns(typeConverter, patterns);
   populateStdToLLVMFuncOpConversionPattern(typeConverter, patterns);
   populateStdToLLVMConversionPatterns(typeConverter, patterns);
+  populateVectorToLLVMConversionPatterns(typeConverter, patterns, false);
 
   patterns.add<LoadTileFeatureIndicesOpLowering,
-               LoadTileThresholdOpLowering>(typeConverter);
+               LoadTileThresholdOpLowering,
+               LoadTileShapeOpLowering>(typeConverter);
   decisionforest::populateDebugOpLoweringPatterns(patterns, typeConverter);
 
   auto module = getOperation();

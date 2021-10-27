@@ -40,7 +40,7 @@ bool Test_RandomXGBoostJSONs_4Trees_BatchSize2_Float(TestArgs_t& args);
 bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float(TestArgs_t& args);
 
 // Tiled Codegen tests 
-bool Test_CodeGeneration_Balanced_TileSize3(TestArgs_t& args);
+bool Test_CodeGeneration_Balanced_TileSize4_BatchSize1(TestArgs_t& args);
 
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
@@ -363,7 +363,7 @@ bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t fore
       Test_ASSERT(FPEqual(serializedTree[i].threshold[j], thresholds[i*tileSize + j]));
       Test_ASSERT(serializedTree[i].index[j] == featureIndices[i*tileSize + j]);
     }
-    std::cout << tileShapeIDs[i] << std::endl;
+    // std::cout << tileShapeIDs[i] << std::endl;
     Test_ASSERT(tileShapeIDs[i] == serializedTree[i].tileShapeID);
   }
   Test_ASSERT(offsets[0] == 0);
@@ -377,7 +377,7 @@ bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t fore
   Test_ASSERT(lengthVec[0] == numTiles);
 
   mlir::decisionforest::ClearPersistedForest();
-  std::cout << "**********\n";
+  // std::cout << "**********\n";
   return true;
 }
 
@@ -496,13 +496,14 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float),
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Tiled),
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy_Tiled),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_Balanced_Tiled)
+  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_Balanced_Tiled),
+  TEST_LIST_ENTRY(Test_CodeGeneration_Balanced_TileSize4_BatchSize1)
 };
 
 // TestDescriptor testList[] = {
-//    TEST_LIST_ENTRY(Test_CodeGeneration_Balanced_TileSize3),
-  //  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy_Tiled),
-  //  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_Balanced_Tiled)
+//   TEST_LIST_ENTRY(Test_CodeGeneration_Balanced_TileSize4_BatchSize1),
+//   //  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy_Tiled),
+//   //  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_Balanced_Tiled)
 // };
 
 const size_t numTests = sizeof(testList) / sizeof(testList[0]);

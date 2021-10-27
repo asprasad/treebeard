@@ -60,6 +60,9 @@ InferenceRunner::InferenceRunner(mlir::ModuleOp module, int32_t tileSize, int32_
   InitializeLengthsArray();
   InitializeOffsetsArray();
   InitializeModelArray();
+  assert(tileSize > 0);
+  if (tileSize != 1)
+    InitializeLUT();
 }
 
 int32_t InferenceRunner::InitializeLengthsArray() {
@@ -98,6 +101,9 @@ void InferenceRunner::PrintLengthsArray() {
 
   return;
 }
+
+// TODO All the initialize methods are doing the same thing, except that the getter they're calling are different. 
+// Refactor them into a shared method.
 
 int32_t InferenceRunner::InitializeOffsetsArray() {
   // TODO The ForestJSONReader class needs to provide an interface to iterate over tile sizes and bit widths
@@ -140,6 +146,7 @@ int32_t InferenceRunner::InitializeModelArray() {
   // TODO The ForestJSONReader class needs to provide an interface to iterate over tile sizes and bit widths
   // We need to construct the name of the getter function based on those. 
   auto& engine = m_engine;
+  // TODO this type doesn't really matter, but its not right. Maybe just use some dummy type here?
   Memref<TileType<double, int32_t, 1>, 1> modelMemref;
   void *args[] = { &modelMemref };
   auto invocationResult = engine->invokePacked("Get_model", args);
@@ -150,6 +157,20 @@ int32_t InferenceRunner::InitializeModelArray() {
   // std::cout << "Model memref length : " << modelMemref.lengths[0] << std::endl;
   std::vector<int32_t> offsets(mlir::decisionforest::ForestJSONReader::GetInstance().GetNumberOfTrees(), -1);
   mlir::decisionforest::ForestJSONReader::GetInstance().InitializeBuffer(modelMemref.alignedPtr, m_tileSize, m_thresholdSize, m_featureIndexSize, offsets); 
+  return 0;
+}
+
+int32_t InferenceRunner::InitializeLUT() {
+  auto& engine = m_engine;
+  // TODO this type doesn't really matter, but its not right. Maybe just use some dummy type here?
+  Memref<int8_t, 2> modelMemref;
+  void *args[] = { &modelMemref };
+  auto invocationResult = engine->invokePacked("Get_lookupTable", args);
+  if (invocationResult) {
+    llvm::errs() << "JIT invocation failed\n";
+    return -1;
+  }
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLookUpTable(modelMemref.alignedPtr, m_tileSize, 8); 
   return 0;
 }
 

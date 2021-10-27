@@ -20,7 +20,7 @@ template<typename ThresholdType, typename IndexType, int32_t VectorSize>
 struct NumericalVectorTileType {
   ThresholdType threshold[VectorSize];
   IndexType index[VectorSize];
-  int16_t tileShapeID;
+  int32_t tileShapeID;
   bool operator==(const NumericalVectorTileType<ThresholdType, IndexType, VectorSize>& other) const {
     for (int32_t i=0; i<VectorSize ; ++i)
       if (threshold[i]!=other.threshold[i] || index[i]!=other.index[i])

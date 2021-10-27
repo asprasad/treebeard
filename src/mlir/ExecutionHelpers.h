@@ -24,6 +24,13 @@ struct TileType {
   ThresholdType thresholds[TileSize];
   FeatureIndexType featureIndices[TileSize];
 };
+
+template<typename ThresholdType, typename FeatureIndexType, int32_t TileSize>
+struct TileTypeWithShapeID {
+  ThresholdType thresholds[TileSize];
+  FeatureIndexType featureIndices[TileSize];
+  int8_t tileShapeID;
+};
 #pragma pack(pop)
 
 template<typename T, int32_t Rank>
@@ -53,6 +60,7 @@ public:
   int32_t InitializeLengthsArray();
   int32_t InitializeOffsetsArray();
   int32_t InitializeModelArray();
+  int32_t InitializeLUT();
 
   void PrintLengthsArray();
   void PrintOffsetsArray();

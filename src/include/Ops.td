@@ -284,4 +284,13 @@ def PrintInputRowOp : DecisionForest_Op<"printInputRow", []> {
 def PrintComparisonOp : DecisionForest_Op<"printComparison", []> {
   let arguments = (ins TileOfThresholdTypes:$data, TileOfThresholdTypes:$threshold, TileOfFeatureIndices:$nodeIndex);
 }
+
+def PrintIsLeafOp : DecisionForest_Op<"printIsLeaf", []> {
+  let arguments = (ins Index:$nodeIndex, I32:$featureIndex, I32:$outcome);
+}
+
+def PrintVectorOp : DecisionForest_Op<"printVector", []> {
+  let arguments = (ins I32:$kind, I32:$bitWidth, I32:$vectorSize, Variadic<AnyType>:$elements);
+}
+
 #endif // TREE_HEAVY_OPS

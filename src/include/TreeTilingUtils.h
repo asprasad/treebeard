@@ -81,6 +81,7 @@ public:
     void InitializeBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets);
     void InitializeOffsetBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth);
     void InitializeLengthBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth);
+    void InitializeLookUpTable(void* bufPtr, int32_t tileSize, int32_t entryBitWidth);
     void ClearAllData();
     void SetNumberOfTrees(int32_t val) { m_numberOfTrees = val; }
     int32_t GetNumberOfTrees() { return m_numberOfTrees; }

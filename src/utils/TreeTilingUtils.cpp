@@ -172,7 +172,7 @@ class CopyModelValuesIntoBuffer : public CopyModelValuesIntoBufferInterface {
 
             if (m_writeTileShapeID) {
                 currPtr = bufPtr + m_tileShapeIDOffsetInBytes;
-                *reinterpret_cast<int16_t*>(currPtr) = static_cast<int16_t>(tileShapeIDs.at(tileIndex));
+                *reinterpret_cast<int32_t*>(currPtr) = static_cast<int32_t>(tileShapeIDs.at(tileIndex));
             }
             bufPtr += m_tileSizeInBytes;
             numTilesWritten += 1;
@@ -240,7 +240,7 @@ CopyModelValuesIntoBufferInterface* GetModelCopier(int32_t tileSize, int32_t thr
     bool copyTileShapeID = false;
     if (tileSize != 1) {
         tileShapeIDOffsetInBytes = tileSizeInBytes;
-        tileSizeInBytes += sizeof(int16_t);
+        tileSizeInBytes += sizeof(int32_t);
         copyTileShapeID = true;
     }
 
@@ -335,6 +335,19 @@ void ForestJSONReader::InitializeLengthBuffer(void* bufPtr, int32_t tileSize, in
     }
 }
 
+void ForestJSONReader::InitializeLookUpTable(void* bufPtr, int32_t tileSize, int32_t entryBitWidth) {
+    assert (entryBitWidth == 8 && "LUT entry must be i8");
+    int8_t* lutBufferPtr = reinterpret_cast<int8_t*>(bufPtr);
+    TileShapeToTileIDMap tileShapeToTileIDMap(tileSize);
+    auto lut = tileShapeToTileIDMap.ComputeTileLookUpTable();
+    for (size_t tileShapeID=0 ; tileShapeID<lut.size() ; ++tileShapeID) {
+        for (size_t outcome=0 ; outcome<lut.at(tileShapeID).size() ; ++outcome) {
+            *lutBufferPtr = lut.at(tileShapeID).at(outcome);
+            lutBufferPtr += 1;
+        }
+    }
+}
+
 int32_t ForestJSONReader::GetTotalNumberOfTiles() {
     assert (this->m_tileSizeEntries.size() == 1 && "Only a single (tile size, threshold type, feature index type) configuration is supported");
     auto& tileSizeEntry = m_tileSizeEntries.front();
@@ -372,6 +385,7 @@ void PersistDecisionForest(mlir::decisionforest::DecisionForest<>& forest, mlir:
         }
         else {
             TiledTree tiledTree(tree);
+            tiledTree.WriteDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/TiledTree.dot");
             std::vector<ThresholdType> thresholds = tiledTree.SerializeThresholds();
             std::vector<FeatureIndexType> featureIndices = tiledTree.SerializeFeatureIndices();
             std::vector<int32_t> tileShapeIDs = tiledTree.SerializeTileShapeIDs();
@@ -1064,8 +1078,13 @@ std::vector<int32_t> ComputeLookUpTableForSingleShape(DecisionTree<>& tree, int3
 
 // Assume that the children of the tile are stored left to right
 std::vector<std::vector<int32_t>> TileShapeToTileIDMap::ComputeTileLookUpTable() {
-    std::vector<std::vector<int32_t>> tileLUT(m_currentTileID);
+    std::vector<std::vector<int32_t>> tileLUT(m_currentTileID-1);
     for (auto mapPair : m_tileStringToTileIDMap) {
+        // Skip adding a row in the LUT for the leaf shape. We added this shape 
+        // at the end to the map and so its ID is always currentTileID - 1
+        if (mapPair.second == m_currentTileID-1)
+            continue;
+
         // First construct a tree that represents the tile
         DecisionTree<> tree;
         ConstructTreeForTile(mapPair.first, 0, tree);

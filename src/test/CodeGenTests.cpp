@@ -514,9 +514,13 @@ public:
   decisionforest::DecisionForest<>& GetForest() { return *m_forest; }
 };
 
-bool Test_CodeGeneration_Balanced_TileSize3(TestArgs_t& args) {
+// Defined in TestMain.cpp
+std::vector<std::vector<double>> GetBatchSize1Data();
+
+bool Test_CodeGeneration_Balanced_TileSize4_BatchSize1(TestArgs_t& args) {
   std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 0, 3, 4 };
-  decisionforest::TreeTilingDescriptor tilingDescriptor(3, 5, tileIDs, decisionforest::TilingType::kRegular);
+  int32_t tileSize = 4;
+  decisionforest::TreeTilingDescriptor tilingDescriptor(tileSize, 5, tileIDs, decisionforest::TilingType::kRegular);
   std::vector<decisionforest::TreeTilingDescriptor> tilingDescriptors = { tilingDescriptor };
 
   FixedTiledTreeIRConstructor irGenerator(args.context, 1, AddBalancedTree<DoubleInt32Tile>, tilingDescriptors);
@@ -524,8 +528,20 @@ bool Test_CodeGeneration_Balanced_TileSize3(TestArgs_t& args) {
   auto module = irGenerator.GetEvaluationFunction();
   decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   decisionforest::LowerEnsembleToMemrefs(args.context, module);
-  module->dump();
-
+  decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  // module->dump();
+  decisionforest::LowerToLLVM(args.context, module);
+  // module->dump();
+  // decisionforest::dumpLLVMIR(module);
+  decisionforest::InferenceRunner inferenceRunner(module, tileSize, 64, 32);
+  
+  auto inputData = GetBatchSize1Data();
+  for(auto& row : inputData) {
+    double result = -1;
+    inferenceRunner.RunInference<double, double>(row.data(), &result, row.size(), 1);
+    double expectedResult = irGenerator.GetForest().Predict(row);
+    Test_ASSERT(FPEqual(result, expectedResult));
+  }
   return true;
 }
 
