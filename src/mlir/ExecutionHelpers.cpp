@@ -142,35 +142,99 @@ void InferenceRunner::PrintOffsetsArray() {
   return;
 }
 
-int32_t InferenceRunner::InitializeModelArray() {
-  // TODO The ForestJSONReader class needs to provide an interface to iterate over tile sizes and bit widths
-  // We need to construct the name of the getter function based on those. 
+template<typename ThresholdType, typename FeatureIndexType>
+int32_t InferenceRunner::CallInitMethod() {
+  std::vector<ThresholdType> thresholds;
+  std::vector<FeatureIndexType> featureIndices;
+  std::vector<int32_t> tileShapeIDs;
+  mlir::decisionforest::ForestJSONReader::GetInstance().GetModelValues(m_tileSize, m_thresholdSize, m_featureIndexSize, thresholds, featureIndices, tileShapeIDs);
+
+  Memref<ThresholdType, 1> thresholdsMemref{thresholds.data(), thresholds.data(), 0, {(int64_t)thresholds.size()}, 1};
+  Memref<FeatureIndexType, 1> featureIndexMemref{featureIndices.data(), featureIndices.data(), 0, {(int64_t)featureIndices.size()}, 1};
+  Memref<int32_t, 1> tileShapeIDMemref{tileShapeIDs.data(), tileShapeIDs.data(), 0, {(int64_t)tileShapeIDs.size()}, 1};
+  int32_t returnValue = -1;
+
+  void* args[] = {
+    &thresholdsMemref.bufferPtr, &thresholdsMemref.alignedPtr, &thresholdsMemref.offset, &thresholdsMemref.lengths[0], &thresholdsMemref.strides[0],
+    &featureIndexMemref.bufferPtr, &featureIndexMemref.alignedPtr, &featureIndexMemref.offset, &featureIndexMemref.lengths[0], &featureIndexMemref.strides[0],
+    &tileShapeIDMemref.bufferPtr, &tileShapeIDMemref.alignedPtr, &tileShapeIDMemref.offset, &tileShapeIDMemref.lengths[0], &tileShapeIDMemref.strides[0],
+    &returnValue
+  };
   auto& engine = m_engine;
-  // TODO this type doesn't really matter, but its not right. Maybe just use some dummy type here?
-  Memref<TileType<double, int32_t, 1>, 1> modelMemref;
-  void *args[] = { &modelMemref };
-  auto invocationResult = engine->invokePacked("Get_model", args);
+  auto invocationResult = engine->invokePacked("Init_model", args);
   if (invocationResult) {
     llvm::errs() << "JIT invocation failed\n";
     return -1;
   }
-  // std::cout << "Model memref length : " << modelMemref.lengths[0] << std::endl;
-  std::vector<int32_t> offsets(mlir::decisionforest::ForestJSONReader::GetInstance().GetNumberOfTrees(), -1);
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeBuffer(modelMemref.alignedPtr, m_tileSize, m_thresholdSize, m_featureIndexSize, offsets); 
+  assert(returnValue == 0);
+  return 0;
+}
+
+int32_t InferenceRunner::InitializeModelArray() {
+  // TODO The ForestJSONReader class needs to provide an interface to iterate over tile sizes and bit widths
+  // We need to construct the name of the getter function based on those. 
+  if (false) {
+    auto& engine = m_engine;
+    // TODO this type doesn't really matter, but its not right. Maybe just use some dummy type here?
+    Memref<TileType_Packed<double, int32_t, 1>, 1> modelMemref;
+    void *args[] = { &modelMemref };
+    auto invocationResult = engine->invokePacked("Get_model", args);
+    if (invocationResult) {
+      llvm::errs() << "JIT invocation failed\n";
+      return -1;
+    }
+    // std::cout << "Model memref length : " << modelMemref.lengths[0] << std::endl;
+
+    std::vector<int32_t> offsets(mlir::decisionforest::ForestJSONReader::GetInstance().GetNumberOfTrees(), -1);
+    mlir::decisionforest::ForestJSONReader::GetInstance().InitializeBuffer(modelMemref.alignedPtr, m_tileSize, m_thresholdSize, m_featureIndexSize, offsets);
+  }
+  else {
+    if (m_thresholdSize == 64) {
+      if (m_featureIndexSize == 32) {
+        return CallInitMethod<double, int32_t>();
+      }
+      else if (m_featureIndexSize == 16) {
+        return CallInitMethod<double, int16_t>();
+      }
+      else if (m_featureIndexSize == 8) {
+        return CallInitMethod<double, int8_t>();
+      }
+      else {
+        assert (false);
+      }
+    }
+    else if (m_thresholdSize == 32) {
+      if (m_featureIndexSize == 32) {
+        return CallInitMethod<float, int32_t>();
+      }
+      else if (m_featureIndexSize == 16) {
+        return CallInitMethod<float, int16_t>();
+      }
+      else if (m_featureIndexSize == 8) {
+        return CallInitMethod<float, int8_t>();
+      }
+      else {
+        assert (false);
+      }
+    }
+    else {
+      assert (false);
+    }
+  }
   return 0;
 }
 
 int32_t InferenceRunner::InitializeLUT() {
   auto& engine = m_engine;
   // TODO this type doesn't really matter, but its not right. Maybe just use some dummy type here?
-  Memref<int8_t, 2> modelMemref;
-  void *args[] = { &modelMemref };
+  Memref<int8_t, 2> lutMemref;
+  void *args[] = { &lutMemref };
   auto invocationResult = engine->invokePacked("Get_lookupTable", args);
   if (invocationResult) {
     llvm::errs() << "JIT invocation failed\n";
     return -1;
   }
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLookUpTable(modelMemref.alignedPtr, m_tileSize, 8); 
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLookUpTable(lutMemref.alignedPtr, m_tileSize, 8); 
   return 0;
 }
 

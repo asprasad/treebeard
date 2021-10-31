@@ -27,7 +27,7 @@ namespace test
 {
 
 bool Test_LoadTileThresholdOp_DoubleInt32_TileSize1(TestArgs_t& args) {
-  using TestTileType = decisionforest::TileType<double, int32_t, 1>;
+  using TestTileType = NumericalTileType_Natural<double, int32_t>;
   
   auto& context = args.context;
   mlir::OpBuilder builder(&context);
@@ -95,7 +95,7 @@ bool Test_LoadTileThresholdOp_DoubleInt32_TileSize1(TestArgs_t& args) {
 }
 
 bool Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1(TestArgs_t& args) {
-  using TestTileType = decisionforest::TileType<double, int32_t, 1>;
+  using TestTileType = NumericalTileType_Natural<double, int32_t>;
   
   auto& context = args.context;
   mlir::OpBuilder builder(&context);
@@ -163,7 +163,7 @@ bool Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1(TestArgs_t& args) {
 }
 
 bool Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args) {
-  using TestTileType = decisionforest::TileType<double, int32_t, 1>;
+  using TestTileType = NumericalTileType_Natural<double, int32_t>;
   
   auto& context = args.context;
   mlir::OpBuilder builder(&context);
@@ -237,7 +237,7 @@ bool Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args) {
 }
 
 bool Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args) {
-  using TestTileType = decisionforest::TileType<double, int32_t, 1>;
+  using TestTileType = NumericalTileType_Natural<double, int32_t>;
   
   auto& context = args.context;
   mlir::OpBuilder builder(&context);
@@ -467,7 +467,9 @@ bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float(TestArgs_t& args) {
   return Test_RandomXGBoostJSONs_4Trees_VariableBatchSize<float>(args, 4);
 }
 
+// ---------------------------------------------------
 // Tests for Tiled trees
+// ---------------------------------------------------
 
 class FixedTiledTreeIRConstructor : public TreeBeard::ModelJSONParser<double, double, int32_t, int32_t, double> {
   using ThresholdType = double;
@@ -517,19 +519,17 @@ public:
 // Defined in TestMain.cpp
 std::vector<std::vector<double>> GetBatchSize1Data();
 
-bool Test_CodeGeneration_Balanced_TileSize4_BatchSize1(TestArgs_t& args) {
-  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 0, 3, 4 };
-  int32_t tileSize = 4;
+bool Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(TestArgs_t& args, ForestConstructor_t forestConstructor, 
+                                                          int32_t tileSize, std::vector<int32_t>& tileIDs) {
   decisionforest::TreeTilingDescriptor tilingDescriptor(tileSize, 5, tileIDs, decisionforest::TilingType::kRegular);
   std::vector<decisionforest::TreeTilingDescriptor> tilingDescriptors = { tilingDescriptor };
 
-  FixedTiledTreeIRConstructor irGenerator(args.context, 1, AddBalancedTree<DoubleInt32Tile>, tilingDescriptors);
+  FixedTiledTreeIRConstructor irGenerator(args.context, 1, forestConstructor, tilingDescriptors);
   irGenerator.Parse();
   auto module = irGenerator.GetEvaluationFunction();
   decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   decisionforest::LowerEnsembleToMemrefs(args.context, module);
   decisionforest::ConvertNodeTypeToIndexType(args.context, module);
-  // module->dump();
   decisionforest::LowerToLLVM(args.context, module);
   // module->dump();
   // decisionforest::dumpLLVMIR(module);
@@ -545,5 +545,58 @@ bool Test_CodeGeneration_Balanced_TileSize4_BatchSize1(TestArgs_t& args) {
   return true;
 }
 
+bool Test_CodeGeneration_Balanced_TileSize2_BatchSize1(TestArgs_t& args) {
+  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 5, 3, 4 };
+  int32_t tileSize = 2;
+  return Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(args, AddBalancedTree<DoubleInt32Tile>, tileSize, tileIDs);
 }
+
+bool Test_CodeGeneration_Balanced_TileSize3_BatchSize1(TestArgs_t& args) {
+  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 0, 3, 4 };
+  int32_t tileSize = 3;
+  return Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(args, AddBalancedTree<DoubleInt32Tile>, tileSize, tileIDs);
 }
+
+bool Test_CodeGeneration_Balanced_TileSize4_BatchSize1(TestArgs_t& args) {
+  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 0, 3, 4 };
+  int32_t tileSize = 4;
+  return Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(args, AddBalancedTree<DoubleInt32Tile>, tileSize, tileIDs);
+}
+
+bool Test_CodeGeneration_RightHeavy_TileSize4_BatchSize1(TestArgs_t& args) {
+  int32_t tileSize = 4;
+  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 3 }; // The root and one of its children are in one tile and all leaves are in separate tiles
+  return Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(args, AddRightHeavyTree<DoubleInt32Tile>, tileSize, tileIDs);
+}
+
+bool Test_CodeGeneration_RightHeavy_TileSize3_BatchSize1(TestArgs_t& args) {
+  int32_t tileSize = 3;
+  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 3 }; // The root and one of its children are in one tile and all leaves are in separate tiles
+  return Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(args, AddRightHeavyTree<DoubleInt32Tile>, tileSize, tileIDs);
+}
+
+bool Test_CodeGeneration_RightHeavy_TileSize2_BatchSize1(TestArgs_t& args) {
+  int32_t tileSize = 2;
+  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 3 }; // The root and one of its children are in one tile and all leaves are in separate tiles
+  return Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(args, AddRightHeavyTree<DoubleInt32Tile>, tileSize, tileIDs);
+}
+
+bool Test_CodeGeneration_LeftHeavy_TileSize2_BatchSize1(TestArgs_t& args) {
+  int32_t tileSize = 2;
+  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 3 }; // The root and one of its children are in one tile and all leaves are in separate tiles
+  return Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(args, AddLeftHeavyTree<DoubleInt32Tile>, tileSize, tileIDs);
+}
+
+bool Test_CodeGeneration_LeftHeavy_TileSize3_BatchSize1(TestArgs_t& args) {
+  int32_t tileSize = 3;
+  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 3 }; // The root and one of its children are in one tile and all leaves are in separate tiles
+  return Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(args, AddLeftHeavyTree<DoubleInt32Tile>, tileSize, tileIDs);
+}
+
+bool Test_CodeGeneration_LeftHeavy_TileSize4_BatchSize1(TestArgs_t& args) {
+  int32_t tileSize = 4;
+  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 3 }; // The root and one of its children are in one tile and all leaves are in separate tiles
+  return Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(args, AddLeftHeavyTree<DoubleInt32Tile>, tileSize, tileIDs);
+}
+} // test
+} // TreeBeard

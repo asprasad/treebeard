@@ -118,6 +118,25 @@ void InsertPrintVectorOp(ConversionPatternRewriter &rewriter, Location location,
   rewriter.create<decisionforest::PrintVectorOp>(location, kindConst, bitWidthConst, tileSizeConst, ValueRange(vectorValues));
 }
 
+Value CreateZeroVectorFPConst(ConversionPatternRewriter &rewriter, Location location, Type fpType, int32_t tileSize) {
+  Value zeroConst;
+  auto vectorType = VectorType::get(tileSize, fpType);
+  if (fpType.isa<mlir::Float64Type>())
+    zeroConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat(0.0), fpType.cast<FloatType>());
+  else if(fpType.isa<mlir::Float32Type>())
+    zeroConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat((float)0.0), fpType.cast<FloatType>());
+  else
+    assert(false && "Unsupported floating point type");
+  auto vectorValue = rewriter.create<vector::BroadcastOp>(location, vectorType, zeroConst);
+  return vectorValue;
+}
+
+Value CreateZeroVectorIntConst(ConversionPatternRewriter &rewriter, Location location, Type intType, int32_t tileSize) {
+  Value zeroConst = rewriter.create<ConstantIntOp>(location, 0, intType);
+  auto vectorType = VectorType::get(tileSize, intType);
+  auto vectorValue = rewriter.create<vector::BroadcastOp>(location, vectorType, zeroConst);
+  return vectorValue;
+}
 
 struct EnsembleConstantOpLowering: public ConversionPattern {
   EnsembleConstantOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::EnsembleConstantOp::getOperationName(), 1 /*benefit*/, ctx) {}
@@ -140,6 +159,7 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     std::string offsetMemrefName = "offsets";
     std::string lengthMemrefName = "lengths";    
     auto memrefTypes = AddGlobalMemrefs(owningModule, ensembleConstOp, rewriter, location, modelMemrefName, offsetMemrefName, lengthMemrefName);
+    AddModelMemrefInitFunction(owningModule, modelMemrefName, std::get<0>(memrefTypes).cast<MemRefType>(), rewriter, location);
     auto getModelGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<0>(memrefTypes), modelMemrefName);
     auto getOffsetGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<1>(memrefTypes), offsetMemrefName);
     auto getLengthGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<1>(memrefTypes), lengthMemrefName);
@@ -217,6 +237,65 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     module.push_back(getGlobalMemrefFunc);
   }
   
+  void AddModelMemrefInitFunction(mlir::ModuleOp module, std::string globalName, MemRefType memrefType, 
+                                  ConversionPatternRewriter &rewriter, Location location) const {
+    assert (memrefType.getShape().size() == 1);
+    SaveAndRestoreInsertionPoint saveAndRestoreEntryPoint(rewriter);
+    auto modelMemrefElementType = memrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
+    int32_t tileSize = modelMemrefElementType.getTileSize();
+    auto thresholdArgType = MemRefType::get({ memrefType.getShape()[0] * tileSize }, modelMemrefElementType.getThresholdElementType());
+    auto indexArgType = MemRefType::get({ memrefType.getShape()[0] * tileSize }, modelMemrefElementType.getIndexElementType());
+    auto tileShapeIDArgType = MemRefType::get(memrefType.getShape(), rewriter.getI32Type());
+    auto getMemrefFuncType = rewriter.getFunctionType(TypeRange{thresholdArgType, indexArgType, tileShapeIDArgType}, rewriter.getI32Type());
+    std::string funcName = "Init_" + globalName;
+    NamedAttribute visibilityAttribute{module.sym_visibilityAttrName(), rewriter.getStringAttr("public")};
+    auto initModelMemrefFunc = FuncOp::create(location, funcName, getMemrefFuncType, ArrayRef<NamedAttribute>(visibilityAttribute));
+    auto &entryBlock = *initModelMemrefFunc.addEntryBlock();
+    rewriter.setInsertionPointToStart(&entryBlock);
+
+    // for tileIndex = 0 : len
+    auto getGlobalMemref = rewriter.create<memref::GetGlobalOp>(location, memrefType, globalName);
+    auto zeroIndexConst = rewriter.create<ConstantIndexOp>(location, 0);
+    auto oneIndexConst = rewriter.create<ConstantIndexOp>(location, 1);
+    auto lenIndexConst = rewriter.create<ConstantIndexOp>(location, memrefType.getShape()[0]);
+    auto forLoop = rewriter.create<scf::ForOp>(location, zeroIndexConst, lenIndexConst, oneIndexConst);
+    auto tileIndex = forLoop.getInductionVar();
+    rewriter.setInsertionPointToStart(forLoop.getBody());
+
+    // index = tileSize * tileIndex
+    auto tileSizeConst = rewriter.create<ConstantIndexOp>(location, tileSize);
+    auto tileSizeTimesi = rewriter.create<MulIOp>(location, tileIndex, tileSizeConst);
+    
+    if (tileSize > 1) {
+      auto thresholdVec = CreateZeroVectorFPConst(rewriter, location, modelMemrefElementType.getThresholdElementType(), tileSize);
+      auto indexVec = CreateZeroVectorIntConst(rewriter, location, modelMemrefElementType.getIndexElementType(), tileSize);
+
+      // Load from index to index + (tileSize - 1) into a vector
+      for (int32_t j = 0 ; j<tileSize ; ++j) {
+        auto offset = rewriter.create<ConstantIndexOp>(location, j);
+        auto index =  rewriter.create<AddIOp>(location, tileSizeTimesi, offset);
+        auto thresholdVal = rewriter.create<memref::LoadOp>(location, entryBlock.getArgument(0), static_cast<Value>(index));
+        thresholdVec = rewriter.create<vector::InsertElementOp>(location, thresholdVal, thresholdVec, j);
+        auto indexVal = rewriter.create<memref::LoadOp>(location, entryBlock.getArgument(1), static_cast<Value>(index));
+        indexVec = rewriter.create<vector::InsertElementOp>(location, indexVal, indexVec, j);
+      }
+      auto tileShapeID = rewriter.create<memref::LoadOp>(location, entryBlock.getArgument(2), tileIndex);
+      rewriter.create<decisionforest::InitTileOp>(location, getGlobalMemref, tileIndex, thresholdVec, indexVec, tileShapeID);
+    }
+    else {
+      // Load from index to index + (tileSize - 1) into a vector
+      auto thresholdVal = rewriter.create<memref::LoadOp>(location, entryBlock.getArgument(0), static_cast<Value>(tileIndex));
+      auto indexVal = rewriter.create<memref::LoadOp>(location, entryBlock.getArgument(1), static_cast<Value>(tileIndex));
+      // TODO check how tileShapeID vector is created when tileSize = 1
+      auto tileShapeID = rewriter.create<ConstantIntOp>(location, 0, rewriter.getI32Type());
+      rewriter.create<decisionforest::InitTileOp>(location, getGlobalMemref, tileIndex, thresholdVal, indexVal, tileShapeID);
+    }
+    rewriter.setInsertionPointAfter(forLoop);
+    auto retVal = rewriter.create<ConstantIntOp>(location, 0, rewriter.getI32Type());
+    rewriter.create<mlir::ReturnOp>(location, static_cast<Value>(retVal));
+    module.push_back(initModelMemrefFunc);
+  }
+
   std::tuple<Type, Type> AddGlobalMemrefs(mlir::ModuleOp module, mlir::decisionforest::EnsembleConstantOp& ensembleConstOp,
                                           ConversionPatternRewriter &rewriter, Location location,
                                           const std::string& modelMemrefName, const std::string& offsetMemrefName, const std::string& lengthMemrefName) const {
@@ -611,6 +690,9 @@ struct GetLeafValueOpLowering : public ConversionPattern {
     Value leafValue = loadThresholdOp;
     
     if (treeTileType.getTileSize() != 1) {
+      if (decisionforest::InsertDebugHelpers) {
+        InsertPrintVectorOp(rewriter, location, 0, treeTileType.getThresholdElementType().getIntOrFloatBitWidth(), treeTileType.getTileSize(), loadThresholdOp);
+      }
       auto extractElement = rewriter.create<vector::ExtractElementOp>(location, static_cast<Value>(loadThresholdOp), int64_t(0));
       leafValue = extractElement;
     }

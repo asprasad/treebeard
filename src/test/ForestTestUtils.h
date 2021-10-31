@@ -6,22 +6,31 @@ using namespace mlir;
 // Some utlities that are used by the tests
 #pragma pack(push, 1)
 template<typename ThresholdType, typename IndexType>
-struct NumericalTileType {
+struct NumericalTileType_Packed {
   ThresholdType threshold;
   IndexType index;
-  bool operator==(const NumericalTileType<ThresholdType, IndexType>& other) const {
+  bool operator==(const NumericalTileType_Packed<ThresholdType, IndexType>& other) const {
     return threshold==other.threshold && index==other.index;
   }
 };
 #pragma pack(pop)
 
+template<typename ThresholdType, typename IndexType>
+struct NumericalTileType_Natural {
+  ThresholdType threshold;
+  IndexType index;
+  bool operator==(const NumericalTileType_Natural<ThresholdType, IndexType>& other) const {
+    return threshold==other.threshold && index==other.index;
+  }
+};
+
 #pragma pack(push, 1)
 template<typename ThresholdType, typename IndexType, int32_t VectorSize>
-struct NumericalVectorTileType {
+struct NumericalVectorTileType_Packed {
   ThresholdType threshold[VectorSize];
   IndexType index[VectorSize];
   int32_t tileShapeID;
-  bool operator==(const NumericalVectorTileType<ThresholdType, IndexType, VectorSize>& other) const {
+  bool operator==(const NumericalVectorTileType_Packed<ThresholdType, IndexType, VectorSize>& other) const {
     for (int32_t i=0; i<VectorSize ; ++i)
       if (threshold[i]!=other.threshold[i] || index[i]!=other.index[i])
         return false;
@@ -168,7 +177,7 @@ void AddFeaturesToForest(decisionforest::DecisionForest<>& forest, std::vector<T
   }
 }
 
-using DoubleInt32Tile = NumericalTileType<double, int32_t>;
+using DoubleInt32Tile = NumericalTileType_Packed<double, int32_t>;
 typedef std::vector<DoubleInt32Tile> (*ForestConstructor_t)(decisionforest::DecisionForest<>& forest);
 
 class FixedTreeIRConstructor : public TreeBeard::ModelJSONParser<double, double, int32_t, int32_t, double> {

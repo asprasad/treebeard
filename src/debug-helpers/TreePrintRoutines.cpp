@@ -5,7 +5,7 @@
 #include <cstdarg>
 
 // TODO move these type definitions to a different file so they can be shared
-#pragma pack(push, 1)
+// TODO We're relying on the fact that clang and llvm will compute the same struct layout.
 template<typename ThresholdType, typename FeatureIndexType, int32_t TileSize>
 struct TileType {
   ThresholdType thresholds[TileSize];
@@ -18,7 +18,6 @@ struct TileTypeWithTileID {
   FeatureIndexType featureIndices[TileSize];
   int32_t tileShapeID;
 };
-#pragma pack(pop)
 
 template<typename T, int32_t Rank>
 struct Memref {
@@ -143,5 +142,11 @@ extern "C" int64_t PrintVector(int32_t kind, int32_t elementSize, int32_t vector
   else {
     assert (false && "Unknown element type");
   }
+  return 42;
+}
+
+extern "C" int64_t PrintElementAddress(void *bufPtr, int64_t index, int64_t actualIndex, int32_t elementIndex, void *elemPtr) {
+  std::cout << "Buffer:" << bufPtr << " Index:" << index << " ActualIndex:" << actualIndex 
+            << " ElementIndex:" << elementIndex << " ElementPtr:" << elemPtr << std::endl;
   return 42;
 }

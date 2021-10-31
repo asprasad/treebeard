@@ -45,6 +45,16 @@
 
 using namespace mlir;
 
+namespace mlir
+{
+namespace decisionforest
+{
+// Defined in LowerDebugHelpers.cpp
+void InsertPrintElementAddressIfNeeded(ConversionPatternRewriter& rewriter, Location location, ModuleOp module,
+                                       Value extractMemrefBufferPointer, Value indexVal, Value actualIndex, Value elemIndexConst, Value elemPtr);
+}
+}
+
 namespace {
 
 const int32_t kAlignedPointerIndexInMemrefStruct = 1;
@@ -53,8 +63,8 @@ const int32_t kThresholdElementNumberInTile = 0;
 const int32_t kFeatureIndexElementNumberInTile = 1;
 const int32_t kTileShapeElementNumberInTile = 2;
 
-void GenerateLoadStructElement(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter, 
-                               int64_t elementNumber, TypeConverter* typeConverter) {
+Type GenerateGetElementPtr(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter, Type elementMLIRType,
+                           int64_t elementNumber, TypeConverter* typeConverter, Value& elementPtr) {
   const int32_t kTreeMemrefOperandNum = 0;
   const int32_t kIndexOperandNum = 1;
   auto location = op->getLoc();
@@ -68,8 +78,7 @@ void GenerateLoadStructElement(Operation *op, ArrayRef<Value> operands, Conversi
   auto indexType = indexVal.getType();
   assert (indexType.isa<IntegerType>());
   
-  auto resultType = op->getResults()[0].getType();
-  auto elementType = typeConverter->convertType(resultType);
+  auto elementType = typeConverter->convertType(elementMLIRType);
 
   // Extract the memref's aligned pointer
   auto extractMemrefBufferPointer = rewriter.create<LLVM::ExtractValueOp>(location, alignedPtrType, operands[kTreeMemrefOperandNum],
@@ -84,13 +93,39 @@ void GenerateLoadStructElement(Operation *op, ArrayRef<Value> operands, Conversi
   auto elementPtrType = LLVM::LLVMPointerType::get(elementType);
   assert(elementType == tileType.getBody()[elementNumber] && "The result type should be the same as the element type in the struct.");
   auto elemIndexConst = rewriter.create<LLVM::ConstantOp>(location, rewriter.getI32Type(), rewriter.getIntegerAttr(rewriter.getI32Type(), elementNumber));
-  auto elementPtr = rewriter.create<LLVM::GEPOp>(location, elementPtrType, static_cast<Value>(extractMemrefBufferPointer), 
-                                                ValueRange({static_cast<Value>(actualIndex), static_cast<Value>(elemIndexConst)}));
+  elementPtr = rewriter.create<LLVM::GEPOp>(location, elementPtrType, static_cast<Value>(extractMemrefBufferPointer), 
+                                            ValueRange({static_cast<Value>(actualIndex), static_cast<Value>(elemIndexConst)}));
 
-  // Load the threshold
+  // Insert call to print pointers if debug helpers is on
+  if (decisionforest::InsertDebugHelpers)
+    decisionforest::InsertPrintElementAddressIfNeeded(rewriter, location, op->getParentOfType<ModuleOp>(), 
+                                                      extractMemrefBufferPointer, indexVal, actualIndex, elemIndexConst, elementPtr);
+  
+  return elementType;
+}
+
+void GenerateLoadStructElement(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter, 
+                               int64_t elementNumber, TypeConverter* typeConverter) {
+  
+  auto location = op->getLoc();
+  Value elementPtr;
+  auto elementType = GenerateGetElementPtr(op, operands, rewriter, op->getResult(0).getType(), elementNumber, typeConverter, elementPtr);
+  
+  // Load the element
   auto elementVal = rewriter.create<LLVM::LoadOp>(location, elementType, static_cast<Value>(elementPtr));
   
   rewriter.replaceOp(op, static_cast<Value>(elementVal));
+}
+
+void GenerateStoreStructElement(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter, Type elementMLIRType,
+                               int64_t elementNumber, TypeConverter* typeConverter, Value elementVal) {
+  
+  auto location = op->getLoc();
+  Value elementPtr;
+  GenerateGetElementPtr(op, operands, rewriter, elementMLIRType, elementNumber, typeConverter, elementPtr);
+  
+  // Store the element
+  rewriter.create<LLVM::StoreOp>(location, elementVal, elementPtr);
 }
 
 struct LoadTileThresholdOpLowering: public ConversionPattern {
@@ -129,6 +164,25 @@ struct LoadTileShapeOpLowering : public ConversionPattern {
   }
 };
 
+struct InitTileOpLowering : public ConversionPattern {
+  InitTileOpLowering(LLVMTypeConverter& typeConverter) 
+  : ConversionPattern(typeConverter, mlir::decisionforest::InitTileOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    assert(operands.size() == 5);
+    decisionforest::InitTileOpAdaptor tileOpAdaptor(operands);
+    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.thresholds().getType(), 0, getTypeConverter(), tileOpAdaptor.thresholds());
+    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.featureIndices().getType(), 1, getTypeConverter(), tileOpAdaptor.featureIndices());
+    auto modelMemrefType = op->getOperand(0).getType().cast<MemRefType>();
+    auto tileType = modelMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
+    if (tileType.getTileSize() > 1)
+      GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.tileShapeID().getType(), 2, getTypeConverter(), tileOpAdaptor.tileShapeID());
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
+
 struct DecisionForestToLLVMLoweringPass : public PassWrapper<DecisionForestToLLVMLoweringPass, OperationPass<ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect, memref::MemRefDialect, tensor::TensorDialect, StandardOpsDialect>();
@@ -150,11 +204,11 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
                 auto thresholdType = type.getThresholdFieldType();
                 auto indexType = type.getIndexFieldType();
                 if (type.getTileSize() == 1) {
-                  return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType}, true);
+                  return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType});
                 }
                 else {
                   auto tileShapeIDType = mlir::IntegerType::get(&context, 32);
-                  return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType}, true);
+                  return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType});
                 }
               });
 
@@ -168,7 +222,8 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
 
   patterns.add<LoadTileFeatureIndicesOpLowering,
                LoadTileThresholdOpLowering,
-               LoadTileShapeOpLowering>(typeConverter);
+               LoadTileShapeOpLowering,
+               InitTileOpLowering>(typeConverter);
   decisionforest::populateDebugOpLoweringPatterns(patterns, typeConverter);
 
   auto module = getOperation();

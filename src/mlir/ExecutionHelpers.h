@@ -20,18 +20,23 @@ namespace decisionforest
 
 #pragma pack(push, 1)
 template<typename ThresholdType, typename FeatureIndexType, int32_t TileSize>
-struct TileType {
+struct TileType_Packed {
   ThresholdType thresholds[TileSize];
   FeatureIndexType featureIndices[TileSize];
-};
-
-template<typename ThresholdType, typename FeatureIndexType, int32_t TileSize>
-struct TileTypeWithShapeID {
-  ThresholdType thresholds[TileSize];
-  FeatureIndexType featureIndices[TileSize];
-  int8_t tileShapeID;
+  bool operator==(const TileType_Packed<ThresholdType, IndexType, TileSize>& other) const {
+    for (int32_t i=0 ; i<TileSize ; ++i)
+      if (thresholds[i] != other.thresholds[i])
+        return false;
+    return index==other.index;
+  }
 };
 #pragma pack(pop)
+
+template<typename ThresholdType, typename FeatureIndexType, int32_t TileSize>
+struct TileType_Natural {
+  ThresholdType thresholds[TileSize];
+  FeatureIndexType featureIndices[TileSize];
+};
 
 template<typename T, int32_t Rank>
 struct Memref {
@@ -53,6 +58,9 @@ class InferenceRunner {
   int32_t m_tileSize;
   int32_t m_thresholdSize;
   int32_t m_featureIndexSize;
+
+  template<typename ThresholdType, typename FeatureIndexType>
+  int32_t CallInitMethod();
 public:
   static llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> CreateExecutionEngine(mlir::ModuleOp module);
   InferenceRunner(mlir::ModuleOp module, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize);

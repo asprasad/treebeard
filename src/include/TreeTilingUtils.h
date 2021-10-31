@@ -90,7 +90,26 @@ public:
         return m_instance;
     }
     static int32_t GetLengthOfTree(std::vector<int32_t>& offsets, int32_t treeIndex);
+    
+    template<typename ThresholdType, typename FeatureIndexType>
+    void GetModelValues(int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize, 
+                        std::vector<ThresholdType>& thresholds, std::vector<FeatureIndexType>& featureIndices, std::vector<int32_t>& tileShapeIDs);
 };
+
+template<typename ThresholdType, typename FeatureIndexType>
+void ForestJSONReader::GetModelValues(int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize, 
+                                      std::vector<ThresholdType>& thresholds, std::vector<FeatureIndexType>& featureIndices, std::vector<int32_t>& tileShapeIDs) {
+    auto iter = FindEntry(tileSize, thresholdSize, featureIndexSize);
+    for (auto& thresholdVec : iter->serializedThresholds)
+        thresholds.insert(thresholds.end(), thresholdVec.begin(), thresholdVec.end());
+    for (auto& indexVec : iter->serializedFetureIndices)
+        featureIndices.insert(featureIndices.end(), indexVec.begin(), indexVec.end());
+    for (auto& tileShapeIDVec : iter->serializedTileShapeIDs)
+        tileShapeIDs.insert(tileShapeIDs.end(), tileShapeIDVec.begin(), tileShapeIDVec.end());
+    if (tileSize > 1)
+        assert ((int32_t)tileShapeIDs.size() == GetTotalNumberOfTiles());
+}
+
 
 void PersistDecisionForest(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType);
 void ClearPersistedForest();

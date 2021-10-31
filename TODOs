@@ -37,16 +37,20 @@ CodeGen for tile size != 1
         - [Done] Tile support in buffer initialization routines (ForestJSONReader)
         - [Done] Write the tileID with each tile's value
     - Change codegen 
-        - Ensemble to Memref Lowering
+        - [Done] Ensemble to Memref Lowering
             - Generate buffers to hold the lookup tables
             - Initialization routines for the lookup tables
             - Compact comparison outcomes into an integer to use as a lookup index
             - Generate lookups rather than computing next tile indices using (2*i + x)
-        - LLVM Lowering
+        - [Done] LLVM Lowering
             - Vector implementations of tree Load* ops
+        - [Done] [Bug] Fix failing Load* tests (Maybe just use structs with natural alignment now?)
+        - Write a general tiling pass to tile the mid-level IR
     - Utils
         - [Done] Number of tiles of a given size
         - [Done] Generate lookup tables for child tile indices given tile comparison outcomes
+
+
 
 Pipeline container
 SIMD container

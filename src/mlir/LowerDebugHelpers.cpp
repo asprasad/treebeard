@@ -344,5 +344,25 @@ void populateDebugOpLoweringPatterns(RewritePatternSet& patterns, LLVMTypeConver
                  PrintVectorOpLowering>(typeConverter);
 }  
 
+void InsertPrintElementAddressIfNeeded(ConversionPatternRewriter& rewriter, Location location, ModuleOp module,
+                                       Value bufferPtr, Value indexVal, Value actualIndex, Value elemIndex, Value elemPtr) {
+    auto context = rewriter.getContext();
+    
+    std::string functionName = "PrintElementAddress";
+    // Create a function declaration for PrintElementAddress, the signature is:
+    //      int64_t PrintElementAddress(void *bufPtr, int64_t index, int64_t actualIndex, int32_t elementIndex, void *elemPtr)
+    auto llvmI64Ty = IntegerType::get(context, 64);
+    auto llvmI32Ty = IntegerType::get(context, 32);
+    auto llvmI32PtrTy = LLVM::LLVMPointerType::get(llvmI32Ty);
+    auto llvmFnType = LLVM::LLVMFunctionType::get(llvmI64Ty, {llvmI32PtrTy, llvmI64Ty, llvmI64Ty, llvmI32Ty, llvmI32PtrTy});
+
+    auto printFunctionRef = getOrInsertFunction(functionName, llvmFnType, rewriter, module);
+    // Cast the pointers to int* and then pass them 
+    auto castedBufferPtr = rewriter.create<LLVM::BitcastOp>(location, llvmI32PtrTy, bufferPtr);
+    auto castedElemPtr = rewriter.create<LLVM::BitcastOp>(location, llvmI32PtrTy, elemPtr);
+
+    rewriter.create<CallOp>(location, printFunctionRef, rewriter.getI64Type(), ValueRange{castedBufferPtr, indexVal, actualIndex, elemIndex, castedElemPtr});
+}
+
 } // decisionforest
 } // mlir

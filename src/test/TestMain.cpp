@@ -41,6 +41,14 @@ bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float(TestArgs_t& args);
 
 // Tiled Codegen tests 
 bool Test_CodeGeneration_Balanced_TileSize4_BatchSize1(TestArgs_t& args);
+bool Test_CodeGeneration_Balanced_TileSize3_BatchSize1(TestArgs_t& args);
+bool Test_CodeGeneration_Balanced_TileSize2_BatchSize1(TestArgs_t& args);
+bool Test_CodeGeneration_RightHeavy_TileSize3_BatchSize1(TestArgs_t& args);
+bool Test_CodeGeneration_RightHeavy_TileSize4_BatchSize1(TestArgs_t& args);
+bool Test_CodeGeneration_RightHeavy_TileSize2_BatchSize1(TestArgs_t& args);
+bool Test_CodeGeneration_LeftHeavy_TileSize2_BatchSize1(TestArgs_t& args);
+bool Test_CodeGeneration_LeftHeavy_TileSize3_BatchSize1(TestArgs_t& args);
+bool Test_CodeGeneration_LeftHeavy_TileSize4_BatchSize1(TestArgs_t& args);
 
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
@@ -49,7 +57,7 @@ void InitializeVectorWithRandValues(std::vector<double>& vec) {
 
 template<typename ThresholdType, typename IndexType>
 bool Test_BufferInit_RightHeavy(TestArgs_t& args) {
-  using TileType = NumericalTileType<ThresholdType, IndexType>;
+  using TileType = NumericalTileType_Packed<ThresholdType, IndexType>;
   auto& context = args.context;
   mlir::OpBuilder builder(&context);
   mlir::decisionforest::DecisionForest<> forest;
@@ -113,7 +121,7 @@ bool Test_BufferInitializationWithOneTree_RightHeavy_FloatInt8(TestArgs_t& args)
 
 template<typename ThresholdType, typename IndexType>
 bool Test_BufferInitialization_TwoTrees(TestArgs_t& args) {
-  using TileType = NumericalTileType<ThresholdType, IndexType>;
+  using TileType = NumericalTileType_Packed<ThresholdType, IndexType>;
   auto& context = args.context;
   mlir::OpBuilder builder(&context);
   mlir::decisionforest::DecisionForest<> forest;
@@ -157,7 +165,7 @@ bool Test_BufferInitialization_TwoTrees(TestArgs_t& args) {
 }
 
 bool Test_BufferInitializationWithOneTree_LeftHeavy(TestArgs_t& args) {
-  using DoubleInt32Tile = NumericalTileType<double, int32_t>;
+  using DoubleInt32Tile = NumericalTileType_Packed<double, int32_t>;
   mlir::MLIRContext& context = args.context;
   mlir::decisionforest::DecisionForest<> forest;
   auto expectedArray = AddLeftHeavyTree<DoubleInt32Tile>(forest);  
@@ -325,7 +333,7 @@ bool Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2(TestArgs_t& args) 
 // Tests for Tiled Buffer Initialization
 template<typename ThresholdType, typename IndexType>
 bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t forestConstructor, std::vector<int32_t>& tileIDs) {
-  using VectorTileType = NumericalVectorTileType<ThresholdType, IndexType, 3>;
+  using VectorTileType = NumericalVectorTileType_Packed<ThresholdType, IndexType, 3>;
   auto& context = args.context;
   mlir::OpBuilder builder(&context);
   mlir::decisionforest::DecisionForest<> forest;
@@ -382,19 +390,19 @@ bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t fore
 }
 
 bool Test_BufferInitializationWithOneTree_RightHeavy_Tiled(TestArgs_t& args) {
-  using TileType = NumericalTileType<double, int32_t>;
+  using TileType = NumericalTileType_Packed<double, int32_t>;
   std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 3 }; // The root and one of its children are in one tile and all leaves are in separate tiles
   return Test_BufferInit_SingleTree_Tiled<double, int32_t>(args, AddRightHeavyTree<TileType>, tileIDs);
 }
 
 bool Test_BufferInitializationWithOneTree_LeftHeavy_Tiled(TestArgs_t& args) {
-  using TileType = NumericalTileType<double, int32_t>;
+  using TileType = NumericalTileType_Packed<double, int32_t>;
   std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 3 }; // The root and one of its children are in one tile and all leaves are in separate tiles
   return Test_BufferInit_SingleTree_Tiled<double, int32_t>(args, AddLeftHeavyTree<TileType>, tileIDs);
 }
 
 bool Test_BufferInitializationWithOneTree_Balanced_Tiled(TestArgs_t& args) {
-  using TileType = NumericalTileType<double, int32_t>;
+  using TileType = NumericalTileType_Packed<double, int32_t>;
   std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 0, 3, 4 };
   return Test_BufferInit_SingleTree_Tiled<double, int32_t>(args, AddBalancedTree<TileType>, tileIDs);
 }
@@ -497,7 +505,15 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Tiled),
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy_Tiled),
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_Balanced_Tiled),
-  TEST_LIST_ENTRY(Test_CodeGeneration_Balanced_TileSize4_BatchSize1)
+  TEST_LIST_ENTRY(Test_CodeGeneration_Balanced_TileSize4_BatchSize1),
+  TEST_LIST_ENTRY(Test_CodeGeneration_Balanced_TileSize3_BatchSize1),
+  TEST_LIST_ENTRY(Test_CodeGeneration_Balanced_TileSize2_BatchSize1),
+  TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_TileSize4_BatchSize1),
+  TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_TileSize3_BatchSize1),
+  TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_TileSize2_BatchSize1),
+  TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_TileSize2_BatchSize1),
+  TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_TileSize3_BatchSize1),
+  TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_TileSize4_BatchSize1)
 };
 
 // TestDescriptor testList[] = {
