@@ -39,16 +39,17 @@ bool Test_RandomXGBoostJSONs_4Trees_BatchSize1_Float(TestArgs_t& args);
 bool Test_RandomXGBoostJSONs_4Trees_BatchSize2_Float(TestArgs_t& args);
 bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float(TestArgs_t& args);
 
-// Tiled Codegen tests 
-bool Test_CodeGeneration_Balanced_TileSize4_BatchSize1(TestArgs_t& args);
-bool Test_CodeGeneration_Balanced_TileSize3_BatchSize1(TestArgs_t& args);
-bool Test_CodeGeneration_Balanced_TileSize2_BatchSize1(TestArgs_t& args);
-bool Test_CodeGeneration_RightHeavy_TileSize3_BatchSize1(TestArgs_t& args);
-bool Test_CodeGeneration_RightHeavy_TileSize4_BatchSize1(TestArgs_t& args);
-bool Test_CodeGeneration_RightHeavy_TileSize2_BatchSize1(TestArgs_t& args);
-bool Test_CodeGeneration_LeftHeavy_TileSize2_BatchSize1(TestArgs_t& args);
-bool Test_CodeGeneration_LeftHeavy_TileSize3_BatchSize1(TestArgs_t& args);
-bool Test_CodeGeneration_LeftHeavy_TileSize4_BatchSize1(TestArgs_t& args);
+// Tiled Codegen tests
+bool Test_TiledCodeGeneration_RightHeavy_BatchSize1(TestArgs_t& args);
+bool Test_TiledCodeGeneration_LeftHeavy_BatchSize1(TestArgs_t& args);
+bool Test_TiledCodeGeneration_BalancedTree_BatchSize1(TestArgs_t& args);
+bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1(TestArgs_t& args);
+
+// Tiled Init Tests
+bool Test_ModelInit_LeftHeavy(TestArgs_t& args);
+bool Test_ModelInit_RightHeavy(TestArgs_t& args);
+bool Test_ModelInit_RightAndLeftHeavy(TestArgs_t& args);
+bool Test_ModelInit_Balanced(TestArgs_t& args);
 
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
@@ -505,21 +506,23 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Tiled),
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy_Tiled),
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_Balanced_Tiled),
-  TEST_LIST_ENTRY(Test_CodeGeneration_Balanced_TileSize4_BatchSize1),
-  TEST_LIST_ENTRY(Test_CodeGeneration_Balanced_TileSize3_BatchSize1),
-  TEST_LIST_ENTRY(Test_CodeGeneration_Balanced_TileSize2_BatchSize1),
-  TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_TileSize4_BatchSize1),
-  TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_TileSize3_BatchSize1),
-  TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_TileSize2_BatchSize1),
-  TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_TileSize2_BatchSize1),
-  TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_TileSize3_BatchSize1),
-  TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_TileSize4_BatchSize1)
+  TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_TiledCodeGeneration_RightHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_TiledCodeGeneration_BalancedTree_BatchSize1),
+  TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy),
+  TEST_LIST_ENTRY(Test_ModelInit_RightHeavy),
+  TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy),
+  TEST_LIST_ENTRY(Test_ModelInit_Balanced)
 };
 
 // TestDescriptor testList[] = {
-//   TEST_LIST_ENTRY(Test_CodeGeneration_Balanced_TileSize4_BatchSize1),
-//   //  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy_Tiled),
-//   //  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_Balanced_Tiled)
+//   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftHeavy_BatchSize1),
+//   TEST_LIST_ENTRY(Test_TiledCodeGeneration_RightHeavy_BatchSize1),
+//   TEST_LIST_ENTRY(Test_TiledCodeGeneration_BalancedTree_BatchSize1),
+//   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1),
+//    TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy_Tiled),
+//    TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_Balanced_Tiled)
 // };
 
 const size_t numTests = sizeof(testList) / sizeof(testList[0]);

@@ -200,4 +200,20 @@ public:
   decisionforest::DecisionForest<>& GetForest() { return *m_forest; }
 };
 
+class InferenceRunnerForTest : public decisionforest::InferenceRunner {
+public:
+  using decisionforest::InferenceRunner::InferenceRunner;
+
+  int32_t ExecuteFunction(const std::string& funcName, std::vector<void*>& args) {
+    auto& engine = m_engine;
+    auto invocationResult = engine->invokePacked(funcName, args);
+    if (invocationResult) {
+      llvm::errs() << "JIT invocation failed\n";
+      assert (false);
+      return -1;
+    }
+    return 0;
+  }
+};
+
 #endif // _FORESTTESTUTILS_H_

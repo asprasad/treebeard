@@ -52,6 +52,7 @@ using OffsetMemrefType = Memref<int64_t, 1>;
 // using ResultMemrefType = Memref<double, 1>;
 
 class InferenceRunner {
+protected:
   llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> m_maybeEngine;
   std::unique_ptr<mlir::ExecutionEngine>& m_engine;
   mlir::ModuleOp m_module;
