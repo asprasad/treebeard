@@ -14,6 +14,7 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include <queue>
+#include <cassert>
 
 using namespace mlir;
 namespace {
@@ -46,6 +47,7 @@ struct TileEnsembleConstants : public RewritePattern {
     if (tilingDescriptor.MaxTileSize() == m_tileSize)
       return mlir::failure();
 
+    assert (tilingDescriptor.MaxTileSize() == 1 && "Forest shouldn't already be tiled!");
     std::vector<Type> treeTypes;
     for (int64_t i=0 ; i<(int64_t)forest.NumTrees() ; ++i) {
       TileSingleDecisionTree(forest.GetTree(i));

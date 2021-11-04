@@ -311,20 +311,21 @@ bool Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1(TestArgs_t& arg
 }
 
 template<typename FloatType>
-bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, const std::string& modelJsonPath) {
+bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, const std::string& modelJsonPath, int32_t tileSize) {
   TestCSVReader csvReader(modelJsonPath + ".csv");
   TreeBeard::XGBoostJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType> xgBoostParser(args.context, modelJsonPath, batchSize);
   xgBoostParser.Parse();
   auto module = xgBoostParser.GetEvaluationFunction();
   // module->dump();
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  mlir::decisionforest::DoUniformTiling(args.context, module, tileSize);
   mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module);
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
   mlir::decisionforest::LowerToLLVM(args.context, module);
   // module->dump();
   // mlir::decisionforest::dumpLLVMIR(module);
-  decisionforest::InferenceRunner inferenceRunner(module, 1, sizeof(FloatType)*8, sizeof(int32_t)*8);
+  decisionforest::InferenceRunner inferenceRunner(module, tileSize, sizeof(FloatType)*8, sizeof(int32_t)*8);
   
   // inferenceRunner.PrintLengthsArray();
   // inferenceRunner.PrintOffsetsArray();
@@ -363,7 +364,8 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
 }
 
 template<typename FloatType>
-bool Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize(TestArgs_t& args, int32_t batchSize, const std::string& modelDirRelativePath) {
+bool Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize(TestArgs_t& args, int32_t batchSize, 
+                                                             const std::string& modelDirRelativePath, int32_t tileSize) {
   auto repoPath = GetTreeBeardRepoPath();
   auto testModelsDir = repoPath + "/" + modelDirRelativePath;
   auto modelListFile = testModelsDir + "/ModelList.txt";
@@ -375,24 +377,24 @@ bool Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize(TestArgs_t& args, i
     std::getline(fin, modelJSONName);
     auto modelJSONPath = testModelsDir + "/" + modelJSONName;
     // std::cout << "Model file : " << modelJSONPath << std::endl;
-    Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FloatType>(args, batchSize, modelJSONPath));
+    Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FloatType>(args, batchSize, modelJSONPath, tileSize));
   }
   return true;
 }
 
 template<typename FloatType=double>
-bool Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(TestArgs_t& args, int32_t batchSize) {
-  return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize<FloatType>(args, batchSize, "xgb_models/test/Random_1Tree");
+bool Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(TestArgs_t& args, int32_t batchSize, int32_t tileSize=1) {
+  return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize<FloatType>(args, batchSize, "xgb_models/test/Random_1Tree", tileSize);
 }
 
 template<typename FloatType=double>
-bool Test_RandomXGBoostJSONs_2Trees_VariableBatchSize(TestArgs_t& args, int32_t batchSize) {
-  return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize<FloatType>(args, batchSize, "xgb_models/test/Random_2Tree");
+bool Test_RandomXGBoostJSONs_2Trees_VariableBatchSize(TestArgs_t& args, int32_t batchSize, int32_t tileSize=1) {
+  return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize<FloatType>(args, batchSize, "xgb_models/test/Random_2Tree", tileSize);
 }
 
 template<typename FloatType=double>
-bool Test_RandomXGBoostJSONs_4Trees_VariableBatchSize(TestArgs_t& args, int32_t batchSize) {
-  return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize<FloatType>(args, batchSize, "xgb_models/test/Random_4Tree");
+bool Test_RandomXGBoostJSONs_4Trees_VariableBatchSize(TestArgs_t& args, int32_t batchSize, int32_t tileSize=1) {
+  return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize<FloatType>(args, batchSize, "xgb_models/test/Random_4Tree", tileSize);
 }
 
 bool Test_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args) {
@@ -1044,6 +1046,54 @@ bool Test_UniformTiling_Balanced_BatchSize1(TestArgs_t &args) {
 
 bool Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1(TestArgs_t &args) {
   return Test_UniformTiling_BatchSize1_AllTypes(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>);
+}
+
+bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args) {
+  {
+    using FPType = double;
+    Test_ASSERT((Test_RandomXGBoostJSONs_1Tree_VariableBatchSize<FPType>(args, 1, 2)));
+    Test_ASSERT((Test_RandomXGBoostJSONs_1Tree_VariableBatchSize<FPType>(args, 1, 3)));
+    Test_ASSERT((Test_RandomXGBoostJSONs_1Tree_VariableBatchSize<FPType>(args, 1, 4)));
+  }
+  {
+    using FPType = float;
+    Test_ASSERT((Test_RandomXGBoostJSONs_1Tree_VariableBatchSize<FPType>(args, 1, 2)));
+    Test_ASSERT((Test_RandomXGBoostJSONs_1Tree_VariableBatchSize<FPType>(args, 1, 3)));
+    Test_ASSERT((Test_RandomXGBoostJSONs_1Tree_VariableBatchSize<FPType>(args, 1, 4)));
+  }
+  return true;
+}
+
+bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize1(TestArgs_t& args) {
+  {
+    using FPType = double;
+    Test_ASSERT((Test_RandomXGBoostJSONs_2Trees_VariableBatchSize<FPType>(args, 1, 2)));
+    Test_ASSERT((Test_RandomXGBoostJSONs_2Trees_VariableBatchSize<FPType>(args, 1, 3)));
+    Test_ASSERT((Test_RandomXGBoostJSONs_2Trees_VariableBatchSize<FPType>(args, 1, 4)));
+  }
+  {
+    using FPType = float;
+    Test_ASSERT((Test_RandomXGBoostJSONs_2Trees_VariableBatchSize<FPType>(args, 1, 2)));
+    Test_ASSERT((Test_RandomXGBoostJSONs_2Trees_VariableBatchSize<FPType>(args, 1, 3)));
+    Test_ASSERT((Test_RandomXGBoostJSONs_2Trees_VariableBatchSize<FPType>(args, 1, 4)));
+  }
+  return true;
+}
+
+bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize1(TestArgs_t& args) {
+  {
+    using FPType = double;
+    Test_ASSERT((Test_RandomXGBoostJSONs_4Trees_VariableBatchSize<FPType>(args, 1, 2)));
+    Test_ASSERT((Test_RandomXGBoostJSONs_4Trees_VariableBatchSize<FPType>(args, 1, 3)));
+    Test_ASSERT((Test_RandomXGBoostJSONs_4Trees_VariableBatchSize<FPType>(args, 1, 4)));
+  }
+  {
+    using FPType = float;
+    Test_ASSERT((Test_RandomXGBoostJSONs_4Trees_VariableBatchSize<FPType>(args, 1, 2)));
+    Test_ASSERT((Test_RandomXGBoostJSONs_4Trees_VariableBatchSize<FPType>(args, 1, 3)));
+    Test_ASSERT((Test_RandomXGBoostJSONs_4Trees_VariableBatchSize<FPType>(args, 1, 4)));
+  }
+  return true;
 }
 
 } // test

@@ -97,9 +97,9 @@ Type GenerateGetElementPtr(Operation *op, ArrayRef<Value> operands, ConversionPa
                                             ValueRange({static_cast<Value>(actualIndex), static_cast<Value>(elemIndexConst)}));
 
   // Insert call to print pointers if debug helpers is on
-  if (decisionforest::InsertDebugHelpers)
-    decisionforest::InsertPrintElementAddressIfNeeded(rewriter, location, op->getParentOfType<ModuleOp>(), 
-                                                      extractMemrefBufferPointer, indexVal, actualIndex, elemIndexConst, elementPtr);
+  // if (decisionforest::InsertDebugHelpers)
+  //   decisionforest::InsertPrintElementAddressIfNeeded(rewriter, location, op->getParentOfType<ModuleOp>(), 
+  //                                                     extractMemrefBufferPointer, indexVal, actualIndex, elemIndexConst, elementPtr);
   
   return elementType;
 }

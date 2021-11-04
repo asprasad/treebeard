@@ -56,6 +56,9 @@ bool Test_UniformTiling_LeftHeavy_BatchSize1(TestArgs_t& args);
 bool Test_UniformTiling_RightHeavy_BatchSize1(TestArgs_t &args);
 bool Test_UniformTiling_Balanced_BatchSize1(TestArgs_t &args);
 bool Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1(TestArgs_t &args);
+bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize1(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize1(TestArgs_t& args);
 
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
@@ -421,7 +424,7 @@ bool Test_TiledTreeConstruction_LeftHeavy_Simple(TestArgs_t& args) {
   tree.SetTilingDescriptor(tilingDescriptor);
 
   decisionforest::TiledTree tiledTree(tree);
-  tiledTree.WriteDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/tiledTree.dot");
+  // tiledTree.WriteDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/tiledTree.dot");
   auto thresholds = tiledTree.SerializeThresholds();
   auto featureIndices = tiledTree.SerializeFeatureIndices();
   return true;
@@ -437,7 +440,7 @@ bool Test_TiledTreeConstruction_RightHeavy_Simple(TestArgs_t& args) {
   tree.SetTilingDescriptor(tilingDescriptor);
 
   decisionforest::TiledTree tiledTree(tree);
-  tiledTree.WriteDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/tiledTree.dot");
+  // tiledTree.WriteDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/tiledTree.dot");
   auto thresholds = tiledTree.SerializeThresholds();
   auto featureIndices = tiledTree.SerializeFeatureIndices();
   return true;
@@ -453,7 +456,7 @@ bool Test_TiledTreeConstruction_Balanced_Simple(TestArgs_t& args) {
   tree.SetTilingDescriptor(tilingDescriptor);
 
   decisionforest::TiledTree tiledTree(tree);
-  tiledTree.WriteDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/tiledTree.dot");
+  // tiledTree.WriteDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/tiledTree.dot");
   auto thresholds = tiledTree.SerializeThresholds();
   auto featureIndices = tiledTree.SerializeFeatureIndices();
   return true;
@@ -522,10 +525,15 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_Balanced_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize1),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize1),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize1),
 };
 
 // TestDescriptor testList[] = {
-//   TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
+//   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize1),
+//   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize1),
+//   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize1),
 //   TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1),
 //   TEST_LIST_ENTRY(Test_UniformTiling_Balanced_BatchSize1),
 //   TEST_LIST_ENTRY(Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1),
@@ -544,9 +552,19 @@ const size_t numTests = sizeof(testList) / sizeof(testList[0]);
 // 	}
 // }
 
+const std::string reset("\033[0m");
+const std::string red("\033[0;31m");
+const std::string boldRed("\033[1;31m");
+const std::string green("\033[0;32m");
+const std::string boldGreen("\033[1;32m");
+const std::string blue("\033[0;34m");
+const std::string boldBlue("\033[1;34m");
+const std::string white("\033[0;37m");
+const std::string underline("\033[4m");
+
 bool RunTest(TestDescriptor test, TestArgs_t& args) {
 	std::string errStr;
-	std::cout << "Running test " << test.m_testName << ".... ";
+	std::cout << white << "Running test " << blue << test.m_testName << reset << ".... ";
 	bool pass = false;
   // try
 	{
@@ -559,7 +577,7 @@ bool RunTest(TestDescriptor test, TestArgs_t& args) {
 	// 	PrintExceptionInfo(eptr);
 	// 	pass = false;
 	// }
-	std::cout << (pass ? "Passed" : "Failed") << std::endl;
+	std::cout << (pass ? green + "Passed" : red + "Failed") << reset << std::endl;
 	return pass;
 }
 
@@ -567,7 +585,7 @@ void RunTests() {
  	bool overallPass = true;
 
   std::cout << "Running Treebeard Tests " << std::endl << std::endl;
-
+  int32_t numPassed = 0;
   for (size_t i = 0; i < numTests; ++i) {
     mlir::MLIRContext context;
     context.getOrLoadDialect<mlir::decisionforest::DecisionForestDialect>();
@@ -577,9 +595,11 @@ void RunTests() {
     context.getOrLoadDialect<mlir::vector::VectorDialect>();
     TestArgs_t args = { context };    
     bool pass = RunTest(testList[i], args);
+    numPassed += pass ? 1 : 0;
     overallPass = overallPass && pass;
   }
-  std::cout << (overallPass ? "\nTest Suite Passed" : "\nTest Suite Failed") << std::endl << std::endl;
+  std::cout << std::endl << boldBlue << underline << numPassed << "/" << numTests << reset << white << " tests passed.";
+  std::cout << underline << (overallPass ? boldGreen + "\nTest Suite Passed." : boldRed + "\nTest Suite Failed.") << std::endl << std::endl;
 }
 
 } // test
