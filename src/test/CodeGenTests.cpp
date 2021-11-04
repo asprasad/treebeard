@@ -953,5 +953,40 @@ bool Test_ModelInit_RightAndLeftHeavy(TestArgs_t& args) {
   return true;
 }
 
+// --------------------------------------------------------------------------
+// Uniform Tiling Tests
+// --------------------------------------------------------------------------
+template<typename ThresholdType=double, typename ReturnType=double, 
+         typename FeatureIndexType=int32_t, typename NodeIndexType=int32_t, typename InputElementType=double>
+bool Test_UniformTiling_BatchSize1(TestArgs_t& args, ForestConstructor_t forestConstructor, int32_t tileSize) {
+  FixedTreeIRConstructor<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType> irGenerator(args.context, 1, forestConstructor);
+  irGenerator.Parse();
+  auto module = irGenerator.GetEvaluationFunction();
+  decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  decisionforest::DoUniformTiling(args.context, module, tileSize);
+  module->dump();
+  decisionforest::LowerEnsembleToMemrefs(args.context, module);
+  decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  module->dump();
+  decisionforest::LowerToLLVM(args.context, module);
+  // module->dump();
+  // decisionforest::dumpLLVMIR(module);
+  decisionforest::InferenceRunner inferenceRunner(module, tileSize, sizeof(ThresholdType)*8, sizeof(FeatureIndexType)*8);
+  
+  auto inputData = GetBatchSize1Data();
+  for(auto& row : inputData) {
+    ThresholdType result = -1;
+    std::vector<InputElementType> inputRow(row.begin(), row.end());
+    inferenceRunner.RunInference<InputElementType, ReturnType>(inputRow.data(), &result, inputRow.size(), 1);
+    ThresholdType expectedResult = irGenerator.GetForest().Predict(row);
+    Test_ASSERT(FPEqual(result, expectedResult));
+  }
+  return true;
+}
+
+bool Test_UniformTiling_LeftHeavy_BatchSize1(TestArgs_t& args) {
+  return Test_UniformTiling_BatchSize1<>(args, AddLeftHeavyTree<DoubleInt32Tile>, 3);
+}
+
 } // test
 } // TreeBeard

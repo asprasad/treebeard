@@ -51,6 +51,9 @@ bool Test_ModelInit_RightHeavy(TestArgs_t& args);
 bool Test_ModelInit_RightAndLeftHeavy(TestArgs_t& args);
 bool Test_ModelInit_Balanced(TestArgs_t& args);
 
+// Uniform Tiling Tests
+bool Test_UniformTiling_LeftHeavy_BatchSize1(TestArgs_t& args);
+
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
     vec[i] = (double)rand()/RAND_MAX;
@@ -228,7 +231,7 @@ bool Test_BufferInitializationWithTwoTrees_FloatInt8(TestArgs_t& args) {
 
 // IR Tests
 bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestConstructor, std::vector< std::vector<double> >& inputData) {
-  FixedTreeIRConstructor irConstructor(args.context, 1, forestConstructor);
+  FixedTreeIRConstructor<> irConstructor(args.context, 1, forestConstructor);
   irConstructor.Parse();
   auto module = irConstructor.GetEvaluationFunction();
   // module->dump();
@@ -257,7 +260,7 @@ bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
 
 bool Test_ForestCodeGen_VariableBatchSize(TestArgs_t& args, ForestConstructor_t forestConstructor, 
                                           int64_t batchSize, std::vector< std::vector<double> >& inputData) {
-  FixedTreeIRConstructor irConstructor(args.context, batchSize, forestConstructor);
+  FixedTreeIRConstructor<> irConstructor(args.context, batchSize, forestConstructor);
   irConstructor.Parse();
   auto module = irConstructor.GetEvaluationFunction();
   // module->dump();
@@ -461,69 +464,64 @@ void TestTileStringGen() {
     tileMap.ComputeTileLookUpTable();
 }
 
-TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Int16),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Int8),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Float),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_FloatInt16),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_FloatInt8),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_Int16),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_Int8),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_Float),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_FloatInt16),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_FloatInt8),
-  TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize1),
-  TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize1),
-  TEST_LIST_ENTRY(Test_CodeGeneration_RightAndLeftHeavy_BatchSize1),
-  TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize2),
-  TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize2),
-  TEST_LIST_ENTRY(Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2),
-  TEST_LIST_ENTRY(Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1),
-  TEST_LIST_ENTRY(Test_LoadTileThresholdOp_DoubleInt32_TileSize1),
-  TEST_LIST_ENTRY(Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1),
-  TEST_LIST_ENTRY(Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize2),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize1),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize1),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize2),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize1),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize2),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize1_Float),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize2_Float),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_Float),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize1_Float),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize2_Float),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_Float),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize1_Float),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize2_Float),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Tiled),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy_Tiled),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_Balanced_Tiled),
-  TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftHeavy_BatchSize1),
-  TEST_LIST_ENTRY(Test_TiledCodeGeneration_RightHeavy_BatchSize1),
-  TEST_LIST_ENTRY(Test_TiledCodeGeneration_BalancedTree_BatchSize1),
-  TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1),
-  TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy),
-  TEST_LIST_ENTRY(Test_ModelInit_RightHeavy),
-  TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy),
-  TEST_LIST_ENTRY(Test_ModelInit_Balanced)
-};
-
 // TestDescriptor testList[] = {
+//   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy),
+//   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Int16),
+//   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Int8),
+//   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Float),
+//   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_FloatInt16),
+//   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_FloatInt8),
+//   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy),
+//   TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees),
+//   TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_Int16),
+//   TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_Int8),
+//   TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_Float),
+//   TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_FloatInt16),
+//   TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_FloatInt8),
+//   TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize1),
+//   TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize1),
+//   TEST_LIST_ENTRY(Test_CodeGeneration_RightAndLeftHeavy_BatchSize1),
+//   TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize2),
+//   TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize2),
+//   TEST_LIST_ENTRY(Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2),
+//   TEST_LIST_ENTRY(Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1),
+//   TEST_LIST_ENTRY(Test_LoadTileThresholdOp_DoubleInt32_TileSize1),
+//   TEST_LIST_ENTRY(Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1),
+//   TEST_LIST_ENTRY(Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize2),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize1),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize1),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize2),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize1),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize2),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize1_Float),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize2_Float),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_Float),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize1_Float),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize2_Float),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_Float),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize1_Float),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize2_Float),
+//   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float),
+//   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Tiled),
+//   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy_Tiled),
+//   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_Balanced_Tiled),
 //   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftHeavy_BatchSize1),
 //   TEST_LIST_ENTRY(Test_TiledCodeGeneration_RightHeavy_BatchSize1),
 //   TEST_LIST_ENTRY(Test_TiledCodeGeneration_BalancedTree_BatchSize1),
 //   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1),
-//    TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy_Tiled),
-//    TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_Balanced_Tiled)
+//   TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy),
+//   TEST_LIST_ENTRY(Test_ModelInit_RightHeavy),
+//   TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy),
+//   TEST_LIST_ENTRY(Test_ModelInit_Balanced)
 // };
+
+TestDescriptor testList[] = {
+  TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
+};
 
 const size_t numTests = sizeof(testList) / sizeof(testList[0]);
 

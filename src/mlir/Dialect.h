@@ -12,10 +12,8 @@
 #include "DecisionTreeTypes.h"
 #include "MemrefTypes.h"
 
-/// Include the auto-generated header file containing the declaration of the sparse tensor dialect.
 #include "Dialect.h.inc"
 
-/// Include the auto-generated header file containing the declarations of the sparse tensor operations.
 #define GET_OP_CLASSES
 #include "Ops.h.inc"
 
@@ -35,6 +33,9 @@ void LowerEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module);
 void ConvertNodeTypeToIndexType(mlir::MLIRContext& context, mlir::ModuleOp module);
 void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module);
 int dumpLLVMIR(mlir::ModuleOp module);
+
+// Optimizing passes
+void DoUniformTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize);
 
 }
 }

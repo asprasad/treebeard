@@ -180,13 +180,9 @@ void AddFeaturesToForest(decisionforest::DecisionForest<>& forest, std::vector<T
 using DoubleInt32Tile = NumericalTileType_Packed<double, int32_t>;
 typedef std::vector<DoubleInt32Tile> (*ForestConstructor_t)(decisionforest::DecisionForest<>& forest);
 
-class FixedTreeIRConstructor : public TreeBeard::ModelJSONParser<double, double, int32_t, int32_t, double> {
-  using ThresholdType = double;
-  using ReturnType = double;
-  using FeatureIndexType = int32_t;
-  using NodeIndexType = int32_t;
-  using InputElementType = double;
-
+template<typename ThresholdType=double, typename ReturnType=double, 
+         typename FeatureIndexType=int32_t, typename NodeIndexType=int32_t, typename InputElementType=double>
+class FixedTreeIRConstructor : public TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType> {
   std::vector<DoubleInt32Tile> m_treeSerialization;
   ForestConstructor_t m_constructForest;
 public:
@@ -194,10 +190,10 @@ public:
     : TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(context, batchSize), m_constructForest(constructForest)
   {  }
   void Parse() override {
-    m_treeSerialization = m_constructForest(*m_forest);
-    AddFeaturesToForest(*m_forest, m_treeSerialization, "float");
+    m_treeSerialization = m_constructForest(*this->m_forest);
+    AddFeaturesToForest(*this->m_forest, m_treeSerialization, "float");
   }
-  decisionforest::DecisionForest<>& GetForest() { return *m_forest; }
+  decisionforest::DecisionForest<>& GetForest() { return *this->m_forest; }
 };
 
 class InferenceRunnerForTest : public decisionforest::InferenceRunner {
