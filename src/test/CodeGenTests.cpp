@@ -984,8 +984,66 @@ bool Test_UniformTiling_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   return true;
 }
 
-bool Test_UniformTiling_LeftHeavy_BatchSize1(TestArgs_t& args) {
-  return Test_UniformTiling_BatchSize1<>(args, AddLeftHeavyTree<DoubleInt32Tile>, 3);
+bool Test_UniformTiling_BatchSize1_AllTypes(TestArgs_t& args, ForestConstructor_t forestConstructor) {
+  {
+    using FPType = double;
+    using IntType = int32_t;
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 2)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 3)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 4)));
+  }  
+  {
+    using FPType = double;
+    using IntType = int16_t;
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 2)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 3)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 4)));
+  }  
+  {
+    using FPType = double;
+    using IntType = int8_t;
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 2)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 3)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 4)));
+  }
+  {
+    using FPType = float;
+    using IntType = int32_t;
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 2)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 3)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 4)));
+  }  
+  {
+    using FPType = float;
+    using IntType = int16_t;
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 2)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 3)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 4)));
+  }  
+  {
+    using FPType = float;
+    using IntType = int8_t;
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 2)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 3)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 4)));
+  }
+  return true;
+}
+
+bool Test_UniformTiling_LeftHeavy_BatchSize1(TestArgs_t &args) {
+  return Test_UniformTiling_BatchSize1_AllTypes(args, AddLeftHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_UniformTiling_RightHeavy_BatchSize1(TestArgs_t &args) {
+  return Test_UniformTiling_BatchSize1_AllTypes(args, AddRightHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_UniformTiling_Balanced_BatchSize1(TestArgs_t &args) {
+  return Test_UniformTiling_BatchSize1_AllTypes(args, AddBalancedTree<DoubleInt32Tile>);
+}
+
+bool Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1(TestArgs_t &args) {
+  return Test_UniformTiling_BatchSize1_AllTypes(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>);
 }
 
 } // test

@@ -53,6 +53,9 @@ bool Test_ModelInit_Balanced(TestArgs_t& args);
 
 // Uniform Tiling Tests
 bool Test_UniformTiling_LeftHeavy_BatchSize1(TestArgs_t& args);
+bool Test_UniformTiling_RightHeavy_BatchSize1(TestArgs_t &args);
+bool Test_UniformTiling_Balanced_BatchSize1(TestArgs_t &args);
+bool Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1(TestArgs_t &args);
 
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
@@ -515,10 +518,17 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy),
   TEST_LIST_ENTRY(Test_ModelInit_Balanced),
   TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_UniformTiling_Balanced_BatchSize1),
+  TEST_LIST_ENTRY(Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1),
 };
 
 // TestDescriptor testList[] = {
 //   TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
+//   TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1),
+//   TEST_LIST_ENTRY(Test_UniformTiling_Balanced_BatchSize1),
+//   TEST_LIST_ENTRY(Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1),
 // };
 
 const size_t numTests = sizeof(testList) / sizeof(testList[0]);

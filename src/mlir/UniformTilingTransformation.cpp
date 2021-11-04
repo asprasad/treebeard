@@ -31,28 +31,20 @@ struct TileEnsembleConstants : public RewritePattern {
     : RewritePattern(mlir::decisionforest::EnsembleConstantOp::getOperationName(), 1 /*benefit*/, ctx), m_tileSize(tileSize)
   {}
 
-  LogicalResult match(Operation *op) const override{
-    mlir::decisionforest::EnsembleConstantOp constantOp = llvm::dyn_cast<mlir::decisionforest::EnsembleConstantOp>(op);
-    if (!constantOp)
-        return mlir::failure();
-    auto forestAttribute = constantOp.forest();
-    auto forest = forestAttribute.GetDecisionForest();
-    auto tilingDescriptor = forest.GetTree(0).TilingDescriptor();
-    if (tilingDescriptor.MaxTileSize() == m_tileSize)
-      return mlir::failure();
-    return mlir::success();
-  }
-
-  void rewrite(Operation *op, PatternRewriter &rewriter) const final {
+  LogicalResult matchAndRewrite(Operation *op, PatternRewriter &rewriter) const final {
     Location location = op->getLoc();
     mlir::decisionforest::EnsembleConstantOp constantOp = llvm::dyn_cast<mlir::decisionforest::EnsembleConstantOp>(op);
     assert(constantOp);
-    // if (!constantOp)
-    //     return mlir::failure();
+    if (!constantOp)
+         return mlir::failure();
 
     auto forestAttribute = constantOp.forest();
     auto forest = forestAttribute.GetDecisionForest();
     auto forestType = constantOp.getType().cast<decisionforest::TreeEnsembleType>();
+    auto tilingDescriptor = forest.GetTree(0).TilingDescriptor();
+    // If we've already tiled this forest, then don't tile it again!
+    if (tilingDescriptor.MaxTileSize() == m_tileSize)
+      return mlir::failure();
 
     std::vector<Type> treeTypes;
     for (int64_t i=0 ; i<(int64_t)forest.NumTrees() ; ++i) {
@@ -81,14 +73,9 @@ struct TileEnsembleConstants : public RewritePattern {
       rewriter.setInsertionPointAfter(useOp);
       auto newGetTreeOp = rewriter.create<decisionforest::GetTreeFromEnsembleOp>(location, newTreeType, static_cast<Value>(newConstant), getTreeOp.treeIndex());
       rewriter.replaceOp(useOp, static_cast<Value>(newGetTreeOp));
-
-      // Find the uses of the getTreeOp and change the operand types
-      // auto treeUses = useOp->getUses();
-      // for (auto& getTreeUse : treeUses) {
-      //   getTreeUse.getOwner()->getOperand(getTreeUse.getOperandNumber()).setType(newTreeType);
-      // }
     }
     rewriter.replaceOp(op, static_cast<Value>(newConstant));
+    return mlir::success();
   }
 
   void DoTileTraversalForNode(const std::vector<decisionforest::DecisionTree<>::Node>& nodes, 
@@ -99,6 +86,7 @@ struct TileEnsembleConstants : public RewritePattern {
     while (!nodeQ.empty() && numNodes < m_tileSize) {
       auto node = nodeQ.front();
       nodeQ.pop();
+      ++numNodes;
       tileIDs.at(node) = tileID;
       auto leftChild = nodes.at(node).leftChild;
       if (leftChild != decisionforest::DecisionTree<>::INVALID_NODE_INDEX && !nodes.at(leftChild).IsLeaf())
