@@ -133,8 +133,8 @@ protected:
     virtual mlir::decisionforest::TreeEnsembleType GetEnsembleType()
     {
         // All trees have the default tiling to start with.
-        mlir::decisionforest::TreeTilingDescriptor tilingDescriptor;
-        auto treeType = mlir::decisionforest::TreeType::get(GetMLIRType(ReturnType(), m_builder), tilingDescriptor, 
+        int32_t tileSize = 1;
+        auto treeType = mlir::decisionforest::TreeType::get(GetMLIRType(ReturnType(), m_builder), tileSize, 
                                                             GetMLIRType(ThresholdType(), m_builder), 
                                                             GetMLIRType(FeatureIndexType(), m_builder));
 

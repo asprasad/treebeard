@@ -13,8 +13,7 @@ using namespace mlir::decisionforest;
 bool mlir::decisionforest::InsertDebugHelpers=false;
 
 void TreeTypeStorage::print(mlir::DialectAsmPrinter &printer) {
-    std::string tileDescriptorStr = m_tilingDescriptor.ToPrintString();
-    printer << "TreeType(returnType:" << m_resultType << ", tiling:( " << tileDescriptorStr << "))";
+    printer << "TreeType(returnType:" << m_resultType << ", tileSize: " << m_tileSize << "))";
 }
 
 void TreeEnsembleTypeStorage::print(mlir::DialectAsmPrinter &printer) {

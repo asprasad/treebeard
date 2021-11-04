@@ -178,53 +178,53 @@ public:
 //===----------------------------------------------------------------------===//
 struct TreeTypeKey {
     Type resultType;
-    TreeTilingDescriptor tilingDescriptor;
+    int32_t tileSize;
     Type thresholdType;
     Type featureIndexType;
     bool operator==(const TreeTypeKey& that) const
     {
-        return this->resultType==that.resultType && this->tilingDescriptor==that.tilingDescriptor &&
+        return this->resultType==that.resultType && this->tileSize==that.tileSize &&
                this->thresholdType==that.thresholdType && this->featureIndexType==that.featureIndexType;
     }
 };
 
 struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
-    TreeTypeStorage(Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type thresholdType, Type featureIndexType)
-        : m_resultType(resultType), m_tilingDescriptor(tilingDescriptor), m_thresholdType(thresholdType), m_featureIndexType(featureIndexType) {}
+    TreeTypeStorage(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType)
+        : m_resultType(resultType), m_tileSize(tileSize), m_thresholdType(thresholdType), m_featureIndexType(featureIndexType) {}
 
     using KeyTy = TreeTypeKey;
 
     bool operator==(const KeyTy &key) const {
-        KeyTy myKey{ m_resultType, m_tilingDescriptor, m_thresholdType, m_featureIndexType };
+        KeyTy myKey{ m_resultType, m_tileSize, m_thresholdType, m_featureIndexType };
         return key == myKey;
     }
 
     static llvm::hash_code hashKey(const KeyTy &key) {
-        std::string tilingDescStr = key.tilingDescriptor.ToHashString();
-        return llvm::hash_combine(key.resultType, tilingDescStr, key.thresholdType, key.featureIndexType);
+        std::string tileSizeStr = std::to_string(key.tileSize);
+        return llvm::hash_combine(key.resultType, tileSizeStr, key.thresholdType, key.featureIndexType);
     }
 
     static KeyTy getKey(Type resultType) {
         auto context = resultType.getContext();
-        return KeyTy{ resultType, TreeTilingDescriptor(), FloatType::getF64(context), IntegerType::get(context, 32) };
+        return KeyTy{ resultType, 1, FloatType::getF64(context), IntegerType::get(context, 32) };
     }
 
-    static KeyTy getKey(Type resultType, TreeTilingDescriptor tilingDescriptor) {
+    static KeyTy getKey(Type resultType, int32_t tileSize) {
         auto context = resultType.getContext();
-        return KeyTy{ resultType, tilingDescriptor, FloatType::getF64(context), IntegerType::get(context, 32) };
+        return KeyTy{ resultType, tileSize, FloatType::getF64(context), IntegerType::get(context, 32) };
     }
 
-    static KeyTy getKey(Type resultType, TreeTilingDescriptor tilingDescriptor, Type thresholdType, Type featureIndexType) {
-        return KeyTy{ resultType, tilingDescriptor, thresholdType, featureIndexType };
+    static KeyTy getKey(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType) {
+        return KeyTy{ resultType, tileSize, thresholdType, featureIndexType };
     }
 
     static TreeTypeStorage *construct(TypeStorageAllocator &allocator,
                                       const KeyTy &key) {
-        return new (allocator.allocate<TreeTypeStorage>()) TreeTypeStorage(key.resultType, key.tilingDescriptor, key.thresholdType, key.featureIndexType);
+        return new (allocator.allocate<TreeTypeStorage>()) TreeTypeStorage(key.resultType, key.tileSize, key.thresholdType, key.featureIndexType);
     }
 
     Type m_resultType;
-    TreeTilingDescriptor m_tilingDescriptor;
+    int32_t m_tileSize;
     Type m_thresholdType;
     Type m_featureIndexType;
 public:
@@ -236,13 +236,13 @@ class TreeType : public mlir::Type::TypeBase<TreeType, mlir::Type,
 public:
     using Base::Base;
 
-    static TreeType get(Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type thresholdType, Type featureIndexType) {
+    static TreeType get(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType) {
         mlir::MLIRContext *ctx = resultType.getContext();
-        return Base::get(ctx, resultType, tilingDescriptor, thresholdType, featureIndexType);
+        return Base::get(ctx, resultType, tileSize, thresholdType, featureIndexType);
     }
 
     mlir::Type getResultType() const { return getImpl()->m_resultType; }
-    const TreeTilingDescriptor& getTilingDescriptor() const { return getImpl()->m_tilingDescriptor; }
+    int32_t getTileSize() const { return getImpl()->m_tileSize; }
     mlir::Type getThresholdType() const { return getImpl()->m_thresholdType; }
     mlir::Type getFeatureIndexType() const { return getImpl()->m_featureIndexType; }
 
@@ -362,9 +362,9 @@ public:
     bool doAllTreesHaveSameTileSize() const {
         if (doAllTreesHaveSameType())
             return true;
-        auto firstTreeTileSize = getImpl()->m_treeTypes.at(0).cast<TreeType>().getTilingDescriptor().MaxTileSize();
+        auto firstTreeTileSize = getImpl()->m_treeTypes.at(0).cast<TreeType>().getTileSize();
         for (size_t i=1; i<getNumberOfTrees() ; ++i) {
-            auto treeTileSize = getImpl()->m_treeTypes.at(i).cast<TreeType>().getTilingDescriptor().MaxTileSize();
+            auto treeTileSize = getImpl()->m_treeTypes.at(i).cast<TreeType>().getTileSize();
             if (firstTreeTileSize != treeTileSize)
                 return false;
         }

@@ -482,7 +482,7 @@ class FixedTiledTreeIRConstructor : public TreeBeard::ModelJSONParser<ThresholdT
     
     std::vector<Type> treeTypes;
     for (size_t i=0 ; i<this->m_forest->NumTrees() ; ++i) {
-      auto treeType = mlir::decisionforest::TreeType::get(GetMLIRType(ReturnType(), this->m_builder), m_tilingDescriptors[i], 
+      auto treeType = mlir::decisionforest::TreeType::get(GetMLIRType(ReturnType(), this->m_builder), m_tilingDescriptors[i].MaxTileSize(), 
                                                           GetMLIRType(ThresholdType(), this->m_builder), 
                                                           GetMLIRType(FeatureIndexType(), this->m_builder));
       treeTypes.push_back(treeType);
@@ -964,10 +964,10 @@ bool Test_UniformTiling_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   auto module = irGenerator.GetEvaluationFunction();
   decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   decisionforest::DoUniformTiling(args.context, module, tileSize);
-  module->dump();
+  // module->dump();
   decisionforest::LowerEnsembleToMemrefs(args.context, module);
   decisionforest::ConvertNodeTypeToIndexType(args.context, module);
-  module->dump();
+  // module->dump();
   decisionforest::LowerToLLVM(args.context, module);
   // module->dump();
   // decisionforest::dumpLLVMIR(module);

@@ -166,7 +166,7 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     
     auto forestType = ensembleConstOp.getResult().getType().cast<decisionforest::TreeEnsembleType>();
     auto firstTreeType = forestType.getTreeType(0).cast<mlir::decisionforest::TreeType>();
-    auto firstTreeTileSize = firstTreeType.getTilingDescriptor().MaxTileSize();
+    auto firstTreeTileSize = firstTreeType.getTileSize();
 
     Type lookUpTableMemrefType;
     Value getLUT;
@@ -196,10 +196,10 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     auto numTrees = static_cast<int32_t>(forestType.getNumberOfTrees());
     assert(numTrees > 0);
     auto firstTreeType = forestType.getTreeType(0).cast<mlir::decisionforest::TreeType>();
-    auto firstTreeTileSize = firstTreeType.getTilingDescriptor().MaxTileSize();
+    auto firstTreeTileSize = firstTreeType.getTileSize();
     for (int32_t i=1 ; i<numTrees ; ++i) {
       auto treeType = forestType.getTreeType(i).cast<mlir::decisionforest::TreeType>();
-      auto tileSize = treeType.getTilingDescriptor().MaxTileSize();
+      auto tileSize = treeType.getTileSize();
       assert (firstTreeTileSize == tileSize && "All tree's should have the same tile size");
     }
     auto tileSize = firstTreeTileSize;
@@ -311,7 +311,7 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
 
     auto thresholdType = treeType.getThresholdType();
     auto featureIndexType = treeType.getFeatureIndexType(); 
-    auto tileSize = treeType.getTilingDescriptor().MaxTileSize();
+    auto tileSize = treeType.getTileSize();
     // assert (tileSize == 1);
     Type memrefElementType = decisionforest::TiledNumericalNodeType::get(thresholdType, featureIndexType, tileSize);
 

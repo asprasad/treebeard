@@ -58,7 +58,7 @@ struct TileEnsembleConstants : public RewritePattern {
     for (int64_t i=0 ; i<(int64_t)forest.NumTrees() ; ++i) {
       TileSingleDecisionTree(forest.GetTree(i));
       auto treeType = forestType.getTreeType(i).cast<decisionforest::TreeType>();
-      auto newTreeType = decisionforest::TreeType::get(treeType.getResultType(), forest.GetTree(i).TilingDescriptor(), 
+      auto newTreeType = decisionforest::TreeType::get(treeType.getResultType(), forest.GetTree(i).TilingDescriptor().MaxTileSize(), 
                                                        treeType.getThresholdType(), treeType.getFeatureIndexType());
       treeTypes.push_back(newTreeType);
     }
@@ -74,9 +74,9 @@ struct TileEnsembleConstants : public RewritePattern {
     for (auto& use : uses) {
       Operation *useOp = use.getOwner();
       auto getTreeOp = AssertOpIsOfType<decisionforest::GetTreeFromEnsembleOp>(useOp);
-      decisionforest::TreeTilingDescriptor tilingDescriptor(m_tileSize, -1, { }, decisionforest::TilingType::kUnknown);
       auto oldTreeType = getTreeOp.getResult().getType().cast<decisionforest::TreeType>();
-      auto newTreeType = decisionforest::TreeType::get(oldTreeType.getResultType(), tilingDescriptor, oldTreeType.getThresholdType(), oldTreeType.getFeatureIndexType());
+      auto newTreeType = decisionforest::TreeType::get(oldTreeType.getResultType(), m_tileSize, oldTreeType.getThresholdType(), oldTreeType.getFeatureIndexType());
+      
       mlir::OpBuilder::InsertionGuard insertionGuard(rewriter);
       rewriter.setInsertionPointAfter(useOp);
       auto newGetTreeOp = rewriter.create<decisionforest::GetTreeFromEnsembleOp>(location, newTreeType, static_cast<Value>(newConstant), getTreeOp.treeIndex());
