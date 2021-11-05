@@ -611,7 +611,7 @@ void RunTests() {
     overallPass = overallPass && pass;
   }
   std::cout << std::endl << boldBlue << underline << numPassed << "/" << numTests << reset << white << " tests passed.";
-  std::cout << underline << (overallPass ? boldGreen + "\nTest Suite Passed." : boldRed + "\nTest Suite Failed.") << std::endl << std::endl;
+  std::cout << underline << (overallPass ? boldGreen + "\nTest Suite Passed." : boldRed + "\nTest Suite Failed.") << reset << std::endl << std::endl;
 }
 
 } // test
