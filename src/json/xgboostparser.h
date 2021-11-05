@@ -14,10 +14,11 @@ class XGBoostJSONParser : public ModelJSONParser<ThresholdType, ReturnType, Feat
     json m_json;
     void ConstructSingleTree(json& treeJSON);
     void ConstructTreesFromBooster(json& boosterJSON);
+    static constexpr double_t INITIAL_VALUE = 0.5;
 
 public:
     XGBoostJSONParser(mlir::MLIRContext& context, const std::string& filename, int32_t batchSize)
-        :ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(context, batchSize)
+        :ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(context, batchSize, INITIAL_VALUE)
     {
         std::ifstream fin(filename);
         assert (fin);

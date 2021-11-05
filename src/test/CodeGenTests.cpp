@@ -355,8 +355,9 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
       std::vector<double> row(batch.begin() + rowIdx*rowSize, batch.begin() + (rowIdx+1)*rowSize);
       FloatType expectedResult = (*currentPredictionsIter)[rowIdx];
       FloatType forestPrediction = xgBoostParser.GetForest()->Predict(row);
-      Test_ASSERT(FPEqual<FloatType>(forestPrediction + (FloatType)0.5, expectedResult));
-      Test_ASSERT(FPEqual<FloatType>(result[rowIdx] + (FloatType)0.5, expectedResult));
+
+      Test_ASSERT(FPEqual<FloatType>(forestPrediction, expectedResult));
+      Test_ASSERT(FPEqual<FloatType>(result[rowIdx], expectedResult));
     }
     ++currentPredictionsIter;
   }

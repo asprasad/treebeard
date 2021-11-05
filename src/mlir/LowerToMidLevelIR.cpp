@@ -95,15 +95,24 @@ struct PredictForestOpLowering: public ConversionPattern {
         auto resultElementType = resultMemrefType.getElementType();
         int64_t numTrees = static_cast<int64_t>(forestType.getNumberOfTrees());
         auto ensembleSizeConst = rewriter.create<ConstantIndexOp>(location, numTrees); 
-        Value zeroResultConst;
+        
+        Value initialValueConst;
+        double_t initialValueValue = forestAttribute.GetDecisionForest().GetInitialOffset();
+
         if (resultElementType.isa<mlir::Float64Type>())
-          zeroResultConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat(0.0), resultElementType.cast<FloatType>());
+          initialValueConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat(initialValueValue), resultElementType.cast<FloatType>());
         else if(resultElementType.isa<mlir::Float32Type>())
-          zeroResultConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat((float)0.0), resultElementType.cast<FloatType>());
+          initialValueConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat((float)initialValueValue), resultElementType.cast<FloatType>());
         else
           assert(false && "Unsupported floating point type");
         // auto oneIndexConst2 = rewriter.create<ConstantIndexOp>(location, 1);
-        auto treeLoop = rewriter.create<scf::ForOp>(location, zeroConst, ensembleSizeConst, oneIndexConst, static_cast<Value>(zeroResultConst));
+               
+        auto treeLoop = rewriter.create<scf::ForOp>(
+          location,
+          zeroConst,
+          ensembleSizeConst,
+          oneIndexConst,
+          static_cast<Value>(initialValueConst));
         
         rewriter.setInsertionPointToStart(treeLoop.getBody());
         auto j = treeLoop.getInductionVar();
