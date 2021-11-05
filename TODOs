@@ -45,13 +45,11 @@ CodeGen for tile size != 1
         - [Done] LLVM Lowering
             - Vector implementations of tree Load* ops
         - [Done] [Bug] Fix failing Load* tests (Maybe just use structs with natural alignment now?)
-        - Write tests for the new Initialization method
-        - Write a general tiling pass to tile the mid-level IR
+        - [Done] Write tests for the new Initialization method
+        - [Done] Write a general tiling pass to tile the mid-level IR
     - Utils
         - [Done] Number of tiles of a given size
         - [Done] Generate lookup tables for child tile indices given tile comparison outcomes
-
-
 
 Pipeline container
 SIMD container
