@@ -6,6 +6,8 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/Math/IR/Math.h"
+
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -711,7 +713,8 @@ struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLowe
     ConversionTarget target(getContext());
 
     target.addLegalDialect<AffineDialect, memref::MemRefDialect, StandardOpsDialect, 
-                           scf::SCFDialect, decisionforest::DecisionForestDialect, vector::VectorDialect>();
+                           scf::SCFDialect, decisionforest::DecisionForestDialect, vector::VectorDialect,
+                           math::MathDialect>();
 
     target.addIllegalOp<decisionforest::EnsembleConstantOp,
                         decisionforest::GetTreeFromEnsembleOp,

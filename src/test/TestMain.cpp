@@ -4,6 +4,7 @@
 #include "ExecutionHelpers.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "xgboostparser.h"
 #include "TiledTree.h"
 
@@ -65,6 +66,17 @@ bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize2(TestArgs_t& args);
 bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4(TestArgs_t& args);
 bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4(TestArgs_t& args);
 bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4(TestArgs_t& args);
+
+// XGBoost benchmark models tests
+bool Test_Scalar_Abalone(TestArgs_t &args);
+bool Test_TileSize2_Abalone(TestArgs_t &args);
+bool Test_TileSize3_Abalone(TestArgs_t &args);
+bool Test_TileSize4_Abalone(TestArgs_t &args);
+
+bool Test_Scalar_Airline(TestArgs_t &args);
+bool Test_TileSize2_Airline(TestArgs_t &args);
+bool Test_TileSize3_Airline(TestArgs_t &args);
+bool Test_TileSize4_Airline(TestArgs_t &args);
 
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
@@ -540,15 +552,27 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4),
   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
+  TEST_LIST_ENTRY(Test_Scalar_Abalone),
+  TEST_LIST_ENTRY(Test_TileSize2_Abalone),
+  TEST_LIST_ENTRY(Test_TileSize3_Abalone),
+  TEST_LIST_ENTRY(Test_TileSize4_Abalone),
+  TEST_LIST_ENTRY(Test_Scalar_Airline),
+  TEST_LIST_ENTRY(Test_TileSize2_Airline),
+  TEST_LIST_ENTRY(Test_TileSize3_Airline),
+  TEST_LIST_ENTRY(Test_TileSize4_Airline),
 };
 
 // TestDescriptor testList[] = {
-//   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4),
-//   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
-//   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
-// //   TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1),
-// //   TEST_LIST_ENTRY(Test_UniformTiling_Balanced_BatchSize1),
-// //   TEST_LIST_ENTRY(Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1),
+//   TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize1),
+//   TEST_LIST_ENTRY(Test_TileSize2_Airline),
+//   TEST_LIST_ENTRY(Test_TileSize3_Airline),
+//   TEST_LIST_ENTRY(Test_TileSize4_Airline),
+//   // TEST_LIST_ENTRY(Test_TileSize4_Abalone),
+// //   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
+// //   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
+// // //   TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1),
+// // //   TEST_LIST_ENTRY(Test_UniformTiling_Balanced_BatchSize1),
+// // //   TEST_LIST_ENTRY(Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1),
 // };
 
 const size_t numTests = sizeof(testList) / sizeof(testList[0]);
@@ -605,6 +629,7 @@ void RunTests() {
     context.getOrLoadDialect<mlir::scf::SCFDialect>();
     context.getOrLoadDialect<mlir::memref::MemRefDialect>();
     context.getOrLoadDialect<mlir::vector::VectorDialect>();
+    context.getOrLoadDialect<mlir::math::MathDialect>();
     TestArgs_t args = { context };    
     bool pass = RunTest(testList[i], args);
     numPassed += pass ? 1 : 0;

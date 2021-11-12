@@ -28,6 +28,9 @@
 #include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 
+#include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
+
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
@@ -219,7 +222,8 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
   populateStdToLLVMFuncOpConversionPattern(typeConverter, patterns);
   populateStdToLLVMConversionPatterns(typeConverter, patterns);
   populateVectorToLLVMConversionPatterns(typeConverter, patterns, false);
-
+  populateMathToLLVMConversionPatterns(typeConverter, patterns);
+  
   patterns.add<LoadTileFeatureIndicesOpLowering,
                LoadTileThresholdOpLowering,
                LoadTileShapeOpLowering,

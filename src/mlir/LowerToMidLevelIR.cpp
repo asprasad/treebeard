@@ -6,6 +6,7 @@
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 
@@ -44,6 +45,24 @@ struct PredictForestOpLowering: public ConversionPattern {
         assert(false && "Lowering for non-tensor argument not implemented");
         return mlir::failure();
     }
+  }
+
+  Value GenSigmoid(ConversionPatternRewriter& rewriter, Value operand, Location location) const {
+    assert (operand.getType().isIntOrFloat());
+    auto negate = rewriter.create<mlir::NegFOp>(location, operand.getType(), operand);
+    auto exponential = rewriter.create<mlir::math::ExpOp>(location, operand.getType(), static_cast<Value>(negate));
+    
+    Value oneConst;
+    if (operand.getType().isa<mlir::Float64Type>())
+      oneConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat(1.0), operand.getType().cast<FloatType>());
+    else if(operand.getType().isa<mlir::Float32Type>())
+      oneConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat((float)1.0), operand.getType().cast<FloatType>());
+    else
+      assert(false && "Unsupported floating point type");
+
+    auto onePlusExp = rewriter.create<AddFOp>(location, operand.getType(), oneConst, exponential);
+    auto result = rewriter.create<DivFOp>(location, operand.getType(), oneConst, onePlusExp);
+    return result;
   }
 
   LogicalResult
@@ -167,7 +186,17 @@ struct PredictForestOpLowering: public ConversionPattern {
 
         rewriter.setInsertionPointAfter(treeLoop);
         // result[i] = Accumulated value
-        rewriter.create<memref::StoreOp>(location, TypeRange({ }), static_cast<Value>(treeLoop.results()[0]), memrefResult, i);
+        auto predTransform = forestAttribute.GetDecisionForest().GetPredictionTransformation();
+        Value transformedValue;
+        if (predTransform == decisionforest::PredictionTransformation::kIdentity)
+          transformedValue = static_cast<Value>(treeLoop.results()[0]);
+        else if (predTransform == decisionforest::PredictionTransformation::kSigmoid) {
+          transformedValue = GenSigmoid(rewriter, static_cast<Value>(treeLoop.results()[0]), location);
+        }
+        else {
+          assert (false && "Unsupported prediction transformation type");
+        }
+        rewriter.create<memref::StoreOp>(location, TypeRange({ }), transformedValue, memrefResult, i);
         // rewriter.create<scf::YieldOp>(location); //, static_cast<Value>(treeLoop.results()[0]));
 
         rewriter.replaceOp(op, static_cast<Value>(memrefResult));
@@ -183,14 +212,12 @@ struct HighLevelIRToMidLevelIRLoweringPass: public PassWrapper<HighLevelIRToMidL
   void runOnFunction() final {
     ConversionTarget target(getContext());
 
-    target.addLegalDialect<AffineDialect, memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect, decisionforest::DecisionForestDialect>();
+    target.addLegalDialect<AffineDialect, memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect, decisionforest::DecisionForestDialect, math::MathDialect>();
 
     target.addIllegalOp<decisionforest::PredictForestOp>();
 
     RewritePatternSet patterns(&getContext());
     patterns.add<PredictForestOpLowering>(&getContext());
-
-    // loweredSparseConstants.clear();
 
     if (failed(applyPartialConversion(getFunction(), target, std::move(patterns))))
         signalPassFailure();

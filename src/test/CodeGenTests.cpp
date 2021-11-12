@@ -354,6 +354,7 @@ public:
     for (size_t i=0 ; i<this->m_forest->NumTrees() ; ++i) {
       this->m_forest->GetTree(i).SetTilingDescriptor(m_tilingDescriptors[i]);
     }
+    this->m_forest->SetPredictionTransformation(decisionforest::PredictionTransformation::kIdentity);
   }
 
   // Add a function that takes a memref of appropriate type and copies the threshold values

@@ -9,6 +9,8 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/Math/IR/Math.h"
+
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -125,7 +127,7 @@ struct UniformTilingPass : public PassWrapper<UniformTilingPass, FunctionPass> {
   int32_t m_tileSize;
   UniformTilingPass(int32_t tileSize) : m_tileSize(tileSize) { }
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect>();
+    registry.insert<AffineDialect, memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect, math::MathDialect>();
   }
   void runOnFunction() final {
     RewritePatternSet patterns(&getContext());

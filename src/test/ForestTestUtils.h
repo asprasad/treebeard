@@ -191,6 +191,7 @@ public:
   {  }
   void Parse() override {
     m_treeSerialization = m_constructForest(*this->m_forest);
+    this->m_forest->SetPredictionTransformation(decisionforest::PredictionTransformation::kIdentity);
     AddFeaturesToForest(*this->m_forest, m_treeSerialization, "float");
   }
   decisionforest::DecisionForest<>& GetForest() { return *this->m_forest; }
