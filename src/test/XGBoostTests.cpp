@@ -492,5 +492,84 @@ bool Test_TileSize4_Airline(TestArgs_t &args) {
   return true;
 }
 
+bool Test_Scalar_AirlineOHE(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  {
+    using FPType = double;
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, 1);
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, 1);
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, 1);
+  }
+  {
+    using FPType = float;
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, 1);
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, 1);
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, 1);
+  }
+  return true;
+}
+
+bool Test_TileSize2_AirlineOHE(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  int32_t tileSize = 2;
+  {
+    using FPType = double;
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, tileSize);
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, tileSize);
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, tileSize);
+  }
+  {
+    using FPType = float;
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, tileSize);
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, tileSize);
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, tileSize);
+  }
+  return true;
+}
+
+bool Test_TileSize3_AirlineOHE(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  int32_t tileSize = 3;
+  {
+    using FPType = double;
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, tileSize);
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, tileSize);
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, tileSize);
+  }
+  {
+    using FPType = float;
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, tileSize);
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, tileSize);
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, tileSize);
+  }
+  return true;
+}
+
+bool Test_TileSize4_AirlineOHE(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  int32_t tileSize = 4;
+  {
+    using FPType = double;
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, tileSize);
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, tileSize);
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, tileSize);
+  }
+  {
+    using FPType = float;
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, tileSize);
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, tileSize);
+    Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, tileSize);
+  }
+  return true;
+}
+
 } // test
 } // TreeBeard

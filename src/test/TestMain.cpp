@@ -78,6 +78,11 @@ bool Test_TileSize2_Airline(TestArgs_t &args);
 bool Test_TileSize3_Airline(TestArgs_t &args);
 bool Test_TileSize4_Airline(TestArgs_t &args);
 
+bool Test_Scalar_AirlineOHE(TestArgs_t &args);
+bool Test_TileSize2_AirlineOHE(TestArgs_t &args);
+bool Test_TileSize3_AirlineOHE(TestArgs_t &args);
+bool Test_TileSize4_AirlineOHE(TestArgs_t &args);
+
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
     vec[i] = (double)rand()/RAND_MAX;
@@ -560,19 +565,23 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TileSize2_Airline),
   TEST_LIST_ENTRY(Test_TileSize3_Airline),
   TEST_LIST_ENTRY(Test_TileSize4_Airline),
+  TEST_LIST_ENTRY(Test_Scalar_AirlineOHE),
+  TEST_LIST_ENTRY(Test_TileSize2_AirlineOHE),
+  TEST_LIST_ENTRY(Test_TileSize3_AirlineOHE),
+  TEST_LIST_ENTRY(Test_TileSize4_AirlineOHE),
 };
 
 // TestDescriptor testList[] = {
-//   TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize1),
-//   TEST_LIST_ENTRY(Test_TileSize2_Airline),
-//   TEST_LIST_ENTRY(Test_TileSize3_Airline),
-//   TEST_LIST_ENTRY(Test_TileSize4_Airline),
-//   // TEST_LIST_ENTRY(Test_TileSize4_Abalone),
-// //   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
-// //   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
-// // //   TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1),
-// // //   TEST_LIST_ENTRY(Test_UniformTiling_Balanced_BatchSize1),
-// // //   TEST_LIST_ENTRY(Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1),
+//   TEST_LIST_ENTRY(Test_Scalar_AirlineOHE),
+//   TEST_LIST_ENTRY(Test_TileSize2_AirlineOHE),
+//   TEST_LIST_ENTRY(Test_TileSize3_AirlineOHE),
+//   TEST_LIST_ENTRY(Test_TileSize4_AirlineOHE),
+// //   // TEST_LIST_ENTRY(Test_TileSize4_Abalone),
+// // //   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
+// // //   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
+// // // //   TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1),
+// // // //   TEST_LIST_ENTRY(Test_UniformTiling_Balanced_BatchSize1),
+// // // //   TEST_LIST_ENTRY(Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1),
 // };
 
 const size_t numTests = sizeof(testList) / sizeof(testList[0]);
