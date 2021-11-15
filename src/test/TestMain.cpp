@@ -83,6 +83,26 @@ bool Test_TileSize2_AirlineOHE(TestArgs_t &args);
 bool Test_TileSize3_AirlineOHE(TestArgs_t &args);
 bool Test_TileSize4_AirlineOHE(TestArgs_t &args);
 
+bool Test_Scalar_Bosch(TestArgs_t &args);
+bool Test_TileSize2_Bosch(TestArgs_t &args);
+bool Test_TileSize3_Bosch(TestArgs_t &args);
+bool Test_TileSize4_Bosch(TestArgs_t &args);
+
+bool Test_Scalar_Epsilon(TestArgs_t &args);
+bool Test_TileSize2_Epsilon(TestArgs_t &args);
+bool Test_TileSize3_Epsilon(TestArgs_t &args);
+bool Test_TileSize4_Epsilon(TestArgs_t &args);
+
+bool Test_Scalar_Higgs(TestArgs_t &args);
+bool Test_TileSize2_Higgs(TestArgs_t &args);
+bool Test_TileSize3_Higgs(TestArgs_t &args);
+bool Test_TileSize4_Higgs(TestArgs_t &args);
+
+bool Test_Scalar_Year(TestArgs_t &args);
+bool Test_TileSize2_Year(TestArgs_t &args);
+bool Test_TileSize3_Year(TestArgs_t &args);
+bool Test_TileSize4_Year(TestArgs_t &args);
+
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
     vec[i] = (double)rand()/RAND_MAX;
@@ -569,19 +589,29 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TileSize2_AirlineOHE),
   TEST_LIST_ENTRY(Test_TileSize3_AirlineOHE),
   TEST_LIST_ENTRY(Test_TileSize4_AirlineOHE),
+  TEST_LIST_ENTRY(Test_Scalar_Bosch), 
+  TEST_LIST_ENTRY(Test_TileSize2_Bosch),
+  TEST_LIST_ENTRY(Test_TileSize3_Bosch),
+  TEST_LIST_ENTRY(Test_TileSize4_Bosch),
+  TEST_LIST_ENTRY(Test_Scalar_Epsilon),
+  TEST_LIST_ENTRY(Test_TileSize2_Epsilon),
+  TEST_LIST_ENTRY(Test_TileSize3_Epsilon),
+  TEST_LIST_ENTRY(Test_TileSize4_Epsilon),
+  TEST_LIST_ENTRY(Test_Scalar_Higgs),
+  TEST_LIST_ENTRY(Test_TileSize2_Higgs),
+  TEST_LIST_ENTRY(Test_TileSize3_Higgs),
+  TEST_LIST_ENTRY(Test_TileSize4_Higgs),
+  TEST_LIST_ENTRY(Test_Scalar_Year),
+  TEST_LIST_ENTRY(Test_TileSize2_Year),
+  TEST_LIST_ENTRY(Test_TileSize3_Year),
+  TEST_LIST_ENTRY(Test_TileSize4_Year),
 };
 
 // TestDescriptor testList[] = {
-//   TEST_LIST_ENTRY(Test_Scalar_AirlineOHE),
-//   TEST_LIST_ENTRY(Test_TileSize2_AirlineOHE),
-//   TEST_LIST_ENTRY(Test_TileSize3_AirlineOHE),
-//   TEST_LIST_ENTRY(Test_TileSize4_AirlineOHE),
-// //   // TEST_LIST_ENTRY(Test_TileSize4_Abalone),
-// // //   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
-// // //   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
-// // // //   TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1),
-// // // //   TEST_LIST_ENTRY(Test_UniformTiling_Balanced_BatchSize1),
-// // // //   TEST_LIST_ENTRY(Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1),
+//   TEST_LIST_ENTRY(Test_Scalar_Year),
+//   TEST_LIST_ENTRY(Test_TileSize2_Year),
+//   TEST_LIST_ENTRY(Test_TileSize3_Year),
+//   TEST_LIST_ENTRY(Test_TileSize4_Year),
 // };
 
 const size_t numTests = sizeof(testList) / sizeof(testList[0]);

@@ -385,7 +385,6 @@ void PersistDecisionForest(mlir::decisionforest::DecisionForest<>& forest, mlir:
         }
         else {
             TiledTree tiledTree(tree);
-            // tiledTree.WriteDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/TiledTree.dot");
             std::vector<ThresholdType> thresholds = tiledTree.SerializeThresholds();
             std::vector<FeatureIndexType> featureIndices = tiledTree.SerializeFeatureIndices();
             std::vector<int32_t> tileShapeIDs = tiledTree.SerializeTileShapeIDs();
@@ -516,8 +515,8 @@ void TiledTreeNode::AddExtraNodesIfNeeded() {
           // TODO How do we decide where to add the new nodes? Maybe just add them somewhere and call sort again?
           assert (candidateIter != candidateNodes.end());
           auto candidateIndex = *candidateIter;
-          auto& candidateNode = GetNode(candidateIndex);
           {
+            auto& candidateNode = GetNode(candidateIndex);
             auto leafIndex = candidateNode.rightChild;
             auto &leafNode = GetNode(leafIndex);
             assert(leafNode.IsLeaf());
@@ -536,6 +535,7 @@ void TiledTreeNode::AddExtraNodesIfNeeded() {
           if (i+1 == numberOfNodesToAdd)
               break;
           {
+            auto& candidateNode = GetNode(candidateIndex);
             auto leafIndex = candidateNode.leftChild;
             auto &leafNode = GetNode(leafIndex);
             assert(leafNode.IsLeaf());
