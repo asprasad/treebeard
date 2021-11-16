@@ -3,4 +3,5 @@ PRIVATE
 TestMain.cpp
 CodeGenTests.cpp
 TestUtilsCommon.cpp
-XGBoostTests.cpp)
+XGBoostTests.cpp
+XGBoostBenchmarks.cpp)
