@@ -6,4 +6,5 @@ LowerEnsembleToMemrefs.cpp
 ConvertNodeTypeToIndexType.cpp
 LowerToLLVM.cpp
 ExecutionHelpers.cpp
-LowerDebugHelpers.cpp)
+LowerDebugHelpers.cpp
+UniformTilingTransformation.cpp)

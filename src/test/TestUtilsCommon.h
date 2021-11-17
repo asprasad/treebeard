@@ -102,6 +102,7 @@ void GenerateRandomModelJSONs(const std::string& dirname, int32_t numberOfModels
                               int32_t maxNumFeatures, double thresholdMin, double thresholdMax, int32_t maxDepth);
 
 void RunTests();
+void RunXGBoostBenchmarks();
 
 } // test
 } // TreeBeard

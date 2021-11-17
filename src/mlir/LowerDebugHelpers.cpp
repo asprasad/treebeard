@@ -198,8 +198,9 @@ struct PrintTreeToDOTFileOpLowering: public ConversionPattern {
                                                                      rewriter.getI64ArrayAttr({ kLengthIndexInMemrefStruct, 0 }));
 
     // Create a tile size constant
-    // TODO This needs to change once we have actual tiles.
-    int64_t tileSize = 1;
+    auto mlirModelMemrefType = op->getOperand(0).getType().cast<mlir::MemRefType>();
+    auto tileType = mlirModelMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
+    int64_t tileSize = tileType.getTileSize();
     auto tileSizeConst = rewriter.create<LLVM::ConstantOp>(location, rewriter.getI64Type(), rewriter.getIntegerAttr(rewriter.getI64Type(), tileSize));
     auto printFunctionRef = getOrInsertPrintTreeNode(rewriter, parentModule, alignedPtrType);
 
@@ -269,6 +270,61 @@ struct PrintInputRowOpLowering: public ConversionPattern {
   }
 };
 
+struct PrintIsLeafOpLowering: public ConversionPattern {
+  PrintIsLeafOpLowering(LLVMTypeConverter& typeConverter)
+  : ConversionPattern(typeConverter, mlir::decisionforest::PrintIsLeafOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
+
+  static FlatSymbolRefAttr getOrInsertPrintIsLeaf(PatternRewriter &rewriter,
+                                                  ModuleOp module) {
+    auto *context = module.getContext();
+    std::string functionName = "PrintIsLeaf";
+    // Create a function declaration for PrintIsLeaf, the signature is:
+    //   * `i64 (i64, i32, i32)`
+    auto llvmI64Ty = IntegerType::get(context, 64);
+    auto llvmI32Ty = IntegerType::get(context, 32);
+    auto llvmFnType = LLVM::LLVMFunctionType::get(llvmI64Ty, {llvmI64Ty, llvmI32Ty, llvmI32Ty});
+
+    return getOrInsertFunction(functionName, llvmFnType, rewriter, module);
+  }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    assert (operands.size() == 3);
+    ModuleOp parentModule = op->getParentOfType<ModuleOp>();
+    auto printFunctionRef = getOrInsertPrintIsLeaf(rewriter, parentModule);
+    rewriter.create<CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>{operands[0], operands[1], operands[2]});
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
+
+struct PrintVectorOpLowering: public ConversionPattern {
+  PrintVectorOpLowering(LLVMTypeConverter& typeConverter)
+  : ConversionPattern(typeConverter, mlir::decisionforest::PrintVectorOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
+
+  static FlatSymbolRefAttr getOrInsertPrintVector(PatternRewriter &rewriter,
+                                                  ModuleOp module) {
+    auto *context = module.getContext();
+    std::string functionName = "PrintVector";
+    // Create a function declaration for PrintIsLeaf, the signature is:
+    //   * `i64 (i32, i32, i32, ...)`
+    auto llvmI64Ty = IntegerType::get(context, 64);
+    auto llvmI32Ty = IntegerType::get(context, 32);
+    auto llvmFnType = LLVM::LLVMFunctionType::get(llvmI64Ty, {llvmI32Ty, llvmI32Ty, llvmI32Ty}, true);
+
+    return getOrInsertFunction(functionName, llvmFnType, rewriter, module);
+  }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    // assert (operands.size() == 3);
+    ModuleOp parentModule = op->getParentOfType<ModuleOp>();
+    auto printFunctionRef = getOrInsertPrintVector(rewriter, parentModule);
+    rewriter.create<CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), operands);
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
 
 } // anonymous namespace
 
@@ -283,8 +339,30 @@ void populateDebugOpLoweringPatterns(RewritePatternSet& patterns, LLVMTypeConver
                  PrintTreeNodeOpLowering,
                  PrintTreeToDOTFileOpLowering,
                  PrintInputRowOpLowering,
-                 PrintComparisonOpLowering>(typeConverter);
+                 PrintComparisonOpLowering,
+                 PrintIsLeafOpLowering,
+                 PrintVectorOpLowering>(typeConverter);
 }  
+
+void InsertPrintElementAddressIfNeeded(ConversionPatternRewriter& rewriter, Location location, ModuleOp module,
+                                       Value bufferPtr, Value indexVal, Value actualIndex, Value elemIndex, Value elemPtr) {
+    auto context = rewriter.getContext();
+    
+    std::string functionName = "PrintElementAddress";
+    // Create a function declaration for PrintElementAddress, the signature is:
+    //      int64_t PrintElementAddress(void *bufPtr, int64_t index, int64_t actualIndex, int32_t elementIndex, void *elemPtr)
+    auto llvmI64Ty = IntegerType::get(context, 64);
+    auto llvmI32Ty = IntegerType::get(context, 32);
+    auto llvmI32PtrTy = LLVM::LLVMPointerType::get(llvmI32Ty);
+    auto llvmFnType = LLVM::LLVMFunctionType::get(llvmI64Ty, {llvmI32PtrTy, llvmI64Ty, llvmI64Ty, llvmI32Ty, llvmI32PtrTy});
+
+    auto printFunctionRef = getOrInsertFunction(functionName, llvmFnType, rewriter, module);
+    // Cast the pointers to int* and then pass them 
+    auto castedBufferPtr = rewriter.create<LLVM::BitcastOp>(location, llvmI32PtrTy, bufferPtr);
+    auto castedElemPtr = rewriter.create<LLVM::BitcastOp>(location, llvmI32PtrTy, elemPtr);
+
+    rewriter.create<CallOp>(location, printFunctionRef, rewriter.getI64Type(), ValueRange{castedBufferPtr, indexVal, actualIndex, elemIndex, castedElemPtr});
+}
 
 } // decisionforest
 } // mlir

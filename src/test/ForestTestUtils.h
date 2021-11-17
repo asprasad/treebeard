@@ -6,22 +6,31 @@ using namespace mlir;
 // Some utlities that are used by the tests
 #pragma pack(push, 1)
 template<typename ThresholdType, typename IndexType>
-struct NumericalTileType {
+struct NumericalTileType_Packed {
   ThresholdType threshold;
   IndexType index;
-  bool operator==(const NumericalTileType<ThresholdType, IndexType>& other) const {
+  bool operator==(const NumericalTileType_Packed<ThresholdType, IndexType>& other) const {
     return threshold==other.threshold && index==other.index;
   }
 };
 #pragma pack(pop)
 
+template<typename ThresholdType, typename IndexType>
+struct NumericalTileType_Natural {
+  ThresholdType threshold;
+  IndexType index;
+  bool operator==(const NumericalTileType_Natural<ThresholdType, IndexType>& other) const {
+    return threshold==other.threshold && index==other.index;
+  }
+};
+
 #pragma pack(push, 1)
 template<typename ThresholdType, typename IndexType, int32_t VectorSize>
-struct NumericalVectorTileType {
+struct NumericalVectorTileType_Packed {
   ThresholdType threshold[VectorSize];
   IndexType index[VectorSize];
-  int16_t tileShapeID;
-  bool operator==(const NumericalVectorTileType<ThresholdType, IndexType, VectorSize>& other) const {
+  int32_t tileShapeID;
+  bool operator==(const NumericalVectorTileType_Packed<ThresholdType, IndexType, VectorSize>& other) const {
     for (int32_t i=0; i<VectorSize ; ++i)
       if (threshold[i]!=other.threshold[i] || index[i]!=other.index[i])
         return false;
@@ -168,16 +177,12 @@ void AddFeaturesToForest(decisionforest::DecisionForest<>& forest, std::vector<T
   }
 }
 
-using DoubleInt32Tile = NumericalTileType<double, int32_t>;
+using DoubleInt32Tile = NumericalTileType_Packed<double, int32_t>;
 typedef std::vector<DoubleInt32Tile> (*ForestConstructor_t)(decisionforest::DecisionForest<>& forest);
 
-class FixedTreeIRConstructor : public TreeBeard::ModelJSONParser<double, double, int32_t, int32_t, double> {
-  using ThresholdType = double;
-  using ReturnType = double;
-  using FeatureIndexType = int32_t;
-  using NodeIndexType = int32_t;
-  using InputElementType = double;
-
+template<typename ThresholdType=double, typename ReturnType=double, 
+         typename FeatureIndexType=int32_t, typename NodeIndexType=int32_t, typename InputElementType=double>
+class FixedTreeIRConstructor : public TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType> {
   std::vector<DoubleInt32Tile> m_treeSerialization;
   ForestConstructor_t m_constructForest;
 public:
@@ -185,10 +190,27 @@ public:
     : TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(context, batchSize), m_constructForest(constructForest)
   {  }
   void Parse() override {
-    m_treeSerialization = m_constructForest(*m_forest);
-    AddFeaturesToForest(*m_forest, m_treeSerialization, "float");
+    m_treeSerialization = m_constructForest(*this->m_forest);
+    this->m_forest->SetPredictionTransformation(decisionforest::PredictionTransformation::kIdentity);
+    AddFeaturesToForest(*this->m_forest, m_treeSerialization, "float");
   }
-  decisionforest::DecisionForest<>& GetForest() { return *m_forest; }
+  decisionforest::DecisionForest<>& GetForest() { return *this->m_forest; }
+};
+
+class InferenceRunnerForTest : public decisionforest::InferenceRunner {
+public:
+  using decisionforest::InferenceRunner::InferenceRunner;
+
+  int32_t ExecuteFunction(const std::string& funcName, std::vector<void*>& args) {
+    auto& engine = m_engine;
+    auto invocationResult = engine->invokePacked(funcName, args);
+    if (invocationResult) {
+      llvm::errs() << "JIT invocation failed\n";
+      assert (false);
+      return -1;
+    }
+    return 0;
+  }
 };
 
 #endif // _FORESTTESTUTILS_H_

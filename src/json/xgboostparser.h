@@ -14,7 +14,7 @@ class XGBoostJSONParser : public ModelJSONParser<ThresholdType, ReturnType, Feat
     json m_json;
     void ConstructSingleTree(json& treeJSON);
     void ConstructTreesFromBooster(json& boosterJSON);
-    static constexpr double_t INITIAL_VALUE = 0.5;
+    static constexpr double_t INITIAL_VALUE = 0;
 
 public:
     XGBoostJSONParser(mlir::MLIRContext& context, const std::string& filename, int32_t batchSize)
@@ -55,13 +55,42 @@ LEARNER (Also includes an objective that is ignored here)
         }
     }
 */
+inline double TransformBaseScore(const std::string& objectiveName, double val) {
+  if (objectiveName == "binary:logistic")
+    return -log(1.0/val - 1.0);
+  else if (objectiveName == "reg:squarederror" || objectiveName=="multi:softmax")
+    return val;
+  else
+    assert(false && "Unknown objective type");
+  return val;
+}
+
+inline mlir::decisionforest::PredictionTransformation GetPredictionTransformType(const std::string& objectiveName) {
+  if (objectiveName == "binary:logistic")
+    return mlir::decisionforest::PredictionTransformation::kSigmoid;
+  else if (objectiveName == "reg:squarederror")
+    return mlir::decisionforest::PredictionTransformation::kIdentity;
+  else if (objectiveName=="multi:softmax")
+    return mlir::decisionforest::PredictionTransformation::kSoftMax;
+  else
+    assert(false && "Unknown objective type");
+  return mlir::decisionforest::PredictionTransformation::kUnknown;
+}
+
 template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType, typename InputElementType>
 void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>::Parse()
 {
     auto& learnerJSON = m_json["learner"];
     auto& featureNamesJSON = learnerJSON["feature_names"];
     auto& featureTypesJSON = learnerJSON["feature_types"];
-
+    
+    // Set the base score for current objective type
+    auto baseScoreStr = learnerJSON["learner_model_param"]["base_score"].get<std::string>();
+    auto baseScore = std::stod(baseScoreStr);
+    auto objectiveName = learnerJSON["objective"]["name"].get<std::string>();
+    this->SetInitialOffset(TransformBaseScore(objectiveName, baseScore));
+    this->m_forest->SetPredictionTransformation(GetPredictionTransformType(objectiveName));
+    
     // Assert is not valid since feature_names is not required. 
     // assert(featureNamesJSON.size() == featureTypesJSON.size());
     for (size_t i = 0; i<featureTypesJSON.size() ; ++i)

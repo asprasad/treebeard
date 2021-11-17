@@ -33,6 +33,15 @@ bool RunGenerationIfNeeded(int argc, char *argv[]) {
   return false;
 }
 
+bool RunXGBoostBenchmarksIfNeeded(int argc, char *argv[]) {
+  for (int32_t i=0 ; i<argc ; ++i)
+    if (std::string(argv[i]).find(std::string("--xgboostBench")) != std::string::npos) {
+      TreeBeard::test::RunXGBoostBenchmarks();
+      return true;
+    }
+  return false;
+}
+
 void RunCompilerPasses(int argc, char *argv[]) {
   mlir::MLIRContext context;
   context.getOrLoadDialect<mlir::decisionforest::DecisionForestDialect>();
@@ -69,6 +78,8 @@ int main(int argc, char *argv[]) {
   cout << "TreeBeard: A compiler for gradient boosting tree inference.\n";
   SetInsertDebugHelpers(argc, argv);
   if (RunGenerationIfNeeded(argc, argv))
+    return 0;
+  else if (RunXGBoostBenchmarksIfNeeded(argc, argv))
     return 0;
   else  
     TreeBeard::test::RunTests();

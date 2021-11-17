@@ -87,7 +87,7 @@ protected:
     void EndTree() { m_currentTree = nullptr; }
     void SetTreeNumberOfFeatures(size_t numFeatures) { m_currentTree->SetNumberOfFeatures(numFeatures); }
     void SetTreeScalingFactor(ThresholdType scale) { m_currentTree->SetTreeScalingFactor(scale); }
-
+    void SetInitialOffset(ReturnType val) { m_forest->SetInitialOffset(val); } 
     // Create a new node in the current tree
     NodeIndexType NewNode(ThresholdType threshold, FeatureIndexType featureIndex) { return m_currentTree->NewNode(threshold, featureIndex); }
     // Set the parent of a node
@@ -133,8 +133,8 @@ protected:
     virtual mlir::decisionforest::TreeEnsembleType GetEnsembleType()
     {
         // All trees have the default tiling to start with.
-        mlir::decisionforest::TreeTilingDescriptor tilingDescriptor;
-        auto treeType = mlir::decisionforest::TreeType::get(GetMLIRType(ReturnType(), m_builder), tilingDescriptor, 
+        int32_t tileSize = 1;
+        auto treeType = mlir::decisionforest::TreeType::get(GetMLIRType(ReturnType(), m_builder), tileSize, 
                                                             GetMLIRType(ThresholdType(), m_builder), 
                                                             GetMLIRType(FeatureIndexType(), m_builder));
 

@@ -220,6 +220,24 @@ def LoadTileFeatureIndicesOp : DecisionForest_Op<"loadTileFeatureIndices", [NoSi
   let results = (outs TileOfFeatureIndices);
 }
 
+def LoadTileShapeOp : DecisionForest_Op<"loadTileShape", [NoSideEffect]> {
+  let summary = "Load the shape of a tree tile.";
+  let description = "Load the shape ID from a tile in a tree memref. Takes a memref and an index into the memref and returns an integer.";
+  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex);
+
+  let results = (outs I32);
+}
+
+def InitTileOp : DecisionForest_Op<"initTile"> {
+  let summary = "Initialize a tree tile.";
+  let description = "Initialize a single tile in a tree memref. Takes a memref and an index along with the values to write into the tile.";
+  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, 
+                       Index:$tileIndex,
+                       TileOfThresholdTypes:$thresholds,
+                       TileOfFeatureIndices:$featureIndices,
+                       I32:$tileShapeID);
+}
+
 def IndexToNodeOp : DecisionForest_Op<"indexToNode", [NoSideEffect]> {
   let summary = "Casts an index into a tree memref into a node type.";
   let description = "Casts an index into a tree memref into a node type. This is a hack so that we don't have to change any block arguments while lowering.";
@@ -276,4 +294,13 @@ def PrintInputRowOp : DecisionForest_Op<"printInputRow", []> {
 def PrintComparisonOp : DecisionForest_Op<"printComparison", []> {
   let arguments = (ins TileOfThresholdTypes:$data, TileOfThresholdTypes:$threshold, TileOfFeatureIndices:$nodeIndex);
 }
+
+def PrintIsLeafOp : DecisionForest_Op<"printIsLeaf", []> {
+  let arguments = (ins Index:$nodeIndex, I32:$featureIndex, I32:$outcome);
+}
+
+def PrintVectorOp : DecisionForest_Op<"printVector", []> {
+  let arguments = (ins I32:$kind, I32:$bitWidth, I32:$vectorSize, Variadic<AnyType>:$elements);
+}
+
 #endif // TREE_HEAVY_OPS

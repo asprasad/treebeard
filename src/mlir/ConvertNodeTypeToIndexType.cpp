@@ -6,6 +6,8 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/Math/IR/Math.h"
+
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -167,7 +169,8 @@ struct ConvertNodeTypeToIndexTypePass : public PassWrapper<ConvertNodeTypeToInde
   void runOnFunction() final {
     ConversionTarget target(getContext());
 
-    target.addLegalDialect<AffineDialect, memref::MemRefDialect, tensor::TensorDialect, StandardOpsDialect, scf::SCFDialect, decisionforest::DecisionForestDialect>();
+    target.addLegalDialect<AffineDialect, memref::MemRefDialect, tensor::TensorDialect, StandardOpsDialect, 
+                           scf::SCFDialect, decisionforest::DecisionForestDialect, math::MathDialect>();
 
     target.addIllegalOp<decisionforest::EnsembleConstantOp,
                         decisionforest::GetTreeFromEnsembleOp,

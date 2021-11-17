@@ -47,3 +47,23 @@ Note:
 
 1. Currently, we assume only numerical regression nodes. Categorical nodes will be addressed in the future.
 2. 
+
+XGBoost Inference Internals
+
+abalone : reg:squarederror -  XGBOOST_DEVICE static bst_float PredTransform(bst_float x) { return x; }
+airline : binary:logistic - XGBOOST_DEVICE static bst_float PredTransform(bst_float x) { return common::Sigmoid(x); }
+airline-ohe : binary:logistic
+bosch : binary:logistic
+covtype : multi:softmax -- see SoftmaxMultiClassObj::Transform in multiclass_obj.cu, see end of same file for the two registrations (softprob and softmax)
+epsilon : binary:logistic
+higgs : binary:logistic
+letter : ??
+year : reg:squarederror
+
+reg:squarederror - struct LinearSquareLoss
+binary:logistic - struct LogisticRegression (functions PredTransform and ProbToMargin)
+multi:softmax - class SoftmaxMultiClassObj (inherits identity ProbToMargin from class ObjFunction)
+
+model.learner_model_param->base_score stores the starting value
+It is the ObjFunction::ProbToMargin(json::base_score), i.e. the value returned by the function when the base_score value specified in the json is passed to it.
+

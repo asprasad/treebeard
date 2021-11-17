@@ -4,6 +4,7 @@
 #include "ExecutionHelpers.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "xgboostparser.h"
 #include "TiledTree.h"
 
@@ -39,8 +40,68 @@ bool Test_RandomXGBoostJSONs_4Trees_BatchSize1_Float(TestArgs_t& args);
 bool Test_RandomXGBoostJSONs_4Trees_BatchSize2_Float(TestArgs_t& args);
 bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float(TestArgs_t& args);
 
-// Tiled Codegen tests 
-bool Test_CodeGeneration_Balanced_TileSize3(TestArgs_t& args);
+// Tiled Codegen tests
+bool Test_TiledCodeGeneration_RightHeavy_BatchSize1(TestArgs_t& args);
+bool Test_TiledCodeGeneration_LeftHeavy_BatchSize1(TestArgs_t& args);
+bool Test_TiledCodeGeneration_BalancedTree_BatchSize1(TestArgs_t& args);
+bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1(TestArgs_t& args);
+
+// Tiled Init Tests
+bool Test_ModelInit_LeftHeavy(TestArgs_t& args);
+bool Test_ModelInit_RightHeavy(TestArgs_t& args);
+bool Test_ModelInit_RightAndLeftHeavy(TestArgs_t& args);
+bool Test_ModelInit_Balanced(TestArgs_t& args);
+
+// Uniform Tiling Tests
+bool Test_UniformTiling_LeftHeavy_BatchSize1(TestArgs_t& args);
+bool Test_UniformTiling_RightHeavy_BatchSize1(TestArgs_t &args);
+bool Test_UniformTiling_Balanced_BatchSize1(TestArgs_t &args);
+bool Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1(TestArgs_t &args);
+bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize1(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize1(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize2(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize2(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize2(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4(TestArgs_t& args);
+
+// XGBoost benchmark models tests
+bool Test_Scalar_Abalone(TestArgs_t &args);
+bool Test_TileSize2_Abalone(TestArgs_t &args);
+bool Test_TileSize3_Abalone(TestArgs_t &args);
+bool Test_TileSize4_Abalone(TestArgs_t &args);
+
+bool Test_Scalar_Airline(TestArgs_t &args);
+bool Test_TileSize2_Airline(TestArgs_t &args);
+bool Test_TileSize3_Airline(TestArgs_t &args);
+bool Test_TileSize4_Airline(TestArgs_t &args);
+
+bool Test_Scalar_AirlineOHE(TestArgs_t &args);
+bool Test_TileSize2_AirlineOHE(TestArgs_t &args);
+bool Test_TileSize3_AirlineOHE(TestArgs_t &args);
+bool Test_TileSize4_AirlineOHE(TestArgs_t &args);
+
+bool Test_Scalar_Bosch(TestArgs_t &args);
+bool Test_TileSize2_Bosch(TestArgs_t &args);
+bool Test_TileSize3_Bosch(TestArgs_t &args);
+bool Test_TileSize4_Bosch(TestArgs_t &args);
+
+bool Test_Scalar_Epsilon(TestArgs_t &args);
+bool Test_TileSize2_Epsilon(TestArgs_t &args);
+bool Test_TileSize3_Epsilon(TestArgs_t &args);
+bool Test_TileSize4_Epsilon(TestArgs_t &args);
+
+bool Test_Scalar_Higgs(TestArgs_t &args);
+bool Test_TileSize2_Higgs(TestArgs_t &args);
+bool Test_TileSize3_Higgs(TestArgs_t &args);
+bool Test_TileSize4_Higgs(TestArgs_t &args);
+
+bool Test_Scalar_Year(TestArgs_t &args);
+bool Test_TileSize2_Year(TestArgs_t &args);
+bool Test_TileSize3_Year(TestArgs_t &args);
+bool Test_TileSize4_Year(TestArgs_t &args);
 
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
@@ -49,7 +110,7 @@ void InitializeVectorWithRandValues(std::vector<double>& vec) {
 
 template<typename ThresholdType, typename IndexType>
 bool Test_BufferInit_RightHeavy(TestArgs_t& args) {
-  using TileType = NumericalTileType<ThresholdType, IndexType>;
+  using TileType = NumericalTileType_Packed<ThresholdType, IndexType>;
   auto& context = args.context;
   mlir::OpBuilder builder(&context);
   mlir::decisionforest::DecisionForest<> forest;
@@ -59,8 +120,7 @@ bool Test_BufferInit_RightHeavy(TestArgs_t& args) {
   // (Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type thresholdType, Type featureIndexType
   auto thresholdType = TreeBeard::GetMLIRType(ThresholdType(), builder);
   auto indexType = TreeBeard::GetMLIRType(IndexType(), builder);
-  mlir::decisionforest::TreeTilingDescriptor tilingDescriptor;
-  auto treeType = mlir::decisionforest::TreeType::get(thresholdType, tilingDescriptor, thresholdType, indexType);
+  auto treeType = mlir::decisionforest::TreeType::get(thresholdType, 1 /*tileSize*/, thresholdType, indexType);
   //(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType, Type treeType)
   auto forestType = mlir::decisionforest::TreeEnsembleType::get(thresholdType, 1, thresholdType /*HACK type doesn't matter for this test*/,
                                                                 mlir::decisionforest::ReductionType::kAdd, treeType);
@@ -113,7 +173,7 @@ bool Test_BufferInitializationWithOneTree_RightHeavy_FloatInt8(TestArgs_t& args)
 
 template<typename ThresholdType, typename IndexType>
 bool Test_BufferInitialization_TwoTrees(TestArgs_t& args) {
-  using TileType = NumericalTileType<ThresholdType, IndexType>;
+  using TileType = NumericalTileType_Packed<ThresholdType, IndexType>;
   auto& context = args.context;
   mlir::OpBuilder builder(&context);
   mlir::decisionforest::DecisionForest<> forest;
@@ -125,8 +185,7 @@ bool Test_BufferInitialization_TwoTrees(TestArgs_t& args) {
   // (Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type thresholdType, Type featureIndexType
   auto thresholdType = TreeBeard::GetMLIRType(ThresholdType(), builder);
   auto indexType = TreeBeard::GetMLIRType(IndexType(), builder);
-  mlir::decisionforest::TreeTilingDescriptor tilingDescriptor;
-  auto treeType = mlir::decisionforest::TreeType::get(thresholdType, tilingDescriptor, thresholdType, indexType);
+  auto treeType = mlir::decisionforest::TreeType::get(thresholdType, 1 /*tileSize*/, thresholdType, indexType);
   //(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType, Type treeType)
   auto forestType = mlir::decisionforest::TreeEnsembleType::get(thresholdType, 1, thresholdType /*HACK type doesn't matter for this test*/,
                                                                 mlir::decisionforest::ReductionType::kAdd, treeType);
@@ -157,7 +216,7 @@ bool Test_BufferInitialization_TwoTrees(TestArgs_t& args) {
 }
 
 bool Test_BufferInitializationWithOneTree_LeftHeavy(TestArgs_t& args) {
-  using DoubleInt32Tile = NumericalTileType<double, int32_t>;
+  using DoubleInt32Tile = NumericalTileType_Packed<double, int32_t>;
   mlir::MLIRContext& context = args.context;
   mlir::decisionforest::DecisionForest<> forest;
   auto expectedArray = AddLeftHeavyTree<DoubleInt32Tile>(forest);  
@@ -166,8 +225,7 @@ bool Test_BufferInitializationWithOneTree_LeftHeavy(TestArgs_t& args) {
   // (Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type thresholdType, Type featureIndexType
   auto doubleType = mlir::Float64Type::get(&context);
   auto int32Type = mlir::IntegerType::get(&context, 32);
-  mlir::decisionforest::TreeTilingDescriptor tilingDescriptor;
-  auto treeType = mlir::decisionforest::TreeType::get(doubleType, tilingDescriptor, doubleType, int32Type);
+  auto treeType = mlir::decisionforest::TreeType::get(doubleType, 1 /*tileSize*/, doubleType, int32Type);
   //(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType, Type treeType)
   auto forestType = mlir::decisionforest::TreeEnsembleType::get(doubleType, 1, doubleType /*HACK type doesn't matter for this test*/,
                                                                 mlir::decisionforest::ReductionType::kAdd, treeType);
@@ -219,7 +277,7 @@ bool Test_BufferInitializationWithTwoTrees_FloatInt8(TestArgs_t& args) {
 
 // IR Tests
 bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestConstructor, std::vector< std::vector<double> >& inputData) {
-  FixedTreeIRConstructor irConstructor(args.context, 1, forestConstructor);
+  FixedTreeIRConstructor<> irConstructor(args.context, 1, forestConstructor);
   irConstructor.Parse();
   auto module = irConstructor.GetEvaluationFunction();
   // module->dump();
@@ -248,7 +306,7 @@ bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
 
 bool Test_ForestCodeGen_VariableBatchSize(TestArgs_t& args, ForestConstructor_t forestConstructor, 
                                           int64_t batchSize, std::vector< std::vector<double> >& inputData) {
-  FixedTreeIRConstructor irConstructor(args.context, batchSize, forestConstructor);
+  FixedTreeIRConstructor<> irConstructor(args.context, batchSize, forestConstructor);
   irConstructor.Parse();
   auto module = irConstructor.GetEvaluationFunction();
   // module->dump();
@@ -325,7 +383,7 @@ bool Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2(TestArgs_t& args) 
 // Tests for Tiled Buffer Initialization
 template<typename ThresholdType, typename IndexType>
 bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t forestConstructor, std::vector<int32_t>& tileIDs) {
-  using VectorTileType = NumericalVectorTileType<ThresholdType, IndexType, 3>;
+  using VectorTileType = NumericalVectorTileType_Packed<ThresholdType, IndexType, 3>;
   auto& context = args.context;
   mlir::OpBuilder builder(&context);
   mlir::decisionforest::DecisionForest<> forest;
@@ -340,7 +398,7 @@ bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t fore
   decisionforest::TreeTilingDescriptor tilingDescriptor(tileSize /*tile size*/, 4 /*num tiles*/, tileIDs, decisionforest::TilingType::kRegular);
   forest.GetTree(0).SetTilingDescriptor(tilingDescriptor);
 
-  auto treeType = mlir::decisionforest::TreeType::get(thresholdType, tilingDescriptor, thresholdType, indexType);
+  auto treeType = mlir::decisionforest::TreeType::get(thresholdType, tilingDescriptor.MaxTileSize(), thresholdType, indexType);
   //(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType, Type treeType)
   std::vector<Type> treeTypes = {treeType};
   auto forestType = mlir::decisionforest::TreeEnsembleType::get(thresholdType, 1, thresholdType /*HACK type doesn't matter for this test*/,
@@ -363,7 +421,7 @@ bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t fore
       Test_ASSERT(FPEqual(serializedTree[i].threshold[j], thresholds[i*tileSize + j]));
       Test_ASSERT(serializedTree[i].index[j] == featureIndices[i*tileSize + j]);
     }
-    std::cout << tileShapeIDs[i] << std::endl;
+    // std::cout << tileShapeIDs[i] << std::endl;
     Test_ASSERT(tileShapeIDs[i] == serializedTree[i].tileShapeID);
   }
   Test_ASSERT(offsets[0] == 0);
@@ -377,24 +435,24 @@ bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t fore
   Test_ASSERT(lengthVec[0] == numTiles);
 
   mlir::decisionforest::ClearPersistedForest();
-  std::cout << "**********\n";
+  // std::cout << "**********\n";
   return true;
 }
 
 bool Test_BufferInitializationWithOneTree_RightHeavy_Tiled(TestArgs_t& args) {
-  using TileType = NumericalTileType<double, int32_t>;
+  using TileType = NumericalTileType_Packed<double, int32_t>;
   std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 3 }; // The root and one of its children are in one tile and all leaves are in separate tiles
   return Test_BufferInit_SingleTree_Tiled<double, int32_t>(args, AddRightHeavyTree<TileType>, tileIDs);
 }
 
 bool Test_BufferInitializationWithOneTree_LeftHeavy_Tiled(TestArgs_t& args) {
-  using TileType = NumericalTileType<double, int32_t>;
+  using TileType = NumericalTileType_Packed<double, int32_t>;
   std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 3 }; // The root and one of its children are in one tile and all leaves are in separate tiles
   return Test_BufferInit_SingleTree_Tiled<double, int32_t>(args, AddLeftHeavyTree<TileType>, tileIDs);
 }
 
 bool Test_BufferInitializationWithOneTree_Balanced_Tiled(TestArgs_t& args) {
-  using TileType = NumericalTileType<double, int32_t>;
+  using TileType = NumericalTileType_Packed<double, int32_t>;
   std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 0, 3, 4 };
   return Test_BufferInit_SingleTree_Tiled<double, int32_t>(args, AddBalancedTree<TileType>, tileIDs);
 }
@@ -409,7 +467,7 @@ bool Test_TiledTreeConstruction_LeftHeavy_Simple(TestArgs_t& args) {
   tree.SetTilingDescriptor(tilingDescriptor);
 
   decisionforest::TiledTree tiledTree(tree);
-  tiledTree.WriteDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/tiledTree.dot");
+  // tiledTree.WriteDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/tiledTree.dot");
   auto thresholds = tiledTree.SerializeThresholds();
   auto featureIndices = tiledTree.SerializeFeatureIndices();
   return true;
@@ -425,7 +483,7 @@ bool Test_TiledTreeConstruction_RightHeavy_Simple(TestArgs_t& args) {
   tree.SetTilingDescriptor(tilingDescriptor);
 
   decisionforest::TiledTree tiledTree(tree);
-  tiledTree.WriteDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/tiledTree.dot");
+  // tiledTree.WriteDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/tiledTree.dot");
   auto thresholds = tiledTree.SerializeThresholds();
   auto featureIndices = tiledTree.SerializeFeatureIndices();
   return true;
@@ -441,7 +499,7 @@ bool Test_TiledTreeConstruction_Balanced_Simple(TestArgs_t& args) {
   tree.SetTilingDescriptor(tilingDescriptor);
 
   decisionforest::TiledTree tiledTree(tree);
-  tiledTree.WriteDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/tiledTree.dot");
+  // tiledTree.WriteDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/tiledTree.dot");
   auto thresholds = tiledTree.SerializeThresholds();
   auto featureIndices = tiledTree.SerializeFeatureIndices();
   return true;
@@ -496,13 +554,64 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float),
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Tiled),
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy_Tiled),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_Balanced_Tiled)
+  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_Balanced_Tiled),
+  TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_TiledCodeGeneration_RightHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_TiledCodeGeneration_BalancedTree_BatchSize1),
+  TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy),
+  TEST_LIST_ENTRY(Test_ModelInit_RightHeavy),
+  TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy),
+  TEST_LIST_ENTRY(Test_ModelInit_Balanced),
+  TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_UniformTiling_Balanced_BatchSize1),
+  TEST_LIST_ENTRY(Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize1),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize1),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize1),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize2),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize2),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize2),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
+  TEST_LIST_ENTRY(Test_Scalar_Abalone),
+  TEST_LIST_ENTRY(Test_TileSize2_Abalone),
+  TEST_LIST_ENTRY(Test_TileSize3_Abalone),
+  TEST_LIST_ENTRY(Test_TileSize4_Abalone),
+  TEST_LIST_ENTRY(Test_Scalar_Airline),
+  TEST_LIST_ENTRY(Test_TileSize2_Airline),
+  TEST_LIST_ENTRY(Test_TileSize3_Airline),
+  TEST_LIST_ENTRY(Test_TileSize4_Airline),
+  TEST_LIST_ENTRY(Test_Scalar_AirlineOHE),
+  TEST_LIST_ENTRY(Test_TileSize2_AirlineOHE),
+  TEST_LIST_ENTRY(Test_TileSize3_AirlineOHE),
+  TEST_LIST_ENTRY(Test_TileSize4_AirlineOHE),
+  TEST_LIST_ENTRY(Test_Scalar_Bosch), 
+  TEST_LIST_ENTRY(Test_TileSize2_Bosch),
+  TEST_LIST_ENTRY(Test_TileSize3_Bosch),
+  TEST_LIST_ENTRY(Test_TileSize4_Bosch),
+  TEST_LIST_ENTRY(Test_Scalar_Epsilon),
+  TEST_LIST_ENTRY(Test_TileSize2_Epsilon),
+  TEST_LIST_ENTRY(Test_TileSize3_Epsilon),
+  TEST_LIST_ENTRY(Test_TileSize4_Epsilon),
+  TEST_LIST_ENTRY(Test_Scalar_Higgs),
+  TEST_LIST_ENTRY(Test_TileSize2_Higgs),
+  TEST_LIST_ENTRY(Test_TileSize3_Higgs),
+  TEST_LIST_ENTRY(Test_TileSize4_Higgs),
+  TEST_LIST_ENTRY(Test_Scalar_Year),
+  TEST_LIST_ENTRY(Test_TileSize2_Year),
+  TEST_LIST_ENTRY(Test_TileSize3_Year),
+  TEST_LIST_ENTRY(Test_TileSize4_Year),
 };
 
 // TestDescriptor testList[] = {
-//    TEST_LIST_ENTRY(Test_CodeGeneration_Balanced_TileSize3),
-  //  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy_Tiled),
-  //  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_Balanced_Tiled)
+//   TEST_LIST_ENTRY(Test_Scalar_Year),
+//   TEST_LIST_ENTRY(Test_TileSize2_Year),
+//   TEST_LIST_ENTRY(Test_TileSize3_Year),
+//   TEST_LIST_ENTRY(Test_TileSize4_Year),
 // };
 
 const size_t numTests = sizeof(testList) / sizeof(testList[0]);
@@ -518,9 +627,19 @@ const size_t numTests = sizeof(testList) / sizeof(testList[0]);
 // 	}
 // }
 
+const std::string reset("\033[0m");
+const std::string red("\033[0;31m");
+const std::string boldRed("\033[1;31m");
+const std::string green("\033[0;32m");
+const std::string boldGreen("\033[1;32m");
+const std::string blue("\033[0;34m");
+const std::string boldBlue("\033[1;34m");
+const std::string white("\033[0;37m");
+const std::string underline("\033[4m");
+
 bool RunTest(TestDescriptor test, TestArgs_t& args) {
 	std::string errStr;
-	std::cout << "Running test " << test.m_testName << ".... ";
+	std::cout << white << "Running test " << blue << test.m_testName << reset << ".... ";
 	bool pass = false;
   // try
 	{
@@ -533,7 +652,7 @@ bool RunTest(TestDescriptor test, TestArgs_t& args) {
 	// 	PrintExceptionInfo(eptr);
 	// 	pass = false;
 	// }
-	std::cout << (pass ? "Passed" : "Failed") << std::endl;
+	std::cout << (pass ? green + "Passed" : red + "Failed") << reset << std::endl;
 	return pass;
 }
 
@@ -541,7 +660,7 @@ void RunTests() {
  	bool overallPass = true;
 
   std::cout << "Running Treebeard Tests " << std::endl << std::endl;
-
+  int32_t numPassed = 0;
   for (size_t i = 0; i < numTests; ++i) {
     mlir::MLIRContext context;
     context.getOrLoadDialect<mlir::decisionforest::DecisionForestDialect>();
@@ -549,11 +668,14 @@ void RunTests() {
     context.getOrLoadDialect<mlir::scf::SCFDialect>();
     context.getOrLoadDialect<mlir::memref::MemRefDialect>();
     context.getOrLoadDialect<mlir::vector::VectorDialect>();
+    context.getOrLoadDialect<mlir::math::MathDialect>();
     TestArgs_t args = { context };    
     bool pass = RunTest(testList[i], args);
+    numPassed += pass ? 1 : 0;
     overallPass = overallPass && pass;
   }
-  std::cout << (overallPass ? "\nTest Suite Passed" : "\nTest Suite Failed") << std::endl << std::endl;
+  std::cout << std::endl << boldBlue << underline << numPassed << "/" << numTests << reset << white << " tests passed.";
+  std::cout << underline << (overallPass ? boldGreen + "\nTest Suite Passed." : boldRed + "\nTest Suite Failed.") << reset << std::endl << std::endl;
 }
 
 } // test

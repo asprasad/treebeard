@@ -172,7 +172,7 @@ class CopyModelValuesIntoBuffer : public CopyModelValuesIntoBufferInterface {
 
             if (m_writeTileShapeID) {
                 currPtr = bufPtr + m_tileShapeIDOffsetInBytes;
-                *reinterpret_cast<int16_t*>(currPtr) = static_cast<int16_t>(tileShapeIDs.at(tileIndex));
+                *reinterpret_cast<int32_t*>(currPtr) = static_cast<int32_t>(tileShapeIDs.at(tileIndex));
             }
             bufPtr += m_tileSizeInBytes;
             numTilesWritten += 1;
@@ -240,7 +240,7 @@ CopyModelValuesIntoBufferInterface* GetModelCopier(int32_t tileSize, int32_t thr
     bool copyTileShapeID = false;
     if (tileSize != 1) {
         tileShapeIDOffsetInBytes = tileSizeInBytes;
-        tileSizeInBytes += sizeof(int16_t);
+        tileSizeInBytes += sizeof(int32_t);
         copyTileShapeID = true;
     }
 
@@ -331,6 +331,19 @@ void ForestJSONReader::InitializeLengthBuffer(void* bufPtr, int32_t tileSize, in
     for (size_t index=0 ; index<treeIndexPresent.size() ; ++index) {
         if (treeIndexPresent[index] == false) {
             lengthBuffer[index] = 0;
+        }
+    }
+}
+
+void ForestJSONReader::InitializeLookUpTable(void* bufPtr, int32_t tileSize, int32_t entryBitWidth) {
+    assert (entryBitWidth == 8 && "LUT entry must be i8");
+    int8_t* lutBufferPtr = reinterpret_cast<int8_t*>(bufPtr);
+    TileShapeToTileIDMap tileShapeToTileIDMap(tileSize);
+    auto lut = tileShapeToTileIDMap.ComputeTileLookUpTable();
+    for (size_t tileShapeID=0 ; tileShapeID<lut.size() ; ++tileShapeID) {
+        for (size_t outcome=0 ; outcome<lut.at(tileShapeID).size() ; ++outcome) {
+            *lutBufferPtr = lut.at(tileShapeID).at(outcome);
+            lutBufferPtr += 1;
         }
     }
 }
@@ -474,68 +487,73 @@ void TiledTreeNode::AddExtraNodesIfNeeded() {
     }
     m_hasExtraNodes = true;
     assert (static_cast<int32_t>(m_nodeIndices.size()) < m_tiledTree.m_modifiedTree.TilingDescriptor().MaxTileSize());
-    int32_t numberOfNodesToAdd = m_tiledTree.m_modifiedTree.TilingDescriptor().MaxTileSize() - static_cast<int32_t>(m_nodeIndices.size());
-    // TODO Must there be at least one node where both children are leaves?
-    // This must be true
-    // 1. The child of any node must either be in the same tile or must be a leaf (if it were not, the tile could have been larger)
-    // 2. Since the tile can't grow indefinitely, #1 => there is at least one node with both children being leaves
-    std::list<int32_t> candidateNodes;
-    for (auto nodeIndex : m_nodeIndices) {
-        auto& node = GetNode(nodeIndex);
-        auto leftChildIndex = node.leftChild;
-        auto rightChildIndex = node.rightChild;
-        auto& leftChild = GetNode(leftChildIndex);
-        auto& rightChild = GetNode(rightChildIndex);
-        assert (AreNodesInSameTile(nodeIndex, leftChildIndex) || leftChild.IsLeaf());
-        assert (AreNodesInSameTile(nodeIndex, rightChildIndex) || rightChild.IsLeaf());
-        if (leftChild.IsLeaf() && rightChild.IsLeaf())
-            candidateNodes.push_front(nodeIndex);
-    }
-    assert (candidateNodes.size() > 0);
-    // TODO How do we determine the shape of this tile once we add new nodes? Maybe some kind of look up based on the positions of the nodes in the 
-    // full dense serialization?
-    // TODO How do we decide which of the candidate nodes to use as the parent of the new node(s)? For now, picking from the first candidate, which will 
-    // be the right most node on the bottom most level. 
-    auto candidateIter = candidateNodes.begin();
-    for (int32_t i=0 ; i<numberOfNodesToAdd ; i+=2) { // We can add two dummy nodes for every candidate node
-        // TODO How do we decide where to add the new nodes? Maybe just add them somewhere and call sort again?
-        auto candidateIndex = *candidateIter;
-        auto& candidateNode = GetNode(candidateIndex);
-        {
-          auto leafIndex = candidateNode.rightChild;
-          auto &leafNode = GetNode(leafIndex);
-          assert(leafNode.IsLeaf());
-          // Add the dummy node as the right child of the candidate
-          auto dummyNode = m_tiledTree.m_modifiedTree.NewNode(candidateNode.threshold, candidateNode.featureIndex, m_tileID);
-          
-          m_tiledTree.m_modifiedTree.SetNodeLeftChild(dummyNode, leafIndex);
-          m_tiledTree.m_modifiedTree.SetNodeRightChild(dummyNode, leafIndex);
-          m_tiledTree.m_modifiedTree.SetNodeParent(leafIndex, dummyNode);
-          
-          m_tiledTree.m_modifiedTree.SetNodeParent(dummyNode, candidateIndex);
-          m_tiledTree.m_modifiedTree.SetNodeRightChild(candidateIndex, dummyNode);
+    do {
+      int32_t numberOfNodesToAdd = m_tiledTree.m_modifiedTree.TilingDescriptor().MaxTileSize() - static_cast<int32_t>(m_nodeIndices.size());
+      // TODO Must there be at least one node where both children are leaves?
+      // This must be true
+      // 1. The child of any node must either be in the same tile or must be a leaf (if it were not, the tile could have been larger)
+      // 2. Since the tile can't grow indefinitely, #1 => there is at least one node with both children being leaves
+      std::list<int32_t> candidateNodes;
+      for (auto nodeIndex : m_nodeIndices) {
+          auto& node = GetNode(nodeIndex);
+          auto leftChildIndex = node.leftChild;
+          auto rightChildIndex = node.rightChild;
+          auto& leftChild = GetNode(leftChildIndex);
+          auto& rightChild = GetNode(rightChildIndex);
+          assert (AreNodesInSameTile(nodeIndex, leftChildIndex) || leftChild.IsLeaf());
+          assert (AreNodesInSameTile(nodeIndex, rightChildIndex) || rightChild.IsLeaf());
+          if (leftChild.IsLeaf() && rightChild.IsLeaf())
+              candidateNodes.push_front(nodeIndex);
+      }
+      assert (candidateNodes.size() > 0);
+      // TODO How do we determine the shape of this tile once we add new nodes? Maybe some kind of look up based on the positions of the nodes in the 
+      // full dense serialization?
+      // TODO How do we decide which of the candidate nodes to use as the parent of the new node(s)? For now, picking from the first candidate, which will 
+      // be the right most node on the bottom most level. 
+      auto candidateIter = candidateNodes.begin();
+      for (int32_t i=0 ; i<numberOfNodesToAdd && candidateIter!=candidateNodes.end(); i+=2) { // We can add two dummy nodes for every candidate node
+          // TODO How do we decide where to add the new nodes? Maybe just add them somewhere and call sort again?
+          assert (candidateIter != candidateNodes.end());
+          auto candidateIndex = *candidateIter;
+          {
+            auto& candidateNode = GetNode(candidateIndex);
+            auto leafIndex = candidateNode.rightChild;
+            auto &leafNode = GetNode(leafIndex);
+            assert(leafNode.IsLeaf());
+            // Add the dummy node as the right child of the candidate
+            auto dummyNode = m_tiledTree.m_modifiedTree.NewNode(candidateNode.threshold, candidateNode.featureIndex, m_tileID);
+            
+            m_tiledTree.m_modifiedTree.SetNodeLeftChild(dummyNode, leafIndex);
+            m_tiledTree.m_modifiedTree.SetNodeRightChild(dummyNode, leafIndex);
+            m_tiledTree.m_modifiedTree.SetNodeParent(leafIndex, dummyNode);
+            
+            m_tiledTree.m_modifiedTree.SetNodeParent(dummyNode, candidateIndex);
+            m_tiledTree.m_modifiedTree.SetNodeRightChild(candidateIndex, dummyNode);
 
-          m_tiledTree.AddNodeToTile(m_tileIndex, dummyNode);
-        }
-        if (i+1 == numberOfNodesToAdd)
-            break;
-        {
-          auto leafIndex = candidateNode.leftChild;
-          auto &leafNode = GetNode(leafIndex);
-          assert(leafNode.IsLeaf());
-          // Add the dummy node as the left child of the candidate
-          auto dummyNode = m_tiledTree.m_modifiedTree.NewNode(candidateNode.threshold, candidateNode.featureIndex, m_tileID);
-          m_tiledTree.m_modifiedTree.SetNodeLeftChild(dummyNode, leafIndex);
-          m_tiledTree.m_modifiedTree.SetNodeRightChild(dummyNode, leafIndex);
-          m_tiledTree.m_modifiedTree.SetNodeParent(leafIndex, dummyNode);
+            m_tiledTree.AddNodeToTile(m_tileIndex, dummyNode);
+          }
+          if (i+1 == numberOfNodesToAdd)
+              break;
+          {
+            auto& candidateNode = GetNode(candidateIndex);
+            auto leafIndex = candidateNode.leftChild;
+            auto &leafNode = GetNode(leafIndex);
+            assert(leafNode.IsLeaf());
+            // Add the dummy node as the left child of the candidate
+            auto dummyNode = m_tiledTree.m_modifiedTree.NewNode(candidateNode.threshold, candidateNode.featureIndex, m_tileID);
+            m_tiledTree.m_modifiedTree.SetNodeLeftChild(dummyNode, leafIndex);
+            m_tiledTree.m_modifiedTree.SetNodeRightChild(dummyNode, leafIndex);
+            m_tiledTree.m_modifiedTree.SetNodeParent(leafIndex, dummyNode);
 
-          m_tiledTree.m_modifiedTree.SetNodeParent(dummyNode, candidateIndex);
-          m_tiledTree.m_modifiedTree.SetNodeLeftChild(candidateIndex, dummyNode);
-          
-          m_tiledTree.AddNodeToTile(m_tileIndex, dummyNode);
-        }
-        ++candidateIter;
-    }
+            m_tiledTree.m_modifiedTree.SetNodeParent(dummyNode, candidateIndex);
+            m_tiledTree.m_modifiedTree.SetNodeLeftChild(candidateIndex, dummyNode);
+            
+            m_tiledTree.AddNodeToTile(m_tileIndex, dummyNode);
+          }
+          ++candidateIter;
+      }
+    } while (static_cast<int32_t>(m_nodeIndices.size()) < m_tiledTree.m_modifiedTree.TilingDescriptor().MaxTileSize());
+    assert (static_cast<int32_t>(m_nodeIndices.size()) == m_tiledTree.m_modifiedTree.TilingDescriptor().MaxTileSize());
     SortTileNodes();
     m_tiledTree.SetChildrenForTile(*this);
 }
@@ -567,7 +585,7 @@ void TiledTreeNode::GetFeatureIndices(std::vector<int32_t>::iterator beginIter) 
         auto& node = GetNode(m_nodeIndices.front());
         assert (node.IsLeaf() && "A tile with a single node can only contain a leaf");
         int32_t tileSize = m_tiledTree.m_modifiedTree.TilingDescriptor().MaxTileSize();
-        auto featureIndex = node.featureIndex;
+        auto featureIndex = -1; // node.featureIndex;
         for (int32_t i=0; i<tileSize ; ++i) {
             *beginIter = featureIndex;
             ++beginIter;
@@ -1064,8 +1082,13 @@ std::vector<int32_t> ComputeLookUpTableForSingleShape(DecisionTree<>& tree, int3
 
 // Assume that the children of the tile are stored left to right
 std::vector<std::vector<int32_t>> TileShapeToTileIDMap::ComputeTileLookUpTable() {
-    std::vector<std::vector<int32_t>> tileLUT(m_currentTileID);
+    std::vector<std::vector<int32_t>> tileLUT(m_currentTileID-1);
     for (auto mapPair : m_tileStringToTileIDMap) {
+        // Skip adding a row in the LUT for the leaf shape. We added this shape 
+        // at the end to the map and so its ID is always currentTileID - 1
+        if (mapPair.second == m_currentTileID-1)
+            continue;
+
         // First construct a tree that represents the tile
         DecisionTree<> tree;
         ConstructTreeForTile(mapPair.first, 0, tree);

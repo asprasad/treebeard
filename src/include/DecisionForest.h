@@ -10,6 +10,7 @@
 #include <cmath>
 #include <queue>
 #include <map>
+#include <iostream>
 #include "TreeTilingDescriptor.h"
 
 namespace mlir
@@ -17,6 +18,7 @@ namespace mlir
 namespace decisionforest
 {
 
+enum class PredictionTransformation { kIdentity, kSigmoid, kSoftMax, kUnknown };
 enum class ReductionType { kAdd, kVoting };
 enum class FeatureType { kNumerical, kCategorical };
 
@@ -116,7 +118,7 @@ template <typename ThresholdType=double, typename ReturnType=double, typename Fe
 class DecisionForest
 {
 public:
-    DecisionForest(ReturnType initialValue) : m_initialValue(initialValue) {}
+    DecisionForest(ReturnType initialValue) : m_initialValue(initialValue), m_predictionTransform(PredictionTransformation::kUnknown) {}
     DecisionForest() : DecisionForest(0.0) {}
 
     struct Feature
@@ -142,12 +144,16 @@ public:
     DecisionTreeType& GetTree(int64_t index) { return m_trees[index]; }
     const std::vector<Feature>& GetFeatures() const { return m_features; }
     ReturnType GetInitialOffset() const { return m_initialValue; }
+    void SetInitialOffset(ReturnType val) { m_initialValue = val; }
     std::string Serialize() const;
     std::string PrintToString() const;
     ReturnType Predict(std::vector<ThresholdType>& data) const;
     bool operator==(const DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>& that) const {
         return m_reductionType==that.m_reductionType && m_trees==that.m_trees;
     }
+    
+    void SetPredictionTransformation(PredictionTransformation val) { m_predictionTransform = val; }
+    PredictionTransformation GetPredictionTransformation() const { return m_predictionTransform; }
 
     int32_t GetDenseSerializationVectorLength() const {
         int32_t size = 0;
@@ -172,7 +178,8 @@ private:
     std::vector<Feature> m_features;
     std::vector<DecisionTreeType> m_trees;
     ReductionType m_reductionType = ReductionType::kAdd;
-    const ReturnType m_initialValue;
+    ReturnType m_initialValue;
+    PredictionTransformation m_predictionTransform;
 };
 
 template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
@@ -268,6 +275,7 @@ ReturnType DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexTy
     const Node* node = &m_nodes[0]; // root node
     while (!node->IsLeaf())
     {
+      // std::cout << "\tf" << node->featureIndex << "(" << data[node->featureIndex] << ")" << " < " << node->threshold << std::endl;
       if (data[node->featureIndex] <= node->threshold)
         node = &m_nodes[node->leftChild];
       else
@@ -317,15 +325,30 @@ std::string DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeInde
     return strStream.str();
 }
 
+template<typename FPType>
+FPType sigmoid(FPType val) {
+  return 1.0/(1.0 + std::exp(-val));
+}
+
 template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
 ReturnType DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::Predict(std::vector<ThresholdType>& data) const
 {
     std::vector<ReturnType> predictions;
-    for (auto& tree: m_trees)
-        predictions.push_back(tree.PredictTree(data));
+    for (auto& tree: m_trees) {
+        auto prediction = tree.PredictTree(data);
+        // std::cout << "Tree " << predictions.size() << " prediction : " << prediction << std::endl;
+        predictions.push_back(prediction);
+    }
     
     assert(m_reductionType == ReductionType::kAdd);
-    return std::accumulate(predictions.begin(), predictions.end(), m_initialValue);
+    auto rawPrediction = std::accumulate(predictions.begin(), predictions.end(), m_initialValue);
+    if (m_predictionTransform == PredictionTransformation::kIdentity)
+      return rawPrediction;
+    else if (m_predictionTransform == PredictionTransformation::kSigmoid)
+      return sigmoid(rawPrediction);
+    else
+      assert(false);
+    return -1; 
 }
 
 template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
