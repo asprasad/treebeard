@@ -649,12 +649,12 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     auto childIndexInt = rewriter.create<memref::LoadOp>(location, lutValue, ValueRange{tileShapeIndex, comparisonIndex});
     auto childIndex = rewriter.create<IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(childIndexInt));
 
-    // index = 2*index + 1 + result
+    // index = (tileSize+1)*index + 1 + childIndex
     auto oneConstant = rewriter.create<ConstantIndexOp>(location, 1);
     auto tileSizeConstant = rewriter.create<ConstantIndexOp>(location, tileSize+1);
     auto tileSizeTimesIndex = rewriter.create<MulIOp>(location, rewriter.getIndexType(), static_cast<Value>(nodeIndex), static_cast<Value>(tileSizeConstant));
-    auto twoTimesIndexPlus1 = rewriter.create<AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(tileSizeTimesIndex), static_cast<Value>(oneConstant));
-    auto newIndex = rewriter.create<AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(twoTimesIndexPlus1), static_cast<Value>(childIndex));
+    auto tileSizeTimesIndexPlus1 = rewriter.create<AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(tileSizeTimesIndex), static_cast<Value>(oneConstant));
+    auto newIndex = rewriter.create<AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(tileSizeTimesIndexPlus1), static_cast<Value>(childIndex));
     
     // node = indexToNode(index)
     auto newNode = rewriter.create<decisionforest::IndexToNodeOp>(location, traverseTileOp.getResult().getType(), treeMemref, static_cast<Value>(newIndex));
