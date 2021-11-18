@@ -4,6 +4,7 @@
 #include "TreeTilingUtils.h"
 #include "TiledTree.h"
 #include "llvm/ADT/STLExtras.h"
+#include "Dialect.h"
 
 namespace mlir
 {
@@ -1049,8 +1050,22 @@ void ComputeLUTHelper(DecisionTree<>& tree, size_t root, std::vector<int32_t>& o
     outcomes.at(root) = oldNodeOutcome;
 }
 
-void SetLUTEntries(std::vector<int32_t>& lut, int32_t childIndex, const std::vector<int32_t>& outcomes, size_t currentIndex, int32_t outcomeBits) {
+inline int32_t InvertBits(int32_t val, int32_t numBits) {
+    int32_t ret = 0, i, temp;
+    for (i = 0; i < numBits; i++)
+    {
+        temp = (val & (1 << i));
+        if(temp)
+            ret |= (1 << ((numBits - 1) - i));
+    }
+    return ret;
+}
+
+void SetLUTEntries(std::vector<int32_t>& lut, int32_t childIndex, const std::vector<int32_t>& outcomes,
+                   size_t currentIndex, int32_t outcomeBits, int32_t tileSize) {
     if (currentIndex >= outcomes.size()) {
+        if (decisionforest::UseBitcastForComparisonOutcome)
+            outcomeBits = InvertBits(outcomeBits, tileSize);
         lut.at(outcomeBits) = childIndex;
         return;
     }
@@ -1058,12 +1073,12 @@ void SetLUTEntries(std::vector<int32_t>& lut, int32_t childIndex, const std::vec
     if (currentOutcome == -1 || currentOutcome == 0) {
         // This node's outcome is a don't care.. So it could be either 0 or 1.
         auto newOutcomeBits = outcomeBits << 1;
-        SetLUTEntries(lut, childIndex, outcomes, currentIndex+1, newOutcomeBits);
+        SetLUTEntries(lut, childIndex, outcomes, currentIndex+1, newOutcomeBits, tileSize);
     }
     if (currentOutcome == -1 || currentOutcome == 1) {
         auto newOutcomeBits = outcomeBits << 1;
         newOutcomeBits |= 1;
-        SetLUTEntries(lut, childIndex, outcomes, currentIndex+1, newOutcomeBits); 
+        SetLUTEntries(lut, childIndex, outcomes, currentIndex+1, newOutcomeBits, tileSize); 
     }
 }
 
@@ -1075,7 +1090,7 @@ std::vector<int32_t> ComputeLookUpTableForSingleShape(DecisionTree<>& tree, int3
     int32_t numOutcomes = std::pow(2, tileSize);
     std::vector<int32_t> lut(numOutcomes, -1);
     for (auto indexOutcomePair : childIndexToOutcomesMap) {
-        SetLUTEntries(lut, indexOutcomePair.first, indexOutcomePair.second, 0, 0);
+        SetLUTEntries(lut, indexOutcomePair.first, indexOutcomePair.second, 0, 0, tileSize);
     }
     return lut;
 }

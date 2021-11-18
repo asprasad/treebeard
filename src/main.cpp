@@ -42,48 +42,15 @@ bool RunXGBoostBenchmarksIfNeeded(int argc, char *argv[]) {
   return false;
 }
 
-void RunCompilerPasses(int argc, char *argv[]) {
-  mlir::MLIRContext context;
-  context.getOrLoadDialect<mlir::decisionforest::DecisionForestDialect>();
-  context.getOrLoadDialect<mlir::StandardOpsDialect>();
-
-  const int32_t batchSize = 16;
-  TreeBeard::XGBoostJSONParser<> xgBoostParser(context, argv[1], batchSize);
-  xgBoostParser.Parse();
-  auto module = xgBoostParser.GetEvaluationFunction();
-  // module->dump();
-
-  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
-  module->dump();
-
-  mlir::decisionforest::LowerEnsembleToMemrefs(context, module);
-  // module->dump();
-
-  mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
-  // module->dump();
-
-  mlir::decisionforest::LowerToLLVM(context, module);
-  module->dump();
-
-  mlir::decisionforest::dumpLLVMIR(module);
-
-  // mlir::decisionforest::InferenceRunner inferenceRunner(module);
-
-  std::vector<double> data(8);
-  auto decisionForest = xgBoostParser.GetForest();
-  cout << "Ensemble prediction: " << decisionForest->Predict(data) << endl;
-}
-
 int main(int argc, char *argv[]) {
-  cout << "TreeBeard: A compiler for gradient boosting tree inference.\n";
   SetInsertDebugHelpers(argc, argv);
   if (RunGenerationIfNeeded(argc, argv))
     return 0;
   else if (RunXGBoostBenchmarksIfNeeded(argc, argv))
     return 0;
-  else  
+  else {  
+    cout << "TreeBeard: A compiler for gradient boosting tree inference.\n";
     TreeBeard::test::RunTests();
-    // mlir::decisionforest::TestTileStringGen();
-  // RunCompilerPasses(argc, argv);
+  }
   return 0;
 }

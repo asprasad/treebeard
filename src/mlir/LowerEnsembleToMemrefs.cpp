@@ -564,6 +564,15 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     return index;
   }
 
+  Value ReduceComparisonResultVectorToInt_Bitcast(Value comparisonResult, int32_t tileSize, ConversionPatternRewriter &rewriter, Location location) const {
+    auto bitcastVectorType = VectorType::get(1, rewriter.getIntegerType(tileSize));
+    auto bitcastOp = rewriter.create<vector::BitCastOp>(location, bitcastVectorType, comparisonResult);
+    auto integerResult = rewriter.create<vector::ExtractElementOp>(location, static_cast<Value>(bitcastOp), 0);
+    auto zeroExtend = rewriter.create<ZeroExtendIOp>(location, integerResult, rewriter.getI64Type()); 
+    auto index = rewriter.create<IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(zeroExtend));
+    return index;
+  }
+
   void LowerOpForVectorTile(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const {
     auto traverseTileOp = AssertOpIsOfType<mlir::decisionforest::TraverseTreeTileOp>(op);
     auto location = op->getLoc();
@@ -642,7 +651,12 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     // result = Compare
     // TODO we need a cast here to make sure the threshold and the row element are the same type. The op expects both operands to be the same type.
     auto comparison = rewriter.create<CmpFOp>(location,  mlir::CmpFPredicate::ULE, static_cast<Value>(features), static_cast<Value>(loadThresholdOp));
-    auto comparisonIndex = ReduceComparisonResultVectorToInt(comparison, tileSize, rewriter, location);
+    Value comparisonIndex;
+    if (decisionforest::UseBitcastForComparisonOutcome)
+      comparisonIndex = ReduceComparisonResultVectorToInt_Bitcast(comparison, tileSize, rewriter, location);
+    else
+      comparisonIndex = ReduceComparisonResultVectorToInt(comparison, tileSize, rewriter, location);
+
 
     // Load the child index from the LUT
     auto lutValue = GetLUTFromTreeOperand(operands[0]);

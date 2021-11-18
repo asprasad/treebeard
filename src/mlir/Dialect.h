@@ -26,6 +26,8 @@ class LLVMTypeConverter;
 namespace decisionforest
 {
 extern bool InsertDebugHelpers;
+extern bool UseBitcastForComparisonOutcome;
+
 void populateDebugOpLoweringPatterns(RewritePatternSet& patterns, LLVMTypeConverter& typeConverter);
 
 void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext& context, mlir::ModuleOp module);
