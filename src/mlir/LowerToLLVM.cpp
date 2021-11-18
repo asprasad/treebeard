@@ -39,6 +39,13 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm-c/Target.h"
+#include "llvm-c/TargetMachine.h"
+#include "llvm/Support/TargetRegistry.h"
+#include "llvm/Target/TargetOptions.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Support/MemoryBufferRef.h"
+#include "llvm/Support/MemoryBuffer.h"
 
 // #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
 // #include "mlir/Dialect/SCF/Passes.h"
@@ -247,12 +254,52 @@ void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module) {
   // mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
   pm.addPass(std::make_unique<DecisionForestToLLVMLoweringPass>());
   pm.addPass(createReconcileUnrealizedCastsPass());
+  
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to LLVM failed.\n";
   }
 }
 
-int dumpLLVMIR(mlir::ModuleOp module) {
+void dumpAssembly(const llvm::Module* llvmModule) {
+  LLVMMemoryBufferRef bufferOut;
+  char *errorMessage = nullptr;
+  std::string error;
+  const llvm::Target* target = llvm::TargetRegistry::lookupTarget(llvmModule->getTargetTriple(), error);
+  
+  if (!target) {
+    llvm::errs() << "No target found";
+  }
+  else if (target->hasTargetMachine()){
+    
+    // TODO - Revisit these defaults
+    auto CPU = "generic";
+    auto Features = "";
+    llvm::TargetOptions opt;
+    auto RM = Optional<llvm::Reloc::Model>();
+    
+    auto tm = target->createTargetMachine(llvmModule->getTargetTriple(), CPU, Features, opt, RM);
+    
+    LLVMTargetMachineEmitToMemoryBuffer(
+      (LLVMTargetMachineRef)tm, // #TODO - Should use a llvm::wrap function. Didn't find one.
+      llvm::wrap(llvmModule),
+      LLVMCodeGenFileType::LLVMAssemblyFile,
+      &errorMessage, // #TODO - This buffer and the buffer below might leak. Look at it later.
+      &bufferOut);
+    
+    if (errorMessage)
+        llvm::errs() <<  errorMessage;
+    else {
+        llvm::errs() << "<ASM Target =" << target->getName() <<">\n";
+        llvm::errs() << llvm::unwrap(bufferOut)->getBuffer() << "\n";
+        llvm::errs() << "</ASM>" << "\n";
+    }
+  }
+  else {
+    llvm::errs () << "Target machine not found";
+  }
+}
+
+int dumpLLVMIR(mlir::ModuleOp module, bool dumpAsm) {
   mlir::registerLLVMDialectTranslation(*module->getContext());
 
   // Convert the module to LLVM IR in a new LLVM IR Context
@@ -266,7 +313,12 @@ int dumpLLVMIR(mlir::ModuleOp module) {
   // Init LLVM targets
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
+
   mlir::ExecutionEngine::setupTargetTriple(llvmModule.get());
+  
+  if (dumpAsm) {
+    dumpAssembly(llvmModule.get());
+  }
 
   llvm::errs() << *llvmModule << "\n";
   return 0;
