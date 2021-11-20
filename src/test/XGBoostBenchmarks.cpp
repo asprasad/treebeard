@@ -58,6 +58,7 @@ int64_t Test_CodeGenForJSON_VariableBatchSize(int64_t batchSize, const std::stri
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
   mlir::decisionforest::DoUniformTiling(context, module, tileSize);
   mlir::decisionforest::LowerEnsembleToMemrefs(context, module);
+  // module->dump();
   mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   mlir::decisionforest::LowerToLLVM(context, module);
   decisionforest::InferenceRunner inferenceRunner(module, tileSize, sizeof(FloatType)*8, sizeof(int32_t)*8);
@@ -146,6 +147,9 @@ void RunXGBoostBenchmarks() {
     RunBenchmark_SingleConfig<FPType, 4, 1>();
     RunBenchmark_SingleConfig<FPType, 4, 2>();
     RunBenchmark_SingleConfig<FPType, 4, 4>();
+    RunBenchmark_SingleConfig<FPType, 5, 4>();
+    RunBenchmark_SingleConfig<FPType, 6, 4>();
+    RunBenchmark_SingleConfig<FPType, 8, 4>();
   }
 }
 
