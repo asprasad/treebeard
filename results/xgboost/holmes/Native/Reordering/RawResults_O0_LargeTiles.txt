@@ -1,0 +1,216 @@
+Type	double	Batch	1 	Tile	1
+	abalone	110866
+	airline	37417
+	airline-ohe	150596
+	bosch	40932
+	epsilon	44685
+	higgs	38975
+	year_prediction_msd	35993
+Type	double	Batch	2 	Tile	1
+	abalone	88615
+	airline	22054
+	airline-ohe	129066
+	bosch	26656
+	epsilon	29872
+	higgs	23554
+	year_prediction_msd	20648
+Type	double	Batch	4 	Tile	1
+	abalone	77987
+	airline	14016
+	airline-ohe	118186
+	bosch	18839
+	epsilon	21768
+	higgs	15431
+	year_prediction_msd	13017
+Type	double	Batch	1 	Tile	2
+	abalone	151809
+	airline	36571
+	airline-ohe	175603
+	bosch	43065
+	epsilon	52810
+	higgs	46386
+	year_prediction_msd	38949
+Type	double	Batch	2 	Tile	2
+	abalone	132678
+	airline	20912
+	airline-ohe	153193
+	bosch	27806
+	epsilon	37609
+	higgs	31353
+	year_prediction_msd	24146
+Type	double	Batch	4 	Tile	2
+	abalone	120948
+	airline	13058
+	airline-ohe	140711
+	bosch	20102
+	epsilon	29684
+	higgs	23454
+	year_prediction_msd	16172
+Type	double	Batch	1 	Tile	3
+	abalone	116441
+	airline	38746
+	airline-ohe	174157
+	bosch	41234
+	epsilon	44979
+	higgs	39836
+	year_prediction_msd	37251
+Type	double	Batch	2 	Tile	3
+	abalone	94168
+	airline	23206
+	airline-ohe	153045
+	bosch	26003
+	epsilon	29678
+	higgs	24626
+	year_prediction_msd	22232
+Type	double	Batch	4 	Tile	3
+	abalone	82080
+	airline	15233
+	airline-ohe	140532
+	bosch	18507
+	epsilon	22634
+	higgs	16971
+	year_prediction_msd	14219
+Type	double	Batch	1 	Tile	4
+	abalone	107303
+	airline	34848
+	airline-ohe	129206
+	bosch	38150
+	epsilon	43486
+	higgs	39438
+	year_prediction_msd	35679
+Type	double	Batch	2 	Tile	4
+	abalone	87040
+	airline	18954
+	airline-ohe	108164
+	bosch	23485
+	epsilon	28419
+	higgs	24071
+	year_prediction_msd	20738
+Type	double	Batch	4 	Tile	4
+	abalone	75667
+	airline	11455
+	airline-ohe	96993
+	bosch	15886
+	epsilon	20756
+	higgs	16733
+	year_prediction_msd	12596
+Type	float	Batch	1 	Tile	1
+	abalone	94153
+	airline	36878
+	airline-ohe	130130
+	bosch	39594
+	epsilon	40470
+	higgs	37296
+	year_prediction_msd	35516
+Type	float	Batch	2 	Tile	1
+	abalone	73866
+	airline	20916
+	airline-ohe	109570
+	bosch	24328
+	epsilon	25290
+	higgs	22043
+	year_prediction_msd	19859
+Type	float	Batch	4 	Tile	1
+	abalone	62718
+	airline	12930
+	airline-ohe	98819
+	bosch	16825
+	epsilon	17391
+	higgs	14026
+	year_prediction_msd	12165
+Type	float	Batch	1 	Tile	2
+	abalone	162812
+	airline	37150
+	airline-ohe	181788
+	bosch	42792
+	epsilon	51004
+	higgs	47706
+	year_prediction_msd	40780
+Type	float	Batch	2 	Tile	2
+	abalone	141849
+	airline	21679
+	airline-ohe	160791
+	bosch	27374
+	epsilon	36247
+	higgs	32494
+	year_prediction_msd	25219
+Type	float	Batch	4 	Tile	2
+	abalone	130551
+	airline	13739
+	airline-ohe	149876
+	bosch	19822
+	epsilon	28933
+	higgs	24806
+	year_prediction_msd	17592
+Type	float	Batch	1 	Tile	3
+	abalone	123654
+	airline	40612
+	airline-ohe	177067
+	bosch	40822
+	epsilon	44396
+	higgs	41173
+	year_prediction_msd	38220
+Type	float	Batch	2 	Tile	3
+	abalone	102493
+	airline	24533
+	airline-ohe	154664
+	bosch	26007
+	epsilon	28821
+	higgs	25857
+	year_prediction_msd	22737
+Type	float	Batch	4 	Tile	3
+	abalone	91220
+	airline	16526
+	airline-ohe	143761
+	bosch	18393
+	epsilon	21444
+	higgs	18062
+	year_prediction_msd	15251
+Type	float	Batch	1 	Tile	4
+	abalone	104230
+	airline	34117
+	airline-ohe	125606
+	bosch	37758
+	epsilon	40175
+	higgs	38769
+	year_prediction_msd	36051
+Type	float	Batch	2 	Tile	4
+	abalone	84442
+	airline	18588
+	airline-ohe	103599
+	bosch	22436
+	epsilon	26001
+	higgs	23330
+	year_prediction_msd	20219
+Type	float	Batch	4 	Tile	4
+	abalone	73055
+	airline	11098
+	airline-ohe	91171
+	bosch	15004
+	epsilon	17973
+	higgs	15862
+	year_prediction_msd	12841
+Type	float	Batch	4 	Tile	5
+	abalone	81740
+	airline	12005
+	airline-ohe	104758
+	bosch	14922
+	epsilon	21027
+	higgs	17881
+	year_prediction_msd	12836
+Type	float	Batch	4 	Tile	6
+	abalone	72377
+	airline	11912
+	airline-ohe	104287
+	bosch	14290
+	epsilon	17931
+	higgs	15801
+	year_prediction_msd	12083
+Type	float	Batch	4 	Tile	8
+	abalone	48343
+	airline	10698
+	airline-ohe	96451
+	bosch	13487
+	epsilon	16800
+	higgs	14359
+	year_prediction_msd	11349

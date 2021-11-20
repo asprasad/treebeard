@@ -1,8 +1,8 @@
 import os
 
-filename = '/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/results/xgboost/holmes/Native/BitcastOpt/RawResults_O0_2.txt'
-doubleCSV = '/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/results/xgboost/holmes/Native/BitcastOpt/DoubleResults_O0_2.csv'
-floatCSV = '/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/results/xgboost/holmes/Native/BitcastOpt/FloatResults_O0_2.csv'
+filename = '/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/results/xgboost/holmes/Native/Reordering/RawResults_O0_LargeTiles.txt'
+doubleCSV = '/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/results/xgboost/holmes/Native/Reordering/DoubleResults_O0_LargeTiles.csv'
+floatCSV = '/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/results/xgboost/holmes/Native/Reordering/FloatResults_O0_LargeTiles.csv'
 
 results = dict()
 results["double"] = dict()

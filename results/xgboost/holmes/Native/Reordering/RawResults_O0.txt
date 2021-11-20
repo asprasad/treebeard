@@ -1,0 +1,192 @@
+Type	double	Batch	1 	Tile	1
+	abalone	108526
+	airline	36432
+	airline-ohe	148794
+	bosch	40449
+	epsilon	43787
+	higgs	37322
+	year_prediction_msd	34927
+Type	double	Batch	2 	Tile	1
+	abalone	88362
+	airline	21372
+	airline-ohe	128737
+	bosch	26048
+	epsilon	28694
+	higgs	22894
+	year_prediction_msd	20282
+Type	double	Batch	4 	Tile	1
+	abalone	78126
+	airline	13761
+	airline-ohe	117470
+	bosch	18176
+	epsilon	21254
+	higgs	14975
+	year_prediction_msd	12834
+Type	double	Batch	1 	Tile	2
+	abalone	151965
+	airline	35484
+	airline-ohe	174916
+	bosch	41866
+	epsilon	52701
+	higgs	46198
+	year_prediction_msd	38657
+Type	double	Batch	2 	Tile	2
+	abalone	130824
+	airline	20039
+	airline-ohe	153648
+	bosch	27365
+	epsilon	37370
+	higgs	31116
+	year_prediction_msd	23605
+Type	double	Batch	4 	Tile	2
+	abalone	120651
+	airline	12640
+	airline-ohe	141709
+	bosch	20001
+	epsilon	29544
+	higgs	23299
+	year_prediction_msd	15945
+Type	double	Batch	1 	Tile	3
+	abalone	114224
+	airline	37678
+	airline-ohe	173727
+	bosch	40388
+	epsilon	44205
+	higgs	38534
+	year_prediction_msd	36270
+Type	double	Batch	2 	Tile	3
+	abalone	93465
+	airline	22532
+	airline-ohe	152012
+	bosch	25690
+	epsilon	28841
+	higgs	23994
+	year_prediction_msd	21161
+Type	double	Batch	4 	Tile	3
+	abalone	81820
+	airline	15248
+	airline-ohe	140399
+	bosch	18251
+	epsilon	21970
+	higgs	16703
+	year_prediction_msd	13719
+Type	double	Batch	1 	Tile	4
+	abalone	106286
+	airline	33148
+	airline-ohe	128254
+	bosch	37310
+	epsilon	42600
+	higgs	37783
+	year_prediction_msd	34983
+Type	double	Batch	2 	Tile	4
+	abalone	86691
+	airline	18307
+	airline-ohe	107829
+	bosch	22785
+	epsilon	27633
+	higgs	23237
+	year_prediction_msd	19762
+Type	double	Batch	4 	Tile	4
+	abalone	75548
+	airline	10940
+	airline-ohe	96304
+	bosch	15726
+	epsilon	20425
+	higgs	16165
+	year_prediction_msd	12349
+Type	float	Batch	1 	Tile	1
+	abalone	92946
+	airline	36177
+	airline-ohe	129806
+	bosch	39146
+	epsilon	40270
+	higgs	36701
+	year_prediction_msd	34706
+Type	float	Batch	2 	Tile	1
+	abalone	73925
+	airline	20607
+	airline-ohe	109412
+	bosch	24295
+	epsilon	25112
+	higgs	21747
+	year_prediction_msd	19708
+Type	float	Batch	4 	Tile	1
+	abalone	63136
+	airline	12890
+	airline-ohe	98703
+	bosch	16541
+	epsilon	17295
+	higgs	13851
+	year_prediction_msd	12147
+Type	float	Batch	1 	Tile	2
+	abalone	162463
+	airline	36734
+	airline-ohe	181546
+	bosch	42737
+	epsilon	51325
+	higgs	47640
+	year_prediction_msd	40158
+Type	float	Batch	2 	Tile	2
+	abalone	142456
+	airline	21302
+	airline-ohe	161151
+	bosch	27385
+	epsilon	36400
+	higgs	32323
+	year_prediction_msd	25397
+Type	float	Batch	4 	Tile	2
+	abalone	131115
+	airline	13755
+	airline-ohe	149775
+	bosch	19920
+	epsilon	28733
+	higgs	24585
+	year_prediction_msd	17573
+Type	float	Batch	1 	Tile	3
+	abalone	122824
+	airline	39805
+	airline-ohe	176083
+	bosch	40585
+	epsilon	43230
+	higgs	40419
+	year_prediction_msd	37119
+Type	float	Batch	2 	Tile	3
+	abalone	102630
+	airline	24181
+	airline-ohe	154746
+	bosch	25915
+	epsilon	28317
+	higgs	25227
+	year_prediction_msd	22397
+Type	float	Batch	4 	Tile	3
+	abalone	91267
+	airline	16227
+	airline-ohe	143361
+	bosch	18067
+	epsilon	20637
+	higgs	17622
+	year_prediction_msd	14682
+Type	float	Batch	1 	Tile	4
+	abalone	104307
+	airline	33443
+	airline-ohe	125709
+	bosch	36903
+	epsilon	40082
+	higgs	38050
+	year_prediction_msd	35156
+Type	float	Batch	2 	Tile	4
+	abalone	84562
+	airline	18243
+	airline-ohe	104310
+	bosch	22483
+	epsilon	25253
+	higgs	23037
+	year_prediction_msd	20140
+Type	float	Batch	4 	Tile	4
+	abalone	73297
+	airline	10882
+	airline-ohe	92894
+	bosch	14941
+	epsilon	17809
+	higgs	15563
+	year_prediction_msd	12482
