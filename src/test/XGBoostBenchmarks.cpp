@@ -18,7 +18,7 @@
 #include "mlir/Dialect/SCF/SCF.h"
 #include "llvm/ADT/STLExtras.h"
 
-#include "xgboostparser.h"
+#include "CompileUtils.h"
 #include "ExecutionHelpers.h"
 #include "TreeTilingDescriptor.h"
 #include "TreeTilingUtils.h"
@@ -44,27 +44,12 @@ constexpr int32_t NUM_RUNS = 3;
 template<typename FloatType>
 int64_t Test_CodeGenForJSON_VariableBatchSize(int64_t batchSize, const std::string& modelJsonPath, int32_t tileSize) {
   mlir::MLIRContext context;
-  context.getOrLoadDialect<mlir::decisionforest::DecisionForestDialect>();
-  context.getOrLoadDialect<mlir::StandardOpsDialect>();
-  context.getOrLoadDialect<mlir::scf::SCFDialect>();
-  context.getOrLoadDialect<mlir::memref::MemRefDialect>();
-  context.getOrLoadDialect<mlir::vector::VectorDialect>();
-  context.getOrLoadDialect<mlir::math::MathDialect>();
 
-  TestCSVReader csvReader(modelJsonPath + ".csv");
-  TreeBeard::XGBoostJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType> xgBoostParser(context, modelJsonPath, batchSize);
-  xgBoostParser.Parse();
-  auto module = xgBoostParser.GetEvaluationFunction();
-  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
-  mlir::decisionforest::DoUniformTiling(context, module, tileSize);
-  mlir::decisionforest::LowerEnsembleToMemrefs(context, module);
-  // module->dump();
-  mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
-  mlir::decisionforest::LowerToLLVM(context, module);
+  TreeBeard::InitializeMLIRContext(context);
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, FloatType, int32_t, int32_t, FloatType>(context, modelJsonPath, batchSize, tileSize);
   decisionforest::InferenceRunner inferenceRunner(module, tileSize, sizeof(FloatType)*8, sizeof(int32_t)*8);
   
-  // inferenceRunner.PrintLengthsArray();
-  // inferenceRunner.PrintOffsetsArray();
+  TestCSVReader csvReader(modelJsonPath + ".csv");
   std::vector<std::vector<FloatType>> inputData;
   for (size_t i=batchSize  ; i<csvReader.NumberOfRows()-1 ; i += batchSize) {
     std::vector<FloatType> batch, preds;
@@ -76,6 +61,10 @@ int64_t Test_CodeGenForJSON_VariableBatchSize(int64_t batchSize, const std::stri
     }
     inputData.push_back(batch);
   }
+  // char ch;
+  // std::cout << "Attach profiler and press any key...";
+  // std::cin >> ch;
+
   size_t rowSize = csvReader.GetRow(0).size() - 1; // The last entry is the xgboost prediction
   std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
   for (int32_t trial=0 ; trial<NUM_RUNS ; ++trial) {
@@ -86,6 +75,10 @@ int64_t Test_CodeGenForJSON_VariableBatchSize(int64_t batchSize, const std::stri
     }
   }
   std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+
+  // std::cout << "Detach profiler and press any key...";
+  // std::cin >> ch;
+
   return std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
 }
 

@@ -324,6 +324,21 @@ int dumpLLVMIR(mlir::ModuleOp module, bool dumpAsm) {
   return 0;
 }
 
+int dumpLLVMIRToFile(mlir::ModuleOp module, const std::string& filename) {
+  mlir::registerLLVMDialectTranslation(*module->getContext());
+
+  // Convert the module to LLVM IR in a new LLVM IR Context
+  llvm::LLVMContext llvmContext;
+  auto llvmModule = mlir::translateModuleToLLVMIR(module, llvmContext);
+  if (!llvmModule) {
+    llvm::errs() << "Failed to emit LLVM IR\n";
+    return -1;
+  }
+   std::error_code ec;
+  llvm::raw_fd_ostream filestream(filename, ec);
+  filestream << *llvmModule;
+  return 0;
+}
 
 // The routine below lowers tensors to memrefs. We don't need it currently
 // as we're not using tensors. Commenting it out so we can remove some MLIR 

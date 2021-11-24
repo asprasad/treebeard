@@ -2,7 +2,8 @@
 #include <unistd.h>
 #include <libgen.h>
 #include <climits>
-
+#include <dlfcn.h>
+#include <set>
 #include "ExecutionHelpers.h"
 #include "Dialect.h"
 
@@ -118,7 +119,7 @@ int32_t InferenceRunner::InitializeOffsetsArray() {
   }
   // std::cout << "Offset memref length : " << offsetMemref.lengths[0] << std::endl;
 
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(offsetMemref.alignedPtr, m_tileSize, m_thresholdSize, m_featureIndexSize); 
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(offsetMemref.alignedPtr, m_tileSize, m_thresholdSize, m_featureIndexSize);
   return 0;
 }
 
@@ -234,6 +235,107 @@ int32_t InferenceRunner::InitializeLUT() {
     llvm::errs() << "JIT invocation failed\n";
     return -1;
   }
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLookUpTable(lutMemref.alignedPtr, m_tileSize, 8); 
+  return 0;
+}
+
+SharedObjectInferenceRunner::SharedObjectInferenceRunner(const std::string& soPath, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize)
+  : m_tileSize(tileSize), m_thresholdSize(thresholdSize), m_featureIndexSize(featureIndexSize)
+{
+  m_so = dlopen(soPath.c_str(), RTLD_NOW);
+  InitializeLengthsArray();
+  InitializeOffsetsArray();
+  InitializeModelArray();
+  assert(tileSize > 0);
+  if (tileSize != 1)
+    InitializeLUT();
+  m_inferenceFuncPtr = dlsym(m_so, "Prediction_Function");
+}
+
+SharedObjectInferenceRunner::~SharedObjectInferenceRunner() {
+  dlclose(m_so);
+}
+
+int32_t SharedObjectInferenceRunner::InitializeLengthsArray() {
+  typedef LengthMemrefType (*GetLengthFunc_t)();
+  auto getLengthPtr = reinterpret_cast<GetLengthFunc_t>(dlsym(m_so, "Get_lengths"));
+  LengthMemrefType lengthMemref = getLengthPtr();
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthMemref.alignedPtr, m_tileSize, m_thresholdSize, m_featureIndexSize); 
+  return 0;
+}
+
+int32_t SharedObjectInferenceRunner::InitializeOffsetsArray() {
+  typedef OffsetMemrefType (*GetOffsetsFunc_t)();
+  auto getOffsetPtr = reinterpret_cast<GetOffsetsFunc_t>(dlsym(m_so, "Get_offsets"));
+  auto offsetMemref = getOffsetPtr();
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(offsetMemref.alignedPtr, m_tileSize, m_thresholdSize, m_featureIndexSize);
+  return 0;
+}
+
+template<typename ThresholdType, typename FeatureIndexType>
+int32_t SharedObjectInferenceRunner::CallInitMethod() {
+  std::vector<ThresholdType> thresholds;
+  std::vector<FeatureIndexType> featureIndices;
+  std::vector<int32_t> tileShapeIDs;
+  mlir::decisionforest::ForestJSONReader::GetInstance().GetModelValues(m_tileSize, m_thresholdSize, m_featureIndexSize, thresholds, featureIndices, tileShapeIDs);
+
+  std::set<int32_t> tileShapes(tileShapeIDs.begin(), tileShapeIDs.end());
+  std::cout << "Number of unique tile shapes : " << tileShapes.size() << std::endl;
+
+  typedef int32_t (*InitModelPtr_t)(ThresholdType*, ThresholdType*, int64_t, int64_t, int64_t, FeatureIndexType*, FeatureIndexType*, int64_t, int64_t, int64_t,
+                                    int32_t*, int32_t*, int64_t, int64_t, int64_t);
+  auto initModelPtr = reinterpret_cast<InitModelPtr_t>(dlsym(m_so, "Init_model"));
+
+  Memref<ThresholdType, 1> thresholdsMemref{thresholds.data(), thresholds.data(), 0, {(int64_t)thresholds.size()}, 1};
+  Memref<FeatureIndexType, 1> featureIndexMemref{featureIndices.data(), featureIndices.data(), 0, {(int64_t)featureIndices.size()}, 1};
+  Memref<int32_t, 1> tileShapeIDMemref{tileShapeIDs.data(), tileShapeIDs.data(), 0, {(int64_t)tileShapeIDs.size()}, 1};
+  initModelPtr(thresholdsMemref.bufferPtr, thresholdsMemref.alignedPtr, thresholdsMemref.offset, thresholdsMemref.lengths[0], thresholdsMemref.strides[0],
+               featureIndexMemref.bufferPtr, featureIndexMemref.alignedPtr, featureIndexMemref.offset, featureIndexMemref.lengths[0], featureIndexMemref.strides[0],
+               tileShapeIDMemref.bufferPtr, tileShapeIDMemref.alignedPtr, tileShapeIDMemref.offset, tileShapeIDMemref.lengths[0], tileShapeIDMemref.strides[0]);
+  return 0;
+}
+
+int32_t SharedObjectInferenceRunner::InitializeModelArray() {
+  if (m_thresholdSize == 64) {
+    if (m_featureIndexSize == 32) {
+      return CallInitMethod<double, int32_t>();
+    }
+    else if (m_featureIndexSize == 16) {
+      return CallInitMethod<double, int16_t>();
+    }
+    else if (m_featureIndexSize == 8) {
+      return CallInitMethod<double, int8_t>();
+    }
+    else {
+      assert (false);
+    }
+  }
+  else if (m_thresholdSize == 32) {
+    if (m_featureIndexSize == 32) {
+      return CallInitMethod<float, int32_t>();
+    }
+    else if (m_featureIndexSize == 16) {
+      return CallInitMethod<float, int16_t>();
+    }
+    else if (m_featureIndexSize == 8) {
+      return CallInitMethod<float, int8_t>();
+    }
+    else {
+      assert (false);
+    }
+  }
+  else {
+    assert (false);
+  }
+  return 0;
+}
+
+int32_t SharedObjectInferenceRunner::InitializeLUT() {
+  using LUTMemrefType = Memref<int8_t, 2>;
+  typedef LUTMemrefType (*GetLUTFunc_t)();
+  
+  auto getLUTPtr = reinterpret_cast<GetLUTFunc_t>(dlsym(m_so, "Get_lookupTable"));
+  LUTMemrefType lutMemref = getLUTPtr();
   mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLookUpTable(lutMemref.alignedPtr, m_tileSize, 8); 
   return 0;
 }

@@ -2,4 +2,5 @@ target_sources(tree-heavy
 PRIVATE 
 TreeTilingDescriptor.cpp
 TreeTilingUtils.cpp
-RandomTreeGenerator.cpp)
+RandomTreeGenerator.cpp
+CompileUtils.cpp)
