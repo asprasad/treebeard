@@ -300,6 +300,9 @@ void dumpAssembly(const llvm::Module* llvmModule) {
 }
 
 int dumpLLVMIR(mlir::ModuleOp module, bool dumpAsm) {
+  // Init LLVM targets
+  llvm::InitializeNativeTarget();
+  llvm::InitializeNativeTargetAsmPrinter();
   mlir::registerLLVMDialectTranslation(*module->getContext());
 
   // Convert the module to LLVM IR in a new LLVM IR Context
@@ -309,10 +312,6 @@ int dumpLLVMIR(mlir::ModuleOp module, bool dumpAsm) {
     llvm::errs() << "Failed to emit LLVM IR\n";
     return -1;
   }
-
-  // Init LLVM targets
-  llvm::InitializeNativeTarget();
-  llvm::InitializeNativeTargetAsmPrinter();
 
   mlir::ExecutionEngine::setupTargetTriple(llvmModule.get());
   
@@ -325,6 +324,9 @@ int dumpLLVMIR(mlir::ModuleOp module, bool dumpAsm) {
 }
 
 int dumpLLVMIRToFile(mlir::ModuleOp module, const std::string& filename) {
+  // Init LLVM targets
+  llvm::InitializeNativeTarget();
+  llvm::InitializeNativeTargetAsmPrinter();
   mlir::registerLLVMDialectTranslation(*module->getContext());
 
   // Convert the module to LLVM IR in a new LLVM IR Context
@@ -334,7 +336,8 @@ int dumpLLVMIRToFile(mlir::ModuleOp module, const std::string& filename) {
     llvm::errs() << "Failed to emit LLVM IR\n";
     return -1;
   }
-   std::error_code ec;
+  ExecutionEngine::setupTargetTriple(llvmModule.get());
+  std::error_code ec;
   llvm::raw_fd_ostream filestream(filename, ec);
   filestream << *llvmModule;
   return 0;

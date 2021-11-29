@@ -17,7 +17,9 @@ mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& cont
   mlir::decisionforest::DoUniformTiling(context, module, tileSize);
   mlir::decisionforest::LowerEnsembleToMemrefs(context, module);
   mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
+  // module->dump();
   mlir::decisionforest::LowerToLLVM(context, module);
+  // mlir::decisionforest::dumpLLVMIR(module, false);
   return module;
 }
 
