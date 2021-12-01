@@ -6,6 +6,7 @@
 #include <set>
 #include "ExecutionHelpers.h"
 #include "Dialect.h"
+#include "Logger.h"
 
 namespace 
 {
@@ -167,7 +168,9 @@ int32_t InferenceRunner::CallInitMethod() {
     llvm::errs() << "JIT invocation failed\n";
     return -1;
   }
-  assert(returnValue == 0);
+  if (TreeBeard::Logging::loggingOptions.logGenCodeStats)
+    TreeBeard::Logging::Log("Model memref size : " + std::to_string(returnValue));
+  // assert(returnValue == 0);
   return 0;
 }
 

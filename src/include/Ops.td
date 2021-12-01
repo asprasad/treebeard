@@ -254,6 +254,13 @@ def NodeToIndexOp : DecisionForest_Op<"nodeToIndex", [NoSideEffect]> {
   let results = (outs Index);
 }
 
+def GetModelMemrefSizeOp : DecisionForest_Op<"getModelMemrefSizeOp", [NoSideEffect]> {
+  let summary = "Gets the size (in bytes) of the argument model memref.";
+  let description = "Gets the size (in bytes) of the argument model memref. Takes into account the actual size of the tile on the target to which we are compiling.";
+  let arguments = (ins TiledNumericalNodeMemRef:$modelMemref, Index:$length);
+
+  let results = (outs I32);
+}
 // class NodeConstantOp<string mnemonic, list<OpTrait> traits = []> : 
 //   DecisionForest_Op<mnemonic, traits> {
 //     string myStr = "";

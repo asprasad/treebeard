@@ -43,11 +43,12 @@ constexpr int32_t NUM_RUNS = 3;
 
 template<typename FloatType>
 int64_t Test_CodeGenForJSON_VariableBatchSize(int64_t batchSize, const std::string& modelJsonPath, int32_t tileSize) {
+  using FeatureIndexType = int32_t;
   mlir::MLIRContext context;
 
   TreeBeard::InitializeMLIRContext(context);
-  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, FloatType, int32_t, int32_t, FloatType>(context, modelJsonPath, batchSize, tileSize);
-  decisionforest::InferenceRunner inferenceRunner(module, tileSize, sizeof(FloatType)*8, sizeof(int32_t)*8);
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, FloatType, FeatureIndexType, int32_t, FloatType>(context, modelJsonPath, batchSize, tileSize);
+  decisionforest::InferenceRunner inferenceRunner(module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
   
   TestCSVReader csvReader(modelJsonPath + ".csv");
   std::vector<std::vector<FloatType>> inputData;

@@ -22,9 +22,33 @@
 #include "CompileUtils.h"
 #include "ExecutionHelpers.h"
 #include "TestUtilsCommon.h"
+#include "Logger.h"
 
 namespace TreeBeard
 {
+
+namespace Logging
+{
+
+LoggingOptions::LoggingOptions() 
+  : logGenCodeStats(false), logTreeStats(false)
+{ }
+
+bool LoggingOptions::ShouldEnableLogging() {
+  return logGenCodeStats || logTreeStats;
+}
+
+LoggingOptions loggingOptions;
+
+bool InitLoggingOptions() {
+  loggingOptions.logGenCodeStats = false;
+  loggingOptions.logTreeStats = false;
+  return loggingOptions.ShouldEnableLogging();
+}
+
+bool loggingEnabled = InitLoggingOptions();
+
+} // Logging
 
 template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
 mlir::ModuleOp SpecializeInputElementType(mlir::MLIRContext& context, const std::string&modelJsonPath, int32_t inputElementTypeWidth, int32_t batchSize, int32_t tileSize) {

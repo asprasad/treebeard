@@ -193,6 +193,45 @@ struct InitTileOpLowering : public ConversionPattern {
   }
 };
 
+struct GetModelMemrefSizeOpLowering : public ConversionPattern {
+  GetModelMemrefSizeOpLowering(LLVMTypeConverter& typeConverter) 
+  : ConversionPattern(typeConverter, mlir::decisionforest::GetModelMemrefSizeOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    const int32_t kTreeMemrefOperandNum = 0;
+    const int32_t kLengthOperandNum = 1;
+    auto location = op->getLoc();
+    
+    auto memrefType = operands[kTreeMemrefOperandNum].getType();
+    auto memrefStructType = memrefType.cast<LLVM::LLVMStructType>();
+    auto alignedPtrType = memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct].cast<LLVM::LLVMPointerType>();
+    
+    auto indexVal = operands[kLengthOperandNum];
+    auto indexType = indexVal.getType();
+    assert (indexType.isa<IntegerType>());
+    
+    // Extract the memref's aligned pointer
+    auto extractMemrefBufferPointer = rewriter.create<LLVM::ExtractValueOp>(location, alignedPtrType, operands[kTreeMemrefOperandNum],
+                                                                            rewriter.getI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
+
+    auto extractMemrefOffset = rewriter.create<LLVM::ExtractValueOp>(location, indexType, operands[kTreeMemrefOperandNum],
+                                                                    rewriter.getI64ArrayAttr(kOffsetIndexInMemrefStruct));
+
+    auto actualIndex = rewriter.create<LLVM::AddOp>(location, indexType, static_cast<Value>(extractMemrefOffset), static_cast<Value>(indexVal));
+
+    auto endPtr = rewriter.create<LLVM::GEPOp>(location, alignedPtrType, static_cast<Value>(extractMemrefBufferPointer), 
+                                               ValueRange({static_cast<Value>(actualIndex)}));
+
+    auto buffPtrInt = rewriter.create<LLVM::PtrToIntOp>(location, indexType, extractMemrefBufferPointer);
+    auto endPtrInt = rewriter.create<LLVM::PtrToIntOp>(location, indexType, endPtr);
+    auto sizeInBytes = rewriter.create<LLVM::SubOp>(location, indexType, endPtrInt, buffPtrInt);
+    auto sizeInBytesI32 = rewriter.create<LLVM::TruncOp>(location, rewriter.getI32Type(), sizeInBytes);
+    rewriter.replaceOp(op, static_cast<Value>(sizeInBytesI32));
+    return mlir::success();
+  }
+};
+
 struct DecisionForestToLLVMLoweringPass : public PassWrapper<DecisionForestToLLVMLoweringPass, OperationPass<ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect, memref::MemRefDialect, tensor::TensorDialect, StandardOpsDialect>();
@@ -234,7 +273,8 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
   patterns.add<LoadTileFeatureIndicesOpLowering,
                LoadTileThresholdOpLowering,
                LoadTileShapeOpLowering,
-               InitTileOpLowering>(typeConverter);
+               InitTileOpLowering,
+               GetModelMemrefSizeOpLowering>(typeConverter);
   decisionforest::populateDebugOpLoweringPatterns(patterns, typeConverter);
 
   auto module = getOperation();

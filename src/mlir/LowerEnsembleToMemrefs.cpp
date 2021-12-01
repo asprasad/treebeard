@@ -293,8 +293,9 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
       rewriter.create<decisionforest::InitTileOp>(location, getGlobalMemref, tileIndex, thresholdVal, indexVal, tileShapeID);
     }
     rewriter.setInsertionPointAfter(forLoop);
-    auto retVal = rewriter.create<ConstantIntOp>(location, 0, rewriter.getI32Type());
-    rewriter.create<mlir::ReturnOp>(location, static_cast<Value>(retVal));
+    
+    auto modelSize = rewriter.create<decisionforest::GetModelMemrefSizeOp>(location, rewriter.getI32Type(), getGlobalMemref, lenIndexConst);
+    rewriter.create<mlir::ReturnOp>(location, static_cast<Value>(modelSize));
     module.push_back(initModelMemrefFunc);
   }
 

@@ -88,6 +88,13 @@ public:
     int32_t GetTreeDepth() {
         return GetTreeDepthHelper(0);
     }
+    int32_t NumLeaves() {
+        int numNodes = 0;
+        for (auto& node : m_nodes)
+            if (node.IsLeaf())
+                ++numNodes;
+        return numNodes;
+    }
     // The number of entries that would be needed if this tree is serialized 
     // into a dense array reprsentation
     int32_t GetDenseSerializationVectorLength() {
