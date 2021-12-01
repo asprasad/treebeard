@@ -51,6 +51,12 @@ CodeGen for tile size != 1
         - [Done] Number of tiles of a given size
         - [Done] Generate lookup tables for child tile indices given tile comparison outcomes
 
+Performance Tuning for Tiled Code
+    - Add XGBoost tests with different feature index types
+    - Add a "child" pointer to each tile (improve leaf duplication, empty space)
+    - Store leaves in a "different" array so leaf values don't have to be duplicated as full tiles
+    - 
+
 Pipeline container
 SIMD container
 

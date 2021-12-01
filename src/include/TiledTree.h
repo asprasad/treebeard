@@ -68,6 +68,7 @@ public:
     const DecisionTree<>::Node& GetNode(int32_t index);
     std::string GetTileShapeString();
     int32_t GetTileShapeID() { return m_tileShapeID; }
+    bool IsLeafTile() { return m_nodeIndices.size()==1 && GetNode(m_nodeIndices.at(0)).IsLeaf(); }
 };
 
 class TiledTreeNode;
@@ -93,6 +94,24 @@ public:
     std::vector<std::vector<int32_t>> ComputeTileLookUpTable();
     // Number of tile shapes with the given tile size
     static int32_t NumberOfTileShapes(int32_t tileSize);
+};
+
+struct TiledTreeStats {
+    int32_t tileSize;
+    int32_t originalTreeDepth;
+    int32_t tiledTreeDepth;
+    // The number of tiles if we store only one copy of duplicated leaves
+    int32_t numberOfUniqueTiles;
+    // The number of tiles assuming even duplicated leaves are distinct
+    int32_t numberOfTiles;
+    int32_t originalTreeNumNodes;
+    // This is the number of thresholds stored in the tiled tree including
+    // replicating each leaf
+    int32_t tiledTreeNumNodes;
+    // The number of nodes that are added to the original tree
+    int32_t numAddedNodes;
+    int32_t originalTreeNumberOfLeaves;
+    int32_t tiledTreeNumberOfLeafTiles;
 };
 
 class TiledTree {
@@ -129,7 +148,9 @@ class TiledTree {
                                size_t vecIndex, size_t nodeIndex, GetterType get, bool singleAttribute);
     
     int32_t GetTreeDepthHelper(int32_t tileIndex);
-
+    int32_t NumberOfLeafTilesHelper(int32_t tileIndex);
+    // The number of tiles required to store this tree if duplicated nodes are considered unique
+    int32_t NumberOfTiles();
 public:
     TiledTree(DecisionTree<>& owningTree);
     
@@ -159,6 +180,8 @@ public:
         assert (m_tiles[0].GetParent() == DecisionTree<>::INVALID_NODE_INDEX);
         return GetTreeDepthHelper(0);
     }
+    int32_t NumberOfLeafTiles();
+    TiledTreeStats GetTreeStats();
 };
 
 } // decisionforest

@@ -35,6 +35,7 @@ void LowerEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module);
 void ConvertNodeTypeToIndexType(mlir::MLIRContext& context, mlir::ModuleOp module);
 void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module);
 int dumpLLVMIR(mlir::ModuleOp module, bool dumpAsm = false);
+int dumpLLVMIRToFile(mlir::ModuleOp module, const std::string& filename);
 
 // Optimizing passes
 void DoUniformTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize);

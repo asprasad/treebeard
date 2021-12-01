@@ -5,6 +5,7 @@
 #include "TiledTree.h"
 #include "llvm/ADT/STLExtras.h"
 #include "Dialect.h"
+#include "Logger.h"
 
 namespace mlir
 {
@@ -358,6 +359,56 @@ int32_t ForestJSONReader::GetTotalNumberOfTiles() {
     return numTiles;
 }
 
+void LogTreeStats(const std::vector<TiledTreeStats>& tiledTreeStats) {
+    int32_t numDummyNodes=0, numEmptyTiles=0, numLeafNodesInTiledTree=0, numLeavesInOrigModel=0, numTiles=0, numUniqueTiles=0;
+    int32_t numNodesInOrigModel=0;
+    double_t averageDepth=0.0, avgOrigTreeDepth=0.0;
+    for (auto& treeStats : tiledTreeStats) {
+        // Total number of dummy nodes
+        numDummyNodes += treeStats.numAddedNodes;
+
+        // Extra nodes due to leaves being stored as tiles
+        numLeafNodesInTiledTree += treeStats.tiledTreeNumberOfLeafTiles;
+
+        numLeavesInOrigModel += treeStats.originalTreeNumberOfLeaves;
+
+        // Number of "empty tiles"
+        int32_t tiledTreeDepth = treeStats.tiledTreeDepth;
+        int32_t numChildrenPerTile = treeStats.tileSize + 1;
+        int32_t numberOfTiles = (std::pow(numChildrenPerTile, tiledTreeDepth) - 1)/(numChildrenPerTile - 1);
+
+        numEmptyTiles += numberOfTiles - treeStats.numberOfTiles;
+
+        numTiles += treeStats.numberOfTiles;
+        numUniqueTiles += treeStats.numberOfUniqueTiles;
+        averageDepth += treeStats.tiledTreeDepth;
+        avgOrigTreeDepth += treeStats.originalTreeDepth;
+        numNodesInOrigModel += treeStats.originalTreeNumNodes;
+    }
+    averageDepth /= tiledTreeStats.size();
+    avgOrigTreeDepth /= tiledTreeStats.size();
+
+    // TreeBeard::Logging::Log("Number of nodes in original model : " + std::to_string(numNodesInOrigModel));
+    // TreeBeard::Logging::Log("Number of leaves in original model : " + std::to_string(numLeavesInOrigModel));
+    // TreeBeard::Logging::Log("Number of inserted dummy nodes : " + std::to_string(numDummyNodes));
+    // TreeBeard::Logging::Log("Number of leaf tiles : " + std::to_string(numLeafNodesInTiledTree));
+    // TreeBeard::Logging::Log("Number of empty tiles : " + std::to_string(numEmptyTiles));
+    // TreeBeard::Logging::Log("Number of tiles (assuming duplicated nodes unique) : " + std::to_string(numTiles));
+    // TreeBeard::Logging::Log("Number of unique tiles : " + std::to_string(numUniqueTiles));
+    // TreeBeard::Logging::Log("Avg tiled tree depth : " + std::to_string(averageDepth));
+    // TreeBeard::Logging::Log("Avg original tree depth : " + std::to_string(avgOrigTreeDepth));
+    TreeBeard::Logging::Log(std::to_string(numNodesInOrigModel) + ", " + 
+                            std::to_string(numLeavesInOrigModel) + ", " +
+                            std::to_string(numDummyNodes)+ ", " +
+                            std::to_string(numLeafNodesInTiledTree)+ ", " +
+                            std::to_string(numEmptyTiles)+ ", " +
+                            std::to_string(numTiles)+ ", " +
+                            std::to_string(numUniqueTiles)+ ", " +
+                            std::to_string(averageDepth)+ ", " +
+                            std::to_string(avgOrigTreeDepth));
+
+}
+
 // Ultimately, this will write a JSON file. For now, we're just 
 // storing it in memory assuming the compiler and inference 
 // will run in the same process. 
@@ -366,6 +417,7 @@ void PersistDecisionForest(mlir::decisionforest::DecisionForest<>& forest, mlir:
 
     auto numTrees = forest.NumTrees();
     mlir::decisionforest::ForestJSONReader::GetInstance().SetNumberOfTrees(numTrees);
+    std::vector<TiledTreeStats> treeStats;
     for (size_t i=0; i<numTrees ; ++i) {
         auto treeType = forestType.getTreeType(0).cast<decisionforest::TreeType>();
         
@@ -394,7 +446,14 @@ void PersistDecisionForest(mlir::decisionforest::DecisionForest<>& forest, mlir:
             mlir::decisionforest::ForestJSONReader::GetInstance().AddSingleTree(i, numTiles, thresholds, featureIndices, tileShapeIDs, tileSize, 
                                                                                 thresholdType.getWidth(), featureIndexType.getWidth());
 
+            if (TreeBeard::Logging::loggingOptions.logTreeStats) {
+                auto tiledTreeStats=tiledTree.GetTreeStats();
+                treeStats.push_back(tiledTreeStats);
+            }
         }
+    }
+    if (TreeBeard::Logging::loggingOptions.logTreeStats) {
+        LogTreeStats(treeStats);
     }
 }
 
@@ -856,6 +915,50 @@ std::vector<int32_t> TiledTree::SerializeTileShapeIDs() {
     std::vector<int32_t> tileShapeIDs(numberOfTiles, -1);
     GetTileAttributeArray(tileShapeIDs, 0, 0, [&](TiledTreeNode& t, std::vector<int32_t>::iterator iter){ *iter=t.GetTileShapeID(); }, true /*singleAttribute*/ );
     return tileShapeIDs;
+}
+
+int32_t TiledTree::NumberOfLeafTilesHelper(int32_t tileIndex) {
+    if (m_tiles.at(tileIndex).IsLeafTile())
+        return 1;
+    auto& tile = m_tiles.at(tileIndex);
+    int32_t numLeafTiles = 0;
+    for (auto childIndex : tile.m_children) {
+        numLeafTiles += NumberOfLeafTilesHelper(childIndex);
+    }
+    return numLeafTiles;
+}
+
+int32_t TiledTree::NumberOfLeafTiles() {
+    if (m_tiles.size() == 0)
+        return 0;
+    assert(m_tiles.at(0).m_parent == DecisionTree<>::INVALID_NODE_INDEX);
+    int32_t numLeafTiles = NumberOfLeafTilesHelper(0);
+    return numLeafTiles;
+}
+
+int32_t TiledTree::NumberOfTiles() {
+    int32_t numTiles = 0;
+    for (auto& tile : m_tiles){
+        if (!tile.IsLeafTile())
+            ++numTiles;
+    }
+    numTiles += NumberOfLeafTiles();
+    return numTiles;
+}
+
+TiledTreeStats TiledTree::GetTreeStats() {
+    TiledTreeStats treeStats;
+    treeStats.tileSize = m_owningTree.TilingDescriptor().MaxTileSize();
+    treeStats.originalTreeDepth = m_owningTree.GetTreeDepth();
+    treeStats.originalTreeNumNodes = m_owningTree.GetNodes().size();
+    treeStats.tiledTreeDepth = GetTreeDepth();
+    treeStats.tiledTreeNumNodes = m_tiles.size() * m_owningTree.TilingDescriptor().MaxTileSize();
+    treeStats.numAddedNodes = m_modifiedTree.GetNodes().size() - m_owningTree.GetNodes().size();
+    treeStats.numberOfUniqueTiles = m_tiles.size();
+    treeStats.numberOfTiles = NumberOfTiles();
+    treeStats.originalTreeNumberOfLeaves = m_owningTree.NumLeaves();
+    treeStats.tiledTreeNumberOfLeafTiles = NumberOfLeafTiles();
+    return treeStats;
 }
 
 // -----------------------------------------------
