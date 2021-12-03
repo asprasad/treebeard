@@ -45,9 +45,9 @@ bool Test_LoadTileThresholdOp_DoubleInt32_TileSize1(TestArgs_t& args) {
   auto &entryBlock = *(func.addEntryBlock());
   builder.setInsertionPointToStart(&entryBlock);
 
-  auto lengthConstant = builder.create<ConstantIndexOp>(location, length); 
-  auto zeroConst = builder.create<ConstantIndexOp>(location, 0);
-  auto oneIndexConst = builder.create<ConstantIndexOp>(location, 1);
+  auto lengthConstant = builder.create<arith::ConstantIndexOp>(location, length); 
+  auto zeroConst = builder.create<arith::ConstantIndexOp>(location, 0);
+  auto oneIndexConst = builder.create<arith::ConstantIndexOp>(location, 1);
   auto batchLoop = builder.create<scf::ForOp>(location, zeroConst, lengthConstant, oneIndexConst/*, static_cast<Value>(memrefResult)*/);
 
   builder.setInsertionPointToStart(batchLoop.getBody());
@@ -60,7 +60,7 @@ bool Test_LoadTileThresholdOp_DoubleInt32_TileSize1(TestArgs_t& args) {
   builder.create<memref::StoreOp>(location, TypeRange({ }), static_cast<Value>(threshold), outputMemref, i);
 
   builder.setInsertionPointAfter(batchLoop);
-  auto retVal = builder.create<mlir::ConstantIntOp>(location, 0, builder.getI32Type());
+  auto retVal = builder.create<arith::ConstantIntOp>(location, 0, builder.getI32Type());
   builder.create<mlir::ReturnOp>(location, static_cast<Value>(retVal));
 
   module.push_back(func);
@@ -113,9 +113,9 @@ bool Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1(TestArgs_t& args) {
   auto &entryBlock = *(func.addEntryBlock());
   builder.setInsertionPointToStart(&entryBlock);
 
-  auto lengthConstant = builder.create<ConstantIndexOp>(location, length); 
-  auto zeroConst = builder.create<ConstantIndexOp>(location, 0);
-  auto oneIndexConst = builder.create<ConstantIndexOp>(location, 1);
+  auto lengthConstant = builder.create<arith::ConstantIndexOp>(location, length); 
+  auto zeroConst = builder.create<arith::ConstantIndexOp>(location, 0);
+  auto oneIndexConst = builder.create<arith::ConstantIndexOp>(location, 1);
   auto batchLoop = builder.create<scf::ForOp>(location, zeroConst, lengthConstant, oneIndexConst/*, static_cast<Value>(memrefResult)*/);
 
   builder.setInsertionPointToStart(batchLoop.getBody());
@@ -128,7 +128,7 @@ bool Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1(TestArgs_t& args) {
   builder.create<memref::StoreOp>(location, TypeRange({ }), static_cast<Value>(featureIndex), outputMemref, i);
 
   builder.setInsertionPointAfter(batchLoop);
-  auto retVal = builder.create<mlir::ConstantIntOp>(location, 0, builder.getI32Type());
+  auto retVal = builder.create<mlir::arith::ConstantIntOp>(location, 0, builder.getI32Type());
   builder.create<mlir::ReturnOp>(location, static_cast<Value>(retVal));
 
   module.push_back(func);
@@ -189,9 +189,9 @@ bool Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args) {
   auto memrefSubview = builder.create<memref::SubViewOp>(location, inputMemref, ArrayRef<OpFoldResult>(builder.getIndexAttr(offset)), ArrayRef<OpFoldResult>(builder.getIndexAttr(length-offset)),
                                                          ArrayRef<OpFoldResult>(builder.getIndexAttr(1)));
 
-  auto lengthConstant = builder.create<ConstantIndexOp>(location, length-offset); 
-  auto zeroConst = builder.create<ConstantIndexOp>(location, 0);
-  auto oneIndexConst = builder.create<ConstantIndexOp>(location, 1);
+  auto lengthConstant = builder.create<arith::ConstantIndexOp>(location, length-offset); 
+  auto zeroConst = builder.create<arith::ConstantIndexOp>(location, 0);
+  auto oneIndexConst = builder.create<arith::ConstantIndexOp>(location, 1);
   auto batchLoop = builder.create<scf::ForOp>(location, zeroConst, lengthConstant, oneIndexConst/*, static_cast<Value>(memrefResult)*/);
 
   builder.setInsertionPointToStart(batchLoop.getBody());
@@ -202,7 +202,7 @@ bool Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args) {
   builder.create<memref::StoreOp>(location, TypeRange({ }), static_cast<Value>(threshold), outputMemref, i);
 
   builder.setInsertionPointAfter(batchLoop);
-  auto retVal = builder.create<mlir::ConstantIntOp>(location, 0, builder.getI32Type());
+  auto retVal = builder.create<mlir::arith::ConstantIntOp>(location, 0, builder.getI32Type());
   builder.create<mlir::ReturnOp>(location, static_cast<Value>(retVal));
 
   module.push_back(func);
@@ -263,9 +263,9 @@ bool Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1(TestArgs_t& arg
   auto memrefSubview = builder.create<memref::SubViewOp>(location, inputMemref, ArrayRef<OpFoldResult>(builder.getIndexAttr(offset)), ArrayRef<OpFoldResult>(builder.getIndexAttr(length-offset)),
                                                          ArrayRef<OpFoldResult>(builder.getIndexAttr(1)));
 
-  auto lengthConstant = builder.create<ConstantIndexOp>(location, length-offset); 
-  auto zeroConst = builder.create<ConstantIndexOp>(location, 0);
-  auto oneIndexConst = builder.create<ConstantIndexOp>(location, 1);
+  auto lengthConstant = builder.create<arith::ConstantIndexOp>(location, length-offset); 
+  auto zeroConst = builder.create<arith::ConstantIndexOp>(location, 0);
+  auto oneIndexConst = builder.create<arith::ConstantIndexOp>(location, 1);
   auto batchLoop = builder.create<scf::ForOp>(location, zeroConst, lengthConstant, oneIndexConst/*, static_cast<Value>(memrefResult)*/);
 
   builder.setInsertionPointToStart(batchLoop.getBody());
@@ -276,7 +276,7 @@ bool Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1(TestArgs_t& arg
   builder.create<memref::StoreOp>(location, TypeRange({ }), static_cast<Value>(featureIndex), outputMemref, i);
 
   builder.setInsertionPointAfter(batchLoop);
-  auto retVal = builder.create<mlir::ConstantIntOp>(location, 0, builder.getI32Type());
+  auto retVal = builder.create<mlir::arith::ConstantIntOp>(location, 0, builder.getI32Type());
   builder.create<mlir::ReturnOp>(location, static_cast<Value>(retVal));
 
   module.push_back(func);
@@ -379,9 +379,9 @@ public:
     auto &entryBlock = *(func.addEntryBlock());
     builder.setInsertionPointToStart(&entryBlock);
 
-    auto lengthConstant = builder.create<ConstantIndexOp>(location, length); 
-    auto zeroConst = builder.create<ConstantIndexOp>(location, 0);
-    auto oneIndexConst = builder.create<ConstantIndexOp>(location, 1);
+    auto lengthConstant = builder.create<arith::ConstantIndexOp>(location, length); 
+    auto zeroConst = builder.create<arith::ConstantIndexOp>(location, 0);
+    auto oneIndexConst = builder.create<arith::ConstantIndexOp>(location, 1);
     auto batchLoop = builder.create<scf::ForOp>(location, zeroConst, lengthConstant, oneIndexConst/*, static_cast<Value>(memrefResult)*/);
 
     builder.setInsertionPointToStart(batchLoop.getBody());
@@ -401,19 +401,20 @@ public:
     auto tileShape = builder.create<decisionforest::LoadTileShapeOp>(location, builder.getI32Type(),
                                                                      static_cast<Value>(inputMemref), static_cast<Value>(i));
 
-    auto tileSizeConst = builder.create<ConstantIndexOp>(location, tileSize);
-    auto outputMemrefOffset = builder.create<mlir::MulIOp>(location, builder.getIndexType(), i, tileSizeConst);
+    auto tileSizeConst = builder.create<arith::ConstantIndexOp>(location, tileSize);
+    auto outputMemrefOffset = builder.create<mlir::arith::MulIOp>(location, builder.getIndexType(), i, tileSizeConst);
     for (int32_t j=0 ; j<tileSize ; ++j) {
-      auto tileIndex = builder.create<ConstantIndexOp>(location, j);
-      auto outputMemrefIndex = builder.create<AddIOp>(location, builder.getIndexType(), outputMemrefOffset, tileIndex);
-      auto element = builder.create<vector::ExtractElementOp>(location, threshold, (int64_t)j);
+      auto tileIndex = builder.create<arith::ConstantIndexOp>(location, j);
+      auto outputMemrefIndex = builder.create<arith::AddIOp>(location, builder.getIndexType(), outputMemrefOffset, tileIndex);
+      auto jConst = builder.create<arith::ConstantIntOp>(location, j, builder.getI32Type());
+      auto element = builder.create<vector::ExtractElementOp>(location, threshold, jConst);
       builder.create<memref::StoreOp>(location, static_cast<Value>(element), static_cast<Value>(outputMemref), static_cast<Value>(outputMemrefIndex));
-      auto indexElement = builder.create<vector::ExtractElementOp>(location, index, (int64_t)j);
+      auto indexElement = builder.create<vector::ExtractElementOp>(location, index, jConst);
       builder.create<memref::StoreOp>(location, static_cast<Value>(indexElement), static_cast<Value>(featureIndexMemref), static_cast<Value>(outputMemrefIndex));
     }
     builder.create<memref::StoreOp>(location, static_cast<Value>(tileShape), static_cast<Value>(tileShapeMemref), i);
     builder.setInsertionPointAfter(batchLoop);
-    auto retVal = builder.create<mlir::ConstantIntOp>(location, 0, builder.getI32Type());
+    auto retVal = builder.create<mlir::arith::ConstantIntOp>(location, 0, builder.getI32Type());
     builder.create<mlir::ReturnOp>(location, static_cast<Value>(retVal));
 
     this->m_module.push_back(func);

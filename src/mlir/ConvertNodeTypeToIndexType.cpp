@@ -51,7 +51,7 @@ struct NodeToIndexOpLowering : public ConversionPattern {
     if (nodeValue.getType().isa<mlir::IndexType>()) {
         auto indexValue = nodeValue;
         nodeToIndexOpToIndexValueMap[op] = indexValue;
-        rewriter.replaceOp(op, indexValue);
+        rewriter.replaceOp(op, operands[1]);
     }
     else {
         assert (false && "Expected node value to be replaced by an index value by now!");
@@ -96,8 +96,8 @@ struct IndexToNodeOpLowering : public ConversionPattern {
         rewriter.replaceOp(op, replacementValue); 
     }
     else {
-        indexToNodeOpToIndexValueMap[op] = indexValue;
-        rewriter.replaceOp(op, indexValue); 
+        // indexToNodeOpToIndexValueMap[op] = indexValue;
+        rewriter.replaceOp(op, operands[1]);
     }
     return mlir::success();
   }
@@ -150,12 +150,25 @@ struct ConvertNodeTypeToIndexTypePass : public PassWrapper<ConvertNodeTypeToInde
         for (auto result : op->getResults()) {
             if (result.getType().isa<decisionforest::NodeType>()) {
                 assert (llvm::dyn_cast<scf::WhileOp>(op) && "Expected op to be an scf::WhileOp");
-                // std::cout << "Calling setType : " << op->getName().getStringRef().str() << std::endl;
+                std::cout << "Calling setType : " << op->getName().getStringRef().str() << std::endl;
                 // TODO check that this is some op with non trivial control flow. 
                 // assert(op->getRegions().size() > 1);
                 // TODO Is there a way we can avoid calling setType here?
                 result.setType(builder.getIndexType());
             }
+        }
+        for (auto operand : op->getOperands()) {
+          auto definingOp = operand.getDefiningOp();
+          if (!definingOp) {
+            std::cout << "NULL defining op" << std::endl;
+            op->dump();
+            continue;
+          }
+
+          if (!llvm::dyn_cast<mlir::decisionforest::IndexToNodeOp>(definingOp) && operand.getType().isa<decisionforest::NodeType>()) {
+            op->dump();
+            assert(false);
+          }
         }
     }
   }
@@ -170,7 +183,7 @@ struct ConvertNodeTypeToIndexTypePass : public PassWrapper<ConvertNodeTypeToInde
     ConversionTarget target(getContext());
 
     target.addLegalDialect<AffineDialect, memref::MemRefDialect, tensor::TensorDialect, StandardOpsDialect, 
-                           scf::SCFDialect, decisionforest::DecisionForestDialect, math::MathDialect>();
+                           scf::SCFDialect, decisionforest::DecisionForestDialect, math::MathDialect, arith::ArithmeticDialect>();
 
     target.addIllegalOp<decisionforest::EnsembleConstantOp,
                         decisionforest::GetTreeFromEnsembleOp,

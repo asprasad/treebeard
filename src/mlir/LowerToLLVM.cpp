@@ -41,7 +41,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm-c/Target.h"
 #include "llvm-c/TargetMachine.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Support/MemoryBufferRef.h"
@@ -234,7 +234,8 @@ struct GetModelMemrefSizeOpLowering : public ConversionPattern {
 
 struct DecisionForestToLLVMLoweringPass : public PassWrapper<DecisionForestToLLVMLoweringPass, OperationPass<ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect, memref::MemRefDialect, tensor::TensorDialect, StandardOpsDialect>();
+    registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect, memref::MemRefDialect, 
+                    StandardOpsDialect, arith::ArithmeticDialect, vector::VectorDialect>();
   }
   void runOnOperation() final;
 };
