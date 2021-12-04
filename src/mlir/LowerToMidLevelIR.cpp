@@ -70,7 +70,6 @@ struct PredictForestOpLowering: public ConversionPattern {
                             mlir::MemRefType dataMemrefType, int64_t batchSize) const
   {
         auto location = op->getLoc();
-        auto context = dataMemrefType.getContext();
 
         // Create the return array (TODO This needs to become a function argument)
         auto resultType = op->getResults()[0].getType();
@@ -143,43 +142,20 @@ struct PredictForestOpLowering: public ConversionPattern {
         auto treeType = forestType.getTreeType(0).cast<mlir::decisionforest::TreeType>();
         auto tree = rewriter.create<decisionforest::GetTreeFromEnsembleOp>(location, treeType, forestConst, j);
 
-        auto nodeType = mlir::decisionforest::NodeType::get(context);
-        auto node = rewriter.create<decisionforest::GetRootOp>(location, nodeType, tree);
-
+        
         // Create the while loop to walk the tree
-        scf::WhileOp whileLoop = rewriter.create<scf::WhileOp>(location, nodeType, static_cast<Value>(node));
-        Block *before = rewriter.createBlock(&whileLoop.before(), {}, nodeType, location);
-        Block *after = rewriter.createBlock(&whileLoop.after(), {}, nodeType, location);
+        auto walkOp = rewriter.create<decisionforest::WalkDecisionTreeOp>(location, treeType.getResultType(), tree, row);
 
-        // Create the 'do' part for the condition.
-        {
-            rewriter.setInsertionPointToStart(&whileLoop.before().front());
-            auto node = before->getArguments()[0];
-            auto isLeaf = rewriter.create<decisionforest::IsLeafOp>(location, rewriter.getI1Type(), tree, node);
-            auto falseConstant = rewriter.create<ConstantIntOp>(location, int64_t(0), rewriter.getI1Type());
-            auto equalTo = rewriter.create<CmpIOp>(location, mlir::CmpIPredicate::eq, static_cast<Value>(isLeaf), static_cast<Value>(falseConstant));
-            rewriter.create<scf::ConditionOp>(location, equalTo, ValueRange({node})); // this is the terminator
-        }
-        // Create the loop body
-        {
-            rewriter.setInsertionPointToStart(&whileLoop.after().front());
-            auto node = after->getArguments()[0];
-            
-            auto traverseTile = rewriter.create<decisionforest::TraverseTreeTileOp>(location, nodeType, tree, node, row);
-            rewriter.create<scf::YieldOp>(location, static_cast<Value>(traverseTile));
-        }
-        rewriter.setInsertionPointAfter(whileLoop);
-        auto treePrediction = rewriter.create<decisionforest::GetLeafValueOp>(location, treeType.getResultType(), tree, whileLoop.results()[0]);
         // rewriter.create<memref::StoreOp>(location, TypeRange({ }), static_cast<Value>(treePrediction), memrefResult, j);
         // result[i]
         
         // auto readResultOfi = rewriter.create<memref::LoadOp>(location, resultElementType, memrefResult, i);
         // Accumulate the tree prediction
         assert(forestType.getReductionType() == decisionforest::ReductionType::kAdd);
-        auto accumulatedValue = rewriter.create<AddFOp>(location, resultElementType, treeLoop.getBody()->getArguments()[1], treePrediction);
+        auto accumulatedValue = rewriter.create<AddFOp>(location, resultElementType, treeLoop.getBody()->getArguments()[1], walkOp);
 
         if (mlir::decisionforest::InsertDebugHelpers) {
-          rewriter.create<decisionforest::PrintTreePredictionOp>(location, treePrediction, j);
+          rewriter.create<decisionforest::PrintTreePredictionOp>(location, walkOp, j);
         }
         // auto updatedResultTensor = rewriter.create<tensor::InsertOp>(location, resultMemrefType, accumulatedValue, treeLoop.getBody()->getArguments()[1], i);
         rewriter.create<scf::YieldOp>(location, static_cast<Value>(accumulatedValue));
@@ -205,6 +181,63 @@ struct PredictForestOpLowering: public ConversionPattern {
 
 };
 
+
+struct WalkDecisionTreeOpLowering: public ConversionPattern {
+  WalkDecisionTreeOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::WalkDecisionTreeOp::getOperationName(), 1 /*benefit*/, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    mlir::decisionforest::WalkDecisionTreeOp walkTreeOp = llvm::dyn_cast<mlir::decisionforest::WalkDecisionTreeOp>(op);
+    assert(walkTreeOp);
+    assert(operands.size() == 2);
+    if (!walkTreeOp)
+        return mlir::failure();
+
+    auto tree = operands[0];
+    auto inputRow = operands[1];
+    
+    auto location = op->getLoc();
+    auto context = inputRow.getContext();
+    auto treeType = tree.getType().cast<mlir::decisionforest::TreeType>();
+
+    auto nodeType = mlir::decisionforest::NodeType::get(context);
+    auto node = rewriter.create<decisionforest::GetRootOp>(location, nodeType, tree);
+
+    scf::WhileOp whileLoop = rewriter.create<scf::WhileOp>(location, nodeType, static_cast<Value>(node));
+    Block *before = rewriter.createBlock(&whileLoop.before(), {}, nodeType, location);
+    Block *after = rewriter.createBlock(&whileLoop.after(), {}, nodeType, location);
+
+    // Create the 'do' part for the condition.
+    {
+        rewriter.setInsertionPointToStart(&whileLoop.before().front());
+        auto node = before->getArguments()[0];
+        auto isLeaf = rewriter.create<decisionforest::IsLeafOp>(location, rewriter.getI1Type(), tree, node);
+        auto falseConstant = rewriter.create<ConstantIntOp>(location, int64_t(0), rewriter.getI1Type());
+        auto equalTo = rewriter.create<CmpIOp>(location, mlir::CmpIPredicate::eq, static_cast<Value>(isLeaf), static_cast<Value>(falseConstant));
+        rewriter.create<scf::ConditionOp>(location, equalTo, ValueRange({node})); // this is the terminator
+    }
+    // Create the loop body
+    {
+        rewriter.setInsertionPointToStart(&whileLoop.after().front());
+        auto node = after->getArguments()[0];
+        
+        auto traverseTile = rewriter.create<decisionforest::TraverseTreeTileOp>(
+          location,
+          nodeType,
+          tree,
+          node,
+          inputRow);
+
+        rewriter.create<scf::YieldOp>(location, static_cast<Value>(traverseTile));
+    }
+    rewriter.setInsertionPointAfter(whileLoop);
+    auto treePrediction = rewriter.create<decisionforest::GetLeafValueOp>(location, treeType.getResultType(), tree, whileLoop.results()[0]);
+    rewriter.replaceOp(op, static_cast<Value>(treePrediction));
+
+    return mlir::success();
+  }
+};
+
 struct HighLevelIRToMidLevelIRLoweringPass: public PassWrapper<HighLevelIRToMidLevelIRLoweringPass, FunctionPass> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect>();
@@ -215,9 +248,11 @@ struct HighLevelIRToMidLevelIRLoweringPass: public PassWrapper<HighLevelIRToMidL
     target.addLegalDialect<AffineDialect, memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect, decisionforest::DecisionForestDialect, math::MathDialect>();
 
     target.addIllegalOp<decisionforest::PredictForestOp>();
+    target.addIllegalOp<decisionforest::WalkDecisionTreeOp>();
 
     RewritePatternSet patterns(&getContext());
     patterns.add<PredictForestOpLowering>(&getContext());
+    patterns.add<WalkDecisionTreeOpLowering>(&getContext());
 
     if (failed(applyPartialConversion(getFunction(), target, std::move(patterns))))
         signalPassFailure();
