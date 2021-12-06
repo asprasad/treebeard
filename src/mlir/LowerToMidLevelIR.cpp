@@ -248,16 +248,35 @@ struct HighLevelIRToMidLevelIRLoweringPass: public PassWrapper<HighLevelIRToMidL
     target.addLegalDialect<AffineDialect, memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect, decisionforest::DecisionForestDialect, math::MathDialect>();
 
     target.addIllegalOp<decisionforest::PredictForestOp>();
-    target.addIllegalOp<decisionforest::WalkDecisionTreeOp>();
 
     RewritePatternSet patterns(&getContext());
     patterns.add<PredictForestOpLowering>(&getContext());
+
+    if (failed(applyPartialConversion(getFunction(), target, std::move(patterns))))
+        signalPassFailure();
+  }
+};
+
+struct WalkDecisionTreeOpLoweringPass: public PassWrapper<WalkDecisionTreeOpLoweringPass, FunctionPass> {
+  
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<StandardOpsDialect, scf::SCFDialect>();
+  }
+
+  void runOnFunction() final {
+    ConversionTarget target(getContext());
+
+    target.addLegalDialect<StandardOpsDialect, scf::SCFDialect, decisionforest::DecisionForestDialect>();
+    target.addIllegalOp<decisionforest::WalkDecisionTreeOp>();
+
+    RewritePatternSet patterns(&getContext());
     patterns.add<WalkDecisionTreeOpLowering>(&getContext());
 
     if (failed(applyPartialConversion(getFunction(), target, std::move(patterns))))
         signalPassFailure();
   }
 };
+
 }
 
 namespace mlir
@@ -269,6 +288,7 @@ void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext& context, mlir::ModuleOp m
   mlir::PassManager pm(&context);
   mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
   optPM.addPass(std::make_unique<HighLevelIRToMidLevelIRLoweringPass>());
+  optPM.addPass(std::make_unique<WalkDecisionTreeOpLoweringPass>());
 
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to mid level IR failed.\n";
