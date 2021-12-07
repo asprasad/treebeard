@@ -9,11 +9,13 @@
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
+#include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Pass/Pass.h"
@@ -41,7 +43,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm-c/Target.h"
 #include "llvm-c/TargetMachine.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Support/MemoryBufferRef.h"
@@ -234,7 +236,8 @@ struct GetModelMemrefSizeOpLowering : public ConversionPattern {
 
 struct DecisionForestToLLVMLoweringPass : public PassWrapper<DecisionForestToLLVMLoweringPass, OperationPass<ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect, memref::MemRefDialect, tensor::TensorDialect, StandardOpsDialect>();
+    registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect, memref::MemRefDialect, 
+                    StandardOpsDialect, arith::ArithmeticDialect, vector::VectorDialect>();
   }
   void runOnOperation() final;
 };
@@ -269,7 +272,8 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
   populateStdToLLVMConversionPatterns(typeConverter, patterns);
   populateVectorToLLVMConversionPatterns(typeConverter, patterns, false);
   populateMathToLLVMConversionPatterns(typeConverter, patterns);
-  
+  arith::populateArithmeticToLLVMConversionPatterns(typeConverter, patterns);
+
   patterns.add<LoadTileFeatureIndicesOpLowering,
                LoadTileThresholdOpLowering,
                LoadTileShapeOpLowering,
@@ -289,6 +293,7 @@ namespace mlir
 namespace decisionforest
 {
 void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module) {
+  // llvm::DebugFlag = false;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
   // mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();

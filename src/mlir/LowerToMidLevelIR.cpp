@@ -3,6 +3,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -49,19 +50,19 @@ struct PredictForestOpLowering: public ConversionPattern {
 
   Value GenSigmoid(ConversionPatternRewriter& rewriter, Value operand, Location location) const {
     assert (operand.getType().isIntOrFloat());
-    auto negate = rewriter.create<mlir::NegFOp>(location, operand.getType(), operand);
+    auto negate = rewriter.create<mlir::arith::NegFOp>(location, operand.getType(), operand);
     auto exponential = rewriter.create<mlir::math::ExpOp>(location, operand.getType(), static_cast<Value>(negate));
     
     Value oneConst;
     if (operand.getType().isa<mlir::Float64Type>())
-      oneConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat(1.0), operand.getType().cast<FloatType>());
+      oneConst = rewriter.create<arith::ConstantFloatOp>(location, llvm::APFloat(1.0), operand.getType().cast<FloatType>());
     else if(operand.getType().isa<mlir::Float32Type>())
-      oneConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat((float)1.0), operand.getType().cast<FloatType>());
+      oneConst = rewriter.create<arith::ConstantFloatOp>(location, llvm::APFloat((float)1.0), operand.getType().cast<FloatType>());
     else
       assert(false && "Unsupported floating point type");
 
-    auto onePlusExp = rewriter.create<AddFOp>(location, operand.getType(), oneConst, exponential);
-    auto result = rewriter.create<DivFOp>(location, operand.getType(), oneConst, onePlusExp);
+    auto onePlusExp = rewriter.create<arith::AddFOp>(location, operand.getType(), oneConst, exponential);
+    auto result = rewriter.create<arith::DivFOp>(location, operand.getType(), oneConst, onePlusExp);
     return result;
   }
 
@@ -90,9 +91,9 @@ struct PredictForestOpLowering: public ConversionPattern {
         auto forestConst = rewriter.create<mlir::decisionforest::EnsembleConstantOp>(location, forestType, forestAttribute);
 
         // Create a for loop over the inputs
-        auto batchSizeConst = rewriter.create<ConstantIndexOp>(location, batchSize); 
-        auto zeroConst = rewriter.create<ConstantIndexOp>(location, 0);
-        auto oneIndexConst = rewriter.create<ConstantIndexOp>(location, 1);
+        auto batchSizeConst = rewriter.create<arith::ConstantIndexOp>(location, batchSize); 
+        auto zeroConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
+        auto oneIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 1);
         auto batchLoop = rewriter.create<scf::ForOp>(location, zeroConst, batchSizeConst, oneIndexConst/*, static_cast<Value>(memrefResult)*/);
         
         rewriter.setInsertionPointToStart(batchLoop.getBody());
@@ -112,15 +113,15 @@ struct PredictForestOpLowering: public ConversionPattern {
         // Create a for loop over the trees
         auto resultElementType = resultMemrefType.getElementType();
         int64_t numTrees = static_cast<int64_t>(forestType.getNumberOfTrees());
-        auto ensembleSizeConst = rewriter.create<ConstantIndexOp>(location, numTrees); 
+        auto ensembleSizeConst = rewriter.create<arith::ConstantIndexOp>(location, numTrees); 
         
         Value initialValueConst;
         double_t initialValueValue = forestAttribute.GetDecisionForest().GetInitialOffset();
 
         if (resultElementType.isa<mlir::Float64Type>())
-          initialValueConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat(initialValueValue), resultElementType.cast<FloatType>());
+          initialValueConst = rewriter.create<arith::ConstantFloatOp>(location, llvm::APFloat(initialValueValue), resultElementType.cast<FloatType>());
         else if(resultElementType.isa<mlir::Float32Type>())
-          initialValueConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat((float)initialValueValue), resultElementType.cast<FloatType>());
+          initialValueConst = rewriter.create<arith::ConstantFloatOp>(location, llvm::APFloat((float)initialValueValue), resultElementType.cast<FloatType>());
         else
           assert(false && "Unsupported floating point type");
         // auto oneIndexConst2 = rewriter.create<ConstantIndexOp>(location, 1);
@@ -152,7 +153,7 @@ struct PredictForestOpLowering: public ConversionPattern {
         // auto readResultOfi = rewriter.create<memref::LoadOp>(location, resultElementType, memrefResult, i);
         // Accumulate the tree prediction
         assert(forestType.getReductionType() == decisionforest::ReductionType::kAdd);
-        auto accumulatedValue = rewriter.create<AddFOp>(location, resultElementType, treeLoop.getBody()->getArguments()[1], walkOp);
+        auto accumulatedValue = rewriter.create<arith::AddFOp>(location, resultElementType, treeLoop.getBody()->getArguments()[1], walkOp);
 
         if (mlir::decisionforest::InsertDebugHelpers) {
           rewriter.create<decisionforest::PrintTreePredictionOp>(location, walkOp, j);
@@ -212,8 +213,8 @@ struct WalkDecisionTreeOpLowering: public ConversionPattern {
         rewriter.setInsertionPointToStart(&whileLoop.before().front());
         auto node = before->getArguments()[0];
         auto isLeaf = rewriter.create<decisionforest::IsLeafOp>(location, rewriter.getI1Type(), tree, node);
-        auto falseConstant = rewriter.create<ConstantIntOp>(location, int64_t(0), rewriter.getI1Type());
-        auto equalTo = rewriter.create<CmpIOp>(location, mlir::CmpIPredicate::eq, static_cast<Value>(isLeaf), static_cast<Value>(falseConstant));
+        auto falseConstant = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI1Type());
+        auto equalTo = rewriter.create<arith::CmpIOp>(location, arith::CmpIPredicate::eq, static_cast<Value>(isLeaf), static_cast<Value>(falseConstant));
         rewriter.create<scf::ConditionOp>(location, equalTo, ValueRange({node})); // this is the terminator
     }
     // Create the loop body
@@ -245,7 +246,8 @@ struct HighLevelIRToMidLevelIRLoweringPass: public PassWrapper<HighLevelIRToMidL
   void runOnFunction() final {
     ConversionTarget target(getContext());
 
-    target.addLegalDialect<AffineDialect, memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect, decisionforest::DecisionForestDialect, math::MathDialect>();
+    target.addLegalDialect<memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect, 
+                           decisionforest::DecisionForestDialect, math::MathDialect, arith::ArithmeticDialect>();
 
     target.addIllegalOp<decisionforest::PredictForestOp>();
 
@@ -266,7 +268,8 @@ struct WalkDecisionTreeOpLoweringPass: public PassWrapper<WalkDecisionTreeOpLowe
   void runOnFunction() final {
     ConversionTarget target(getContext());
 
-    target.addLegalDialect<StandardOpsDialect, scf::SCFDialect, decisionforest::DecisionForestDialect>();
+    target.addLegalDialect<memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect, 
+                           decisionforest::DecisionForestDialect, math::MathDialect, arith::ArithmeticDialect>();
     target.addIllegalOp<decisionforest::WalkDecisionTreeOp>();
 
     RewritePatternSet patterns(&getContext());

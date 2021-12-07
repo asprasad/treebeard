@@ -683,6 +683,7 @@ void RunTests() {
   int32_t numPassed = 0;
   for (size_t i = 0; i < numTests; ++i) {
     mlir::MLIRContext context;
+    context.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
     context.getOrLoadDialect<mlir::decisionforest::DecisionForestDialect>();
     context.getOrLoadDialect<mlir::StandardOpsDialect>();
     context.getOrLoadDialect<mlir::scf::SCFDialect>();

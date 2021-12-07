@@ -4,6 +4,7 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -109,12 +110,13 @@ public:
 
 void InsertPrintVectorOp(ConversionPatternRewriter &rewriter, Location location, int32_t kind, int32_t bitWidth, 
                          int32_t tileSize, Value vectorValue) {
-  auto tileSizeConst = rewriter.create<ConstantIntOp>(location, tileSize, rewriter.getI32Type());
-  auto kindConst = rewriter.create<ConstantIntOp>(location, kind, rewriter.getI32Type());
-  auto bitWidthConst = rewriter.create<ConstantIntOp>(location, bitWidth, rewriter.getI32Type());
+  auto tileSizeConst = rewriter.create<arith::ConstantIntOp>(location, tileSize, rewriter.getI32Type());
+  auto kindConst = rewriter.create<arith::ConstantIntOp>(location, kind, rewriter.getI32Type());
+  auto bitWidthConst = rewriter.create<arith::ConstantIntOp>(location, bitWidth, rewriter.getI32Type());
   std::vector<Value> vectorValues;
   for (int32_t i=0; i<tileSize ; ++i) {
-    auto ithValue = rewriter.create<vector::ExtractElementOp>(location, vectorValue, int64_t(i));
+    auto iConst = rewriter.create<arith::ConstantIntOp>(location, int64_t(i), rewriter.getI32Type());
+    auto ithValue = rewriter.create<vector::ExtractElementOp>(location, vectorValue, iConst);
     vectorValues.push_back(ithValue);
   }
   rewriter.create<decisionforest::PrintVectorOp>(location, kindConst, bitWidthConst, tileSizeConst, ValueRange(vectorValues));
@@ -124,9 +126,9 @@ Value CreateZeroVectorFPConst(ConversionPatternRewriter &rewriter, Location loca
   Value zeroConst;
   auto vectorType = VectorType::get(tileSize, fpType);
   if (fpType.isa<mlir::Float64Type>())
-    zeroConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat(0.0), fpType.cast<FloatType>());
+    zeroConst = rewriter.create<arith::ConstantFloatOp>(location, llvm::APFloat(0.0), fpType.cast<FloatType>());
   else if(fpType.isa<mlir::Float32Type>())
-    zeroConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat((float)0.0), fpType.cast<FloatType>());
+    zeroConst = rewriter.create<arith::ConstantFloatOp>(location, llvm::APFloat((float)0.0), fpType.cast<FloatType>());
   else
     assert(false && "Unsupported floating point type");
   auto vectorValue = rewriter.create<vector::BroadcastOp>(location, vectorType, zeroConst);
@@ -134,7 +136,7 @@ Value CreateZeroVectorFPConst(ConversionPatternRewriter &rewriter, Location loca
 }
 
 Value CreateZeroVectorIntConst(ConversionPatternRewriter &rewriter, Location location, Type intType, int32_t tileSize) {
-  Value zeroConst = rewriter.create<ConstantIntOp>(location, 0, intType);
+  Value zeroConst = rewriter.create<arith::ConstantIntOp>(location, 0, intType);
   auto vectorType = VectorType::get(tileSize, intType);
   auto vectorValue = rewriter.create<vector::BroadcastOp>(location, vectorType, zeroConst);
   return vectorValue;
@@ -218,7 +220,7 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
                                       /*sym_visibility=*/rewriter.getStringAttr("private"),
                                       /*type=*/lutMemrefType,
                                       /*initial_value=*/rewriter.getUnitAttr(),
-                                      /*constant=*/false);
+                                      /*constant=*/false, IntegerAttr());
     AddGlobalMemrefGetter(module, lookupTableMemrefName, lutMemrefType, rewriter, location);
 
     return lutMemrefType;
@@ -257,16 +259,16 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
 
     // for tileIndex = 0 : len
     auto getGlobalMemref = rewriter.create<memref::GetGlobalOp>(location, memrefType, globalName);
-    auto zeroIndexConst = rewriter.create<ConstantIndexOp>(location, 0);
-    auto oneIndexConst = rewriter.create<ConstantIndexOp>(location, 1);
-    auto lenIndexConst = rewriter.create<ConstantIndexOp>(location, memrefType.getShape()[0]);
+    auto zeroIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
+    auto oneIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 1);
+    auto lenIndexConst = rewriter.create<arith::ConstantIndexOp>(location, memrefType.getShape()[0]);
     auto forLoop = rewriter.create<scf::ForOp>(location, zeroIndexConst, lenIndexConst, oneIndexConst);
     auto tileIndex = forLoop.getInductionVar();
     rewriter.setInsertionPointToStart(forLoop.getBody());
 
     // index = tileSize * tileIndex
-    auto tileSizeConst = rewriter.create<ConstantIndexOp>(location, tileSize);
-    auto tileSizeTimesi = rewriter.create<MulIOp>(location, tileIndex, tileSizeConst);
+    auto tileSizeConst = rewriter.create<arith::ConstantIndexOp>(location, tileSize);
+    auto tileSizeTimesi = rewriter.create<arith::MulIOp>(location, tileIndex, tileSizeConst);
     
     if (tileSize > 1) {
       auto thresholdVec = CreateZeroVectorFPConst(rewriter, location, modelMemrefElementType.getThresholdElementType(), tileSize);
@@ -274,12 +276,13 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
 
       // Load from index to index + (tileSize - 1) into a vector
       for (int32_t j = 0 ; j<tileSize ; ++j) {
-        auto offset = rewriter.create<ConstantIndexOp>(location, j);
-        auto index =  rewriter.create<AddIOp>(location, tileSizeTimesi, offset);
+        auto offset = rewriter.create<arith::ConstantIndexOp>(location, j);
+        auto index =  rewriter.create<arith::AddIOp>(location, tileSizeTimesi, offset);
         auto thresholdVal = rewriter.create<memref::LoadOp>(location, entryBlock.getArgument(0), static_cast<Value>(index));
-        thresholdVec = rewriter.create<vector::InsertElementOp>(location, thresholdVal, thresholdVec, j);
+        auto jConst = rewriter.create<arith::ConstantIntOp>(location, j, rewriter.getI32Type());
+        thresholdVec = rewriter.create<vector::InsertElementOp>(location, thresholdVal, thresholdVec, jConst);
         auto indexVal = rewriter.create<memref::LoadOp>(location, entryBlock.getArgument(1), static_cast<Value>(index));
-        indexVec = rewriter.create<vector::InsertElementOp>(location, indexVal, indexVec, j);
+        indexVec = rewriter.create<vector::InsertElementOp>(location, indexVal, indexVec, jConst);
       }
       auto tileShapeID = rewriter.create<memref::LoadOp>(location, entryBlock.getArgument(2), tileIndex);
       rewriter.create<decisionforest::InitTileOp>(location, getGlobalMemref, tileIndex, thresholdVec, indexVec, tileShapeID);
@@ -289,7 +292,7 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
       auto thresholdVal = rewriter.create<memref::LoadOp>(location, entryBlock.getArgument(0), static_cast<Value>(tileIndex));
       auto indexVal = rewriter.create<memref::LoadOp>(location, entryBlock.getArgument(1), static_cast<Value>(tileIndex));
       // TODO check how tileShapeID vector is created when tileSize = 1
-      auto tileShapeID = rewriter.create<ConstantIntOp>(location, 0, rewriter.getI32Type());
+      auto tileShapeID = rewriter.create<arith::ConstantIntOp>(location, 0, rewriter.getI32Type());
       rewriter.create<decisionforest::InitTileOp>(location, getGlobalMemref, tileIndex, thresholdVal, indexVal, tileShapeID);
     }
     rewriter.setInsertionPointAfter(forLoop);
@@ -326,17 +329,17 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
                                       /*sym_visibility=*/rewriter.getStringAttr("private"),
                                       /*type=*/modelMemrefType,
                                       /*initial_value=*/rewriter.getUnitAttr(),
-                                      /*constant=*/false);
+                                      /*constant=*/false, IntegerAttr());
     AddGlobalMemrefGetter(module, modelMemrefName, modelMemrefType, rewriter, location);
     
     auto offsetSize = (int32_t)forest.NumTrees();
     auto offsetMemrefType = MemRefType::get({offsetSize}, rewriter.getIndexType());
     rewriter.create<memref::GlobalOp>(location, offsetMemrefName, rewriter.getStringAttr("private"),
-                                      offsetMemrefType, rewriter.getUnitAttr(), false);
+                                      offsetMemrefType, rewriter.getUnitAttr(), false, IntegerAttr());
     AddGlobalMemrefGetter(module, offsetMemrefName, offsetMemrefType, rewriter, location);
     
     rewriter.create<memref::GlobalOp>(location, lengthMemrefName, rewriter.getStringAttr("private"),
-                                      offsetMemrefType, rewriter.getUnitAttr(), false);
+                                      offsetMemrefType, rewriter.getUnitAttr(), false, IntegerAttr());
     AddGlobalMemrefGetter(module, lengthMemrefName, offsetMemrefType, rewriter, location);
 
     return std::make_tuple(modelMemrefType, offsetMemrefType);
@@ -410,7 +413,7 @@ struct GetRootOpLowering: public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     auto getRootOp = AssertOpIsOfType<mlir::decisionforest::GetRootOp>(op);
-    auto nodeIndexConst = rewriter.create<ConstantIndexOp>(op->getLoc(), 0);
+    auto nodeIndexConst = rewriter.create<arith::ConstantIndexOp>(op->getLoc(), 0);
 
     auto treeMemref = GetTreeMemrefFromTreeOperand(operands[0]);
     auto nodeType = getRootOp.getResult().getType();
@@ -453,14 +456,15 @@ struct IsLeafOpLowering: public ConversionPattern {
     else {
       auto indexVectorType = featureIndexType.cast<mlir::VectorType>();
       assert (indexVectorType);
-      auto extractFirstElement = rewriter.create<vector::ExtractElementOp>(location, static_cast<Value>(loadFeatureIndexOp), int64_t(0));
+      auto zeroConst = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI32Type());
+      auto extractFirstElement = rewriter.create<vector::ExtractElementOp>(location, static_cast<Value>(loadFeatureIndexOp), zeroConst);
       featureIndexValue = extractFirstElement;
     }
-    auto minusOneConstant = rewriter.create<ConstantIntOp>(location, int64_t(-1), treeTileType.getIndexElementType());
-    auto comparison = rewriter.create<CmpIOp>(location, mlir::CmpIPredicate::eq, featureIndexValue, static_cast<Value>(minusOneConstant));
+    auto minusOneConstant = rewriter.create<arith::ConstantIntOp>(location, int64_t(-1), treeTileType.getIndexElementType());
+    auto comparison = rewriter.create<arith::CmpIOp>(location, mlir::arith::CmpIPredicate::eq, featureIndexValue, static_cast<Value>(minusOneConstant));
     
     if (decisionforest::InsertDebugHelpers) {
-      Value outcome = rewriter.create<mlir::ZeroExtendIOp>(location, rewriter.getI32Type(), static_cast<Value>(comparison));
+      Value outcome = rewriter.create<mlir::arith::ExtUIOp>(location, rewriter.getI32Type(), static_cast<Value>(comparison));
       rewriter.create<decisionforest::PrintIsLeafOp>(location, nodeIndex, featureIndexValue, outcome);
     }
     rewriter.replaceOp(op, static_cast<Value>(comparison));
@@ -518,8 +522,8 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     // Load feature value
     auto rowMemref = operands[2];
     auto rowMemrefType = rowMemref.getType().cast<MemRefType>();
-    auto rowIndex = rewriter.create<IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadFeatureIndexOp));
-    auto zeroIndex = rewriter.create<ConstantIndexOp>(location, 0);
+    auto rowIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadFeatureIndexOp));
+    auto zeroIndex = rewriter.create<arith::ConstantIndexOp>(location, 0);
     auto feature = rewriter.create<memref::LoadOp>(location, rowMemrefType.getElementType(), rowMemref,
                                                    ValueRange({static_cast<Value>(zeroIndex), static_cast<Value>(rowIndex)}));
 
@@ -529,16 +533,16 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
 
     // result = Compare
     // TODO we need a cast here to make sure the threshold and the row element are the same type. The op expects both operands to be the same type.
-    auto comparison = rewriter.create<CmpFOp>(location,  mlir::CmpFPredicate::UGT, static_cast<Value>(feature), static_cast<Value>(loadThresholdOp));
-    auto comparisonUnsigned = rewriter.create<ZeroExtendIOp>(location, rewriter.getI32Type(), static_cast<Value>(comparison));
+    auto comparison = rewriter.create<arith::CmpFOp>(location,  mlir::arith::CmpFPredicate::UGT, static_cast<Value>(feature), static_cast<Value>(loadThresholdOp));
+    auto comparisonUnsigned = rewriter.create<arith::ExtUIOp>(location, rewriter.getI32Type(), static_cast<Value>(comparison));
 
     // index = 2*index + 1 + result
-    auto oneConstant = rewriter.create<ConstantIndexOp>(location, 1);
-    auto twoConstant = rewriter.create<ConstantIndexOp>(location, 2);
-    auto twoTimesIndex = rewriter.create<MulIOp>(location, rewriter.getIndexType(), static_cast<Value>(nodeIndex), static_cast<Value>(twoConstant));
-    auto twoTimesIndexPlus1 = rewriter.create<AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(twoTimesIndex), static_cast<Value>(oneConstant));
-    auto comparisonResultIndex = rewriter.create<IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(comparisonUnsigned));
-    auto newIndex = rewriter.create<AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(twoTimesIndexPlus1), static_cast<Value>(comparisonResultIndex));
+    auto oneConstant = rewriter.create<arith::ConstantIndexOp>(location, 1);
+    auto twoConstant = rewriter.create<arith::ConstantIndexOp>(location, 2);
+    auto twoTimesIndex = rewriter.create<arith::MulIOp>(location, rewriter.getIndexType(), static_cast<Value>(nodeIndex), static_cast<Value>(twoConstant));
+    auto twoTimesIndexPlus1 = rewriter.create<arith::AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(twoTimesIndex), static_cast<Value>(oneConstant));
+    auto comparisonResultIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(comparisonUnsigned));
+    auto newIndex = rewriter.create<arith::AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(twoTimesIndexPlus1), static_cast<Value>(comparisonResultIndex));
     
     // node = indexToNode(index)
     auto newNode = rewriter.create<decisionforest::IndexToNodeOp>(location, traverseTileOp.getResult().getType(), treeMemref, static_cast<Value>(newIndex));
@@ -548,29 +552,30 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
 
   Value ReduceComparisonResultVectorToInt(Value comparisonResult, int32_t tileSize, ConversionPatternRewriter &rewriter, Location location) const {
     auto i32VectorType = VectorType::get(tileSize, rewriter.getI32Type());
-    auto comparisonExtended = rewriter.create<ZeroExtendIOp>(location, i32VectorType, comparisonResult);
+    auto comparisonExtended = rewriter.create<arith::ExtUIOp>(location, i32VectorType, comparisonResult);
 
-    auto zeroI32Const = rewriter.create<ConstantIntOp>(location, int64_t(0), rewriter.getI32Type());
+    auto zeroI32Const = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI32Type());
     auto shiftVector = static_cast<Value>(rewriter.create<vector::BroadcastOp>(location, i32VectorType, zeroI32Const));
     for (int32_t shift=0, pos=tileSize-1 ; shift<tileSize; ++shift, --pos) {
-      auto shiftValConst = rewriter.create<ConstantIntOp>(location, int64_t(shift), rewriter.getI32Type());
+      auto shiftValConst = rewriter.create<arith::ConstantIntOp>(location, int64_t(shift), rewriter.getI32Type());
       shiftVector = rewriter.create<vector::InsertOp>(location, static_cast<Value>(shiftValConst), 
                                                       static_cast<Value>(shiftVector), ArrayRef<int64_t>({ pos }));
     }
 
-    auto leftShift = rewriter.create<ShiftLeftOp>(location, i32VectorType, comparisonExtended, shiftVector);
+    auto leftShift = rewriter.create<arith::ShLIOp>(location, i32VectorType, comparisonExtended, shiftVector);
     auto kind = rewriter.getStringAttr("add");
     auto sum = rewriter.create<vector::ReductionOp>(location, rewriter.getI32Type(), kind, static_cast<Value>(leftShift), ValueRange{ });
-    auto index = rewriter.create<IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(sum));
+    auto index = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(sum));
     return index;
   }
 
   Value ReduceComparisonResultVectorToInt_Bitcast(Value comparisonResult, int32_t tileSize, ConversionPatternRewriter &rewriter, Location location) const {
     auto bitcastVectorType = VectorType::get(1, rewriter.getIntegerType(tileSize));
     auto bitcastOp = rewriter.create<vector::BitCastOp>(location, bitcastVectorType, comparisonResult);
-    auto integerResult = rewriter.create<vector::ExtractElementOp>(location, static_cast<Value>(bitcastOp), 0);
-    auto zeroExtend = rewriter.create<ZeroExtendIOp>(location, integerResult, rewriter.getI64Type()); 
-    auto index = rewriter.create<IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(zeroExtend));
+    auto zeroConst = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI32Type());
+    auto integerResult = rewriter.create<vector::ExtractElementOp>(location, static_cast<Value>(bitcastOp), static_cast<Value>(zeroConst));
+    auto zeroExtend = rewriter.create<arith::ExtUIOp>(location, integerResult, rewriter.getI64Type()); 
+    auto index = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(zeroExtend));
     return index;
   }
 
@@ -612,32 +617,32 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
 
     // Load the tile shape
     auto loadTileShapeOp = rewriter.create<decisionforest::LoadTileShapeOp>(location, rewriter.getI32Type(), treeMemref, static_cast<Value>(nodeIndex));
-    auto tileShapeIndex = rewriter.create<IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadTileShapeOp));
+    auto tileShapeIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadTileShapeOp));
 
     // index = (tileSize+1)*index + 1 + childIndex
-    auto oneConstant = rewriter.create<ConstantIndexOp>(location, 1);
-    auto tileSizeConstant = rewriter.create<ConstantIndexOp>(location, tileSize+1);
-    auto tileSizeTimesIndex = rewriter.create<MulIOp>(location, rewriter.getIndexType(), static_cast<Value>(nodeIndex), static_cast<Value>(tileSizeConstant));
-    auto tileSizeTimesIndexPlus1 = rewriter.create<AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(tileSizeTimesIndex), static_cast<Value>(oneConstant));
+    auto oneConstant = rewriter.create<arith::ConstantIndexOp>(location, 1);
+    auto tileSizeConstant = rewriter.create<arith::ConstantIndexOp>(location, tileSize+1);
+    auto tileSizeTimesIndex = rewriter.create<arith::MulIOp>(location, rewriter.getIndexType(), static_cast<Value>(nodeIndex), static_cast<Value>(tileSizeConstant));
+    auto tileSizeTimesIndexPlus1 = rewriter.create<arith::AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(tileSizeTimesIndex), static_cast<Value>(oneConstant));
     
     // Load feature value
     auto rowMemref = operands[2];
     auto rowMemrefType = rowMemref.getType().cast<MemRefType>();
     auto vectorIndexType = VectorType::get({ tileSize }, rewriter.getIndexType());
-    auto rowIndex = rewriter.create<IndexCastOp>(location, vectorIndexType, static_cast<Value>(loadFeatureIndexOp));
-    auto zeroIndex = rewriter.create<ConstantIndexOp>(location, 0);
+    auto rowIndex = rewriter.create<arith::IndexCastOp>(location, vectorIndexType, static_cast<Value>(loadFeatureIndexOp));
+    auto zeroIndex = rewriter.create<arith::ConstantIndexOp>(location, 0);
     // auto zeroIndexVector = rewriter.create<vector::BroadcastOp>(location, vectorIndexType, zeroIndex);
 
     auto featuresVectorType = VectorType::get({ tileSize }, rowMemrefType.getElementType());
-    auto oneI1Const = rewriter.create<ConstantIntOp>(location, 1, rewriter.getI1Type());
+    auto oneI1Const = rewriter.create<arith::ConstantIntOp>(location, 1, rewriter.getI1Type());
     auto i1VectorType = VectorType::get(tileSize, rewriter.getI1Type());
     auto mask = rewriter.create<vector::BroadcastOp>(location, i1VectorType, oneI1Const);
 
     Value zeroPassThruConst;
     if (rowMemrefType.getElementType().isa<mlir::Float64Type>())
-      zeroPassThruConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat(0.0), rowMemrefType.getElementType().cast<FloatType>());
+      zeroPassThruConst = rewriter.create<arith::ConstantFloatOp>(location, llvm::APFloat(0.0), rowMemrefType.getElementType().cast<FloatType>());
     else if(rowMemrefType.getElementType().isa<mlir::Float32Type>())
-      zeroPassThruConst = rewriter.create<ConstantFloatOp>(location, llvm::APFloat((float)0.0), rowMemrefType.getElementType().cast<FloatType>());
+      zeroPassThruConst = rewriter.create<arith::ConstantFloatOp>(location, llvm::APFloat((float)0.0), rowMemrefType.getElementType().cast<FloatType>());
     else
       assert(false && "Unsupported floating point type");
     auto zeroPassThruVector = rewriter.create<vector::BroadcastOp>(location, featuresVectorType, zeroPassThruConst);
@@ -658,7 +663,7 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
 
     // result = Compare
     // TODO we need a cast here to make sure the threshold and the row element are the same type. The op expects both operands to be the same type.
-    auto comparison = rewriter.create<CmpFOp>(location,  mlir::CmpFPredicate::ULE, static_cast<Value>(features), static_cast<Value>(loadThresholdOp));
+    auto comparison = rewriter.create<arith::CmpFOp>(location,  mlir::arith::CmpFPredicate::ULE, static_cast<Value>(features), static_cast<Value>(loadThresholdOp));
     Value comparisonIndex;
     if (decisionforest::UseBitcastForComparisonOutcome)
       comparisonIndex = ReduceComparisonResultVectorToInt_Bitcast(comparison, tileSize, rewriter, location);
@@ -669,9 +674,9 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     // Load the child index from the LUT
     auto lutValue = GetLUTFromTreeOperand(operands[0]);
     auto childIndexInt = rewriter.create<memref::LoadOp>(location, lutValue, ValueRange{tileShapeIndex, comparisonIndex});
-    auto childIndex = rewriter.create<IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(childIndexInt));
+    auto childIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(childIndexInt));
 
-    auto newIndex = rewriter.create<AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(tileSizeTimesIndexPlus1), static_cast<Value>(childIndex));
+    auto newIndex = rewriter.create<arith::AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(tileSizeTimesIndexPlus1), static_cast<Value>(childIndex));
     
     // node = indexToNode(index)
     auto newNode = rewriter.create<decisionforest::IndexToNodeOp>(location, traverseTileOp.getResult().getType(), treeMemref, static_cast<Value>(newIndex));
@@ -712,7 +717,8 @@ struct GetLeafValueOpLowering : public ConversionPattern {
       if (decisionforest::InsertDebugHelpers) {
         InsertPrintVectorOp(rewriter, location, 0, treeTileType.getThresholdElementType().getIntOrFloatBitWidth(), treeTileType.getTileSize(), loadThresholdOp);
       }
-      auto extractElement = rewriter.create<vector::ExtractElementOp>(location, static_cast<Value>(loadThresholdOp), int64_t(0));
+      auto zeroConst = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI32Type());
+      auto extractElement = rewriter.create<vector::ExtractElementOp>(location, static_cast<Value>(loadThresholdOp), zeroConst);
       leafValue = extractElement;
     }
     
@@ -731,7 +737,7 @@ struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLowe
 
     target.addLegalDialect<AffineDialect, memref::MemRefDialect, StandardOpsDialect, 
                            scf::SCFDialect, decisionforest::DecisionForestDialect, vector::VectorDialect,
-                           math::MathDialect>();
+                           math::MathDialect, arith::ArithmeticDialect>();
 
     target.addIllegalOp<decisionforest::EnsembleConstantOp,
                         decisionforest::GetTreeFromEnsembleOp,
