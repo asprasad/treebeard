@@ -121,6 +121,16 @@ def PredictForestOp : DecisionForest_Op<"predict_ensemble"> {
     }];
 }
 
+def WalkDecisionTreeOp : DecisionForest_Op<"walk_decision_tree"> {
+  let summary = "Walk the decision tree.";
+  let description = "Operation to walk the decision tree and generate a prediction."
+                    "Takes input data and tree as input and produces prediction as output.";
+
+  let arguments = (ins TreeType:$tree, InputDataType:$data);
+
+  let results = (outs LeafNodeValueType);
+} 
+
 // NOTE We will use the std.return op. We don't need our own. 
 // def ReturnOp : DecisionForest_Op<"return", [NoSideEffect, HasParent<"FuncOp">,Terminator]> {
 //   let summary = "return operation";
