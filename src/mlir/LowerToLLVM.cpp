@@ -9,11 +9,13 @@
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
 #include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
+#include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 
 #include "mlir/Dialect/StandardOps/IR/Ops.h"
 #include "mlir/Pass/Pass.h"
@@ -270,7 +272,8 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
   populateStdToLLVMConversionPatterns(typeConverter, patterns);
   populateVectorToLLVMConversionPatterns(typeConverter, patterns, false);
   populateMathToLLVMConversionPatterns(typeConverter, patterns);
-  
+  arith::populateArithmeticToLLVMConversionPatterns(typeConverter, patterns);
+
   patterns.add<LoadTileFeatureIndicesOpLowering,
                LoadTileThresholdOpLowering,
                LoadTileShapeOpLowering,
@@ -290,6 +293,7 @@ namespace mlir
 namespace decisionforest
 {
 void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module) {
+  // llvm::DebugFlag = false;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
   // mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
