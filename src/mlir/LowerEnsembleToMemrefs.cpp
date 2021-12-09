@@ -249,7 +249,7 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     int32_t tileSize = modelMemrefElementType.getTileSize();
     auto thresholdArgType = MemRefType::get({ memrefType.getShape()[0] * tileSize }, modelMemrefElementType.getThresholdElementType());
     auto indexArgType = MemRefType::get({ memrefType.getShape()[0] * tileSize }, modelMemrefElementType.getIndexElementType());
-    auto tileShapeIDArgType = MemRefType::get(memrefType.getShape(), rewriter.getI32Type());
+    auto tileShapeIDArgType = MemRefType::get(memrefType.getShape(), modelMemrefElementType.getTileShapeType());
     auto getMemrefFuncType = rewriter.getFunctionType(TypeRange{thresholdArgType, indexArgType, tileShapeIDArgType}, rewriter.getI32Type());
     std::string funcName = "Init_" + globalName;
     NamedAttribute visibilityAttribute{module.sym_visibilityAttrName(), rewriter.getStringAttr("public")};
@@ -318,8 +318,9 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     auto thresholdType = treeType.getThresholdType();
     auto featureIndexType = treeType.getFeatureIndexType(); 
     auto tileSize = treeType.getTileSize();
+    auto tileShapeType = treeType.getTileShapeType();
     // assert (tileSize == 1);
-    Type memrefElementType = decisionforest::TiledNumericalNodeType::get(thresholdType, featureIndexType, tileSize);
+    Type memrefElementType = decisionforest::TiledNumericalNodeType::get(thresholdType, featureIndexType, tileShapeType, tileSize);
 
     PersistDecisionForest(forest, forestType);
     
@@ -593,6 +594,7 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     assert(featureIndexVectorType);
     auto thresholdType = treeTileType.getThresholdFieldType();
     auto thresholdVectorType = thresholdType.cast<VectorType>();
+    auto tileShapeType = treeTileType.getTileShapeType();
     assert(thresholdVectorType);
 
     assert (treeTileType.getTileSize() > 1);
@@ -616,7 +618,7 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     }
 
     // Load the tile shape
-    auto loadTileShapeOp = rewriter.create<decisionforest::LoadTileShapeOp>(location, rewriter.getI32Type(), treeMemref, static_cast<Value>(nodeIndex));
+    auto loadTileShapeOp = rewriter.create<decisionforest::LoadTileShapeOp>(location, tileShapeType, treeMemref, static_cast<Value>(nodeIndex));
     auto tileShapeIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadTileShapeOp));
 
     // index = (tileSize+1)*index + 1 + childIndex

@@ -145,15 +145,30 @@ void InferenceRunner::PrintOffsetsArray() {
 }
 
 template<typename ThresholdType, typename FeatureIndexType>
+int32_t InferenceRunner::ResolveTileShapeType() {
+  auto tileShapeBitWidth = mlir::decisionforest::ForestJSONReader::GetInstance().GetTileShapeBitWidth();
+  if (tileShapeBitWidth == 8)
+    return CallInitMethod<ThresholdType, FeatureIndexType, int8_t>();
+  else if (tileShapeBitWidth == 16)
+    return CallInitMethod<ThresholdType, FeatureIndexType, int16_t>();
+  else if (tileShapeBitWidth == 32)
+    return CallInitMethod<ThresholdType, FeatureIndexType, int32_t>();
+  else
+    assert (false && "Unsupported tile shape bit width");
+  return -1;
+}
+
+
+template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType>
 int32_t InferenceRunner::CallInitMethod() {
   std::vector<ThresholdType> thresholds;
   std::vector<FeatureIndexType> featureIndices;
-  std::vector<int32_t> tileShapeIDs;
+  std::vector<TileShapeType> tileShapeIDs;
   mlir::decisionforest::ForestJSONReader::GetInstance().GetModelValues(m_tileSize, m_thresholdSize, m_featureIndexSize, thresholds, featureIndices, tileShapeIDs);
 
   Memref<ThresholdType, 1> thresholdsMemref{thresholds.data(), thresholds.data(), 0, {(int64_t)thresholds.size()}, 1};
   Memref<FeatureIndexType, 1> featureIndexMemref{featureIndices.data(), featureIndices.data(), 0, {(int64_t)featureIndices.size()}, 1};
-  Memref<int32_t, 1> tileShapeIDMemref{tileShapeIDs.data(), tileShapeIDs.data(), 0, {(int64_t)tileShapeIDs.size()}, 1};
+  Memref<TileShapeType, 1> tileShapeIDMemref{tileShapeIDs.data(), tileShapeIDs.data(), 0, {(int64_t)tileShapeIDs.size()}, 1};
   int32_t returnValue = -1;
 
   void* args[] = {
@@ -195,13 +210,13 @@ int32_t InferenceRunner::InitializeModelArray() {
   else {
     if (m_thresholdSize == 64) {
       if (m_featureIndexSize == 32) {
-        return CallInitMethod<double, int32_t>();
+        return ResolveTileShapeType<double, int32_t>();
       }
       else if (m_featureIndexSize == 16) {
-        return CallInitMethod<double, int16_t>();
+        return ResolveTileShapeType<double, int16_t>();
       }
       else if (m_featureIndexSize == 8) {
-        return CallInitMethod<double, int8_t>();
+        return ResolveTileShapeType<double, int8_t>();
       }
       else {
         assert (false);
@@ -209,13 +224,13 @@ int32_t InferenceRunner::InitializeModelArray() {
     }
     else if (m_thresholdSize == 32) {
       if (m_featureIndexSize == 32) {
-        return CallInitMethod<float, int32_t>();
+        return ResolveTileShapeType<float, int32_t>();
       }
       else if (m_featureIndexSize == 16) {
-        return CallInitMethod<float, int16_t>();
+        return ResolveTileShapeType<float, int16_t>();
       }
       else if (m_featureIndexSize == 8) {
-        return CallInitMethod<float, int8_t>();
+        return ResolveTileShapeType<float, int8_t>();
       }
       else {
         assert (false);
@@ -275,39 +290,53 @@ int32_t SharedObjectInferenceRunner::InitializeOffsetsArray() {
   return 0;
 }
 
-template<typename ThresholdType, typename FeatureIndexType>
+template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType>
 int32_t SharedObjectInferenceRunner::CallInitMethod() {
   std::vector<ThresholdType> thresholds;
   std::vector<FeatureIndexType> featureIndices;
-  std::vector<int32_t> tileShapeIDs;
+  std::vector<TileShapeType> tileShapeIDs;
   mlir::decisionforest::ForestJSONReader::GetInstance().GetModelValues(m_tileSize, m_thresholdSize, m_featureIndexSize, thresholds, featureIndices, tileShapeIDs);
 
   std::set<int32_t> tileShapes(tileShapeIDs.begin(), tileShapeIDs.end());
   std::cout << "Number of unique tile shapes : " << tileShapes.size() << std::endl;
 
   typedef int32_t (*InitModelPtr_t)(ThresholdType*, ThresholdType*, int64_t, int64_t, int64_t, FeatureIndexType*, FeatureIndexType*, int64_t, int64_t, int64_t,
-                                    int32_t*, int32_t*, int64_t, int64_t, int64_t);
+                                    TileShapeType*, TileShapeType*, int64_t, int64_t, int64_t);
   auto initModelPtr = reinterpret_cast<InitModelPtr_t>(dlsym(m_so, "Init_model"));
 
   Memref<ThresholdType, 1> thresholdsMemref{thresholds.data(), thresholds.data(), 0, {(int64_t)thresholds.size()}, 1};
   Memref<FeatureIndexType, 1> featureIndexMemref{featureIndices.data(), featureIndices.data(), 0, {(int64_t)featureIndices.size()}, 1};
-  Memref<int32_t, 1> tileShapeIDMemref{tileShapeIDs.data(), tileShapeIDs.data(), 0, {(int64_t)tileShapeIDs.size()}, 1};
+  Memref<TileShapeType, 1> tileShapeIDMemref{tileShapeIDs.data(), tileShapeIDs.data(), 0, {(int64_t)tileShapeIDs.size()}, 1};
   initModelPtr(thresholdsMemref.bufferPtr, thresholdsMemref.alignedPtr, thresholdsMemref.offset, thresholdsMemref.lengths[0], thresholdsMemref.strides[0],
                featureIndexMemref.bufferPtr, featureIndexMemref.alignedPtr, featureIndexMemref.offset, featureIndexMemref.lengths[0], featureIndexMemref.strides[0],
                tileShapeIDMemref.bufferPtr, tileShapeIDMemref.alignedPtr, tileShapeIDMemref.offset, tileShapeIDMemref.lengths[0], tileShapeIDMemref.strides[0]);
   return 0;
 }
 
+template<typename ThresholdType, typename FeatureIndexType>
+int32_t SharedObjectInferenceRunner::ResolveTileShapeType() {
+  auto tileShapeBitWidth = mlir::decisionforest::ForestJSONReader::GetInstance().GetTileShapeBitWidth();
+  if (tileShapeBitWidth == 8)
+    return CallInitMethod<ThresholdType, FeatureIndexType, int8_t>();
+  else if (tileShapeBitWidth == 16)
+    return CallInitMethod<ThresholdType, FeatureIndexType, int16_t>();
+  else if (tileShapeBitWidth == 32)
+    return CallInitMethod<ThresholdType, FeatureIndexType, int32_t>();
+  else
+    assert (false && "Unsupported tile shape bit width");
+  return -1;
+}
+
 int32_t SharedObjectInferenceRunner::InitializeModelArray() {
   if (m_thresholdSize == 64) {
     if (m_featureIndexSize == 32) {
-      return CallInitMethod<double, int32_t>();
+      return ResolveTileShapeType<double, int32_t>();
     }
     else if (m_featureIndexSize == 16) {
-      return CallInitMethod<double, int16_t>();
+      return ResolveTileShapeType<double, int16_t>();
     }
     else if (m_featureIndexSize == 8) {
-      return CallInitMethod<double, int8_t>();
+      return ResolveTileShapeType<double, int8_t>();
     }
     else {
       assert (false);
@@ -315,13 +344,13 @@ int32_t SharedObjectInferenceRunner::InitializeModelArray() {
   }
   else if (m_thresholdSize == 32) {
     if (m_featureIndexSize == 32) {
-      return CallInitMethod<float, int32_t>();
+      return ResolveTileShapeType<float, int32_t>();
     }
     else if (m_featureIndexSize == 16) {
-      return CallInitMethod<float, int16_t>();
+      return ResolveTileShapeType<float, int16_t>();
     }
     else if (m_featureIndexSize == 8) {
-      return CallInitMethod<float, int8_t>();
+      return ResolveTileShapeType<float, int8_t>();
     }
     else {
       assert (false);

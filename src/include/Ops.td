@@ -143,6 +143,7 @@ def WalkDecisionTreeOp : DecisionForest_Op<"walk_decision_tree"> {
 
 def ThresholdValueType : AnyTypeOf<[F16, F32, F64]>;
 def FeatureIndexType : AnyTypeOf<[I8, I16, I32, I64]>;
+def TileShapeType : AnyTypeOf<[I8, I16, I32, I64]>;
 
 def TreeConstantOp : DecisionForest_Op<"tree", [NoSideEffect]> {
   let summary = "Tree constant operation";
@@ -235,7 +236,7 @@ def LoadTileShapeOp : DecisionForest_Op<"loadTileShape", [NoSideEffect]> {
   let description = "Load the shape ID from a tile in a tree memref. Takes a memref and an index into the memref and returns an integer.";
   let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex);
 
-  let results = (outs I32);
+  let results = (outs TileShapeType);
 }
 
 def InitTileOp : DecisionForest_Op<"initTile"> {
@@ -245,7 +246,7 @@ def InitTileOp : DecisionForest_Op<"initTile"> {
                        Index:$tileIndex,
                        TileOfThresholdTypes:$thresholds,
                        TileOfFeatureIndices:$featureIndices,
-                       I32:$tileShapeID);
+                       TileShapeType:$tileShapeID);
 }
 
 def IndexToNodeOp : DecisionForest_Op<"indexToNode", [NoSideEffect]> {

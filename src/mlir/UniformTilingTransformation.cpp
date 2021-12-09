@@ -30,8 +30,10 @@ T AssertOpIsOfType(Operation* operation) {
 
 struct TileEnsembleConstants : public RewritePattern {
   int32_t m_tileSize;
-  TileEnsembleConstants(MLIRContext *ctx, int32_t tileSize) 
-    : RewritePattern(mlir::decisionforest::EnsembleConstantOp::getOperationName(), 1 /*benefit*/, ctx), m_tileSize(tileSize)
+  Type m_tileShapeType;
+  TileEnsembleConstants(MLIRContext *ctx, int32_t tileSize, Type tileShapeType) 
+    : RewritePattern(mlir::decisionforest::EnsembleConstantOp::getOperationName(), 1 /*benefit*/, ctx),
+      m_tileSize(tileSize), m_tileShapeType(tileShapeType)
   {}
 
   LogicalResult matchAndRewrite(Operation *op, PatternRewriter &rewriter) const final {
@@ -55,7 +57,7 @@ struct TileEnsembleConstants : public RewritePattern {
       TileSingleDecisionTree(forest.GetTree(i));
       auto treeType = forestType.getTreeType(i).cast<decisionforest::TreeType>();
       auto newTreeType = decisionforest::TreeType::get(treeType.getResultType(), forest.GetTree(i).TilingDescriptor().MaxTileSize(), 
-                                                       treeType.getThresholdType(), treeType.getFeatureIndexType());
+                                                       treeType.getThresholdType(), treeType.getFeatureIndexType(), m_tileShapeType);
       treeTypes.push_back(newTreeType);
     }
     // Tile this forest uniformly
@@ -125,13 +127,16 @@ struct TileEnsembleConstants : public RewritePattern {
 
 struct UniformTilingPass : public PassWrapper<UniformTilingPass, FunctionPass> {
   int32_t m_tileSize;
-  UniformTilingPass(int32_t tileSize) : m_tileSize(tileSize) { }
+  int32_t m_tileShapeBitWidth;
+  UniformTilingPass(int32_t tileSize, int32_t tileShapeBitWidth) : m_tileSize(tileSize), m_tileShapeBitWidth(tileShapeBitWidth)
+  { }
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect, math::MathDialect>();
   }
   void runOnFunction() final {
     RewritePatternSet patterns(&getContext());
-    patterns.add<TileEnsembleConstants>(&getContext(), m_tileSize);
+    auto tileShapeType = IntegerType::get(&getContext(), m_tileShapeBitWidth);
+    patterns.add<TileEnsembleConstants>(&getContext(), m_tileSize, tileShapeType);
 
     if (failed(applyPatternsAndFoldGreedily(getFunction(), std::move(patterns))))
         signalPassFailure();
@@ -143,10 +148,10 @@ namespace mlir
 {
 namespace decisionforest
 {
-void DoUniformTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize) {
+void DoUniformTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth) {
   mlir::PassManager pm(&context);
   mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
-  optPM.addPass(std::make_unique<UniformTilingPass>(tileSize));
+  optPM.addPass(std::make_unique<UniformTilingPass>(tileSize, tileShapeBitWidth));
 
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to mid level IR failed.\n";

@@ -60,8 +60,12 @@ protected:
   int32_t m_thresholdSize;
   int32_t m_featureIndexSize;
 
-  template<typename ThresholdType, typename FeatureIndexType>
+  template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType>
   int32_t CallInitMethod();
+  
+  template<typename ThresholdType, typename FeatureIndexType>
+  int32_t ResolveTileShapeType();
+
 public:
   static llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> CreateExecutionEngine(mlir::ModuleOp module);
   InferenceRunner(mlir::ModuleOp module, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize);
@@ -105,8 +109,11 @@ class SharedObjectInferenceRunner {
   void *m_so;
   void *m_inferenceFuncPtr;
 
-  template<typename ThresholdType, typename FeatureIndexType>
+  template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType>
   int32_t CallInitMethod();
+  
+  template<typename ThresholdType, typename FeatureIndexType>
+  int32_t ResolveTileShapeType();
 public:
   SharedObjectInferenceRunner(const std::string& soPath, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize);
   ~SharedObjectInferenceRunner();

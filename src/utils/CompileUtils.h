@@ -9,12 +9,13 @@ namespace TreeBeard
 
 template<typename ThresholdType=double, typename ReturnType=double, typename FeatureIndexType=int32_t, 
          typename NodeIndexType=int32_t, typename InputElementType=double>
-mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, const std::string& modelJsonPath, int32_t batchSize, int32_t tileSize=1) {
+mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, const std::string& modelJsonPath, 
+                                                         int32_t batchSize, int32_t tileSize=1, int32_t tileShapeBitWidth=32) {
   TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType> xgBoostParser(context, modelJsonPath, batchSize);
   xgBoostParser.Parse();
   auto module = xgBoostParser.GetEvaluationFunction();
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
-  mlir::decisionforest::DoUniformTiling(context, module, tileSize);
+  mlir::decisionforest::DoUniformTiling(context, module, tileSize, tileShapeBitWidth);
   mlir::decisionforest::LowerEnsembleToMemrefs(context, module);
   mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();

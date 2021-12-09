@@ -21,53 +21,55 @@ namespace decisionforest
 struct TiledNumericalNodeTypeKey {
     Type thresholdType;
     Type indexType;
+    Type tileShapeType;
     int32_t tileSize;
     bool operator==(const TiledNumericalNodeTypeKey& that) const {
         return this->thresholdType == that.thresholdType && this->indexType == that.indexType &&
-               this->tileSize == that.tileSize;
+               this->tileShapeType == that.tileShapeType && this->tileSize == that.tileSize;
     }
 };
 
 struct TiledNumericalNodeTypeStorage : public TypeStorage {
-    TiledNumericalNodeTypeStorage(Type thresholdType, Type indexType, int32_t tileSize)
-        : m_thresholdType(thresholdType), m_indexType(indexType), m_tileSize(tileSize) {}
+    TiledNumericalNodeTypeStorage(Type thresholdType, Type indexType, Type tileShapeType, int32_t tileSize)
+        : m_thresholdType(thresholdType), m_indexType(indexType), m_tileShapeType(tileShapeType), m_tileSize(tileSize) {}
 
     /// The hash key for this storage is a pair of the integer and type params.
     using KeyTy = TiledNumericalNodeTypeKey;
 
     /// Define the comparison function for the key type.
     bool operator==(const KeyTy &key) const {
-        KeyTy myKey{m_thresholdType, m_indexType, m_tileSize};
+        KeyTy myKey{m_thresholdType, m_indexType, m_tileShapeType, m_tileSize};
         return key == myKey;
     }
 
-    /// Define a hash function for the key type.
-    /// Note: This isn't necessary because std::pair, unsigned, and Type all have
-    /// hash functions already available.
     static llvm::hash_code hashKey(const KeyTy &key) {
-        return llvm::hash_combine(key.thresholdType, key.indexType, key.tileSize);
+        return llvm::hash_combine(key.thresholdType, key.indexType, key.tileShapeType, key.tileSize);
     }
 
-    /// Define a construction function for the key type.
-    /// Note: This isn't necessary because KeyTy can be directly constructed with
-    /// the given parameters.
     static KeyTy getKey(Type thresholdType, Type indexType, int32_t tileSize) {
-        return KeyTy{thresholdType, indexType, tileSize};
+        return KeyTy{thresholdType, indexType, IntegerType::get(thresholdType.getContext(), 32), tileSize};
+    }
+
+    static KeyTy getKey(Type thresholdType, Type indexType, Type tileShapeType, int32_t tileSize) {
+        return KeyTy{thresholdType, indexType, tileShapeType, tileSize};
     }
 
     /// Define a construction method for creating a new instance of this storage.
     static TiledNumericalNodeTypeStorage *construct(TypeStorageAllocator &allocator,
                                                     const KeyTy &key) {
     return new (allocator.allocate<TiledNumericalNodeTypeStorage>())
-        TiledNumericalNodeTypeStorage(key.thresholdType, key.indexType, key.tileSize);
+        TiledNumericalNodeTypeStorage(key.thresholdType, key.indexType, key.tileShapeType, key.tileSize);
     }
 
     /// The parametric data held by the storage class.
     Type m_thresholdType;
     Type m_indexType;
+    Type m_tileShapeType;
     int32_t m_tileSize;
 public:
-    void print(mlir::DialectAsmPrinter &printer) { printer << "TiledNumericalNode(" << m_thresholdType << ", " << m_indexType << ", " << m_tileSize << ")"; }
+    void print(mlir::DialectAsmPrinter &printer) { 
+        printer << "TiledNumericalNode(" << m_thresholdType << ", " << m_indexType << ", " << m_tileShapeType << ", " << m_tileSize << ")";
+    }
 };
 
 
@@ -80,8 +82,7 @@ public:
 
     /// Create an instance of a `NumericalNodeType` with the given element types. There
     /// *must* be atleast one element type.
-    static TiledNumericalNodeType get(mlir::Type thresholdType, mlir::Type indexType, int32_t tileSize)
-    {
+    static TiledNumericalNodeType get(mlir::Type thresholdType, mlir::Type indexType, int32_t tileSize) {
         // Call into a helper 'get' method in 'TypeBase' to get a uniqued instance
         // of this type. The first parameter is the context to unique in. The
         // parameters after the context are forwarded to the storage instance.
@@ -90,8 +91,15 @@ public:
         return Base::get(ctx, thresholdType, indexType, tileSize);
     }
 
+    static TiledNumericalNodeType get(mlir::Type thresholdType, mlir::Type indexType, mlir::Type tileShapeType, int32_t tileSize) {
+        mlir::MLIRContext *ctx = thresholdType.getContext();
+        assert (ctx == indexType.getContext());
+        return Base::get(ctx, thresholdType, indexType, tileShapeType, tileSize);
+    }
+
     mlir::Type getThresholdElementType() const { return getImpl()->m_thresholdType; }
     mlir::Type getIndexElementType() const { return getImpl()->m_indexType; }
+    mlir::Type getTileShapeType() const { return getImpl()->m_tileShapeType; }
     int32_t getTileSize() const { return getImpl()->m_tileSize; }
     
     mlir::Type getThresholdFieldType() const { 

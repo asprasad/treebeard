@@ -43,20 +43,43 @@ bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float(TestArgs_t& args);
 // Tiled Codegen tests
 bool Test_TiledCodeGeneration_RightHeavy_BatchSize1(TestArgs_t& args);
 bool Test_TiledCodeGeneration_LeftHeavy_BatchSize1(TestArgs_t& args);
+bool Test_TiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape(TestArgs_t& args);
+bool Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape(TestArgs_t& args);
+bool Test_TiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape(TestArgs_t& args);
+bool Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape(TestArgs_t& args);
 bool Test_TiledCodeGeneration_BalancedTree_BatchSize1(TestArgs_t& args);
 bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1(TestArgs_t& args);
+bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize(TestArgs_t& args);
+bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize(TestArgs_t& args);
 
 // Tiled Init Tests
 bool Test_ModelInit_LeftHeavy(TestArgs_t& args);
 bool Test_ModelInit_RightHeavy(TestArgs_t& args);
 bool Test_ModelInit_RightAndLeftHeavy(TestArgs_t& args);
 bool Test_ModelInit_Balanced(TestArgs_t& args);
+bool Test_ModelInit_LeftHeavy_Int8TileShape(TestArgs_t& args);
+bool Test_ModelInit_LeftHeavy_Int16TileShape(TestArgs_t& args);
+bool Test_ModelInit_RightHeavy_Int8TileShape(TestArgs_t& args);
+bool Test_ModelInit_RightHeavy_Int16TileShape(TestArgs_t& args);
+bool Test_ModelInit_Balanced_Int8TileShape(TestArgs_t& args);
+bool Test_ModelInit_Balanced_Int16TileShape(TestArgs_t& args);
+bool Test_ModelInit_RightAndLeftHeavy_Int8TileShape(TestArgs_t& args);
+bool Test_ModelInit_RightAndLeftHeavy_Int16TileShape(TestArgs_t& args);
 
 // Uniform Tiling Tests
 bool Test_UniformTiling_LeftHeavy_BatchSize1(TestArgs_t& args);
 bool Test_UniformTiling_RightHeavy_BatchSize1(TestArgs_t &args);
 bool Test_UniformTiling_Balanced_BatchSize1(TestArgs_t &args);
 bool Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1(TestArgs_t &args);
+bool Test_UniformTiling_LeftHeavy_BatchSize1_Int8TileShape(TestArgs_t& args);
+bool Test_UniformTiling_RightHeavy_BatchSize1_Int8TileShape(TestArgs_t &args);
+bool Test_UniformTiling_Balanced_BatchSize1_Int8TileShape(TestArgs_t &args);
+bool Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1_Int8TileShape(TestArgs_t &args);
+bool Test_UniformTiling_LeftHeavy_BatchSize1_Int16TileShape(TestArgs_t& args);
+bool Test_UniformTiling_RightHeavy_BatchSize1_Int16TileShape(TestArgs_t &args);
+bool Test_UniformTiling_Balanced_BatchSize1_Int16TileShape(TestArgs_t &args);
+bool Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1_Int16TileShape(TestArgs_t &args);
+
 bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args);
 bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize1(TestArgs_t& args);
 bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize1(TestArgs_t& args);
@@ -64,8 +87,14 @@ bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize2(TestArgs_t& args);
 bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize2(TestArgs_t& args);
 bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize2(TestArgs_t& args);
 bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4_Int8TileShape(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4_Int16TileShape(TestArgs_t& args);
 bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4_Int8TileShape(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4_Int16TileShape(TestArgs_t& args);
 bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4_Int8TileShape(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4_Int16TileShape(TestArgs_t& args);
 
 // XGBoost benchmark models tests
 bool Test_Scalar_Abalone(TestArgs_t &args);
@@ -566,15 +595,37 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_RightHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_BalancedTree_BatchSize1),
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_TiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape),
+  TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape),
+  TEST_LIST_ENTRY(Test_TiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape),
+  TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape),
+  TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize),
+  TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize),
   TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy),
   TEST_LIST_ENTRY(Test_ModelInit_RightHeavy),
   TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy),
   TEST_LIST_ENTRY(Test_ModelInit_Balanced),
+  TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy_Int8TileShape),
+  TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy_Int16TileShape),
+  TEST_LIST_ENTRY(Test_ModelInit_RightHeavy_Int8TileShape),
+  TEST_LIST_ENTRY(Test_ModelInit_RightHeavy_Int16TileShape),
+  TEST_LIST_ENTRY(Test_ModelInit_Balanced_Int8TileShape),
+  TEST_LIST_ENTRY(Test_ModelInit_Balanced_Int16TileShape),
+  TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy_Int8TileShape),
+  TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy_Int16TileShape),
   TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_Balanced_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1_Int8TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1_Int8TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_Balanced_BatchSize1_Int8TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1_Int8TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1_Int16TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1_Int16TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_Balanced_BatchSize1_Int16TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1_Int16TileShape),
   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize1),
@@ -584,6 +635,12 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4),
   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4_Int8TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4_Int16TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4_Int8TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4_Int16TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4_Int8TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4_Int16TileShape),
   TEST_LIST_ENTRY(Test_Scalar_Abalone),
   TEST_LIST_ENTRY(Test_TileSize2_Abalone),
   TEST_LIST_ENTRY(Test_TileSize3_Abalone),
@@ -622,7 +679,6 @@ TestDescriptor testList[] = {
 };
 
 // TestDescriptor testList[] = {
-//   TEST_LIST_ENTRY(Test_Scalar_Abalone),
   // TEST_LIST_ENTRY(Test_TileSize8_Abalone),
   // TEST_LIST_ENTRY(Test_TileSize8_Airline),
   // TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE),

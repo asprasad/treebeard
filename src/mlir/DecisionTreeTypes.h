@@ -181,52 +181,52 @@ struct TreeTypeKey {
     int32_t tileSize;
     Type thresholdType;
     Type featureIndexType;
+    Type tileShapeType;
     bool operator==(const TreeTypeKey& that) const
     {
         return this->resultType==that.resultType && this->tileSize==that.tileSize &&
-               this->thresholdType==that.thresholdType && this->featureIndexType==that.featureIndexType;
+               this->thresholdType==that.thresholdType && this->featureIndexType==that.featureIndexType &&
+               this->tileShapeType==that.tileShapeType;
     }
 };
 
 struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
-    TreeTypeStorage(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType)
-        : m_resultType(resultType), m_tileSize(tileSize), m_thresholdType(thresholdType), m_featureIndexType(featureIndexType) {}
+    TreeTypeStorage(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType, Type tileShapeType)
+        : m_resultType(resultType), m_tileSize(tileSize), m_thresholdType(thresholdType), 
+          m_featureIndexType(featureIndexType), m_tileShapeType(tileShapeType) {}
 
     using KeyTy = TreeTypeKey;
 
     bool operator==(const KeyTy &key) const {
-        KeyTy myKey{ m_resultType, m_tileSize, m_thresholdType, m_featureIndexType };
+        KeyTy myKey{ m_resultType, m_tileSize, m_thresholdType, m_featureIndexType, m_tileShapeType };
         return key == myKey;
     }
 
     static llvm::hash_code hashKey(const KeyTy &key) {
         std::string tileSizeStr = std::to_string(key.tileSize);
-        return llvm::hash_combine(key.resultType, tileSizeStr, key.thresholdType, key.featureIndexType);
-    }
-
-    static KeyTy getKey(Type resultType) {
-        auto context = resultType.getContext();
-        return KeyTy{ resultType, 1, FloatType::getF64(context), IntegerType::get(context, 32) };
-    }
-
-    static KeyTy getKey(Type resultType, int32_t tileSize) {
-        auto context = resultType.getContext();
-        return KeyTy{ resultType, tileSize, FloatType::getF64(context), IntegerType::get(context, 32) };
+        return llvm::hash_combine(key.resultType, tileSizeStr, key.thresholdType, key.featureIndexType, key.tileShapeType);
     }
 
     static KeyTy getKey(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType) {
-        return KeyTy{ resultType, tileSize, thresholdType, featureIndexType };
+        auto context = resultType.getContext();
+        return KeyTy{ resultType, tileSize, thresholdType, featureIndexType, IntegerType::get(context, 32) };
+    }
+
+    static KeyTy getKey(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType, Type tileShapeType) {
+        return KeyTy{ resultType, tileSize, thresholdType, featureIndexType, tileShapeType };
     }
 
     static TreeTypeStorage *construct(TypeStorageAllocator &allocator,
                                       const KeyTy &key) {
-        return new (allocator.allocate<TreeTypeStorage>()) TreeTypeStorage(key.resultType, key.tileSize, key.thresholdType, key.featureIndexType);
+        return new (allocator.allocate<TreeTypeStorage>()) TreeTypeStorage(key.resultType, key.tileSize, key.thresholdType, 
+                                                                           key.featureIndexType, key.tileShapeType);
     }
 
     Type m_resultType;
     int32_t m_tileSize;
     Type m_thresholdType;
     Type m_featureIndexType;
+    Type m_tileShapeType;
 public:
     void print(mlir::DialectAsmPrinter &printer) override;
 };
@@ -241,10 +241,16 @@ public:
         return Base::get(ctx, resultType, tileSize, thresholdType, featureIndexType);
     }
 
+    static TreeType get(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType, Type tileShapeType) {
+        mlir::MLIRContext *ctx = resultType.getContext();
+        return Base::get(ctx, resultType, tileSize, thresholdType, featureIndexType, tileShapeType);
+    }
+
     mlir::Type getResultType() const { return getImpl()->m_resultType; }
     int32_t getTileSize() const { return getImpl()->m_tileSize; }
     mlir::Type getThresholdType() const { return getImpl()->m_thresholdType; }
     mlir::Type getFeatureIndexType() const { return getImpl()->m_featureIndexType; }
+    mlir::Type getTileShapeType() const { return getImpl()->m_tileShapeType; }
 
     void print(mlir::DialectAsmPrinter &printer) { getImpl()->print(printer); }
 };
@@ -253,8 +259,6 @@ public:
 // Tree Ensemble Type
 //===----------------------------------------------------------------------===//
 
-// TODO We currently store the resultType here and including the "tensor type" due to the batch size.
-// Should it just be the numerical type? (f64 instead of Tensor<16xf64>)
 // TODO Should we store the input row type (apart from the batch size) here?
 struct TreeEnsembleTypeKey {
     Type resultType;

@@ -259,7 +259,7 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
                   return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType});
                 }
                 else {
-                  auto tileShapeIDType = mlir::IntegerType::get(&context, 32);
+                  auto tileShapeIDType = type.getTileShapeType();
                   return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType});
                 }
               });

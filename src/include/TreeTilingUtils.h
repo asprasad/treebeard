@@ -59,6 +59,7 @@ class ForestJSONReader
         std::list<std::vector<FeatureIndexType>> serializedFetureIndices;
         std::list<std::vector<int32_t>> serializedTileShapeIDs;
     };
+    int32_t tileShapeBitWidth;
     std::list<SingleTileSizeEntry> m_tileSizeEntries;
     json m_json;
     int32_t m_numberOfTrees;
@@ -86,19 +87,23 @@ public:
     void SetNumberOfTrees(int32_t val) { m_numberOfTrees = val; }
     int32_t GetNumberOfTrees() { return m_numberOfTrees; }
     int32_t GetTotalNumberOfTiles();
+    
+    int32_t GetTileShapeBitWidth() { return tileShapeBitWidth; }
+    void SetTileShapeBitWidth(int32_t val) { tileShapeBitWidth=val; }
+    
     static ForestJSONReader& GetInstance() {
         return m_instance;
     }
     static int32_t GetLengthOfTree(std::vector<int32_t>& offsets, int32_t treeIndex);
     
-    template<typename ThresholdType, typename FeatureIndexType>
+    template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType>
     void GetModelValues(int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize, 
-                        std::vector<ThresholdType>& thresholds, std::vector<FeatureIndexType>& featureIndices, std::vector<int32_t>& tileShapeIDs);
+                        std::vector<ThresholdType>& thresholds, std::vector<FeatureIndexType>& featureIndices, std::vector<TileShapeType>& tileShapeIDs);
 };
 
-template<typename ThresholdType, typename FeatureIndexType>
+template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType>
 void ForestJSONReader::GetModelValues(int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize, 
-                                      std::vector<ThresholdType>& thresholds, std::vector<FeatureIndexType>& featureIndices, std::vector<int32_t>& tileShapeIDs) {
+                                      std::vector<ThresholdType>& thresholds, std::vector<FeatureIndexType>& featureIndices, std::vector<TileShapeType>& tileShapeIDs) {
     auto iter = FindEntry(tileSize, thresholdSize, featureIndexSize);
     for (auto& thresholdVec : iter->serializedThresholds)
         thresholds.insert(thresholds.end(), thresholdVec.begin(), thresholdVec.end());

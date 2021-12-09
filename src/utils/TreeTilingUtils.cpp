@@ -418,9 +418,14 @@ void PersistDecisionForest(mlir::decisionforest::DecisionForest<>& forest, mlir:
     auto numTrees = forest.NumTrees();
     mlir::decisionforest::ForestJSONReader::GetInstance().SetNumberOfTrees(numTrees);
     std::vector<TiledTreeStats> treeStats;
+    uint tileShapeBitWidth = 0;
     for (size_t i=0; i<numTrees ; ++i) {
         auto treeType = forestType.getTreeType(0).cast<decisionforest::TreeType>();
         
+        auto currentTreeTileShapeBitWidth = treeType.getTileShapeType().getIntOrFloatBitWidth();
+        assert (tileShapeBitWidth==0 || currentTreeTileShapeBitWidth==tileShapeBitWidth);
+        tileShapeBitWidth=currentTreeTileShapeBitWidth;
+
         // TODO We're assuming that the threshold type is a float type and index type 
         // is an integer. This is just to get the size. Can we get the size differently?
         auto thresholdType = treeType.getThresholdType().cast<FloatType>();
@@ -452,6 +457,9 @@ void PersistDecisionForest(mlir::decisionforest::DecisionForest<>& forest, mlir:
             }
         }
     }
+    assert (tileShapeBitWidth != 0);
+    mlir::decisionforest::ForestJSONReader::GetInstance().SetTileShapeBitWidth(tileShapeBitWidth);
+    
     if (TreeBeard::Logging::loggingOptions.logTreeStats) {
         LogTreeStats(treeStats);
     }
