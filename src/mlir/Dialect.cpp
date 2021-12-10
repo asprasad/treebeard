@@ -10,11 +10,14 @@ using namespace mlir::decisionforest;
 
 #include "Dialect.cpp.inc"
 
-bool mlir::decisionforest::InsertDebugHelpers=false;
+bool mlir::decisionforest::InsertDebugHelpers = false;
 bool mlir::decisionforest::UseBitcastForComparisonOutcome = true;
+bool mlir::decisionforest::UseSparseTreeRepresentation = true;
 
 void TreeTypeStorage::print(mlir::DialectAsmPrinter &printer) {
-    printer << "TreeType(returnType:" << m_resultType << ", tileSize: " << m_tileSize << ", tileShapeType: " << m_tileShapeType << "))";
+    printer << "TreeType(returnType:" << m_resultType << ", tileSize:" << m_tileSize 
+            << ", tileShapeType:" << m_tileShapeType << ", sparse:" << m_sparseRepresentation 
+            << ", childIndexType:" << m_childIndexType << "))";
 }
 
 void TreeEnsembleTypeStorage::print(mlir::DialectAsmPrinter &printer) {

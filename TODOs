@@ -52,8 +52,15 @@ CodeGen for tile size != 1
         - [Done] Generate lookup tables for child tile indices given tile comparison outcomes
 
 Performance Tuning for Tiled Code
-    - Add XGBoost tests with different feature index types
+    - [Done] Add XGBoost tests with different feature index types
     - Add a "child" pointer to each tile (improve leaf duplication, empty space)
+        - Change TiledTreeNodeType to include type for the child index and sparsity
+        - Store sparse trees in ForestJSONReader (model, offsets, lengths)
+        - Change TraverseTreeTile (only the index computation part)
+        - No changes to IsLeaf, GetThreshold, GetFeatureIndices, Comparison, LUT lookup, LUT computation, GetLeafValue, GetTree, GetRoot (as long as struct has thresholds in the beginning etc)
+        - New op to simultaneously read both child index and tile shape?
+        - LLVM lowering (new op, type conversion)
+
     - Store leaves in a "different" array so leaf values don't have to be duplicated as full tiles
     - 
 

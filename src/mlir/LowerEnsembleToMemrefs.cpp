@@ -65,9 +65,6 @@ using namespace mlir;
 
 namespace {
 
-using ThresholdType = double;
-using FeatureIndexType = int32_t;
-
 struct EnsembleConstantLoweringInfo {
   Value modelGlobal;
   Value offsetGlobal;
@@ -83,8 +80,11 @@ struct EnsembleConstantLoweringInfo {
 std::map<Operation*, EnsembleConstantLoweringInfo> ensembleConstantToMemrefsMap;
 // Maps a GetTree operation to a memref that represents the tree once the ensemble constant has been replaced
 std::map<Operation*, Value> getTreeOperationMap;
-// Maps a GetRoot operation to the integer constant (=0) that will represent the index into the tree memref
-std::map<Operation*, Value> getRootOperationMap;
+
+void ClearGlobalMaps() {
+  ensembleConstantToMemrefsMap.clear();
+  getTreeOperationMap.clear();
+}
 
 template<typename T>
 T AssertOpIsOfType(Operation* operation) {
@@ -735,6 +735,11 @@ struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLowe
     registry.insert<AffineDialect, memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect>();
   }
   void runOnFunction() final {
+    // [BUG!!] TODO Since MLIR runs this pass multi-threaded, if multiple passes access these globals, they need to be protected!
+    
+    // Clear the global maps that store the mappings for the ensemble constants
+    ClearGlobalMaps();
+
     ConversionTarget target(getContext());
 
     target.addLegalDialect<AffineDialect, memref::MemRefDialect, StandardOpsDialect, 
