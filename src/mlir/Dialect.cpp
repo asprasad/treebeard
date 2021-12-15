@@ -12,7 +12,7 @@ using namespace mlir::decisionforest;
 
 bool mlir::decisionforest::InsertDebugHelpers = false;
 bool mlir::decisionforest::UseBitcastForComparisonOutcome = true;
-bool mlir::decisionforest::UseSparseTreeRepresentation = true;
+bool mlir::decisionforest::UseSparseTreeRepresentation = false;
 
 void TreeTypeStorage::print(mlir::DialectAsmPrinter &printer) {
     printer << "TreeType(returnType:" << m_resultType << ", tileSize:" << m_tileSize 
