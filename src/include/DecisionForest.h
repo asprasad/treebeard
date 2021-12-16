@@ -458,7 +458,7 @@ std::vector<FeatureIndexType> DecisionTree<ThresholdType, ReturnType, FeatureInd
     std::vector<FeatureIndexType> featureIndexVec(sortedNodes.size());
     size_t i=0;
     for (auto& node : sortedNodes) {
-        featureIndexVec.at(i) = node.featureIndex;
+        featureIndexVec.at(i) = node.IsLeaf() ? -1 : node.featureIndex;
         ++i;
     }
     return featureIndexVec;

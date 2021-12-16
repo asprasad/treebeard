@@ -61,7 +61,8 @@ class ForestJSONReader
         std::list<std::vector<int32_t>> serializedChildIndices;
         std::list<std::vector<ThresholdType>> serializedLeaves;
     };
-    int32_t tileShapeBitWidth;
+    int32_t m_tileShapeBitWidth;
+    int32_t m_childIndexBitWidth;
     std::list<SingleTileSizeEntry> m_tileSizeEntries;
     json m_json;
     int32_t m_numberOfTrees;
@@ -117,9 +118,12 @@ public:
     int32_t GetTotalNumberOfTiles();
     int32_t GetTotalNumberOfLeaves();
     
-    int32_t GetTileShapeBitWidth() { return tileShapeBitWidth; }
-    void SetTileShapeBitWidth(int32_t val) { tileShapeBitWidth=val; }
-    
+    int32_t GetTileShapeBitWidth() { return m_tileShapeBitWidth; }
+    void SetTileShapeBitWidth(int32_t val) { m_tileShapeBitWidth=val; }
+
+    int32_t GetChildIndexBitWidth() { return m_childIndexBitWidth; }
+    void SetChildIndexBitWidth(int32_t val) { m_childIndexBitWidth=val; }
+
     static ForestJSONReader& GetInstance() {
         return m_instance;
     }
@@ -129,10 +133,10 @@ public:
     void GetModelValues(int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize, 
                         std::vector<ThresholdType>& thresholds, std::vector<FeatureIndexType>& featureIndices, std::vector<TileShapeType>& tileShapeIDs);
     
-    template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType>
+    template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType, typename ChildIndexType>
     void GetModelValues(int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize, 
                         std::vector<ThresholdType>& thresholds, std::vector<FeatureIndexType>& featureIndices, std::vector<TileShapeType>& tileShapeIDs,
-                        std::vector<TileShapeType>& childIndices, std::vector<ThresholdType>& leaves);
+                        std::vector<ChildIndexType>& childIndices);
 
 };
 
@@ -150,10 +154,10 @@ void ForestJSONReader::GetModelValues(int32_t tileSize, int32_t thresholdSize, i
         assert ((int32_t)tileShapeIDs.size() == GetTotalNumberOfTiles());
 }
 
-template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType>
+template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType, typename ChildIndexType>
 void ForestJSONReader::GetModelValues(int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize, 
                                       std::vector<ThresholdType>& thresholds, std::vector<FeatureIndexType>& featureIndices, std::vector<TileShapeType>& tileShapeIDs,
-                                      std::vector<TileShapeType>& childIndices, std::vector<ThresholdType>& leaves) {
+                                      std::vector<ChildIndexType>& childIndices) {
     auto iter = FindEntry(tileSize, thresholdSize, featureIndexSize);
     for (auto& thresholdVec : iter->serializedThresholds)
         thresholds.insert(thresholds.end(), thresholdVec.begin(), thresholdVec.end());
@@ -163,8 +167,6 @@ void ForestJSONReader::GetModelValues(int32_t tileSize, int32_t thresholdSize, i
         tileShapeIDs.insert(tileShapeIDs.end(), tileShapeIDVec.begin(), tileShapeIDVec.end());
     for (auto& childIndicesVec : iter->serializedChildIndices)
         childIndices.insert(childIndices.end(), childIndicesVec.begin(), childIndicesVec.end());
-    for (auto& leavesVec : iter->serializedLeaves)
-        leaves.insert(leaves.end(), leavesVec.begin(), leavesVec.end());
     if (tileSize > 1) {
         assert ((int32_t)tileShapeIDs.size() == GetTotalNumberOfTiles());
         assert (tileShapeIDs.size() == childIndices.size());

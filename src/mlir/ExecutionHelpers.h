@@ -60,11 +60,14 @@ protected:
   int32_t m_thresholdSize;
   int32_t m_featureIndexSize;
 
-  template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType>
+  template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType, typename ChildIndexType>
   int32_t CallInitMethod();
   
   template<typename ThresholdType, typename FeatureIndexType>
   int32_t ResolveTileShapeType();
+
+  template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType>
+  int32_t ResolveChildIndexType();
 
 public:
   static llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> CreateExecutionEngine(mlir::ModuleOp module);
@@ -74,6 +77,7 @@ public:
   int32_t InitializeOffsetsArray();
   int32_t InitializeModelArray();
   int32_t InitializeLUT();
+  int32_t InitializeLeafArrays();
 
   void PrintLengthsArray();
   void PrintOffsetsArray();

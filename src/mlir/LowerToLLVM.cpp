@@ -214,7 +214,7 @@ struct InitSparseTileOpLowering : public ConversionPattern {
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
-    assert(operands.size() == 5);
+    assert(operands.size() == 6);
     decisionforest::InitSparseTileOpAdaptor tileOpAdaptor(operands);
     GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.thresholds().getType(), 0, getTypeConverter(), tileOpAdaptor.thresholds());
     GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.featureIndices().getType(), 1, getTypeConverter(), tileOpAdaptor.featureIndices());
@@ -222,7 +222,7 @@ struct InitSparseTileOpLowering : public ConversionPattern {
     auto tileType = modelMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
     if (tileType.getTileSize() > 1)
       GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.tileShapeID().getType(), 2, getTypeConverter(), tileOpAdaptor.tileShapeID());
-    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.childIndex().getType(), 2, getTypeConverter(), tileOpAdaptor.childIndex());
+    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.childIndex().getType(), 3, getTypeConverter(), tileOpAdaptor.childIndex());
     rewriter.eraseOp(op);
     return mlir::success();
   }
@@ -285,17 +285,32 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
 
   auto& context = getContext();
   LLVMTypeConverter typeConverter(&getContext(), options);
-  typeConverter.addConversion([&](decisionforest::TiledNumericalNodeType type) {
-                auto thresholdType = type.getThresholdFieldType();
-                auto indexType = type.getIndexFieldType();
-                if (type.getTileSize() == 1) {
-                  return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType});
-                }
-                else {
+  if (decisionforest::UseSparseTreeRepresentation == false)
+    typeConverter.addConversion([&](decisionforest::TiledNumericalNodeType type) {
+                  auto thresholdType = type.getThresholdFieldType();
+                  auto indexType = type.getIndexFieldType();
+                  if (type.getTileSize() == 1) {
+                    return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType});
+                  }
+                  else {
+                    auto tileShapeIDType = type.getTileShapeType();
+                    return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType});
+                  }
+                });
+    else
+      typeConverter.addConversion([&](decisionforest::TiledNumericalNodeType type) {
+                  auto thresholdType = type.getThresholdFieldType();
+                  auto indexType = type.getIndexFieldType();
+                  auto childIndexType = type.getChildIndexType();
                   auto tileShapeIDType = type.getTileShapeType();
-                  return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType});
-                }
-              });
+                  if (type.getTileSize() == 1) {
+                    return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType, childIndexType});
+                  }
+                  else {
+                    return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType, childIndexType});
+                  }
+                });
+
 
   RewritePatternSet patterns(&getContext());
   populateAffineToStdConversionPatterns(patterns);
@@ -310,7 +325,9 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
   patterns.add<LoadTileFeatureIndicesOpLowering,
                LoadTileThresholdOpLowering,
                LoadTileShapeOpLowering,
+               LoadChildIndexOpLowering,
                InitTileOpLowering,
+               InitSparseTileOpLowering,
                GetModelMemrefSizeOpLowering>(typeConverter);
   decisionforest::populateDebugOpLoweringPatterns(patterns, typeConverter);
 
