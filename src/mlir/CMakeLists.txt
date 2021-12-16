@@ -3,6 +3,7 @@ PRIVATE
 Dialect.cpp
 LowerToMidLevelIR.cpp
 LowerEnsembleToMemrefs.cpp
+LowerSparseEnsembleToMemrefs.cpp
 ConvertNodeTypeToIndexType.cpp
 LowerToLLVM.cpp
 ExecutionHelpers.cpp

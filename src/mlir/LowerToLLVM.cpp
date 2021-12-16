@@ -74,6 +74,7 @@ const int32_t kOffsetIndexInMemrefStruct = 2;
 const int32_t kThresholdElementNumberInTile = 0;
 const int32_t kFeatureIndexElementNumberInTile = 1;
 const int32_t kTileShapeElementNumberInTile = 2;
+const int32_t kChildIndexElementNumberInTile = 3;
 
 Type GenerateGetElementPtr(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter, Type elementMLIRType,
                            int64_t elementNumber, TypeConverter* typeConverter, Value& elementPtr) {
@@ -176,6 +177,18 @@ struct LoadTileShapeOpLowering : public ConversionPattern {
   }
 };
 
+struct LoadChildIndexOpLowering : public ConversionPattern {
+  LoadChildIndexOpLowering(LLVMTypeConverter& typeConverter) 
+  : ConversionPattern(typeConverter, mlir::decisionforest::LoadChildIndexOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    assert(operands.size() == 2);
+    GenerateLoadStructElement(op, operands, rewriter, kChildIndexElementNumberInTile, getTypeConverter());
+    return mlir::success();
+  }
+};
+
 struct InitTileOpLowering : public ConversionPattern {
   InitTileOpLowering(LLVMTypeConverter& typeConverter) 
   : ConversionPattern(typeConverter, mlir::decisionforest::InitTileOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
@@ -190,6 +203,26 @@ struct InitTileOpLowering : public ConversionPattern {
     auto tileType = modelMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
     if (tileType.getTileSize() > 1)
       GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.tileShapeID().getType(), 2, getTypeConverter(), tileOpAdaptor.tileShapeID());
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
+
+struct InitSparseTileOpLowering : public ConversionPattern {
+  InitSparseTileOpLowering(LLVMTypeConverter& typeConverter) 
+  : ConversionPattern(typeConverter, mlir::decisionforest::InitSparseTileOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    assert(operands.size() == 5);
+    decisionforest::InitSparseTileOpAdaptor tileOpAdaptor(operands);
+    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.thresholds().getType(), 0, getTypeConverter(), tileOpAdaptor.thresholds());
+    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.featureIndices().getType(), 1, getTypeConverter(), tileOpAdaptor.featureIndices());
+    auto modelMemrefType = op->getOperand(0).getType().cast<MemRefType>();
+    auto tileType = modelMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
+    if (tileType.getTileSize() > 1)
+      GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.tileShapeID().getType(), 2, getTypeConverter(), tileOpAdaptor.tileShapeID());
+    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.childIndex().getType(), 2, getTypeConverter(), tileOpAdaptor.childIndex());
     rewriter.eraseOp(op);
     return mlir::success();
   }

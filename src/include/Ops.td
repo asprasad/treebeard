@@ -144,6 +144,7 @@ def WalkDecisionTreeOp : DecisionForest_Op<"walk_decision_tree"> {
 def ThresholdValueType : AnyTypeOf<[F16, F32, F64]>;
 def FeatureIndexType : AnyTypeOf<[I8, I16, I32, I64]>;
 def TileShapeType : AnyTypeOf<[I8, I16, I32, I64]>;
+def ChildIndexType : AnyTypeOf<[I8, I16, I32, I64]>;
 
 def TreeConstantOp : DecisionForest_Op<"tree", [NoSideEffect]> {
   let summary = "Tree constant operation";
@@ -239,6 +240,14 @@ def LoadTileShapeOp : DecisionForest_Op<"loadTileShape", [NoSideEffect]> {
   let results = (outs TileShapeType);
 }
 
+def LoadChildIndexOp : DecisionForest_Op<"loadChildIndex", [NoSideEffect]> {
+  let summary = "Load the child index of a tree tile.";
+  let description = "Load the child index from a tile in a tree memref. Takes a memref and an index into the memref and returns an integer.";
+  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex);
+
+  let results = (outs ChildIndexType);
+}
+
 def InitTileOp : DecisionForest_Op<"initTile"> {
   let summary = "Initialize a tree tile.";
   let description = "Initialize a single tile in a tree memref. Takes a memref and an index along with the values to write into the tile.";
@@ -247,6 +256,18 @@ def InitTileOp : DecisionForest_Op<"initTile"> {
                        TileOfThresholdTypes:$thresholds,
                        TileOfFeatureIndices:$featureIndices,
                        TileShapeType:$tileShapeID);
+}
+
+def InitSparseTileOp : DecisionForest_Op<"initSparseTile"> {
+  let summary = "Initialize a sparse tree tile.";
+  let description = "Initialize a single tile in a tree memref. Takes a memref and an index along with the values to write into the tile.";
+  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, 
+                       Index:$tileIndex,
+                       TileOfThresholdTypes:$thresholds,
+                       TileOfFeatureIndices:$featureIndices,
+                       TileShapeType:$tileShapeID,
+                       ChildIndexType:$childIndex
+                       );
 }
 
 def IndexToNodeOp : DecisionForest_Op<"indexToNode", [NoSideEffect]> {

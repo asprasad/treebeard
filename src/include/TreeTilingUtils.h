@@ -75,6 +75,9 @@ class ForestJSONReader
                             std::list<std::vector<int32_t>>& serializedChildIndices, std::list<std::vector<ThresholdType>>& serializedLeaves,
                             const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth);
 
+    template<typename LeafType>
+    void InitializeLeavesImpl(LeafType *bufPtr, std::list<ForestJSONReader::SingleTileSizeEntry>::iterator listIter);
+
 public:
     ForestJSONReader(const std::string& filename) {
         std::ifstream fin;
@@ -101,6 +104,9 @@ public:
     void InitializeLengthBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth);
     void InitializeLookUpTable(void* bufPtr, int32_t tileSize, int32_t entryBitWidth);
     
+    void InitializeLeaves(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth);
+    void InitializeLeavesOffsetBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth);
+    void InitializeLeavesLengthBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth);
     void ClearAllData();
 
     //===----------------------------------------===/
@@ -109,6 +115,7 @@ public:
     void SetNumberOfTrees(int32_t val) { m_numberOfTrees = val; }
     int32_t GetNumberOfTrees() { return m_numberOfTrees; }
     int32_t GetTotalNumberOfTiles();
+    int32_t GetTotalNumberOfLeaves();
     
     int32_t GetTileShapeBitWidth() { return tileShapeBitWidth; }
     void SetTileShapeBitWidth(int32_t val) { tileShapeBitWidth=val; }
@@ -167,6 +174,7 @@ void ForestJSONReader::GetModelValues(int32_t tileSize, int32_t thresholdSize, i
 void PersistDecisionForest(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType);
 void ClearPersistedForest();
 int32_t GetTotalNumberOfTiles();
+int32_t GetTotalNumberOfLeaves();
 
 } // decisionforest
 } // mlir

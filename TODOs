@@ -56,12 +56,17 @@ Performance Tuning for Tiled Code
     - Add a "child" pointer to each tile (improve leaf duplication, empty space)
         - [Done] Change TiledTreeNodeType to include type for the child index and sparsity
         - [Done] Return sparse representation from decision tree and tiled tree
-        - Store sparse trees in ForestJSONReader (model, offsets, lengths)
-        - Change the init method to initialize the child 
-        - Change IsLeaf, TraverseTreeTile, EnsembleConstant, GetLeafValue (only the index computation part)
-        - No changes to  GetThreshold, GetFeatureIndices, Comparison, LUT lookup, LUT computation,  GetTree, GetRoot (as long as struct has thresholds in the beginning etc)
-        - New op to simultaneously read both child index and tile shape?
-        - LLVM lowering (new op, type conversion)
+        - [Done] Store sparse trees in ForestJSONReader (model, offsets, lengths)
+        - [Done] Check that existing initialization works for length and offset of model array
+            - Seems to work because these values are computed based on "numberOfTiles" in trees and this shouldn't change with sparse. 
+        - [Done] Initialization for leaves array (and its offset and length array)
+        - Lower ensemble to memref
+            - [Done] Add leaves memref, offset and length arrays for leaves memref
+            - [Done] Change the init method to initialize the child 
+            - [Done] Change IsLeaf, TraverseTreeTile, EnsembleConstant, GetLeafValue (only the index computation part)
+            - No changes to  GetThreshold, GetFeatureIndices, Comparison, LUT lookup, LUT computation,  GetTree, GetRoot (as long as struct has thresholds in the beginning etc)
+            - [Defer] New op to simultaneously read both child index and tile shape?
+        - [Done] LLVM lowering (new op, type conversion)
 
     - Store leaves in a "different" array so leaf values don't have to be duplicated as full tiles
     - 
