@@ -139,6 +139,26 @@ bool Test_TileSize3_Year(TestArgs_t &args);
 bool Test_TileSize4_Year(TestArgs_t &args);
 bool Test_TileSize8_Year(TestArgs_t &args);
 
+// Sparse XGBoost Scalar Tests
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize2(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize4(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize1(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize2(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize4(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize1(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize2(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize4(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1_Float(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize2_Float(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize4_Float(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize1_Float(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize2_Float(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize4_Float(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize1_Float(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize2_Float(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize4_Float(TestArgs_t& args);
+
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
     vec[i] = (double)rand()/RAND_MAX;
@@ -344,9 +364,10 @@ bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
 }
 
 bool Test_ForestCodeGen_VariableBatchSize(TestArgs_t& args, ForestConstructor_t forestConstructor, 
-                                          int64_t batchSize, std::vector< std::vector<double> >& inputData) {
+                                          int64_t batchSize, std::vector< std::vector<double> >& inputData, int32_t childIndexBitWidth=1) {
   FixedTreeIRConstructor<> irConstructor(args.context, batchSize, forestConstructor);
   irConstructor.Parse();
+  irConstructor.SetChildIndexBitWidth(childIndexBitWidth);
   auto module = irConstructor.GetEvaluationFunction();
   // module->dump();
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
@@ -429,6 +450,35 @@ bool Test_SparseCodeGeneration_LeftHeavy_BatchSize1_I32ChildIdx(TestArgs_t& args
   return Test_ForestCodeGen_BatchSize1(args, AddLeftHeavyTree<DoubleInt32Tile>, data, 32);
 }
 
+bool Test_SparseCodeGeneration_RightHeavy_BatchSize1_I32ChildIdx(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto data = GetBatchSize1Data();
+  return Test_ForestCodeGen_BatchSize1(args, AddRightHeavyTree<DoubleInt32Tile>, data, 32);
+}
+
+bool Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize1_I32ChildIdx(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto data = GetBatchSize1Data();
+  return Test_ForestCodeGen_BatchSize1(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, data, 32);
+}
+
+bool Test_SparseCodeGeneration_LeftHeavy_BatchSize2_I32ChildIdx(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto data = GetBatchSize2Data();
+  return Test_ForestCodeGen_VariableBatchSize(args, AddLeftHeavyTree<DoubleInt32Tile>, 2, data, 32);
+}
+
+bool Test_SparseCodeGeneration_RightHeavy_BatchSize2_I32ChildIdx(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto data = GetBatchSize2Data();
+  return Test_ForestCodeGen_VariableBatchSize(args, AddRightHeavyTree<DoubleInt32Tile>, 2, data, 32);
+}
+
+bool Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto data = GetBatchSize2Data();
+  return Test_ForestCodeGen_VariableBatchSize(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 2, data, 32);
+}
 
 // Tests for Tiled Buffer Initialization
 template<typename ThresholdType, typename IndexType>
@@ -693,10 +743,38 @@ TestDescriptor testList[] = {
 
   // Sparse tests
   TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize1_I32ChildIdx),
+  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize1_I32ChildIdx),
+  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize1_I32ChildIdx),
+  TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize2_I32ChildIdx),
+  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize2_I32ChildIdx),
+  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize2),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize4),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize1),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize2),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize4),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize1),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize2),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize4),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1_Float),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize2_Float),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize4_Float),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize1_Float),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize2_Float),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize4_Float),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize1_Float),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize2_Float),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize4_Float),
 };
 
 // TestDescriptor testList[] = {
 //   TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize1_I32ChildIdx),
+//   TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize1_I32ChildIdx),
+//   TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize1_I32ChildIdx),
+//   TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize2_I32ChildIdx),
+//   TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize2_I32ChildIdx),
+//   TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx),
   // TEST_LIST_ENTRY(Test_TileSize8_Airline),
   // TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE),
   // TEST_LIST_ENTRY(Test_TileSize8_Bosch),

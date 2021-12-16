@@ -32,10 +32,11 @@ namespace test
 
 template<typename FloatType, typename FeatureIndexType=int32_t>
 bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, const std::string& modelJsonPath, 
-                                           int32_t tileSize, int32_t tileShapeBitWidth) {
+                                           int32_t tileSize, int32_t tileShapeBitWidth, int32_t childIndexBitWidth) {
   TestCSVReader csvReader(modelJsonPath + ".csv");
   TreeBeard::XGBoostJSONParser<FloatType, FloatType, FeatureIndexType, int32_t, FloatType> xgBoostParser(args.context, modelJsonPath, batchSize);
   xgBoostParser.Parse();
+  xgBoostParser.SetChildIndexBitWidth(childIndexBitWidth);
   auto module = xgBoostParser.GetEvaluationFunction();
   // module->dump();
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
@@ -87,7 +88,8 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
 
 template<typename FloatType>
 bool Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize(TestArgs_t& args, int32_t batchSize, 
-                                                             const std::string& modelDirRelativePath, int32_t tileSize, int32_t tileShapeBitWidth) {
+                                                             const std::string& modelDirRelativePath, 
+                                                             int32_t tileSize, int32_t tileShapeBitWidth, int32_t childIndexBitWidth) {
   auto repoPath = GetTreeBeardRepoPath();
   auto testModelsDir = repoPath + "/" + modelDirRelativePath;
   auto modelListFile = testModelsDir + "/ModelList.txt";
@@ -99,24 +101,24 @@ bool Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize(TestArgs_t& args, i
     std::getline(fin, modelJSONName);
     auto modelJSONPath = testModelsDir + "/" + modelJSONName;
     // std::cout << "Model file : " << modelJSONPath << std::endl;
-    Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FloatType>(args, batchSize, modelJSONPath, tileSize, tileShapeBitWidth));
+    Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FloatType>(args, batchSize, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth));
   }
   return true;
 }
 
 template<typename FloatType=double>
-bool Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(TestArgs_t& args, int32_t batchSize, int32_t tileSize=1, int32_t tileShapeBitWidth=32) {
-  return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize<FloatType>(args, batchSize, "xgb_models/test/Random_1Tree", tileSize, tileShapeBitWidth);
+bool Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(TestArgs_t& args, int32_t batchSize, int32_t tileSize=1, int32_t tileShapeBitWidth=32, int32_t childIndexBitWidth=1) {
+  return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize<FloatType>(args, batchSize, "xgb_models/test/Random_1Tree", tileSize, tileShapeBitWidth, childIndexBitWidth);
 }
 
 template<typename FloatType=double>
-bool Test_RandomXGBoostJSONs_2Trees_VariableBatchSize(TestArgs_t& args, int32_t batchSize, int32_t tileSize=1, int32_t tileShapeBitWidth=32) {
-  return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize<FloatType>(args, batchSize, "xgb_models/test/Random_2Tree", tileSize, tileShapeBitWidth);
+bool Test_RandomXGBoostJSONs_2Trees_VariableBatchSize(TestArgs_t& args, int32_t batchSize, int32_t tileSize=1, int32_t tileShapeBitWidth=32, int32_t childIndexBitWidth=1) {
+  return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize<FloatType>(args, batchSize, "xgb_models/test/Random_2Tree", tileSize, tileShapeBitWidth, childIndexBitWidth);
 }
 
 template<typename FloatType=double>
-bool Test_RandomXGBoostJSONs_4Trees_VariableBatchSize(TestArgs_t& args, int32_t batchSize, int32_t tileSize=1, int32_t tileShapeBitWidth=32) {
-  return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize<FloatType>(args, batchSize, "xgb_models/test/Random_4Tree", tileSize, tileShapeBitWidth);
+bool Test_RandomXGBoostJSONs_4Trees_VariableBatchSize(TestArgs_t& args, int32_t batchSize, int32_t tileSize=1, int32_t tileShapeBitWidth=32, int32_t childIndexBitWidth=1) {
+  return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize<FloatType>(args, batchSize, "xgb_models/test/Random_4Tree", tileSize, tileShapeBitWidth, childIndexBitWidth);
 }
 
 bool Test_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args) {
@@ -189,6 +191,100 @@ bool Test_RandomXGBoostJSONs_4Trees_BatchSize2_Float(TestArgs_t& args) {
 
 bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float(TestArgs_t& args) {
   return Test_RandomXGBoostJSONs_4Trees_VariableBatchSize<float>(args, 4);
+}
+
+// --------------------------------------------------------------------------
+// XGBoost Sparse Code Gen Tests
+// --------------------------------------------------------------------------
+
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(args, 1, 1, 32, 32);
+}
+
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize2(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(args, 2, 1, 32, 32);
+}
+
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize4(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(args, 4, 1, 32, 32);
+}
+
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize1(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_RandomXGBoostJSONs_2Trees_VariableBatchSize(args, 1, 1, 32, 32);
+}
+
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize2(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_RandomXGBoostJSONs_2Trees_VariableBatchSize(args, 2, 1, 32, 32);
+}
+
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize4(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_RandomXGBoostJSONs_2Trees_VariableBatchSize(args, 4, 1, 32, 32);
+}
+
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize1(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_RandomXGBoostJSONs_4Trees_VariableBatchSize(args, 1, 1, 32, 32);
+}
+
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize2(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_RandomXGBoostJSONs_4Trees_VariableBatchSize(args, 2, 1, 32, 32);
+}
+
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize4(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_RandomXGBoostJSONs_4Trees_VariableBatchSize(args, 4, 1, 32, 32);
+}
+
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1_Float(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_RandomXGBoostJSONs_1Tree_VariableBatchSize<float>(args, 1, 1, 32, 32);
+}
+
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize2_Float(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_RandomXGBoostJSONs_1Tree_VariableBatchSize<float>(args, 2, 1, 32, 32);
+}
+
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize4_Float(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_RandomXGBoostJSONs_1Tree_VariableBatchSize<float>(args, 4, 1, 32, 32);
+}
+
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize1_Float(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_RandomXGBoostJSONs_2Trees_VariableBatchSize<float>(args, 1, 1, 32, 32);
+}
+
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize2_Float(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_RandomXGBoostJSONs_2Trees_VariableBatchSize<float>(args, 2, 1, 32, 32);
+}
+
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize4_Float(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_RandomXGBoostJSONs_2Trees_VariableBatchSize<float>(args, 4, 1, 32, 32);
+}
+
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize1_Float(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_RandomXGBoostJSONs_4Trees_VariableBatchSize<float>(args, 1, 1, 32, 32);
+}
+
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize2_Float(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_RandomXGBoostJSONs_4Trees_VariableBatchSize<float>(args, 2, 1, 32, 32);
+}
+
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize4_Float(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_RandomXGBoostJSONs_4Trees_VariableBatchSize<float>(args, 4, 1, 32, 32);
 }
 
 // --------------------------------------------------------------------------
@@ -445,49 +541,50 @@ bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4_Int16TileShape(Test
 // XGBoost Benchmark Correctness Tests
 // ===---------------------------------------------------=== //
 
-bool Test_SingleTileSize_SingleModel(TestArgs_t &args, const std::string& modelJSONPath, int32_t tileSize, bool skipInt8 = false, int32_t tileShapeBitWidth=32) {
+bool Test_SingleTileSize_SingleModel(TestArgs_t &args, const std::string& modelJSONPath, int32_t tileSize, 
+                                     bool skipInt8 = false, int32_t tileShapeBitWidth=32, int32_t childIndexBitWidth=1) {
   {
     using FPType = double;
-    Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, tileSize, tileShapeBitWidth));
-    Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, tileSize, tileShapeBitWidth));
-    Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, tileSize, tileShapeBitWidth));
+    Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth));
+    Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth));
+    Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth));
   }
   {
     using FPType = double;
     using IntType = int16_t;
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, tileSize, tileShapeBitWidth)));
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, tileSize, tileShapeBitWidth)));
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, tileSize, tileShapeBitWidth)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
   }
   if (!skipInt8)
   {
     using FPType = double;
     using IntType = int8_t;
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, tileSize, tileShapeBitWidth)));
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, tileSize, tileShapeBitWidth)));
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, tileSize, tileShapeBitWidth)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
   }
 
   {
     using FPType = float;
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, tileSize, tileShapeBitWidth)));
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, tileSize, tileShapeBitWidth)));
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, tileSize, tileShapeBitWidth)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
   }
   {
     using FPType = float;
     using IntType = int16_t;
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, tileSize, tileShapeBitWidth)));
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, tileSize, tileShapeBitWidth)));
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, tileSize, tileShapeBitWidth)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
   }
   if (!skipInt8)
   {
     using FPType = float;
     using IntType = int8_t;
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, tileSize, tileShapeBitWidth)));
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, tileSize, tileShapeBitWidth)));
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, tileSize, tileShapeBitWidth)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
   }
   return true;
 }
