@@ -427,9 +427,9 @@ struct GetTreeOpLowering: public ConversionPattern {
       leavesMemref = rewriter.create<memref::SubViewOp>(location, ensembleInfo.leavesGlobal, ArrayRef<OpFoldResult>({static_cast<Value>(leavesMemrefIndex)}),
                                                           ArrayRef<OpFoldResult>({static_cast<Value>(leavesLength)}), ArrayRef<OpFoldResult>({rewriter.getIndexAttr(1)}));
     }   
-    if (decisionforest::InsertDebugHelpers) {
-      rewriter.create<decisionforest::PrintTreeToDOTFileOp>(location, treeMemref, treeIndex);
-    }
+    // if (decisionforest::InsertDebugHelpers) {
+    //   rewriter.create<decisionforest::PrintTreeToDOTFileOp>(location, treeMemref, treeIndex);
+    // }
     getTreeOperationMap[op] = { static_cast<Value>(treeMemref), static_cast<Value>(leavesMemref) };
 
     rewriter.eraseOp(op);
@@ -509,33 +509,48 @@ struct IsLeafOpLowering: public ConversionPattern {
     auto treeMemrefLen = rewriter.create<memref::DimOp>(location, treeMemref, 0);
     auto nodeIndexOutOfBounds = rewriter.create<arith::CmpIOp>(location, arith::CmpIPredicate::sge, nodeIndex, treeMemrefLen);
 
-    auto treeTileType = treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
-    auto featureIndexType = treeTileType.getIndexFieldType();
-    auto loadFeatureIndexOp = rewriter.create<decisionforest::LoadTileFeatureIndicesOp>(location, featureIndexType, treeMemref, static_cast<Value>(nodeIndex));    
-    
-    Value featureIndexValue;
-    if (treeTileType.getTileSize() == 1) {
-      featureIndexValue = loadFeatureIndexOp;
+    auto ifElse = rewriter.create<scf::IfOp>(location, TypeRange{ rewriter.getI1Type() }, nodeIndexOutOfBounds, true);
+    {
+      // return true if the index is out of bounds
+      auto ifBuilder = ifElse.getThenBodyBuilder();
+      auto trueConst = ifBuilder.create<arith::ConstantIntOp>(location, 1, rewriter.getI1Type());
+      if (decisionforest::InsertDebugHelpers) {
+        Value outcome = ifBuilder.create<mlir::arith::ExtUIOp>(location, ifBuilder.getI32Type(), static_cast<Value>(nodeIndexOutOfBounds));
+        Value featureIndexValue = ifBuilder.create<arith::ConstantIntOp>(location, int64_t(-1), ifBuilder.getI32Type());
+        ifBuilder.create<decisionforest::PrintIsLeafOp>(location, nodeIndex, featureIndexValue, outcome);
+      }
+      ifBuilder.create<scf::YieldOp>(location, static_cast<Value>(trueConst));
     }
-    else {
-      auto indexVectorType = featureIndexType.cast<mlir::VectorType>();
-      assert (indexVectorType);
-      auto zeroConst = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI32Type());
-      auto extractFirstElement = rewriter.create<vector::ExtractElementOp>(location, static_cast<Value>(loadFeatureIndexOp), zeroConst);
-      featureIndexValue = extractFirstElement;
-    }
-    auto minusOneConstant = rewriter.create<arith::ConstantIntOp>(location, int64_t(-1), treeTileType.getIndexElementType());
-    auto comparison = rewriter.create<arith::CmpIOp>(location, mlir::arith::CmpIPredicate::eq, featureIndexValue, static_cast<Value>(minusOneConstant));
-    
-    // Loop condition = out of bounds || feature index == -1
-    auto loopCondition = rewriter.create<arith::OrIOp>(location, nodeIndexOutOfBounds, comparison);
+    {    
+      auto elseBuilder = ifElse.getElseBodyBuilder();
+      auto treeTileType = treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
+      auto featureIndexType = treeTileType.getIndexFieldType();
+      auto loadFeatureIndexOp = elseBuilder.create<decisionforest::LoadTileFeatureIndicesOp>(location, featureIndexType, treeMemref, static_cast<Value>(nodeIndex));    
+      
+      Value featureIndexValue;
+      if (treeTileType.getTileSize() == 1) {
+        featureIndexValue = loadFeatureIndexOp;
+      }
+      else {
+        auto indexVectorType = featureIndexType.cast<mlir::VectorType>();
+        assert (indexVectorType);
+        auto zeroConst = elseBuilder.create<arith::ConstantIntOp>(location, int64_t(0), elseBuilder.getI32Type());
+        auto extractFirstElement = elseBuilder.create<vector::ExtractElementOp>(location, static_cast<Value>(loadFeatureIndexOp), zeroConst);
+        featureIndexValue = extractFirstElement;
+      }
+      auto minusOneConstant = elseBuilder.create<arith::ConstantIntOp>(location, int64_t(-1), treeTileType.getIndexElementType());
+      auto comparison = elseBuilder.create<arith::CmpIOp>(location, mlir::arith::CmpIPredicate::eq, featureIndexValue, static_cast<Value>(minusOneConstant));
+      
+      // Loop condition = out of bounds || feature index == -1
+      // auto loopCondition = elseBuilder.create<arith::OrIOp>(location, nodeIndexOutOfBounds, comparison);
 
-    if (decisionforest::InsertDebugHelpers) {
-      Value outcome = rewriter.create<mlir::arith::ExtUIOp>(location, rewriter.getI32Type(), static_cast<Value>(loopCondition));
-      rewriter.create<decisionforest::PrintIsLeafOp>(location, nodeIndex, featureIndexValue, outcome);
+      if (decisionforest::InsertDebugHelpers) {
+        Value outcome = elseBuilder.create<mlir::arith::ExtUIOp>(location, elseBuilder.getI32Type(), static_cast<Value>(comparison));
+        elseBuilder.create<decisionforest::PrintIsLeafOp>(location, nodeIndex, featureIndexValue, outcome);
+      }
+      elseBuilder.create<scf::YieldOp>(location, static_cast<Value>(comparison));
     }
-
-    rewriter.replaceOp(op, static_cast<Value>(loopCondition));
+    rewriter.replaceOp(op, static_cast<Value>(ifElse.getResult(0)));
 
     return mlir::success();
   }
@@ -785,7 +800,7 @@ struct GetLeafValueOpLowering : public ConversionPattern {
       auto treeMemrefLen = rewriter.create<memref::DimOp>(location, treeMemref, 0);
       auto nodeIndexOutOfBounds = rewriter.create<arith::CmpIOp>(location, arith::CmpIPredicate::slt, nodeIndex, treeMemrefLen);
 
-      auto ifElse = rewriter.create<scf::IfOp>(location, TypeRange{ thresholdType }, nodeIndexOutOfBounds, true);
+      auto ifElse = rewriter.create<scf::IfOp>(location, TypeRange{ treeTileType.getThresholdElementType() }, nodeIndexOutOfBounds, true);
       {
         auto thenBuilder = ifElse.getThenBodyBuilder();
         // Load threshold
@@ -811,6 +826,7 @@ struct GetLeafValueOpLowering : public ConversionPattern {
         auto leafValue = elseBuilder.create<memref::LoadOp>(location, leavesMemref, static_cast<Value>(leafIndex));
         elseBuilder.create<scf::YieldOp>(location, static_cast<Value>(leafValue));
       }
+      // auto resultConst = rewriter.create<arith::ConstantFloatOp>(location, APFloat(double(0.5)), rewriter.getF64Type());
       // TODO cast the loaded value to the correct result type of the tree. 
       rewriter.replaceOp(op, static_cast<Value>(ifElse.getResult(0)));
     }

@@ -1169,6 +1169,8 @@ void TiledTree::GetSparseSerialization(std::vector<double>& thresholds, std::vec
     auto& sortedTiles = levelOrder.LevelOrderNodes();
     std::map<int32_t, int32_t> tileIndexMap;
     int32_t numberOfTilesInLeafArray=0, currentTileIndex=0;
+    std::vector<double> tileThresholds(TileSize());
+    std::vector<int32_t> tileFeatureIndices(TileSize());
     for (auto& tile : sortedTiles) {
         // if tile is a leaf and all siblings are leaves, put it into the leaf array
         if (tile.IsLeafTile() && AreAllSiblingsLeaves(tile)) {
@@ -1177,8 +1179,10 @@ void TiledTree::GetSparseSerialization(std::vector<double>& thresholds, std::vec
             numberOfTilesInLeafArray += 1;
         }
         else {
-            tile.GetThresholds(thresholds.end());
-            tile.GetFeatureIndices(featureIndices.end());
+            tile.GetThresholds(tileThresholds.begin());
+            thresholds.insert(thresholds.end(), tileThresholds.begin(), tileThresholds.end());
+            tile.GetFeatureIndices(tileFeatureIndices.begin());
+            featureIndices.insert(featureIndices.end(), tileFeatureIndices.begin(), tileFeatureIndices.end());
             tileShapeIDs.push_back(tile.GetTileShapeID());
             childIndices.push_back(tile.GetChildren().front());
             tileIndexMap[currentTileIndex] = currentTileIndex - numberOfTilesInLeafArray;
