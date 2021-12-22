@@ -998,5 +998,324 @@ bool Test_TileSize8_Year(TestArgs_t &args) {
   return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize);
 }
 
+// ===---------------------------------------------------=== //
+// XGBoost Benchmark Sparse Code Gen Correctness Tests
+// ===---------------------------------------------------=== //
+
+bool Test_SparseScalar_Abalone(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  int32_t tileSize = 1;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
+}
+
+bool Test_SparseTileSize2_Abalone(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  int32_t tileSize = 2;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
+}
+
+bool Test_SparseTileSize3_Abalone(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  int32_t tileSize = 3;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
+}
+
+bool Test_SparseTileSize4_Abalone(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  int32_t tileSize = 4;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
+}
+
+bool Test_SparseTileSize8_Abalone(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
+}
+
+bool Test_SparseScalar_Airline(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  int32_t tileSize = 1;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
+}
+
+bool Test_SparseTileSize2_Airline(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  int32_t tileSize = 2;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
+}
+
+bool Test_SparseTileSize3_Airline(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  int32_t tileSize = 3;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
+}
+
+bool Test_SparseTileSize4_Airline(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  int32_t tileSize = 4;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
+}
+
+bool Test_SparseTileSize8_Airline(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
+}
+
+bool Test_SparseScalar_AirlineOHE(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  int32_t tileSize = 1;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 32);
+}
+
+bool Test_SparseTileSize2_AirlineOHE(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+    auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  int32_t tileSize = 2;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 32);
+}
+
+bool Test_SparseTileSize3_AirlineOHE(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+    auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  int32_t tileSize = 3;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 32);
+}
+
+bool Test_SparseTileSize4_AirlineOHE(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+    auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  int32_t tileSize = 4;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 32);
+}
+
+bool Test_SparseTileSize8_AirlineOHE(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 32);
+}
+
+bool Test_SparseScalar_Bosch(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/bosch_xgb_model_save.json";
+  int32_t tileSize = 1;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 32);
+}
+
+bool Test_SparseTileSize2_Bosch(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/bosch_xgb_model_save.json";
+  int32_t tileSize = 2;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 32);
+}
+
+bool Test_SparseTileSize3_Bosch(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/bosch_xgb_model_save.json";
+  int32_t tileSize = 3;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 32);
+}
+
+bool Test_SparseTileSize4_Bosch(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/bosch_xgb_model_save.json";
+  int32_t tileSize = 4;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 32);
+}
+
+bool Test_SparseTileSize8_Bosch(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/bosch_xgb_model_save.json";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 32);
+}
+
+bool Test_SparseScalar_Epsilon(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
+  int32_t tileSize = 1;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 32);
+}
+
+bool Test_SparseTileSize2_Epsilon(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
+  int32_t tileSize = 2;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 32);
+}
+
+bool Test_SparseTileSize3_Epsilon(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
+  int32_t tileSize = 3;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 32);
+}
+
+bool Test_SparseTileSize4_Epsilon(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
+  int32_t tileSize = 4;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 32);
+}
+
+bool Test_SparseTileSize8_Epsilon(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 32);
+}
+
+bool Test_SparseScalar_Higgs(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
+  int32_t tileSize = 1;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
+}
+
+bool Test_SparseTileSize2_Higgs(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
+  int32_t tileSize = 2;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
+}
+
+bool Test_SparseTileSize3_Higgs(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
+  int32_t tileSize = 3;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
+}
+
+bool Test_SparseTileSize4_Higgs(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
+  int32_t tileSize = 4;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
+}
+
+bool Test_SparseTileSize8_Higgs(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
+}
+
+bool Test_SparseScalar_Year(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/year_prediction_msd_xgb_model_save.json";
+  int32_t tileSize = 1;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
+}
+
+bool Test_SparseTileSize2_Year(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/year_prediction_msd_xgb_model_save.json";
+  int32_t tileSize = 2;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
+}
+
+bool Test_SparseTileSize3_Year(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/year_prediction_msd_xgb_model_save.json";
+  int32_t tileSize = 3;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
+}
+
+bool Test_SparseTileSize4_Year(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/year_prediction_msd_xgb_model_save.json";
+  int32_t tileSize = 4;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
+}
+
+bool Test_SparseTileSize8_Year(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/year_prediction_msd_xgb_model_save.json";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
+}
+
 } // test
 } // TreeBeard

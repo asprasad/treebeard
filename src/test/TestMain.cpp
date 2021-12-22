@@ -175,6 +175,43 @@ bool Test_SparseUniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4(TestArgs_t& ar
 bool Test_SparseUniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4(TestArgs_t& args);
 bool Test_SparseUniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4(TestArgs_t& args);
 
+// Sparse XGBoost Benchmark Correctness Tests
+bool Test_SparseScalar_Abalone(TestArgs_t &args);
+bool Test_SparseTileSize2_Abalone(TestArgs_t &args);
+bool Test_SparseTileSize3_Abalone(TestArgs_t &args);
+bool Test_SparseTileSize4_Abalone(TestArgs_t &args);
+bool Test_SparseTileSize8_Abalone(TestArgs_t &args);
+bool Test_SparseScalar_Airline(TestArgs_t &args);
+bool Test_SparseTileSize2_Airline(TestArgs_t &args);
+bool Test_SparseTileSize3_Airline(TestArgs_t &args);
+bool Test_SparseTileSize4_Airline(TestArgs_t &args);
+bool Test_SparseTileSize8_Airline(TestArgs_t &args);
+bool Test_SparseScalar_AirlineOHE(TestArgs_t &args);
+bool Test_SparseTileSize2_AirlineOHE(TestArgs_t &args);
+bool Test_SparseTileSize3_AirlineOHE(TestArgs_t &args);
+bool Test_SparseTileSize4_AirlineOHE(TestArgs_t &args);
+bool Test_SparseTileSize8_AirlineOHE(TestArgs_t &args);
+bool Test_SparseScalar_Bosch(TestArgs_t &args);
+bool Test_SparseTileSize2_Bosch(TestArgs_t &args);
+bool Test_SparseTileSize3_Bosch(TestArgs_t &args);
+bool Test_SparseTileSize4_Bosch(TestArgs_t &args);
+bool Test_SparseTileSize8_Bosch(TestArgs_t &args);
+bool Test_SparseScalar_Epsilon(TestArgs_t &args);
+bool Test_SparseTileSize2_Epsilon(TestArgs_t &args);
+bool Test_SparseTileSize3_Epsilon(TestArgs_t &args);
+bool Test_SparseTileSize4_Epsilon(TestArgs_t &args);
+bool Test_SparseTileSize8_Epsilon(TestArgs_t &args);
+bool Test_SparseScalar_Higgs(TestArgs_t &args);
+bool Test_SparseTileSize2_Higgs(TestArgs_t &args);
+bool Test_SparseTileSize3_Higgs(TestArgs_t &args);
+bool Test_SparseTileSize4_Higgs(TestArgs_t &args);
+bool Test_SparseTileSize8_Higgs(TestArgs_t &args);
+bool Test_SparseScalar_Year(TestArgs_t &args);
+bool Test_SparseTileSize2_Year(TestArgs_t &args);
+bool Test_SparseTileSize3_Year(TestArgs_t &args);
+bool Test_SparseTileSize4_Year(TestArgs_t &args);
+bool Test_SparseTileSize8_Year(TestArgs_t &args);
+
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
     vec[i] = (double)rand()/RAND_MAX;
@@ -793,9 +830,46 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape),
   TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
   TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
+  // XGBoost Benchmarks Sparse Tests
+  TEST_LIST_ENTRY(Test_SparseScalar_Abalone),
+  TEST_LIST_ENTRY(Test_SparseTileSize2_Abalone),
+  TEST_LIST_ENTRY(Test_SparseTileSize3_Abalone),
+  TEST_LIST_ENTRY(Test_SparseTileSize4_Abalone),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Abalone),
+  TEST_LIST_ENTRY(Test_SparseScalar_Airline),
+  TEST_LIST_ENTRY(Test_SparseTileSize2_Airline),
+  TEST_LIST_ENTRY(Test_SparseTileSize3_Airline),
+  TEST_LIST_ENTRY(Test_SparseTileSize4_Airline),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Airline),
+  TEST_LIST_ENTRY(Test_SparseScalar_AirlineOHE),
+  TEST_LIST_ENTRY(Test_SparseTileSize2_AirlineOHE),
+  TEST_LIST_ENTRY(Test_SparseTileSize3_AirlineOHE),
+  TEST_LIST_ENTRY(Test_SparseTileSize4_AirlineOHE),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_AirlineOHE),
+  TEST_LIST_ENTRY(Test_SparseScalar_Bosch),
+  TEST_LIST_ENTRY(Test_SparseTileSize2_Bosch),
+  TEST_LIST_ENTRY(Test_SparseTileSize3_Bosch),
+  TEST_LIST_ENTRY(Test_SparseTileSize4_Bosch),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Bosch),
+  TEST_LIST_ENTRY(Test_SparseScalar_Epsilon),
+  TEST_LIST_ENTRY(Test_SparseTileSize2_Epsilon),
+  TEST_LIST_ENTRY(Test_SparseTileSize3_Epsilon),
+  TEST_LIST_ENTRY(Test_SparseTileSize4_Epsilon),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Epsilon),
+  TEST_LIST_ENTRY(Test_SparseScalar_Higgs),
+  TEST_LIST_ENTRY(Test_SparseTileSize2_Higgs),
+  TEST_LIST_ENTRY(Test_SparseTileSize3_Higgs),
+  TEST_LIST_ENTRY(Test_SparseTileSize4_Higgs),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Higgs),
+  TEST_LIST_ENTRY(Test_SparseScalar_Year),
+  TEST_LIST_ENTRY(Test_SparseTileSize2_Year),
+  TEST_LIST_ENTRY(Test_SparseTileSize3_Year),
+  TEST_LIST_ENTRY(Test_SparseTileSize4_Year),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Year),
 };
 
 // TestDescriptor testList[] = {
+  // TEST_LIST_ENTRY(Test_TileSize8_Abalone),
   // TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4),
   // TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
   // TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
