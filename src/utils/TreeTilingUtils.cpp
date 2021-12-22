@@ -535,6 +535,7 @@ void PersistDecisionForestImpl(mlir::decisionforest::DecisionForest<>& forest, m
         }
         else {
             TiledTree tiledTree(tree);
+            // tiledTree.WriteDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/xgboostTest_TiledTree.dot");
             persistTreeTiled(tiledTree, i, treeType);
             if (TreeBeard::Logging::loggingOptions.logTreeStats) {
                 auto tiledTreeStats=tiledTree.GetTreeStats();
@@ -1104,15 +1105,15 @@ int32_t TiledTree::NumberOfLeafTiles() {
     return numLeafTiles;
 }
 
-bool TiledTree::AreAllSiblingsLeaves(TiledTreeNode& tile) {
+bool TiledTree::AreAllSiblingsLeaves(TiledTreeNode& tile, const std::vector<TiledTreeNode>& tiles) {
     if (!tile.IsLeafTile())
         return false;
     auto parentIdx = tile.GetParent();
     if (parentIdx == DecisionTree<>::INVALID_NODE_INDEX)
         return true; // This is the only node in the tree
-    auto& parent = m_tiles.at(parentIdx);
+    auto& parent = tiles.at(parentIdx);
     for (auto childIdx : parent.GetChildren()) {
-        auto& child = m_tiles.at(childIdx);
+        auto& child = tiles.at(childIdx);
         if (!child.IsLeafTile())
             return false;
     }
@@ -1122,7 +1123,7 @@ bool TiledTree::AreAllSiblingsLeaves(TiledTreeNode& tile) {
 int32_t TiledTree::NumberOfLeavesWithAllLeafSiblings(int32_t tileIndex) {
     if (m_tiles.at(tileIndex).IsLeafTile()) {
         auto tile = m_tiles.at(tileIndex);
-        if (AreAllSiblingsLeaves(tile))
+        if (AreAllSiblingsLeaves(tile, m_tiles))
             return 1;
         else
             return 0;
@@ -1173,7 +1174,7 @@ void TiledTree::GetSparseSerialization(std::vector<double>& thresholds, std::vec
     std::vector<int32_t> tileFeatureIndices(TileSize());
     for (auto& tile : sortedTiles) {
         // if tile is a leaf and all siblings are leaves, put it into the leaf array
-        if (tile.IsLeafTile() && AreAllSiblingsLeaves(tile)) {
+        if (tile.IsLeafTile() && AreAllSiblingsLeaves(tile, sortedTiles)) {
             leaves.push_back(tile.GetNode(tile.GetNodeIndices().front()).threshold);
             tileIndexMap[currentTileIndex] = -(numberOfTilesInLeafArray+1); // HACK!
             numberOfTilesInLeafArray += 1;
@@ -1184,12 +1185,17 @@ void TiledTree::GetSparseSerialization(std::vector<double>& thresholds, std::vec
             tile.GetFeatureIndices(tileFeatureIndices.begin());
             featureIndices.insert(featureIndices.end(), tileFeatureIndices.begin(), tileFeatureIndices.end());
             tileShapeIDs.push_back(tile.GetTileShapeID());
-            childIndices.push_back(tile.GetChildren().front());
+            if (!tile.IsLeafTile())
+                childIndices.push_back(tile.GetChildren().front());
+            else
+                childIndices.push_back(-1);
             tileIndexMap[currentTileIndex] = currentTileIndex - numberOfTilesInLeafArray;
         }
         ++currentTileIndex;
     }
     for (size_t i=0 ; i<childIndices.size() ; ++i) {
+        if (childIndices.at(i) == -1)
+            continue;
         auto mapIter = tileIndexMap.find(childIndices.at(i));
         assert (mapIter != tileIndexMap.end());
         auto newChildIndex = mapIter->second;

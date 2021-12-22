@@ -387,9 +387,9 @@ struct GetTreeOpLowering: public ConversionPattern {
     auto treeMemref = rewriter.create<memref::SubViewOp>(location, ensembleInfo.modelGlobal, ArrayRef<OpFoldResult>({static_cast<Value>(modelMemrefIndex)}),
                                                          ArrayRef<OpFoldResult>({static_cast<Value>(treeLength)}), ArrayRef<OpFoldResult>({rewriter.getIndexAttr(1)}));
 
-    if (decisionforest::InsertDebugHelpers) {
-      rewriter.create<decisionforest::PrintTreeToDOTFileOp>(location, treeMemref, treeIndex);
-    }
+    // if (decisionforest::InsertDebugHelpers) {
+    //   rewriter.create<decisionforest::PrintTreeToDOTFileOp>(location, treeMemref, treeIndex);
+    // }
     getTreeOperationMap[op] = static_cast<Value>(treeMemref);
 
     rewriter.eraseOp(op);

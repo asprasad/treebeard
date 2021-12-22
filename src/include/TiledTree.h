@@ -154,7 +154,7 @@ class TiledTree {
     int32_t NumberOfLeavesWithAllLeafSiblings(int32_t tileIndex);
     // The number of tiles required to store this tree if duplicated nodes are considered unique
     int32_t NumberOfTiles();
-    bool AreAllSiblingsLeaves(TiledTreeNode& tile);
+    bool AreAllSiblingsLeaves(TiledTreeNode& tile, const std::vector<TiledTreeNode>& tiles);
 public:
     TiledTree(DecisionTree<>& owningTree);
     
@@ -220,7 +220,7 @@ public:
         }
       };
       std::map<MapKey, int32_t> m_nodeIndexMap;
-      
+      std::map<int32_t, int32_t> m_levelOrderIndexToOriginalIndexMap;
       void DoLevelOrderTraversal(const std::vector<LevelOrderSorterNodeType>& nodes) {
         int32_t invalidIndex = DecisionTree<>::INVALID_NODE_INDEX;
         // MapKey invalidIndicesMapKey{invalidIndex, invalidIndex, 0 };
@@ -237,6 +237,7 @@ public:
           MapKey mapKey{entry.parentNodeIndex, index, entry.childNumber};
           assert (m_nodeIndexMap.find(mapKey) == m_nodeIndexMap.end());
           m_nodeIndexMap[mapKey] = m_levelOrder.size() - 1;
+          m_levelOrderIndexToOriginalIndexMap[m_levelOrder.size() - 1] = index;
           if (node.IsLeafTile())
             continue;
           int32_t childNum=0;
@@ -259,10 +260,14 @@ public:
         for (auto& node : m_levelOrder) {
           // MapKey parentMapKey{node.GetParent(), }
           // node.m_parent = GetNewIndex(node.GetParent());
+          assert (m_levelOrderIndexToOriginalIndexMap.find(currNodeIndex) != m_levelOrderIndexToOriginalIndexMap.end());
+          int32_t originalIndex = m_levelOrderIndexToOriginalIndexMap[currNodeIndex];
+          assert (originalIndex == node.m_tileIndex);
           for (size_t i=0 ; i<node.m_children.size() ; ++i) {
             assert(node.m_children.at(i) > 0);
-            MapKey childMapKey{currNodeIndex, node.m_children.at(i), static_cast<int32_t>(i)};
+            MapKey childMapKey{originalIndex, node.m_children.at(i), static_cast<int32_t>(i)};
             node.m_children.at(i) = GetNewIndex(childMapKey);
+            assert(m_levelOrder.at(node.m_children.at(i)).GetParent() == originalIndex);
             m_levelOrder.at(node.m_children.at(i)).SetParent(currNodeIndex);
             assert (i == 0 || ( node.m_children.at(i) = (node.m_children.at(i-1)+1) ));
           }

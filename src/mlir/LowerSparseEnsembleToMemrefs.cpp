@@ -17,6 +17,7 @@
 #include "Dialect.h"
 #include "TreeTilingUtils.h"
 #include "TiledTree.h"
+#include "Logger.h"
 
 /*
 Plan and issues
@@ -148,6 +149,13 @@ Value CreateZeroVectorFPConst(ConversionPatternRewriter &rewriter, Location loca
 Value CreateZeroVectorIntConst(ConversionPatternRewriter &rewriter, Location location, Type intType, int32_t tileSize) {
   Value zeroConst = rewriter.create<arith::ConstantIntOp>(location, 0, intType);
   auto vectorType = VectorType::get(tileSize, intType);
+  auto vectorValue = rewriter.create<vector::BroadcastOp>(location, vectorType, zeroConst);
+  return vectorValue;
+}
+
+Value CreateZeroVectorIndexConst(ConversionPatternRewriter &rewriter, Location location, int32_t tileSize) {
+  Value zeroConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
+  auto vectorType = VectorType::get(tileSize, rewriter.getIndexType());
   auto vectorValue = rewriter.create<vector::BroadcastOp>(location, vectorType, zeroConst);
   return vectorValue;
 }
@@ -377,6 +385,9 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     rewriter.create<memref::GlobalOp>(location, leavesMemrefName, rewriter.getStringAttr("private"),
                                       leavesMemrefType, rewriter.getUnitAttr(), false, IntegerAttr());
     AddGlobalMemrefGetter(module, leavesMemrefName, leavesMemrefType, rewriter, location);
+    
+    if (TreeBeard::Logging::loggingOptions.logGenCodeStats)
+        TreeBeard::Logging::Log("Leaves memref size : " + std::to_string(leavesMemrefSize * (thresholdType.getIntOrFloatBitWidth()/8)));
 
     // Create leaf offset memref
     rewriter.create<memref::GlobalOp>(location, leavesOffsetMemrefName, rewriter.getStringAttr("private"),
@@ -760,7 +771,18 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     auto childNumber = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(childIndexInt));
 
     auto newIndex = rewriter.create<arith::AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(childIndex), static_cast<Value>(childNumber));
-    
+
+    if (decisionforest::InsertDebugHelpers) {
+      // (child base index, lutLookup result, new index)
+      auto zeroVector = CreateZeroVectorIndexConst(rewriter, location, 3);
+      auto zeroConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
+      auto elem0Set = rewriter.create<vector::InsertElementOp>(location, childIndex, zeroVector, zeroConst);
+      auto oneConst = rewriter.create<arith::ConstantIndexOp>(location, 1);
+      auto elem1Set = rewriter.create<vector::InsertElementOp>(location, childNumber, elem0Set, oneConst);
+      auto twoConst = rewriter.create<arith::ConstantIndexOp>(location, 2);
+      auto elem2Set = rewriter.create<vector::InsertElementOp>(location, newIndex, elem1Set, twoConst);
+      InsertPrintVectorOp(rewriter, location, 1, 64, 3, elem2Set);
+    }    
     // node = indexToNode(index)
     auto newNode = rewriter.create<decisionforest::IndexToNodeOp>(location, traverseTileOp.getResult().getType(), treeMemref, static_cast<Value>(newIndex));
     rewriter.replaceOp(op, static_cast<Value>(newNode));

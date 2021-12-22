@@ -57,7 +57,8 @@ struct TileEnsembleConstants : public RewritePattern {
       TileSingleDecisionTree(forest.GetTree(i));
       auto treeType = forestType.getTreeType(i).cast<decisionforest::TreeType>();
       auto newTreeType = decisionforest::TreeType::get(treeType.getResultType(), forest.GetTree(i).TilingDescriptor().MaxTileSize(), 
-                                                       treeType.getThresholdType(), treeType.getFeatureIndexType(), m_tileShapeType);
+                                                       treeType.getThresholdType(), treeType.getFeatureIndexType(), m_tileShapeType, 
+                                                       treeType.isSparseRepresentation(), treeType.getChildIndexType());
       treeTypes.push_back(newTreeType);
     }
     // Tile this forest uniformly
