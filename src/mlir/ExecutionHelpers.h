@@ -51,14 +51,12 @@ using LengthMemrefType = Memref<int64_t, 1>;
 using OffsetMemrefType = Memref<int64_t, 1>;
 // using ResultMemrefType = Memref<double, 1>;
 
-class InferenceRunner {
+class InferenceRunnerBase {
 protected:
-  llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> m_maybeEngine;
-  std::unique_ptr<mlir::ExecutionEngine>& m_engine;
-  mlir::ModuleOp m_module;
   int32_t m_tileSize;
   int32_t m_thresholdSize;
   int32_t m_featureIndexSize;
+  void *m_inferenceFuncPtr;
 
   template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType, typename ChildIndexType>
   int32_t CallInitMethod();
@@ -69,9 +67,12 @@ protected:
   template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType>
   int32_t ResolveChildIndexType();
 
+  virtual void* GetFunctionAddress(const std::string& functionName) = 0;
+  
+  void Init();
 public:
-  static llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> CreateExecutionEngine(mlir::ModuleOp module);
-  InferenceRunner(mlir::ModuleOp module, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize);
+  InferenceRunnerBase(int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize)
+    : m_tileSize(tileSize), m_thresholdSize(thresholdSize), m_featureIndexSize(featureIndexSize) { }
 
   int32_t InitializeLengthsArray();
   int32_t InitializeOffsetsArray();
@@ -82,49 +83,6 @@ public:
   void PrintLengthsArray();
   void PrintOffsetsArray();
   void PrintModelArray();
-
-  template<typename InputElementType, typename ReturnType>
-  int32_t RunInference(InputElementType *input, ReturnType *returnValue, int32_t inputRowSize, int32_t batchSize) {
-    auto& engine = m_engine;
-    Memref<ReturnType, 1> resultMemref;
-    // Memref<InputElementType, 2> resultMemref;
-    InputElementType *ptr = input, *alignedPtr = input;
-    int64_t rowSize = inputRowSize, offset = 0, stride = 1;
-    ReturnType *resultPtr = returnValue, *resultAlignedPtr = returnValue;
-    int64_t resultLen = batchSize;
-    void *args[] = { &ptr, &alignedPtr, &offset, &batchSize, &rowSize, &stride, &stride, // Input memref fields
-                     &resultPtr, &resultAlignedPtr, &offset, &resultLen, &stride, // Result memref fields 
-                     &resultMemref };
-    auto invocationResult = engine->invokePacked("Prediction_Function", args);
-    if (invocationResult) {
-      llvm::errs() << "JIT invocation failed\n";
-      return -1;
-    }
-    // std::cout << "Result memref length : " << resultMemref.lengths[0] << std::endl;
-    return 0;
-  }
-};
-
-class SharedObjectInferenceRunner {
-  int32_t m_tileSize;
-  int32_t m_thresholdSize;
-  int32_t m_featureIndexSize;
-
-  void *m_so;
-  void *m_inferenceFuncPtr;
-
-  template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType>
-  int32_t CallInitMethod();
-  
-  template<typename ThresholdType, typename FeatureIndexType>
-  int32_t ResolveTileShapeType();
-public:
-  SharedObjectInferenceRunner(const std::string& soPath, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize);
-  ~SharedObjectInferenceRunner();
-  int32_t InitializeLengthsArray();
-  int32_t InitializeOffsetsArray();
-  int32_t InitializeModelArray();
-  int32_t InitializeLUT();
 
   template<typename InputElementType, typename ReturnType>
   int32_t RunInference(InputElementType *input, ReturnType *returnValue, int32_t inputRowSize, int32_t batchSize) {
@@ -139,7 +97,27 @@ public:
                      resultPtr, resultAlignedPtr, offset, resultLen, stride);
     return 0;
   }
+};
 
+class InferenceRunner : public InferenceRunnerBase {
+protected:
+  llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> m_maybeEngine;
+  std::unique_ptr<mlir::ExecutionEngine>& m_engine;
+  mlir::ModuleOp m_module;
+
+  void* GetFunctionAddress(const std::string& functionName) override;
+public:
+  static llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> CreateExecutionEngine(mlir::ModuleOp module);
+  InferenceRunner(mlir::ModuleOp module, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize);
+};
+
+class SharedObjectInferenceRunner : public InferenceRunnerBase{
+  void *m_so;
+protected:
+  void* GetFunctionAddress(const std::string& functionName) override;
+public:
+  SharedObjectInferenceRunner(const std::string& soPath, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize);
+  ~SharedObjectInferenceRunner();
 };
 
 } // decision forest
