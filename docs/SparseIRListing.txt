@@ -1,0 +1,205 @@
+module @MyModule  {
+  memref.global "private" @lookupTable : memref<1430x256xi8> = uninitialized
+  memref.global "private" @model : memref<9100x!decisionforest<"TiledNumericalNode(f32, i16, i16, 8, true, i16)">> = uninitialized
+  memref.global "private" @offsets : memref<100xindex> = uninitialized
+  memref.global "private" @lengths : memref<100xindex> = uninitialized
+  memref.global "private" @leaves : memref<69138xf32> = uninitialized
+  memref.global "private" @leavesOffsets : memref<100xindex> = uninitialized
+  memref.global "private" @leavesLengths : memref<100xindex> = uninitialized
+  func public @Prediction_Function(%arg0: memref<200x2000xf32>, %arg1: memref<200xf32>) -> memref<200xf32> {
+    %c200 = arith.constant 200 : index
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c100 = arith.constant 100 : index
+    %cst = arith.constant -0.000000e+00 : f32
+    %false = arith.constant false
+    %cst_0 = arith.constant 1.000000e+00 : f32
+    %0 = memref.subview %arg0[0, 0] [200, 2000] [1, 1] : memref<200x2000xf32> to memref<200x2000xf32, affine_map<(d0, d1) -> (d0 * 2000 + d1)>>
+    %1 = memref.get_global @model : memref<9100x!decisionforest<"TiledNumericalNode(f32, i16, i16, 8, true, i16)">>
+    %2 = memref.get_global @offsets : memref<100xindex>
+    %3 = memref.get_global @lengths : memref<100xindex>
+    %4 = memref.get_global @leaves : memref<69138xf32>
+    %5 = memref.get_global @leavesOffsets : memref<100xindex>
+    %6 = memref.get_global @leavesLengths : memref<100xindex>
+    %7 = memref.get_global @lookupTable : memref<1430x256xi8>
+    scf.for %arg2 = %c0 to %c200 step %c1 {
+      %8 = memref.subview %0[%arg2, 0] [1, 2000] [1, 1] : memref<200x2000xf32, affine_map<(d0, d1) -> (d0 * 2000 + d1)>> to memref<1x2000xf32, affine_map<(d0, d1)[s0] -> (d0 * 2000 + s0 + d1)>>
+      %9 = scf.for %arg3 = %c0 to %c100 step %c1 iter_args(%arg4 = %cst) -> (f32) {
+        %14 = memref.load %2[%arg3] : memref<100xindex>
+        %15 = memref.load %3[%arg3] : memref<100xindex>
+        %16 = memref.subview %1[%14] [%15] [1] : memref<9100x!decisionforest<"TiledNumericalNode(f32, i16, i16, 8, true, i16)">> to memref<?x!decisionforest<"TiledNumericalNode(f32, i16, i16, 8, true, i16)">, affine_map<(d0)[s0] -> (d0 + s0)>>
+        %17 = memref.load %5[%arg3] : memref<100xindex>
+        %18 = memref.load %6[%arg3] : memref<100xindex>
+        %19 = memref.subview %4[%17] [%18] [1] : memref<69138xf32> to memref<?xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
+        %c0_1 = arith.constant 0 : index
+        %20 = scf.while (%arg5 = %c0_1) : (index) -> index {
+          %c0_3 = arith.constant 0 : index
+          %25 = memref.dim %16, %c0_3 : memref<?x!decisionforest<"TiledNumericalNode(f32, i16, i16, 8, true, i16)">, affine_map<(d0)[s0] -> (d0 + s0)>>
+          %26 = arith.cmpi sge, %arg5, %25 : index
+          %27 = scf.if %26 -> (i1) {
+            %true = arith.constant true
+            scf.yield %true : i1
+          } else {
+            %29 = "decisionforest.loadTileFeatureIndices"(%16, %arg5) : (memref<?x!decisionforest<"TiledNumericalNode(f32, i16, i16, 8, true, i16)">, affine_map<(d0)[s0] -> (d0 + s0)>>, index) -> vector<8xi16>
+            %c0_i32 = arith.constant 0 : i32
+            %30 = vector.extractelement %29[%c0_i32 : i32] : vector<8xi16>
+            %c-1_i16 = arith.constant -1 : i16
+            %31 = arith.cmpi eq, %30, %c-1_i16 : i16
+            scf.yield %31 : i1
+          }
+          %28 = arith.cmpi eq, %27, %false : i1
+          scf.condition(%28) %arg5 : index
+        } do {
+        ^bb0(%arg5: index):  // no predecessors
+          %25 = "decisionforest.loadTileThresholds"(%16, %arg5) : (memref<?x!decisionforest<"TiledNumericalNode(f32, i16, i16, 8, true, i16)">, affine_map<(d0)[s0] -> (d0 + s0)>>, index) -> vector<8xf32>
+          %26 = "decisionforest.loadTileFeatureIndices"(%16, %arg5) : (memref<?x!decisionforest<"TiledNumericalNode(f32, i16, i16, 8, true, i16)">, affine_map<(d0)[s0] -> (d0 + s0)>>, index) -> vector<8xi16>
+          %27 = "decisionforest.loadTileShape"(%16, %arg5) : (memref<?x!decisionforest<"TiledNumericalNode(f32, i16, i16, 8, true, i16)">, affine_map<(d0)[s0] -> (d0 + s0)>>, index) -> i16
+          %28 = arith.index_cast %27 : i16 to index
+          %29 = "decisionforest.loadChildIndex"(%16, %arg5) : (memref<?x!decisionforest<"TiledNumericalNode(f32, i16, i16, 8, true, i16)">, affine_map<(d0)[s0] -> (d0 + s0)>>, index) -> i16
+          %30 = arith.index_cast %29 : i16 to index
+          %31 = arith.index_cast %26 : vector<8xi16> to vector<8xindex>
+          %c0_3 = arith.constant 0 : index
+          %true = arith.constant true
+          %cst_4 = arith.constant dense<true> : vector<8xi1>
+          %cst_5 = arith.constant 0.000000e+00 : f32
+          %cst_6 = arith.constant dense<0.000000e+00> : vector<8xf32>
+          %32 = vector.gather %8[%c0_3, %c0_3] [%31], %cst_4, %cst_6 : memref<1x2000xf32, affine_map<(d0, d1)[s0] -> (d0 * 2000 + s0 + d1)>>, vector<8xindex>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+          %33 = arith.cmpf ule, %32, %25 : vector<8xf32>
+          %34 = vector.bitcast %33 : vector<8xi1> to vector<1xi8>
+          %c0_i32 = arith.constant 0 : i32
+          %35 = vector.extractelement %34[%c0_i32 : i32] : vector<1xi8>
+          %36 = arith.extui %35 : i8 to i64
+          %37 = arith.index_cast %36 : i64 to index
+          %38 = memref.load %7[%28, %37] : memref<1430x256xi8>
+          %39 = arith.index_cast %38 : i8 to index
+          %40 = arith.addi %30, %39 : index
+          scf.yield %40 : index
+        }
+        %c0_2 = arith.constant 0 : index
+        %21 = memref.dim %16, %c0_2 : memref<?x!decisionforest<"TiledNumericalNode(f32, i16, i16, 8, true, i16)">, affine_map<(d0)[s0] -> (d0 + s0)>>
+        %22 = arith.cmpi slt, %20, %21 : index
+        %23 = scf.if %22 -> (f32) {
+          %25 = "decisionforest.loadTileThresholds"(%16, %20) : (memref<?x!decisionforest<"TiledNumericalNode(f32, i16, i16, 8, true, i16)">, affine_map<(d0)[s0] -> (d0 + s0)>>, index) -> vector<8xf32>
+          %c0_i32 = arith.constant 0 : i32
+          %26 = vector.extractelement %25[%c0_i32 : i32] : vector<8xf32>
+          scf.yield %26 : f32
+        } else {
+          %25 = arith.subi %20, %21 : index
+          %26 = memref.load %19[%25] : memref<?xf32, affine_map<(d0)[s0] -> (d0 + s0)>>
+          scf.yield %26 : f32
+        }
+        %24 = arith.addf %arg4, %23 : f32
+        scf.yield %24 : f32
+      }
+      %10 = arith.negf %9 : f32
+      %11 = math.exp %10 : f32
+      %12 = arith.addf %cst_0, %11 : f32
+      %13 = arith.divf %cst_0, %12 : f32
+      memref.store %13, %arg1[%arg2] : memref<200xf32>
+    }
+    return %arg1 : memref<200xf32>
+  }
+  func public @Get_model() -> memref<9100x!decisionforest<"TiledNumericalNode(f32, i16, i16, 8, true, i16)">> {
+    %0 = memref.get_global @model : memref<9100x!decisionforest<"TiledNumericalNode(f32, i16, i16, 8, true, i16)">>
+    return %0 : memref<9100x!decisionforest<"TiledNumericalNode(f32, i16, i16, 8, true, i16)">>
+  }
+  func public @Get_offsets() -> memref<100xindex> {
+    %0 = memref.get_global @offsets : memref<100xindex>
+    return %0 : memref<100xindex>
+  }
+  func public @Get_lengths() -> memref<100xindex> {
+    %0 = memref.get_global @lengths : memref<100xindex>
+    return %0 : memref<100xindex>
+  }
+  func public @Get_leaves() -> memref<69138xf32> {
+    %0 = memref.get_global @leaves : memref<69138xf32>
+    return %0 : memref<69138xf32>
+  }
+  func public @Get_leavesOffsets() -> memref<100xindex> {
+    %0 = memref.get_global @leavesOffsets : memref<100xindex>
+    return %0 : memref<100xindex>
+  }
+  func public @Get_leavesLengths() -> memref<100xindex> {
+    %0 = memref.get_global @leavesLengths : memref<100xindex>
+    return %0 : memref<100xindex>
+  }
+  func public @Init_model(%arg0: memref<72800xf32>, %arg1: memref<72800xi16>, %arg2: memref<9100xi16>, %arg3: memref<9100xi16>) -> i32 {
+    %0 = memref.get_global @model : memref<9100x!decisionforest<"TiledNumericalNode(f32, i16, i16, 8, true, i16)">>
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %c9100 = arith.constant 9100 : index
+    scf.for %arg4 = %c0 to %c9100 step %c1 {
+      %c8 = arith.constant 8 : index
+      %2 = arith.muli %arg4, %c8 : index
+      %cst = arith.constant 0.000000e+00 : f32
+      %cst_0 = arith.constant dense<0.000000e+00> : vector<8xf32>
+      %c0_i16 = arith.constant 0 : i16
+      %cst_1 = arith.constant dense<0> : vector<8xi16>
+      %c0_2 = arith.constant 0 : index
+      %3 = arith.addi %2, %c0_2 : index
+      %4 = memref.load %arg0[%3] : memref<72800xf32>
+      %c0_i32 = arith.constant 0 : i32
+      %5 = vector.insertelement %4, %cst_0[%c0_i32 : i32] : vector<8xf32>
+      %6 = memref.load %arg1[%3] : memref<72800xi16>
+      %7 = vector.insertelement %6, %cst_1[%c0_i32 : i32] : vector<8xi16>
+      %c1_3 = arith.constant 1 : index
+      %8 = arith.addi %2, %c1_3 : index
+      %9 = memref.load %arg0[%8] : memref<72800xf32>
+      %c1_i32 = arith.constant 1 : i32
+      %10 = vector.insertelement %9, %5[%c1_i32 : i32] : vector<8xf32>
+      %11 = memref.load %arg1[%8] : memref<72800xi16>
+      %12 = vector.insertelement %11, %7[%c1_i32 : i32] : vector<8xi16>
+      %c2 = arith.constant 2 : index
+      %13 = arith.addi %2, %c2 : index
+      %14 = memref.load %arg0[%13] : memref<72800xf32>
+      %c2_i32 = arith.constant 2 : i32
+      %15 = vector.insertelement %14, %10[%c2_i32 : i32] : vector<8xf32>
+      %16 = memref.load %arg1[%13] : memref<72800xi16>
+      %17 = vector.insertelement %16, %12[%c2_i32 : i32] : vector<8xi16>
+      %c3 = arith.constant 3 : index
+      %18 = arith.addi %2, %c3 : index
+      %19 = memref.load %arg0[%18] : memref<72800xf32>
+      %c3_i32 = arith.constant 3 : i32
+      %20 = vector.insertelement %19, %15[%c3_i32 : i32] : vector<8xf32>
+      %21 = memref.load %arg1[%18] : memref<72800xi16>
+      %22 = vector.insertelement %21, %17[%c3_i32 : i32] : vector<8xi16>
+      %c4 = arith.constant 4 : index
+      %23 = arith.addi %2, %c4 : index
+      %24 = memref.load %arg0[%23] : memref<72800xf32>
+      %c4_i32 = arith.constant 4 : i32
+      %25 = vector.insertelement %24, %20[%c4_i32 : i32] : vector<8xf32>
+      %26 = memref.load %arg1[%23] : memref<72800xi16>
+      %27 = vector.insertelement %26, %22[%c4_i32 : i32] : vector<8xi16>
+      %c5 = arith.constant 5 : index
+      %28 = arith.addi %2, %c5 : index
+      %29 = memref.load %arg0[%28] : memref<72800xf32>
+      %c5_i32 = arith.constant 5 : i32
+      %30 = vector.insertelement %29, %25[%c5_i32 : i32] : vector<8xf32>
+      %31 = memref.load %arg1[%28] : memref<72800xi16>
+      %32 = vector.insertelement %31, %27[%c5_i32 : i32] : vector<8xi16>
+      %c6 = arith.constant 6 : index
+      %33 = arith.addi %2, %c6 : index
+      %34 = memref.load %arg0[%33] : memref<72800xf32>
+      %c6_i32 = arith.constant 6 : i32
+      %35 = vector.insertelement %34, %30[%c6_i32 : i32] : vector<8xf32>
+      %36 = memref.load %arg1[%33] : memref<72800xi16>
+      %37 = vector.insertelement %36, %32[%c6_i32 : i32] : vector<8xi16>
+      %c7 = arith.constant 7 : index
+      %38 = arith.addi %2, %c7 : index
+      %39 = memref.load %arg0[%38] : memref<72800xf32>
+      %c7_i32 = arith.constant 7 : i32
+      %40 = vector.insertelement %39, %35[%c7_i32 : i32] : vector<8xf32>
+      %41 = memref.load %arg1[%38] : memref<72800xi16>
+      %42 = vector.insertelement %41, %37[%c7_i32 : i32] : vector<8xi16>
+      %43 = memref.load %arg2[%arg4] : memref<9100xi16>
+      %44 = memref.load %arg3[%arg4] : memref<9100xi16>
+      "decisionforest.initSparseTile"(%0, %arg4, %40, %42, %43, %44) : (memref<9100x!decisionforest<"TiledNumericalNode(f32, i16, i16, 8, true, i16)">>, index, vector<8xf32>, vector<8xi16>, i16, i16) -> ()
+    }
+    %1 = "decisionforest.getModelMemrefSizeOp"(%0, %c9100) : (memref<9100x!decisionforest<"TiledNumericalNode(f32, i16, i16, 8, true, i16)">>, index) -> i32
+    return %1 : i32
+  }
+  func public @Get_lookupTable() -> memref<1430x256xi8> {
+    %0 = memref.get_global @lookupTable : memref<1430x256xi8>
+    return %0 : memref<1430x256xi8>
+  }
+}

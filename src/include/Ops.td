@@ -248,6 +248,14 @@ def LoadChildIndexOp : DecisionForest_Op<"loadChildIndex", [NoSideEffect]> {
   let results = (outs ChildIndexType);
 }
 
+def LoadTileShapeAndChildIndexOp : DecisionForest_Op<"loadTileShapeAndChildIndex", [NoSideEffect]> {
+  let summary = "Load the shape of a tree tile and the child index of a tree tile.";
+  let description = "Load the shape ID and child index from a tile in a tree memref. Takes a memref and an index into the memref and returns a vector of integers.";
+  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex);
+
+  let results = (outs VectorOf<[TileShapeType]>);
+}
+
 def InitTileOp : DecisionForest_Op<"initTile"> {
   let summary = "Initialize a tree tile.";
   let description = "Initialize a single tile in a tree memref. Takes a memref and an index along with the values to write into the tile.";

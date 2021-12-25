@@ -28,6 +28,7 @@ namespace decisionforest
 extern bool InsertDebugHelpers;
 extern bool UseBitcastForComparisonOutcome;
 extern bool UseSparseTreeRepresentation;
+extern bool VectorizeShapeAndChildIndexLoad;
 
 void populateDebugOpLoweringPatterns(RewritePatternSet& patterns, LLVMTypeConverter& typeConverter);
 
