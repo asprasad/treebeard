@@ -28,16 +28,19 @@ mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& cont
 
 mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, const std::string&modelJsonPath,
                                                          int32_t thresholdTypeWidth, int32_t returnTypeWidth, int32_t featureIndexTypeWidth, 
-                                                         int32_t nodeIndexTypeWidth, int32_t inputElementTypeWidth, int32_t batchSize, int32_t tileSize);
+                                                         int32_t nodeIndexTypeWidth, int32_t inputElementTypeWidth, int32_t batchSize, int32_t tileSize,
+                                                         int32_t tileShapeBitWidth, int32_t childIndexBitWidth);
 
 void InitializeMLIRContext(mlir::MLIRContext& context);
 void ConvertXGBoostJSONToLLVMIR(const std::string&modelJsonPath, const std::string& llvmIRFilePath,
                                 int32_t thresholdTypeWidth, int32_t returnTypeWidth, int32_t featureIndexTypeWidth, 
-                                int32_t nodeIndexTypeWidth, int32_t inputElementTypeWidth, int32_t batchSize, int32_t tileSize);
+                                int32_t nodeIndexTypeWidth, int32_t inputElementTypeWidth, int32_t batchSize, int32_t tileSize,
+                                int32_t tileShapeBitWidth, int32_t childIndexBitWidth);
 
 void RunInferenceUsingSO(const std::string&modelJsonPath, const std::string& soPath, const std::string& csvPath,
                          int32_t thresholdTypeWidth, int32_t returnTypeWidth, int32_t featureIndexTypeWidth, 
-                         int32_t nodeIndexTypeWidth, int32_t inputElementTypeWidth, int32_t batchSize, int32_t tileSize);
+                         int32_t nodeIndexTypeWidth, int32_t inputElementTypeWidth, int32_t batchSize, int32_t tileSize,
+                         int32_t tileShapeBitWidth, int32_t childIndexBitWidth);
 }
 
 

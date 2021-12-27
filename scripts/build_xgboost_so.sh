@@ -18,13 +18,16 @@ TREEBEARD_BUILD_DIR=${TREEBEARD_BUILD_DIR:-'build'}
 TREEBEARD_BUILD_PATH="$TREEBEARD_DIR/$TREEBEARD_BUILD_DIR"
 echo "Using TreeBeard build at : $TREEBEARD_BUILD_PATH"
 
-while getopts "t:b:m:o:" opt
+while getopts "t:b:m:o:s" opt
 do
    case "$opt" in
       t ) TILE_SIZE="$OPTARG" ;;
       b ) BATCH_SIZE="$OPTARG" ;;
       m ) MODEL="$OPTARG" ;;
       o ) OUTPUT_DIR="$OPTARG" ;;
+      s ) SPARSE_FLAG="--sparse"
+          BASE_NAME_SPARSE_EXT="_sparse"
+          ;;
       # ? ) helpFunction ;; # Print helpFunction in case parameter is non-existent
    esac
 done
@@ -33,14 +36,14 @@ done
 
 TREEBEARD_EXEC="$TREEBEARD_BUILD_PATH/bin/tree-heavy"
 MODEL_JSON="$TREEBEARD_DIR/xgb_models/${MODEL}_xgb_model_save.json"
-BASE_NAME="${MODEL}_t${TILE_SIZE}_b${BATCH_SIZE}_f_i32"
+BASE_NAME="${MODEL}_t${TILE_SIZE}_b${BATCH_SIZE}_f_i16${BASE_NAME_SPARSE_EXT}"
 LLVM_IR_FILE="$OUTPUT_DIR/$BASE_NAME.ll"
 ASM_FILE="$OUTPUT_DIR/$BASE_NAME.s"
 SO_FILE="$OUTPUT_DIR/$BASE_NAME.so"
 
 # bin/tree-heavy --dumpLLVM -json ~/mlir-build/llvm-project/mlir/examples/tree-heavy/xgb_models/abalone_xgb_model_save.json 
 # -o ~/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/bin/abalone_b4_t8_f.ll -batchSize 4 -tileSize 8
-DUMP_LLVM_CMD="$TREEBEARD_EXEC --dumpLLVM -json $MODEL_JSON -o $LLVM_IR_FILE -batchSize $BATCH_SIZE -tileSize $TILE_SIZE"
+DUMP_LLVM_CMD="$TREEBEARD_EXEC --dumpLLVM $SPARSE_FLAG -json $MODEL_JSON -o $LLVM_IR_FILE -batchSize $BATCH_SIZE -tileSize $TILE_SIZE"
 echo "$DUMP_LLVM_CMD"
 $DUMP_LLVM_CMD
 

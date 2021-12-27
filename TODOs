@@ -68,8 +68,9 @@ Performance Tuning for Tiled Code
             - [Defer] New op to simultaneously read both child index and tile shape?
         - [Done] LLVM lowering (new op, type conversion)
 
-    - Store leaves in a "different" array so leaf values don't have to be duplicated as full tiles
-    - 
+    - [Done] Store leaves in a "different" array so leaf values don't have to be duplicated as full tiles
+
+[Done] SO support for sparse representation
 
 Pipeline container
 SIMD container
