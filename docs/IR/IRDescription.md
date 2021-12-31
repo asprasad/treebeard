@@ -147,6 +147,7 @@ The reasons to use a scheduling language rather than a hard-coded lowering are a
 There are some simplifying assumptions and limitations in the current design
 * Tree traversals are considered atomic. There is no way to express partial tree traversals or schedule individual node/level computations. 
 * Accumulation of tree predictions is done immediately (as opposed to, for example, collecting all predictions and performing a reduction later).
+* The final representation of the model in memory is not specified through the scheduling language.
 
 ## Language Definition
 We will have broadly two classes of directives in the language. The first is a set of loop nest modifiers that are used to specify the structure of the loop nest to walk the iteration space. The second is a set of clauses that specify intra and inter tree optimizations. 
