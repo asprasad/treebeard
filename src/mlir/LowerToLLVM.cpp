@@ -74,6 +74,7 @@ const int32_t kOffsetIndexInMemrefStruct = 2;
 const int32_t kThresholdElementNumberInTile = 0;
 const int32_t kFeatureIndexElementNumberInTile = 1;
 const int32_t kTileShapeElementNumberInTile = 2;
+const int32_t kChildIndexElementNumberInTile = 3;
 
 Type GenerateGetElementPtr(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter, Type elementMLIRType,
                            int64_t elementNumber, TypeConverter* typeConverter, Value& elementPtr) {
@@ -176,6 +177,30 @@ struct LoadTileShapeOpLowering : public ConversionPattern {
   }
 };
 
+struct LoadChildIndexOpLowering : public ConversionPattern {
+  LoadChildIndexOpLowering(LLVMTypeConverter& typeConverter) 
+  : ConversionPattern(typeConverter, mlir::decisionforest::LoadChildIndexOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    assert(operands.size() == 2);
+    GenerateLoadStructElement(op, operands, rewriter, kChildIndexElementNumberInTile, getTypeConverter());
+    return mlir::success();
+  }
+};
+
+struct LoadTileShapeAndChildIndexOpLowering : public ConversionPattern {
+  LoadTileShapeAndChildIndexOpLowering(LLVMTypeConverter& typeConverter) 
+  : ConversionPattern(typeConverter, mlir::decisionforest::LoadTileShapeAndChildIndexOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    assert(operands.size() == 2);
+    GenerateLoadStructElement(op, operands, rewriter, kTileShapeElementNumberInTile, getTypeConverter());
+    return mlir::success();
+  }
+};
+
 struct InitTileOpLowering : public ConversionPattern {
   InitTileOpLowering(LLVMTypeConverter& typeConverter) 
   : ConversionPattern(typeConverter, mlir::decisionforest::InitTileOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
@@ -190,6 +215,53 @@ struct InitTileOpLowering : public ConversionPattern {
     auto tileType = modelMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
     if (tileType.getTileSize() > 1)
       GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.tileShapeID().getType(), 2, getTypeConverter(), tileOpAdaptor.tileShapeID());
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
+
+struct InitSparseTileOpLowering : public ConversionPattern {
+  InitSparseTileOpLowering(LLVMTypeConverter& typeConverter) 
+  : ConversionPattern(typeConverter, mlir::decisionforest::InitSparseTileOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    assert(operands.size() == 6);
+    decisionforest::InitSparseTileOpAdaptor tileOpAdaptor(operands);
+    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.thresholds().getType(), 0, getTypeConverter(), tileOpAdaptor.thresholds());
+    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.featureIndices().getType(), 1, getTypeConverter(), tileOpAdaptor.featureIndices());
+    auto modelMemrefType = op->getOperand(0).getType().cast<MemRefType>();
+    auto tileType = modelMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
+    if (decisionforest::VectorizeShapeAndChildIndexLoad) {
+      if (tileType.getTileSize() == 1)
+        GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.childIndex().getType(), 3, getTypeConverter(), tileOpAdaptor.childIndex());
+      else {
+        assert(tileType.getChildIndexType() == tileType.getTileShapeType());
+        // Construct a vector of <tile shape, child index>
+        auto vectorType = VectorType::get({ 2 }, tileType.getChildIndexType());
+        DenseElementsAttr attr;
+        if (tileType.getTileShapeType().getIntOrFloatBitWidth() == 8) 
+          attr = DenseElementsAttr::get(vectorType, (int8_t)0);
+        else if (tileType.getTileShapeType().getIntOrFloatBitWidth() == 16)
+          attr = DenseElementsAttr::get(vectorType, (int16_t)0);
+        else if (tileType.getTileShapeType().getIntOrFloatBitWidth() == 32)
+          attr = DenseElementsAttr::get(vectorType, (int32_t)0);
+        else 
+          assert (false && "Unknown tileshape ID type");
+        auto zeroVector = rewriter.create<LLVM::ConstantOp>(op->getLoc(), vectorType, attr);
+        auto zeroConst = rewriter.create<LLVM::ConstantOp>(op->getLoc(), rewriter.getI32Type(), IntegerAttr::get(rewriter.getI32Type(), 0));
+        auto tileShapeInserted = rewriter.create<LLVM::InsertElementOp>(op->getLoc(), vectorType, zeroVector, tileOpAdaptor.tileShapeID(), zeroConst);
+        auto oneConst = rewriter.create<LLVM::ConstantOp>(op->getLoc(), rewriter.getI32Type(), IntegerAttr::get(rewriter.getI32Type(), 1));
+        auto tileShapeAndChildIndexVec = rewriter.create<LLVM::InsertElementOp>(op->getLoc(), vectorType, tileShapeInserted, tileOpAdaptor.childIndex(), oneConst);
+        // Store the vector into the memref
+        GenerateStoreStructElement(op, operands, rewriter, vectorType, 2, getTypeConverter(), tileShapeAndChildIndexVec);  
+      }
+    }
+    else {
+      if (tileType.getTileSize() > 1)
+        GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.tileShapeID().getType(), 2, getTypeConverter(), tileOpAdaptor.tileShapeID());
+      GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.childIndex().getType(), 3, getTypeConverter(), tileOpAdaptor.childIndex());
+    }
     rewriter.eraseOp(op);
     return mlir::success();
   }
@@ -252,17 +324,36 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
 
   auto& context = getContext();
   LLVMTypeConverter typeConverter(&getContext(), options);
-  typeConverter.addConversion([&](decisionforest::TiledNumericalNodeType type) {
-                auto thresholdType = type.getThresholdFieldType();
-                auto indexType = type.getIndexFieldType();
-                if (type.getTileSize() == 1) {
-                  return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType});
-                }
-                else {
-                  auto tileShapeIDType = mlir::IntegerType::get(&context, 32);
-                  return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType});
-                }
-              });
+  if (decisionforest::UseSparseTreeRepresentation == false)
+    typeConverter.addConversion([&](decisionforest::TiledNumericalNodeType type) {
+                  auto thresholdType = type.getThresholdFieldType();
+                  auto indexType = type.getIndexFieldType();
+                  if (type.getTileSize() == 1) {
+                    return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType});
+                  }
+                  else {
+                    auto tileShapeIDType = type.getTileShapeType();
+                    return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType});
+                  }
+                });
+    else
+      typeConverter.addConversion([&](decisionforest::TiledNumericalNodeType type) {
+                  auto thresholdType = type.getThresholdFieldType();
+                  auto indexType = type.getIndexFieldType();
+                  auto childIndexType = type.getChildIndexType();
+                  auto tileShapeIDType = type.getTileShapeType();
+                  if (type.getTileSize() == 1) {
+                    return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType, childIndexType});
+                  }
+                  else {
+                    if (decisionforest::VectorizeShapeAndChildIndexLoad) {
+                      assert (childIndexType == tileShapeIDType);
+                      return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, mlir::VectorType::get({ 2 }, tileShapeIDType)});
+                    }
+                    else
+                      return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType, childIndexType});
+                  }
+                });
 
   RewritePatternSet patterns(&getContext());
   populateAffineToStdConversionPatterns(patterns);
@@ -277,7 +368,10 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
   patterns.add<LoadTileFeatureIndicesOpLowering,
                LoadTileThresholdOpLowering,
                LoadTileShapeOpLowering,
+               LoadChildIndexOpLowering,
+               LoadTileShapeAndChildIndexOpLowering,
                InitTileOpLowering,
+               InitSparseTileOpLowering,
                GetModelMemrefSizeOpLowering>(typeConverter);
   decisionforest::populateDebugOpLoweringPatterns(patterns, typeConverter);
 

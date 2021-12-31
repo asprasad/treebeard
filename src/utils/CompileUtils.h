@@ -9,12 +9,15 @@ namespace TreeBeard
 
 template<typename ThresholdType=double, typename ReturnType=double, typename FeatureIndexType=int32_t, 
          typename NodeIndexType=int32_t, typename InputElementType=double>
-mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, const std::string& modelJsonPath, int32_t batchSize, int32_t tileSize=1) {
+mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, const std::string& modelJsonPath, 
+                                                         int32_t batchSize, int32_t tileSize=1, int32_t tileShapeBitWidth=32,
+                                                         int32_t childIndexBitWidth=1) {
   TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType> xgBoostParser(context, modelJsonPath, batchSize);
   xgBoostParser.Parse();
+  xgBoostParser.SetChildIndexBitWidth(childIndexBitWidth);
   auto module = xgBoostParser.GetEvaluationFunction();
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
-  mlir::decisionforest::DoUniformTiling(context, module, tileSize);
+  mlir::decisionforest::DoUniformTiling(context, module, tileSize, tileShapeBitWidth);
   mlir::decisionforest::LowerEnsembleToMemrefs(context, module);
   mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();
@@ -25,16 +28,19 @@ mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& cont
 
 mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, const std::string&modelJsonPath,
                                                          int32_t thresholdTypeWidth, int32_t returnTypeWidth, int32_t featureIndexTypeWidth, 
-                                                         int32_t nodeIndexTypeWidth, int32_t inputElementTypeWidth, int32_t batchSize, int32_t tileSize);
+                                                         int32_t nodeIndexTypeWidth, int32_t inputElementTypeWidth, int32_t batchSize, int32_t tileSize,
+                                                         int32_t tileShapeBitWidth, int32_t childIndexBitWidth);
 
 void InitializeMLIRContext(mlir::MLIRContext& context);
 void ConvertXGBoostJSONToLLVMIR(const std::string&modelJsonPath, const std::string& llvmIRFilePath,
                                 int32_t thresholdTypeWidth, int32_t returnTypeWidth, int32_t featureIndexTypeWidth, 
-                                int32_t nodeIndexTypeWidth, int32_t inputElementTypeWidth, int32_t batchSize, int32_t tileSize);
+                                int32_t nodeIndexTypeWidth, int32_t inputElementTypeWidth, int32_t batchSize, int32_t tileSize,
+                                int32_t tileShapeBitWidth, int32_t childIndexBitWidth);
 
 void RunInferenceUsingSO(const std::string&modelJsonPath, const std::string& soPath, const std::string& csvPath,
                          int32_t thresholdTypeWidth, int32_t returnTypeWidth, int32_t featureIndexTypeWidth, 
-                         int32_t nodeIndexTypeWidth, int32_t inputElementTypeWidth, int32_t batchSize, int32_t tileSize);
+                         int32_t nodeIndexTypeWidth, int32_t inputElementTypeWidth, int32_t batchSize, int32_t tileSize,
+                         int32_t tileShapeBitWidth, int32_t childIndexBitWidth);
 }
 
 

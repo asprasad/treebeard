@@ -104,6 +104,15 @@ void GenerateRandomModelJSONs(const std::string& dirname, int32_t numberOfModels
 void RunTests();
 void RunXGBoostBenchmarks();
 
+
+// ===---------------------------------------------=== //
+// Configuration for tests
+// ===---------------------------------------------=== //
+
+// Defined in XGBoostTests.cpp
+extern bool RunSingleBatchSizeForXGBoostTests;
+
+
 } // test
 } // TreeBeard
 

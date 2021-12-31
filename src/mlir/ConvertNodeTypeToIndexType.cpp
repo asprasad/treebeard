@@ -120,7 +120,7 @@ struct ConvertNodeTypeToIndexTypePass : public PassWrapper<ConvertNodeTypeToInde
         for (auto result : op->getResults()) {
             if (result.getType().isa<decisionforest::NodeType>()) {
                 assert (llvm::dyn_cast<scf::WhileOp>(op) && "Expected op to be an scf::WhileOp");
-                TreeBeard::Logging::Log("Calling setType on result of : " + op->getName().getStringRef().str());
+                // TreeBeard::Logging::Log("Calling setType on result of : " + op->getName().getStringRef().str());
                 // TODO check that this is some op with non trivial control flow. 
                 // assert(op->getRegions().size() > 1);
                 // TODO Is there a way we can avoid calling setType here?
@@ -129,7 +129,7 @@ struct ConvertNodeTypeToIndexTypePass : public PassWrapper<ConvertNodeTypeToInde
         }
         for (auto operand : op->getOperands()) {
           if (operand.getType().isa<decisionforest::NodeType>()) {
-            TreeBeard::Logging::Log("Calling setType on argument of : " + op->getName().getStringRef().str());
+            // TreeBeard::Logging::Log("Calling setType on argument of : " + op->getName().getStringRef().str());
             operand.setType(IndexType::get(op->getContext()));
           }
         }

@@ -19,6 +19,14 @@ struct TileTypeWithTileID {
   int32_t tileShapeID;
 };
 
+template<typename ThresholdType, typename FeatureIndexType, int32_t TileSize, typename TileShapeType, typename ChildIndexType>
+struct SparseTileType {
+  ThresholdType thresholds[TileSize];
+  FeatureIndexType featureIndices[TileSize];
+  TileShapeType tileShapeID;
+  ChildIndexType childIndex;
+};
+
 template<typename T, int32_t Rank>
 struct Memref {
   T *bufferPtr;
@@ -91,6 +99,10 @@ extern "C" int64_t PrintTreeToDOTFile(TreeTileType *treeBuf, int64_t length, int
   return 42;
 }
 
+using SparseTreeTileType = SparseTileType<double, int32_t, 1, int32_t, int32_t>;
+extern "C" int64_t PrintSparseTreeToDOTFile(SparseTreeTileType *treeBuf, int64_t length, int64_t treeIndex, int64_t tileSize) {
+}
+
 extern "C" int64_t PrintInputRow(double *treeBuf, int64_t length, int64_t rowIndex) {
   std::cout << "Fetching input row " << rowIndex << " : { ";
   for (int64_t i=0 ; i<length ; ++i) {
@@ -133,6 +145,13 @@ extern "C" int64_t PrintVector(int32_t kind, int32_t elementSize, int32_t vector
       va_start(args, vectorSize);
       for (int i=0 ; i<vectorSize ; ++i)
         std::cout << " " << va_arg(args, int32_t);
+      std::cout << " )\n";
+    }
+    else if (elementSize == 64) {
+      std::cout << "(";
+      va_start(args, vectorSize);
+      for (int i=0 ; i<vectorSize ; ++i)
+        std::cout << " " << va_arg(args, int64_t);
       std::cout << " )\n";
     }
     else {

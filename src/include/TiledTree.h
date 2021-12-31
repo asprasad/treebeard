@@ -60,15 +60,15 @@ public:
     { }
     std::vector<int32_t>& GetNodeIndices() { return m_nodeIndices; }
 
-    int32_t GetParent() { return m_parent; }
-    const std::vector<int32_t>& GetChildren() { return m_children; }
+    int32_t GetParent() const { return m_parent; }
+    const std::vector<int32_t>& GetChildren() const { return m_children; }
 
-    int32_t GetEntryNode() { return m_nodeIndices[0]; }
+    int32_t GetEntryNode() const { return m_nodeIndices[0]; }
     DecisionTree<>& GetTree();
-    const DecisionTree<>::Node& GetNode(int32_t index);
+    const DecisionTree<>::Node& GetNode(int32_t index) const;
     std::string GetTileShapeString();
-    int32_t GetTileShapeID() { return m_tileShapeID; }
-    bool IsLeafTile() { return m_nodeIndices.size()==1 && GetNode(m_nodeIndices.at(0)).IsLeaf(); }
+    int32_t GetTileShapeID() const { return m_tileShapeID; }
+    bool IsLeafTile() const { return m_nodeIndices.size()==1 && GetNode(m_nodeIndices.at(0)).IsLeaf(); }
 };
 
 class TiledTreeNode;
@@ -112,6 +112,8 @@ struct TiledTreeStats {
     int32_t numAddedNodes;
     int32_t originalTreeNumberOfLeaves;
     int32_t tiledTreeNumberOfLeafTiles;
+    // Num leaves that have only leaves for siblings
+    int32_t numLeavesWithAllLeafSiblings;
 };
 
 class TiledTree {
@@ -149,8 +151,10 @@ class TiledTree {
     
     int32_t GetTreeDepthHelper(int32_t tileIndex);
     int32_t NumberOfLeafTilesHelper(int32_t tileIndex);
+    int32_t NumberOfLeavesWithAllLeafSiblings(int32_t tileIndex);
     // The number of tiles required to store this tree if duplicated nodes are considered unique
     int32_t NumberOfTiles();
+    bool AreAllSiblingsLeaves(TiledTreeNode& tile, const std::vector<TiledTreeNode>& tiles);
 public:
     TiledTree(DecisionTree<>& owningTree);
     
@@ -164,6 +168,7 @@ public:
         size_t numTiles = static_cast<size_t>((std::pow(numChildren, depth) - 1)/(numChildren-1));
         return numTiles;
     }
+    int32_t TileSize() { return m_owningTree.TilingDescriptor().MaxTileSize(); }
     size_t NumTiles() { return m_tiles.size(); }
     int32_t GetNodeTileIndex(int32_t nodeIndex) {
         if (nodeIndex == DecisionTree<>::INVALID_NODE_INDEX)
@@ -175,6 +180,9 @@ public:
     std::vector<double> SerializeThresholds();
     std::vector<int32_t> SerializeFeatureIndices();
     std::vector<int32_t> SerializeTileShapeIDs();
+
+    void GetSparseSerialization(std::vector<double>& thresholds, std::vector<int32_t>& featureIndices, 
+                                std::vector<int32_t>& tileShapeIDs, std::vector<int32_t>& childIndices, std::vector<double>& leaves);
     int32_t GetTreeDepth() { 
         // The root of the tiled tree should be the first node
         assert (m_tiles[0].GetParent() == DecisionTree<>::INVALID_NODE_INDEX);
@@ -182,7 +190,100 @@ public:
     }
     int32_t NumberOfLeafTiles();
     TiledTreeStats GetTreeStats();
+
+    using LevelOrderSorterNodeType = TiledTreeNode;
+
+    class LevelOrderTraversal {
+      // using QueueEntry = std::pair<int32_t, LevelOrderSorterNodeType>;
+      struct QueueEntry {
+        int32_t parentNodeIndex;
+        int32_t childNodeIndex;
+        int32_t childNumber;
+        LevelOrderSorterNodeType childNode;
+      };
+      std::vector<LevelOrderSorterNodeType> m_levelOrder;
+      std::queue<QueueEntry> m_queue;
+      struct MapKey {
+        int32_t parentNodeIndex;
+        int32_t childNodeIndex;
+        int32_t childNum;
+        bool operator<(const MapKey& rhs) const {
+          int32_t vals1[] = { parentNodeIndex, childNodeIndex, childNum };
+          int32_t vals2[] = { rhs.parentNodeIndex, rhs.childNodeIndex, rhs.childNum };
+          for (int32_t i=0 ; i<static_cast<int32_t>(sizeof(vals1)/sizeof(int32_t)) ; ++i) {
+            if (vals1[i] < vals2[i])
+              return true;
+            else if (vals1[i] > vals2[i])
+              return false;  
+          }
+          return false;
+        }
+      };
+      std::map<MapKey, int32_t> m_nodeIndexMap;
+      std::map<int32_t, int32_t> m_levelOrderIndexToOriginalIndexMap;
+      void DoLevelOrderTraversal(const std::vector<LevelOrderSorterNodeType>& nodes) {
+        int32_t invalidIndex = DecisionTree<>::INVALID_NODE_INDEX;
+        // MapKey invalidIndicesMapKey{invalidIndex, invalidIndex, 0 };
+        // m_nodeIndexMap[invalidIndicesMapKey] = invalidIndex;
+        // Assume the root is the first node.
+        assert (nodes[0].GetParent() == invalidIndex);
+        m_queue.push(QueueEntry{invalidIndex, 0, 0, nodes[0]});
+        while(!m_queue.empty()) {
+          auto entry = m_queue.front();
+          m_queue.pop();
+          auto index = entry.childNodeIndex;
+          auto& node = entry.childNode;
+          m_levelOrder.push_back(node);
+          MapKey mapKey{entry.parentNodeIndex, index, entry.childNumber};
+          assert (m_nodeIndexMap.find(mapKey) == m_nodeIndexMap.end());
+          m_nodeIndexMap[mapKey] = m_levelOrder.size() - 1;
+          m_levelOrderIndexToOriginalIndexMap[m_levelOrder.size() - 1] = index;
+          if (node.IsLeafTile())
+            continue;
+          int32_t childNum=0;
+          for (auto child : node.GetChildren()) {
+            if (child != DecisionTree<>::INVALID_NODE_INDEX)
+                m_queue.push(QueueEntry{index, child, childNum, nodes.at(child)});
+            ++childNum;
+          }
+        }
+      }
+
+      int32_t GetNewIndex(MapKey& oldIndex) {
+        auto iter = m_nodeIndexMap.find(oldIndex);
+        assert (iter != m_nodeIndexMap.end());
+        return iter->second;
+      }
+
+      void RewriteIndices() {
+        int32_t currNodeIndex=0;
+        for (auto& node : m_levelOrder) {
+          // MapKey parentMapKey{node.GetParent(), }
+          // node.m_parent = GetNewIndex(node.GetParent());
+          assert (m_levelOrderIndexToOriginalIndexMap.find(currNodeIndex) != m_levelOrderIndexToOriginalIndexMap.end());
+          int32_t originalIndex = m_levelOrderIndexToOriginalIndexMap[currNodeIndex];
+          assert (originalIndex == node.m_tileIndex);
+          for (size_t i=0 ; i<node.m_children.size() ; ++i) {
+            assert(node.m_children.at(i) > 0);
+            MapKey childMapKey{originalIndex, node.m_children.at(i), static_cast<int32_t>(i)};
+            node.m_children.at(i) = GetNewIndex(childMapKey);
+            assert(m_levelOrder.at(node.m_children.at(i)).GetParent() == originalIndex);
+            m_levelOrder.at(node.m_children.at(i)).SetParent(currNodeIndex);
+            assert (i == 0 || ( node.m_children.at(i) = (node.m_children.at(i-1)+1) ));
+          }
+          ++currNodeIndex;
+        }
+      }
+    public:
+      LevelOrderTraversal(const std::vector<LevelOrderSorterNodeType>& nodes) {
+        DoLevelOrderTraversal(nodes);
+        RewriteIndices();
+      }
+      std::vector<LevelOrderSorterNodeType>& LevelOrderNodes() { return m_levelOrder; }
+    };
+
 };
+
 
 } // decisionforest
 } // mlir

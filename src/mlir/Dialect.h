@@ -27,6 +27,8 @@ namespace decisionforest
 {
 extern bool InsertDebugHelpers;
 extern bool UseBitcastForComparisonOutcome;
+extern bool UseSparseTreeRepresentation;
+extern bool VectorizeShapeAndChildIndexLoad;
 
 void populateDebugOpLoweringPatterns(RewritePatternSet& patterns, LLVMTypeConverter& typeConverter);
 
@@ -38,7 +40,7 @@ int dumpLLVMIR(mlir::ModuleOp module, bool dumpAsm = false);
 int dumpLLVMIRToFile(mlir::ModuleOp module, const std::string& filename);
 
 // Optimizing passes
-void DoUniformTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize);
+void DoUniformTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth);
 
 }
 }

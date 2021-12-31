@@ -43,20 +43,43 @@ bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float(TestArgs_t& args);
 // Tiled Codegen tests
 bool Test_TiledCodeGeneration_RightHeavy_BatchSize1(TestArgs_t& args);
 bool Test_TiledCodeGeneration_LeftHeavy_BatchSize1(TestArgs_t& args);
+bool Test_TiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape(TestArgs_t& args);
+bool Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape(TestArgs_t& args);
+bool Test_TiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape(TestArgs_t& args);
+bool Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape(TestArgs_t& args);
 bool Test_TiledCodeGeneration_BalancedTree_BatchSize1(TestArgs_t& args);
 bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1(TestArgs_t& args);
+bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize(TestArgs_t& args);
+bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize(TestArgs_t& args);
 
 // Tiled Init Tests
 bool Test_ModelInit_LeftHeavy(TestArgs_t& args);
 bool Test_ModelInit_RightHeavy(TestArgs_t& args);
 bool Test_ModelInit_RightAndLeftHeavy(TestArgs_t& args);
 bool Test_ModelInit_Balanced(TestArgs_t& args);
+bool Test_ModelInit_LeftHeavy_Int8TileShape(TestArgs_t& args);
+bool Test_ModelInit_LeftHeavy_Int16TileShape(TestArgs_t& args);
+bool Test_ModelInit_RightHeavy_Int8TileShape(TestArgs_t& args);
+bool Test_ModelInit_RightHeavy_Int16TileShape(TestArgs_t& args);
+bool Test_ModelInit_Balanced_Int8TileShape(TestArgs_t& args);
+bool Test_ModelInit_Balanced_Int16TileShape(TestArgs_t& args);
+bool Test_ModelInit_RightAndLeftHeavy_Int8TileShape(TestArgs_t& args);
+bool Test_ModelInit_RightAndLeftHeavy_Int16TileShape(TestArgs_t& args);
 
 // Uniform Tiling Tests
 bool Test_UniformTiling_LeftHeavy_BatchSize1(TestArgs_t& args);
 bool Test_UniformTiling_RightHeavy_BatchSize1(TestArgs_t &args);
 bool Test_UniformTiling_Balanced_BatchSize1(TestArgs_t &args);
 bool Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1(TestArgs_t &args);
+bool Test_UniformTiling_LeftHeavy_BatchSize1_Int8TileShape(TestArgs_t& args);
+bool Test_UniformTiling_RightHeavy_BatchSize1_Int8TileShape(TestArgs_t &args);
+bool Test_UniformTiling_Balanced_BatchSize1_Int8TileShape(TestArgs_t &args);
+bool Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1_Int8TileShape(TestArgs_t &args);
+bool Test_UniformTiling_LeftHeavy_BatchSize1_Int16TileShape(TestArgs_t& args);
+bool Test_UniformTiling_RightHeavy_BatchSize1_Int16TileShape(TestArgs_t &args);
+bool Test_UniformTiling_Balanced_BatchSize1_Int16TileShape(TestArgs_t &args);
+bool Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1_Int16TileShape(TestArgs_t &args);
+
 bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args);
 bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize1(TestArgs_t& args);
 bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize1(TestArgs_t& args);
@@ -64,8 +87,14 @@ bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize2(TestArgs_t& args);
 bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize2(TestArgs_t& args);
 bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize2(TestArgs_t& args);
 bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4_Int8TileShape(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4_Int16TileShape(TestArgs_t& args);
 bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4_Int8TileShape(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4_Int16TileShape(TestArgs_t& args);
 bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4_Int8TileShape(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4_Int16TileShape(TestArgs_t& args);
 
 // XGBoost benchmark models tests
 bool Test_Scalar_Abalone(TestArgs_t &args);
@@ -109,6 +138,79 @@ bool Test_TileSize2_Year(TestArgs_t &args);
 bool Test_TileSize3_Year(TestArgs_t &args);
 bool Test_TileSize4_Year(TestArgs_t &args);
 bool Test_TileSize8_Year(TestArgs_t &args);
+
+// Sparse XGBoost Scalar Tests
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize2(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize4(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize1(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize2(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize4(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize1(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize2(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize4(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1_Float(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize2_Float(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize4_Float(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize1_Float(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize2_Float(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize4_Float(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize1_Float(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize2_Float(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize4_Float(TestArgs_t& args);
+
+// Sparse Tiled Code Gen
+bool Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1(TestArgs_t& args);
+bool Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize(TestArgs_t& args);
+bool Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize(TestArgs_t& args);
+bool Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1(TestArgs_t& args);
+bool Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1(TestArgs_t& args);
+bool Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape(TestArgs_t& args);
+bool Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape(TestArgs_t& args);
+bool Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape(TestArgs_t& args);
+bool Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape(TestArgs_t& args);
+
+// XGBoost Sparse Uniform Tiling Tests
+bool Test_SparseUniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4(TestArgs_t& args);
+bool Test_SparseUniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4(TestArgs_t& args);
+bool Test_SparseUniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4(TestArgs_t& args);
+
+// Sparse XGBoost Benchmark Correctness Tests
+bool Test_SparseScalar_Abalone(TestArgs_t &args);
+bool Test_SparseTileSize2_Abalone(TestArgs_t &args);
+bool Test_SparseTileSize3_Abalone(TestArgs_t &args);
+bool Test_SparseTileSize4_Abalone(TestArgs_t &args);
+bool Test_SparseTileSize8_Abalone(TestArgs_t &args);
+bool Test_SparseScalar_Airline(TestArgs_t &args);
+bool Test_SparseTileSize2_Airline(TestArgs_t &args);
+bool Test_SparseTileSize3_Airline(TestArgs_t &args);
+bool Test_SparseTileSize4_Airline(TestArgs_t &args);
+bool Test_SparseTileSize8_Airline(TestArgs_t &args);
+bool Test_SparseScalar_AirlineOHE(TestArgs_t &args);
+bool Test_SparseTileSize2_AirlineOHE(TestArgs_t &args);
+bool Test_SparseTileSize3_AirlineOHE(TestArgs_t &args);
+bool Test_SparseTileSize4_AirlineOHE(TestArgs_t &args);
+bool Test_SparseTileSize8_AirlineOHE(TestArgs_t &args);
+bool Test_SparseScalar_Bosch(TestArgs_t &args);
+bool Test_SparseTileSize2_Bosch(TestArgs_t &args);
+bool Test_SparseTileSize3_Bosch(TestArgs_t &args);
+bool Test_SparseTileSize4_Bosch(TestArgs_t &args);
+bool Test_SparseTileSize8_Bosch(TestArgs_t &args);
+bool Test_SparseScalar_Epsilon(TestArgs_t &args);
+bool Test_SparseTileSize2_Epsilon(TestArgs_t &args);
+bool Test_SparseTileSize3_Epsilon(TestArgs_t &args);
+bool Test_SparseTileSize4_Epsilon(TestArgs_t &args);
+bool Test_SparseTileSize8_Epsilon(TestArgs_t &args);
+bool Test_SparseScalar_Higgs(TestArgs_t &args);
+bool Test_SparseTileSize2_Higgs(TestArgs_t &args);
+bool Test_SparseTileSize3_Higgs(TestArgs_t &args);
+bool Test_SparseTileSize4_Higgs(TestArgs_t &args);
+bool Test_SparseTileSize8_Higgs(TestArgs_t &args);
+bool Test_SparseScalar_Year(TestArgs_t &args);
+bool Test_SparseTileSize2_Year(TestArgs_t &args);
+bool Test_SparseTileSize3_Year(TestArgs_t &args);
+bool Test_SparseTileSize4_Year(TestArgs_t &args);
+bool Test_SparseTileSize8_Year(TestArgs_t &args);
 
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
@@ -283,9 +385,12 @@ bool Test_BufferInitializationWithTwoTrees_FloatInt8(TestArgs_t& args) {
 }
 
 // IR Tests
-bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestConstructor, std::vector< std::vector<double> >& inputData) {
+bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestConstructor, std::vector< std::vector<double> >& inputData, int32_t childIndexBitWidth=1) {
   FixedTreeIRConstructor<> irConstructor(args.context, 1, forestConstructor);
   irConstructor.Parse();
+  // If sparse representation is turned on, then child index bit width should be passed
+  assert (!mlir::decisionforest::UseSparseTreeRepresentation || childIndexBitWidth!=1 );
+  irConstructor.SetChildIndexBitWidth(childIndexBitWidth);
   auto module = irConstructor.GetEvaluationFunction();
   // module->dump();
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
@@ -312,9 +417,10 @@ bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
 }
 
 bool Test_ForestCodeGen_VariableBatchSize(TestArgs_t& args, ForestConstructor_t forestConstructor, 
-                                          int64_t batchSize, std::vector< std::vector<double> >& inputData) {
+                                          int64_t batchSize, std::vector< std::vector<double> >& inputData, int32_t childIndexBitWidth=1) {
   FixedTreeIRConstructor<> irConstructor(args.context, batchSize, forestConstructor);
   irConstructor.Parse();
+  irConstructor.SetChildIndexBitWidth(childIndexBitWidth);
   auto module = irConstructor.GetEvaluationFunction();
   // module->dump();
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
@@ -385,6 +491,46 @@ bool Test_CodeGeneration_RightHeavy_BatchSize2(TestArgs_t& args) {
 bool Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2(TestArgs_t& args) {
   auto data = GetBatchSize2Data();
   return Test_ForestCodeGen_VariableBatchSize(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 2, data);
+}
+
+// ===----------------------------------------=== //
+// Basic sparse code gen tests
+// ===----------------------------------------=== //
+
+bool Test_SparseCodeGeneration_LeftHeavy_BatchSize1_I32ChildIdx(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto data = GetBatchSize1Data();
+  return Test_ForestCodeGen_BatchSize1(args, AddLeftHeavyTree<DoubleInt32Tile>, data, 32);
+}
+
+bool Test_SparseCodeGeneration_RightHeavy_BatchSize1_I32ChildIdx(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto data = GetBatchSize1Data();
+  return Test_ForestCodeGen_BatchSize1(args, AddRightHeavyTree<DoubleInt32Tile>, data, 32);
+}
+
+bool Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize1_I32ChildIdx(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto data = GetBatchSize1Data();
+  return Test_ForestCodeGen_BatchSize1(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, data, 32);
+}
+
+bool Test_SparseCodeGeneration_LeftHeavy_BatchSize2_I32ChildIdx(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto data = GetBatchSize2Data();
+  return Test_ForestCodeGen_VariableBatchSize(args, AddLeftHeavyTree<DoubleInt32Tile>, 2, data, 32);
+}
+
+bool Test_SparseCodeGeneration_RightHeavy_BatchSize2_I32ChildIdx(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto data = GetBatchSize2Data();
+  return Test_ForestCodeGen_VariableBatchSize(args, AddRightHeavyTree<DoubleInt32Tile>, 2, data, 32);
+}
+
+bool Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto data = GetBatchSize2Data();
+  return Test_ForestCodeGen_VariableBatchSize(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 2, data, 32);
 }
 
 // Tests for Tiled Buffer Initialization
@@ -566,15 +712,37 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_RightHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_BalancedTree_BatchSize1),
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_TiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape),
+  TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape),
+  TEST_LIST_ENTRY(Test_TiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape),
+  TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape),
+  TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize),
+  TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize),
   TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy),
   TEST_LIST_ENTRY(Test_ModelInit_RightHeavy),
   TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy),
   TEST_LIST_ENTRY(Test_ModelInit_Balanced),
+  TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy_Int8TileShape),
+  TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy_Int16TileShape),
+  TEST_LIST_ENTRY(Test_ModelInit_RightHeavy_Int8TileShape),
+  TEST_LIST_ENTRY(Test_ModelInit_RightHeavy_Int16TileShape),
+  TEST_LIST_ENTRY(Test_ModelInit_Balanced_Int8TileShape),
+  TEST_LIST_ENTRY(Test_ModelInit_Balanced_Int16TileShape),
+  TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy_Int8TileShape),
+  TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy_Int16TileShape),
   TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_Balanced_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1_Int8TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1_Int8TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_Balanced_BatchSize1_Int8TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1_Int8TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1_Int16TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1_Int16TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_Balanced_BatchSize1_Int16TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1_Int16TileShape),
   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize1),
@@ -584,6 +752,12 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4),
   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
   TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4_Int8TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4_Int16TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4_Int8TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4_Int16TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4_Int8TileShape),
+  TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4_Int16TileShape),
   TEST_LIST_ENTRY(Test_Scalar_Abalone),
   TEST_LIST_ENTRY(Test_TileSize2_Abalone),
   TEST_LIST_ENTRY(Test_TileSize3_Abalone),
@@ -619,11 +793,99 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TileSize3_Year),
   TEST_LIST_ENTRY(Test_TileSize4_Year),
   TEST_LIST_ENTRY(Test_TileSize8_Year),
+
+  // Sparse tests
+  TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize1_I32ChildIdx),
+  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize1_I32ChildIdx),
+  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize1_I32ChildIdx),
+  TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize2_I32ChildIdx),
+  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize2_I32ChildIdx),
+  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize2),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize4),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize1),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize2),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize4),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize1),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize2),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize4),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1_Float),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize2_Float),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize4_Float),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize1_Float),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize2_Float),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize4_Float),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize1_Float),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize2_Float),
+  TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize4_Float),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape),
+  TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
+  TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
+  // XGBoost Benchmarks Sparse Tests
+  TEST_LIST_ENTRY(Test_SparseScalar_Abalone),
+  TEST_LIST_ENTRY(Test_SparseTileSize2_Abalone),
+  TEST_LIST_ENTRY(Test_SparseTileSize3_Abalone),
+  TEST_LIST_ENTRY(Test_SparseTileSize4_Abalone),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Abalone),
+  TEST_LIST_ENTRY(Test_SparseScalar_Airline),
+  TEST_LIST_ENTRY(Test_SparseTileSize2_Airline),
+  TEST_LIST_ENTRY(Test_SparseTileSize3_Airline),
+  TEST_LIST_ENTRY(Test_SparseTileSize4_Airline),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Airline),
+  TEST_LIST_ENTRY(Test_SparseScalar_AirlineOHE),
+  TEST_LIST_ENTRY(Test_SparseTileSize2_AirlineOHE),
+  TEST_LIST_ENTRY(Test_SparseTileSize3_AirlineOHE),
+  TEST_LIST_ENTRY(Test_SparseTileSize4_AirlineOHE),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_AirlineOHE),
+  TEST_LIST_ENTRY(Test_SparseScalar_Bosch),
+  TEST_LIST_ENTRY(Test_SparseTileSize2_Bosch),
+  TEST_LIST_ENTRY(Test_SparseTileSize3_Bosch),
+  TEST_LIST_ENTRY(Test_SparseTileSize4_Bosch),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Bosch),
+  TEST_LIST_ENTRY(Test_SparseScalar_Epsilon),
+  TEST_LIST_ENTRY(Test_SparseTileSize2_Epsilon),
+  TEST_LIST_ENTRY(Test_SparseTileSize3_Epsilon),
+  TEST_LIST_ENTRY(Test_SparseTileSize4_Epsilon),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Epsilon),
+  TEST_LIST_ENTRY(Test_SparseScalar_Higgs),
+  TEST_LIST_ENTRY(Test_SparseTileSize2_Higgs),
+  TEST_LIST_ENTRY(Test_SparseTileSize3_Higgs),
+  TEST_LIST_ENTRY(Test_SparseTileSize4_Higgs),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Higgs),
+  TEST_LIST_ENTRY(Test_SparseScalar_Year),
+  TEST_LIST_ENTRY(Test_SparseTileSize2_Year),
+  TEST_LIST_ENTRY(Test_SparseTileSize3_Year),
+  TEST_LIST_ENTRY(Test_SparseTileSize4_Year),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Year),
 };
 
 // TestDescriptor testList[] = {
-//   TEST_LIST_ENTRY(Test_Scalar_Abalone),
   // TEST_LIST_ENTRY(Test_TileSize8_Abalone),
+  // TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4),
+  // TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
+  // TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
+//   TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape),
+//   TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape),
+//   TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize),
+//   TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1),
+//   TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize),
+//   TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1),
+//   TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape),
+//   TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape),
+//   TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize1_I32ChildIdx),
+//   TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize1_I32ChildIdx),
+//   TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize2_I32ChildIdx),
+//   TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize2_I32ChildIdx),
+//   TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx),
   // TEST_LIST_ENTRY(Test_TileSize8_Airline),
   // TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE),
   // TEST_LIST_ENTRY(Test_TileSize8_Bosch),
@@ -690,7 +952,12 @@ void RunTests() {
     context.getOrLoadDialect<mlir::memref::MemRefDialect>();
     context.getOrLoadDialect<mlir::vector::VectorDialect>();
     context.getOrLoadDialect<mlir::math::MathDialect>();
-    TestArgs_t args = { context };    
+    TestArgs_t args = { context };
+    
+    // Disable sparse code generation by default
+    decisionforest::UseSparseTreeRepresentation = false;
+    mlir::decisionforest::ForestJSONReader::GetInstance().SetChildIndexBitWidth(-1);
+    
     bool pass = RunTest(testList[i], args);
     numPassed += pass ? 1 : 0;
     overallPass = overallPass && pass;

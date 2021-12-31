@@ -103,6 +103,12 @@ public:
     }
     std::vector<ThresholdType> GetThresholdArray();
     std::vector<FeatureIndexType> GetFeatureIndexArray();
+    
+    // Helpers for sparse representation
+    std::vector<ThresholdType> GetSparseThresholdArray();
+    std::vector<FeatureIndexType> GetSparseFeatureIndexArray();
+    std::vector<int32_t> GetChildIndexArray();
+    
     int32_t GetNumberOfTiles();
     void WriteToDOTFile(std::ostream& fout);
     void WriteToDOTFile(const std::string& filename);
@@ -431,6 +437,45 @@ public:
   }
   std::vector<LevelOrderSorterNodeType>& LevelOrderNodes() { return m_levelOrder; }
 };
+
+template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+std::vector<ThresholdType> DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::GetSparseThresholdArray() {
+    LevelOrderTraversal levelOrder(GetNodes());
+    auto& sortedNodes = levelOrder.LevelOrderNodes();
+    std::vector<ThresholdType> thresholdVec(sortedNodes.size());
+    size_t i=0;
+    for (auto& node : sortedNodes) {
+        thresholdVec.at(i) = node.threshold;
+        ++i;
+    }
+    return thresholdVec;
+}
+
+template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+std::vector<FeatureIndexType> DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::GetSparseFeatureIndexArray() {
+    LevelOrderTraversal levelOrder(GetNodes());
+    auto& sortedNodes = levelOrder.LevelOrderNodes();
+    std::vector<FeatureIndexType> featureIndexVec(sortedNodes.size());
+    size_t i=0;
+    for (auto& node : sortedNodes) {
+        featureIndexVec.at(i) = node.IsLeaf() ? -1 : node.featureIndex;
+        ++i;
+    }
+    return featureIndexVec;
+}
+
+template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+std::vector<int32_t> DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::GetChildIndexArray() {
+    LevelOrderTraversal levelOrder(GetNodes());
+    auto& sortedNodes = levelOrder.LevelOrderNodes();
+    std::vector<int32_t> childIndexVec(sortedNodes.size());
+    size_t i=0;
+    for (auto& node : sortedNodes) {
+        childIndexVec.at(i) = node.leftChild;
+        ++i;
+    }
+    return childIndexVec;
+}
 
 
 } // decisionforest

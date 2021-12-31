@@ -17,6 +17,7 @@
 #include "Dialect.h"
 #include "TreeTilingUtils.h"
 #include "TiledTree.h"
+#include "Logger.h"
 
 /*
 Plan and issues
@@ -63,17 +64,6 @@ Plan and issues
 */
 using namespace mlir;
 
-namespace mlir
-{
-namespace decisionforest
-{
-
-void PopulateLowerToSparseRepresentationPatterns(RewritePatternSet& patterns);
-void PopulateLowerToArrayRepresentationPatterns(RewritePatternSet& patterns);
-
-} // decisionforest
-} // mlir
-
 namespace {
 
 struct EnsembleConstantLoweringInfo {
@@ -81,16 +71,26 @@ struct EnsembleConstantLoweringInfo {
   Value offsetGlobal;
   Value lengthGlobal;
   Value lutGlobal;
+  Value leavesGlobal;
+  Value leavesOffsetGlobal;
+  Value leavesLengthGlobal;
   Type modelGlobalType;
   Type offsetGlobaltype;
   Type lengthGlobalType;
   Type lutGlobalType;
+  Type leavesGlobalType;
 };
 
 // Maps an ensemble constant operation to a model memref and an offsets memref
 std::map<Operation*, EnsembleConstantLoweringInfo> ensembleConstantToMemrefsMap;
+
+struct GetTreeLoweringInfo {
+  Value treeMemref;
+  Value leavesMemref;
+};
+
 // Maps a GetTree operation to a memref that represents the tree once the ensemble constant has been replaced
-std::map<Operation*, Value> getTreeOperationMap;
+std::map<Operation*, GetTreeLoweringInfo> getTreeOperationMap;
 
 void ClearGlobalMaps() {
   ensembleConstantToMemrefsMap.clear();
@@ -153,6 +153,13 @@ Value CreateZeroVectorIntConst(ConversionPatternRewriter &rewriter, Location loc
   return vectorValue;
 }
 
+Value CreateZeroVectorIndexConst(ConversionPatternRewriter &rewriter, Location location, int32_t tileSize) {
+  Value zeroConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
+  auto vectorType = VectorType::get(tileSize, rewriter.getIndexType());
+  auto vectorValue = rewriter.create<vector::BroadcastOp>(location, vectorType, zeroConst);
+  return vectorValue;
+}
+
 struct EnsembleConstantOpLowering: public ConversionPattern {
   EnsembleConstantOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::EnsembleConstantOp::getOperationName(), 1 /*benefit*/, ctx) {}
 
@@ -172,12 +179,22 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     // TODO the getter function names need to be persisted with the actual tree values in the JSON so the runtime can call them. 
     std::string modelMemrefName = "model";
     std::string offsetMemrefName = "offsets";
-    std::string lengthMemrefName = "lengths";    
-    auto memrefTypes = AddGlobalMemrefs(owningModule, ensembleConstOp, rewriter, location, modelMemrefName, offsetMemrefName, lengthMemrefName);
+    std::string lengthMemrefName = "lengths";
+    std::string leavesMemrefName = "leaves";
+    std::string leavesLengthMemrefName = "leavesLengths";
+    std::string leavesOffsetMemrefName = "leavesOffsets";
+
+    auto memrefTypes = AddGlobalMemrefs(owningModule, ensembleConstOp, rewriter, location, modelMemrefName, offsetMemrefName, lengthMemrefName, 
+                                        leavesMemrefName, leavesLengthMemrefName, leavesOffsetMemrefName);
     AddModelMemrefInitFunction(owningModule, modelMemrefName, std::get<0>(memrefTypes).cast<MemRefType>(), rewriter, location);
+    
+    // Add getters for all the globals we've created
     auto getModelGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<0>(memrefTypes), modelMemrefName);
     auto getOffsetGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<1>(memrefTypes), offsetMemrefName);
     auto getLengthGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<1>(memrefTypes), lengthMemrefName);
+    auto getLeavesGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<2>(memrefTypes), leavesMemrefName);
+    auto getLeavesOffsetGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<1>(memrefTypes), leavesOffsetMemrefName);
+    auto getLeavesLengthGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<1>(memrefTypes), leavesLengthMemrefName);
     
     auto forestType = ensembleConstOp.getResult().getType().cast<decisionforest::TreeEnsembleType>();
     auto firstTreeType = forestType.getTreeType(0).cast<mlir::decisionforest::TreeType>();
@@ -192,7 +209,8 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     }
 
     EnsembleConstantLoweringInfo info {static_cast<Value>(getModelGlobal), static_cast<Value>(getOffsetGlobal), static_cast<Value>(getLengthGlobal), getLUT,
-                                       std::get<0>(memrefTypes), std::get<1>(memrefTypes), std::get<1>(memrefTypes), lookUpTableMemrefType};
+                                       getLeavesGlobal, getLeavesOffsetGlobal, getLeavesLengthGlobal,
+                                       std::get<0>(memrefTypes), std::get<1>(memrefTypes), std::get<1>(memrefTypes), lookUpTableMemrefType, std::get<2>(memrefTypes)};
     ensembleConstantToMemrefsMap[op] = info;
     
     // rewriter.replaceOp(op, static_cast<Value>(getModelGlobal));
@@ -261,10 +279,11 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     auto thresholdArgType = MemRefType::get({ memrefType.getShape()[0] * tileSize }, modelMemrefElementType.getThresholdElementType());
     auto indexArgType = MemRefType::get({ memrefType.getShape()[0] * tileSize }, modelMemrefElementType.getIndexElementType());
     auto tileShapeIDArgType = MemRefType::get(memrefType.getShape(), modelMemrefElementType.getTileShapeType());
-    auto getMemrefFuncType = rewriter.getFunctionType(TypeRange{thresholdArgType, indexArgType, tileShapeIDArgType}, rewriter.getI32Type());
+    auto childrenIndexArgType = MemRefType::get(memrefType.getShape(), modelMemrefElementType.getChildIndexType());
+    auto initMemrefFuncType = rewriter.getFunctionType(TypeRange{thresholdArgType, indexArgType, tileShapeIDArgType, childrenIndexArgType}, rewriter.getI32Type());
     std::string funcName = "Init_" + globalName;
     NamedAttribute visibilityAttribute{module.sym_visibilityAttrName(), rewriter.getStringAttr("public")};
-    auto initModelMemrefFunc = FuncOp::create(location, funcName, getMemrefFuncType, ArrayRef<NamedAttribute>(visibilityAttribute));
+    auto initModelMemrefFunc = FuncOp::create(location, funcName, initMemrefFuncType, ArrayRef<NamedAttribute>(visibilityAttribute));
     auto &entryBlock = *initModelMemrefFunc.addEntryBlock();
     rewriter.setInsertionPointToStart(&entryBlock);
 
@@ -296,15 +315,17 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
         indexVec = rewriter.create<vector::InsertElementOp>(location, indexVal, indexVec, jConst);
       }
       auto tileShapeID = rewriter.create<memref::LoadOp>(location, entryBlock.getArgument(2), tileIndex);
-      rewriter.create<decisionforest::InitTileOp>(location, getGlobalMemref, tileIndex, thresholdVec, indexVec, tileShapeID);
+      auto childIndex = rewriter.create<memref::LoadOp>(location, entryBlock.getArgument(3), tileIndex);
+      rewriter.create<decisionforest::InitSparseTileOp>(location, getGlobalMemref, tileIndex, thresholdVec, indexVec, tileShapeID, childIndex);
     }
     else {
       // Load from index to index + (tileSize - 1) into a vector
       auto thresholdVal = rewriter.create<memref::LoadOp>(location, entryBlock.getArgument(0), static_cast<Value>(tileIndex));
       auto indexVal = rewriter.create<memref::LoadOp>(location, entryBlock.getArgument(1), static_cast<Value>(tileIndex));
+      auto childIndex = rewriter.create<memref::LoadOp>(location, entryBlock.getArgument(3), static_cast<Value>(tileIndex));
       // TODO check how tileShapeID vector is created when tileSize = 1
       auto tileShapeID = rewriter.create<arith::ConstantIntOp>(location, 0, rewriter.getI32Type());
-      rewriter.create<decisionforest::InitTileOp>(location, getGlobalMemref, tileIndex, thresholdVal, indexVal, tileShapeID);
+      rewriter.create<decisionforest::InitSparseTileOp>(location, getGlobalMemref, tileIndex, thresholdVal, indexVal, tileShapeID, childIndex);
     }
     rewriter.setInsertionPointAfter(forLoop);
     
@@ -313,9 +334,11 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     module.push_back(initModelMemrefFunc);
   }
 
-  std::tuple<Type, Type> AddGlobalMemrefs(mlir::ModuleOp module, mlir::decisionforest::EnsembleConstantOp& ensembleConstOp,
+  std::tuple<Type, Type, Type> AddGlobalMemrefs(mlir::ModuleOp module, mlir::decisionforest::EnsembleConstantOp& ensembleConstOp,
                                           ConversionPatternRewriter &rewriter, Location location,
-                                          const std::string& modelMemrefName, const std::string& offsetMemrefName, const std::string& lengthMemrefName) const {
+                                          const std::string& modelMemrefName, const std::string& offsetMemrefName, const std::string& lengthMemrefName,
+                                          const std::string& leavesMemrefName, const std::string& leavesLengthMemrefName,
+                                          const std::string& leavesOffsetMemrefName) const {
     mlir::decisionforest::DecisionForestAttribute forestAttribute = ensembleConstOp.forest();
     mlir::decisionforest::DecisionForest<>& forest = forestAttribute.GetDecisionForest();
 
@@ -330,8 +353,9 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     auto featureIndexType = treeType.getFeatureIndexType(); 
     auto tileSize = treeType.getTileSize();
     auto tileShapeType = treeType.getTileShapeType();
+    auto childIndexType = treeType.getChildIndexType();
     // assert (tileSize == 1);
-    Type memrefElementType = decisionforest::TiledNumericalNodeType::get(thresholdType, featureIndexType, tileShapeType, tileSize);
+    Type memrefElementType = decisionforest::TiledNumericalNodeType::get(thresholdType, featureIndexType, tileShapeType, tileSize, true, childIndexType);
 
     PersistDecisionForest(forest, forestType);
     
@@ -344,17 +368,38 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
                                       /*constant=*/false, IntegerAttr());
     AddGlobalMemrefGetter(module, modelMemrefName, modelMemrefType, rewriter, location);
     
+    // Create offset memref
     auto offsetSize = (int32_t)forest.NumTrees();
     auto offsetMemrefType = MemRefType::get({offsetSize}, rewriter.getIndexType());
     rewriter.create<memref::GlobalOp>(location, offsetMemrefName, rewriter.getStringAttr("private"),
                                       offsetMemrefType, rewriter.getUnitAttr(), false, IntegerAttr());
     AddGlobalMemrefGetter(module, offsetMemrefName, offsetMemrefType, rewriter, location);
     
+    // Create length memref
     rewriter.create<memref::GlobalOp>(location, lengthMemrefName, rewriter.getStringAttr("private"),
                                       offsetMemrefType, rewriter.getUnitAttr(), false, IntegerAttr());
     AddGlobalMemrefGetter(module, lengthMemrefName, offsetMemrefType, rewriter, location);
 
-    return std::make_tuple(modelMemrefType, offsetMemrefType);
+    auto leavesMemrefSize = decisionforest::GetTotalNumberOfLeaves();
+    auto leavesMemrefType = MemRefType::get({leavesMemrefSize}, thresholdType);
+    rewriter.create<memref::GlobalOp>(location, leavesMemrefName, rewriter.getStringAttr("private"),
+                                      leavesMemrefType, rewriter.getUnitAttr(), false, IntegerAttr());
+    AddGlobalMemrefGetter(module, leavesMemrefName, leavesMemrefType, rewriter, location);
+    
+    if (TreeBeard::Logging::loggingOptions.logGenCodeStats)
+        TreeBeard::Logging::Log("Leaves memref size : " + std::to_string(leavesMemrefSize * (thresholdType.getIntOrFloatBitWidth()/8)));
+
+    // Create leaf offset memref
+    rewriter.create<memref::GlobalOp>(location, leavesOffsetMemrefName, rewriter.getStringAttr("private"),
+                                      offsetMemrefType, rewriter.getUnitAttr(), false, IntegerAttr());
+    AddGlobalMemrefGetter(module, leavesOffsetMemrefName, offsetMemrefType, rewriter, location);
+
+    // Create leaf length memref
+    rewriter.create<memref::GlobalOp>(location, leavesLengthMemrefName, rewriter.getStringAttr("private"),
+                                      offsetMemrefType, rewriter.getUnitAttr(), false, IntegerAttr());
+    AddGlobalMemrefGetter(module, leavesLengthMemrefName, offsetMemrefType, rewriter, location);
+
+    return std::make_tuple(modelMemrefType, offsetMemrefType, leavesMemrefType);
   }
 };
 
@@ -381,16 +426,22 @@ struct GetTreeOpLowering: public ConversionPattern {
     Value treeIndex = operands[1];
 
     auto modelMemrefIndex = rewriter.create<memref::LoadOp>(location, ensembleInfo.offsetGlobal, treeIndex);
-    // TODO There is no way to infer the length of the tree memref here (since this could potentially be multiple trees.)
-    // The length of the memref needs to be a runtime value with the length of the tree. This may need an additional global.
     auto treeLength = rewriter.create<memref::LoadOp>(location, ensembleInfo.lengthGlobal, treeIndex);; // TODO Need to put this into the map too
     auto treeMemref = rewriter.create<memref::SubViewOp>(location, ensembleInfo.modelGlobal, ArrayRef<OpFoldResult>({static_cast<Value>(modelMemrefIndex)}),
                                                          ArrayRef<OpFoldResult>({static_cast<Value>(treeLength)}), ArrayRef<OpFoldResult>({rewriter.getIndexAttr(1)}));
 
+    int32_t tileSize = ensembleInfo.modelGlobal.getType().cast<MemRefType>().getElementType().cast<decisionforest::TiledNumericalNodeType>().getTileSize();
+    Value leavesMemref;
+    if (tileSize > 1) {
+      auto leavesMemrefIndex = rewriter.create<memref::LoadOp>(location, ensembleInfo.leavesOffsetGlobal, treeIndex);
+      auto leavesLength = rewriter.create<memref::LoadOp>(location, ensembleInfo.leavesLengthGlobal, treeIndex);; // TODO Need to put this into the map too
+      leavesMemref = rewriter.create<memref::SubViewOp>(location, ensembleInfo.leavesGlobal, ArrayRef<OpFoldResult>({static_cast<Value>(leavesMemrefIndex)}),
+                                                          ArrayRef<OpFoldResult>({static_cast<Value>(leavesLength)}), ArrayRef<OpFoldResult>({rewriter.getIndexAttr(1)}));
+    }   
     // if (decisionforest::InsertDebugHelpers) {
     //   rewriter.create<decisionforest::PrintTreeToDOTFileOp>(location, treeMemref, treeIndex);
     // }
-    getTreeOperationMap[op] = static_cast<Value>(treeMemref);
+    getTreeOperationMap[op] = { static_cast<Value>(treeMemref), static_cast<Value>(leavesMemref) };
 
     rewriter.eraseOp(op);
 
@@ -403,8 +454,16 @@ Value GetTreeMemrefFromTreeOperand(Value treeValue) {
   AssertOpIsOfType<mlir::decisionforest::GetTreeFromEnsembleOp>(getTreeOp);
   auto getTreeOperationMapIter = getTreeOperationMap.find(getTreeOp);
   assert(getTreeOperationMapIter != getTreeOperationMap.end());
-  auto treeMemref = getTreeOperationMapIter->second;
+  auto treeMemref = getTreeOperationMapIter->second.treeMemref;
   return treeMemref;
+}
+
+Value GetLeavesMemrefFromTreeOperand(Value treeValue) {
+  auto getTreeOp = treeValue.getDefiningOp();
+  AssertOpIsOfType<mlir::decisionforest::GetTreeFromEnsembleOp>(getTreeOp);
+  auto getTreeOperationMapIter = getTreeOperationMap.find(getTreeOp);
+  assert(getTreeOperationMapIter != getTreeOperationMap.end());
+  return getTreeOperationMapIter->second.leavesMemref;
 }
 
 Value GetLUTFromTreeOperand(Value treeValue) {
@@ -457,29 +516,52 @@ struct IsLeafOpLowering: public ConversionPattern {
     // auto nodeIndexType = nodeIndex.getType().cast<IndexType>();
     // assert(nodeIndexType);
 
-    auto treeTileType = treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
-    auto featureIndexType = treeTileType.getIndexFieldType();
-    auto loadFeatureIndexOp = rewriter.create<decisionforest::LoadTileFeatureIndicesOp>(location, featureIndexType, treeMemref, static_cast<Value>(nodeIndex));    
-    
-    Value featureIndexValue;
-    if (treeTileType.getTileSize() == 1) {
-      featureIndexValue = loadFeatureIndexOp;
+    // Check if node index is out of bounds
+    auto treeMemrefLen = rewriter.create<memref::DimOp>(location, treeMemref, 0);
+    auto nodeIndexOutOfBounds = rewriter.create<arith::CmpIOp>(location, arith::CmpIPredicate::sge, nodeIndex, treeMemrefLen);
+
+    auto ifElse = rewriter.create<scf::IfOp>(location, TypeRange{ rewriter.getI1Type() }, nodeIndexOutOfBounds, true);
+    {
+      // return true if the index is out of bounds
+      auto ifBuilder = ifElse.getThenBodyBuilder();
+      auto trueConst = ifBuilder.create<arith::ConstantIntOp>(location, 1, rewriter.getI1Type());
+      if (decisionforest::InsertDebugHelpers) {
+        Value outcome = ifBuilder.create<mlir::arith::ExtUIOp>(location, ifBuilder.getI32Type(), static_cast<Value>(nodeIndexOutOfBounds));
+        Value featureIndexValue = ifBuilder.create<arith::ConstantIntOp>(location, int64_t(-1), ifBuilder.getI32Type());
+        ifBuilder.create<decisionforest::PrintIsLeafOp>(location, nodeIndex, featureIndexValue, outcome);
+      }
+      ifBuilder.create<scf::YieldOp>(location, static_cast<Value>(trueConst));
     }
-    else {
-      auto indexVectorType = featureIndexType.cast<mlir::VectorType>();
-      assert (indexVectorType);
-      auto zeroConst = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI32Type());
-      auto extractFirstElement = rewriter.create<vector::ExtractElementOp>(location, static_cast<Value>(loadFeatureIndexOp), zeroConst);
-      featureIndexValue = extractFirstElement;
+    {    
+      auto elseBuilder = ifElse.getElseBodyBuilder();
+      auto treeTileType = treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
+      auto featureIndexType = treeTileType.getIndexFieldType();
+      auto loadFeatureIndexOp = elseBuilder.create<decisionforest::LoadTileFeatureIndicesOp>(location, featureIndexType, treeMemref, static_cast<Value>(nodeIndex));    
+      
+      Value featureIndexValue;
+      if (treeTileType.getTileSize() == 1) {
+        featureIndexValue = loadFeatureIndexOp;
+      }
+      else {
+        auto indexVectorType = featureIndexType.cast<mlir::VectorType>();
+        assert (indexVectorType);
+        auto zeroConst = elseBuilder.create<arith::ConstantIntOp>(location, int64_t(0), elseBuilder.getI32Type());
+        auto extractFirstElement = elseBuilder.create<vector::ExtractElementOp>(location, static_cast<Value>(loadFeatureIndexOp), zeroConst);
+        featureIndexValue = extractFirstElement;
+      }
+      auto minusOneConstant = elseBuilder.create<arith::ConstantIntOp>(location, int64_t(-1), treeTileType.getIndexElementType());
+      auto comparison = elseBuilder.create<arith::CmpIOp>(location, mlir::arith::CmpIPredicate::eq, featureIndexValue, static_cast<Value>(minusOneConstant));
+      
+      // Loop condition = out of bounds || feature index == -1
+      // auto loopCondition = elseBuilder.create<arith::OrIOp>(location, nodeIndexOutOfBounds, comparison);
+
+      if (decisionforest::InsertDebugHelpers) {
+        Value outcome = elseBuilder.create<mlir::arith::ExtUIOp>(location, elseBuilder.getI32Type(), static_cast<Value>(comparison));
+        elseBuilder.create<decisionforest::PrintIsLeafOp>(location, nodeIndex, featureIndexValue, outcome);
+      }
+      elseBuilder.create<scf::YieldOp>(location, static_cast<Value>(comparison));
     }
-    auto minusOneConstant = rewriter.create<arith::ConstantIntOp>(location, int64_t(-1), treeTileType.getIndexElementType());
-    auto comparison = rewriter.create<arith::CmpIOp>(location, mlir::arith::CmpIPredicate::eq, featureIndexValue, static_cast<Value>(minusOneConstant));
-    
-    if (decisionforest::InsertDebugHelpers) {
-      Value outcome = rewriter.create<mlir::arith::ExtUIOp>(location, rewriter.getI32Type(), static_cast<Value>(comparison));
-      rewriter.create<decisionforest::PrintIsLeafOp>(location, nodeIndex, featureIndexValue, outcome);
-    }
-    rewriter.replaceOp(op, static_cast<Value>(comparison));
+    rewriter.replaceOp(op, static_cast<Value>(ifElse.getResult(0)));
 
     return mlir::success();
   }
@@ -519,6 +601,7 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     auto treeTileType = treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
     auto featureIndexType = treeTileType.getIndexElementType();
     auto thresholdType = treeTileType.getThresholdElementType();
+    auto childIndexType = treeTileType.getChildIndexType();
     // Assert tile size is 1
     assert (treeTileType.getTileSize() == 1);
 
@@ -531,6 +614,9 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     auto loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, thresholdType, treeMemref, static_cast<Value>(nodeIndex));
     // Load feature index
     auto loadFeatureIndexOp = rewriter.create<decisionforest::LoadTileFeatureIndicesOp>(location, featureIndexType, treeMemref, static_cast<Value>(nodeIndex));
+    // Load the child index
+    auto loadChildIndex = rewriter.create<decisionforest::LoadChildIndexOp>(location, childIndexType, treeMemref, static_cast<Value>(nodeIndex));
+    auto childIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadChildIndex));
     // Load feature value
     auto rowMemref = operands[2];
     auto rowMemrefType = rowMemref.getType().cast<MemRefType>();
@@ -548,13 +634,9 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     auto comparison = rewriter.create<arith::CmpFOp>(location,  mlir::arith::CmpFPredicate::UGT, static_cast<Value>(feature), static_cast<Value>(loadThresholdOp));
     auto comparisonUnsigned = rewriter.create<arith::ExtUIOp>(location, rewriter.getI32Type(), static_cast<Value>(comparison));
 
-    // index = 2*index + 1 + result
-    auto oneConstant = rewriter.create<arith::ConstantIndexOp>(location, 1);
-    auto twoConstant = rewriter.create<arith::ConstantIndexOp>(location, 2);
-    auto twoTimesIndex = rewriter.create<arith::MulIOp>(location, rewriter.getIndexType(), static_cast<Value>(nodeIndex), static_cast<Value>(twoConstant));
-    auto twoTimesIndexPlus1 = rewriter.create<arith::AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(twoTimesIndex), static_cast<Value>(oneConstant));
+    // index = childIndex + result
     auto comparisonResultIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(comparisonUnsigned));
-    auto newIndex = rewriter.create<arith::AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(twoTimesIndexPlus1), static_cast<Value>(comparisonResultIndex));
+    auto newIndex = rewriter.create<arith::AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(childIndex), static_cast<Value>(comparisonResultIndex));
     
     // node = indexToNode(index)
     auto newNode = rewriter.create<decisionforest::IndexToNodeOp>(location, traverseTileOp.getResult().getType(), treeMemref, static_cast<Value>(newIndex));
@@ -605,8 +687,9 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     assert(featureIndexVectorType);
     auto thresholdType = treeTileType.getThresholdFieldType();
     auto thresholdVectorType = thresholdType.cast<VectorType>();
-    auto tileShapeType = treeTileType.getTileShapeType();
     assert(thresholdVectorType);
+    auto tileShapeType = treeTileType.getTileShapeType();
+    auto childIndexType = treeTileType.getChildIndexType();
 
     assert (treeTileType.getTileSize() > 1);
     auto tileSize = treeTileType.getTileSize();
@@ -628,16 +711,29 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
                           tileSize, static_cast<Value>(loadFeatureIndexOp));
     }
 
-    // Load the tile shape
-    auto loadTileShapeOp = rewriter.create<decisionforest::LoadTileShapeOp>(location, tileShapeType, treeMemref, static_cast<Value>(nodeIndex));
-    auto tileShapeIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadTileShapeOp));
+    Value tileShapeIndex, childIndex;
+    if (decisionforest::VectorizeShapeAndChildIndexLoad) {
+      assert (tileShapeType == childIndexType);
+      auto vectorType = VectorType::get({2}, tileShapeType);
+      auto tileShapeAndChild = rewriter.create<decisionforest::LoadTileShapeAndChildIndexOp>(location, vectorType, treeMemref, static_cast<Value>(nodeIndex));
+      auto vectorIndexType = VectorType::get({2}, rewriter.getIndexType());
+      auto indexCast = rewriter.create<arith::IndexCastOp>(location, vectorIndexType, static_cast<Value>(tileShapeAndChild));
 
-    // index = (tileSize+1)*index + 1 + childIndex
-    auto oneConstant = rewriter.create<arith::ConstantIndexOp>(location, 1);
-    auto tileSizeConstant = rewriter.create<arith::ConstantIndexOp>(location, tileSize+1);
-    auto tileSizeTimesIndex = rewriter.create<arith::MulIOp>(location, rewriter.getIndexType(), static_cast<Value>(nodeIndex), static_cast<Value>(tileSizeConstant));
-    auto tileSizeTimesIndexPlus1 = rewriter.create<arith::AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(tileSizeTimesIndex), static_cast<Value>(oneConstant));
-    
+      auto zeroConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
+      tileShapeIndex = rewriter.create<vector::ExtractElementOp>(location, indexCast, zeroConst);
+
+      auto oneConst = rewriter.create<arith::ConstantIndexOp>(location, 1);
+      childIndex = rewriter.create<vector::ExtractElementOp>(location, indexCast, oneConst);
+    }
+    else {
+      // Load the tile shape
+      auto loadTileShapeOp = rewriter.create<decisionforest::LoadTileShapeOp>(location, tileShapeType, treeMemref, static_cast<Value>(nodeIndex));
+      tileShapeIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadTileShapeOp));
+
+      // Load the child index
+      auto loadChildIndexOp = rewriter.create<decisionforest::LoadChildIndexOp>(location, childIndexType, treeMemref, static_cast<Value>(nodeIndex));
+      childIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadChildIndexOp));
+    }
     // Load feature value
     auto rowMemref = operands[2];
     auto rowMemrefType = rowMemref.getType().cast<MemRefType>();
@@ -687,10 +783,21 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     // Load the child index from the LUT
     auto lutValue = GetLUTFromTreeOperand(operands[0]);
     auto childIndexInt = rewriter.create<memref::LoadOp>(location, lutValue, ValueRange{tileShapeIndex, comparisonIndex});
-    auto childIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(childIndexInt));
+    auto childNumber = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(childIndexInt));
 
-    auto newIndex = rewriter.create<arith::AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(tileSizeTimesIndexPlus1), static_cast<Value>(childIndex));
-    
+    auto newIndex = rewriter.create<arith::AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(childIndex), static_cast<Value>(childNumber));
+
+    if (decisionforest::InsertDebugHelpers) {
+      // (child base index, lutLookup result, new index)
+      auto zeroVector = CreateZeroVectorIndexConst(rewriter, location, 3);
+      auto zeroConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
+      auto elem0Set = rewriter.create<vector::InsertElementOp>(location, childIndex, zeroVector, zeroConst);
+      auto oneConst = rewriter.create<arith::ConstantIndexOp>(location, 1);
+      auto elem1Set = rewriter.create<vector::InsertElementOp>(location, childNumber, elem0Set, oneConst);
+      auto twoConst = rewriter.create<arith::ConstantIndexOp>(location, 2);
+      auto elem2Set = rewriter.create<vector::InsertElementOp>(location, newIndex, elem1Set, twoConst);
+      InsertPrintVectorOp(rewriter, location, 1, 64, 3, elem2Set);
+    }    
     // node = indexToNode(index)
     auto newNode = rewriter.create<decisionforest::IndexToNodeOp>(location, traverseTileOp.getResult().getType(), treeMemref, static_cast<Value>(newIndex));
     rewriter.replaceOp(op, static_cast<Value>(newNode));
@@ -716,89 +823,67 @@ struct GetLeafValueOpLowering : public ConversionPattern {
     auto thresholdType = treeTileType.getThresholdFieldType();
     auto node = operands[1];
     auto nodeIndex = rewriter.create<decisionforest::NodeToIndexOp>(location, rewriter.getIndexType(), treeMemref, node);
+    
     if (decisionforest::InsertDebugHelpers) {
       rewriter.create<decisionforest::PrintTreeNodeOp>(location, nodeIndex);
     }
 
-    // Load threshold
-    // TODO Ideally, this should be a different op for when we deal with tile sizes != 1. We will then need to load 
-    // a single threshold value and cast it the trees return type
-    auto loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, thresholdType, treeMemref, static_cast<Value>(nodeIndex));
-    Value leafValue = loadThresholdOp;
-    
-    if (treeTileType.getTileSize() != 1) {
-      if (decisionforest::InsertDebugHelpers) {
-        InsertPrintVectorOp(rewriter, location, 0, treeTileType.getThresholdElementType().getIntOrFloatBitWidth(), treeTileType.getTileSize(), loadThresholdOp);
-      }
-      auto zeroConst = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI32Type());
-      auto extractElement = rewriter.create<vector::ExtractElementOp>(location, static_cast<Value>(loadThresholdOp), zeroConst);
-      leafValue = extractElement;
+    if (treeTileType.getTileSize() == 1) {
+      auto loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, thresholdType, treeMemref, static_cast<Value>(nodeIndex));
+      Value leafValue = loadThresholdOp;
+      rewriter.replaceOp(op, static_cast<Value>(leafValue));
     }
-    
-    // TODO cast the loaded value to the correct result type of the tree. 
-    rewriter.replaceOp(op, static_cast<Value>(leafValue));
+    else {
+      auto treeMemrefLen = rewriter.create<memref::DimOp>(location, treeMemref, 0);
+      auto nodeIndexOutOfBounds = rewriter.create<arith::CmpIOp>(location, arith::CmpIPredicate::slt, nodeIndex, treeMemrefLen);
+
+      auto ifElse = rewriter.create<scf::IfOp>(location, TypeRange{ treeTileType.getThresholdElementType() }, nodeIndexOutOfBounds, true);
+      {
+        auto thenBuilder = ifElse.getThenBodyBuilder();
+        // Load threshold
+        // TODO Ideally, this should be a different op for when we deal with tile sizes != 1. We will then need to load 
+        // a single threshold value and cast it the trees return type
+        auto loadThresholdOp = thenBuilder.create<decisionforest::LoadTileThresholdsOp>(location, thresholdType, treeMemref, static_cast<Value>(nodeIndex));
+        Value leafValue = loadThresholdOp;
+        
+        if (treeTileType.getTileSize() != 1) {
+          // if (decisionforest::InsertDebugHelpers) {
+          //   InsertPrintVectorOp(rewriter, location, 0, treeTileType.getThresholdElementType().getIntOrFloatBitWidth(), treeTileType.getTileSize(), loadThresholdOp);
+          // }
+          auto zeroConst = thenBuilder.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI32Type());
+          auto extractElement = thenBuilder.create<vector::ExtractElementOp>(location, static_cast<Value>(loadThresholdOp), zeroConst);
+          leafValue = extractElement;
+        }
+        thenBuilder.create<scf::YieldOp>(location, leafValue);
+      }
+      {
+        auto elseBuilder = ifElse.getElseBodyBuilder();
+        auto leafIndex = elseBuilder.create<arith::SubIOp>(location, nodeIndex, treeMemrefLen);
+        auto leavesMemref = GetLeavesMemrefFromTreeOperand(operands[0]);
+        auto leafValue = elseBuilder.create<memref::LoadOp>(location, leavesMemref, static_cast<Value>(leafIndex));
+        elseBuilder.create<scf::YieldOp>(location, static_cast<Value>(leafValue));
+      }
+      // auto resultConst = rewriter.create<arith::ConstantFloatOp>(location, APFloat(double(0.5)), rewriter.getF64Type());
+      // TODO cast the loaded value to the correct result type of the tree. 
+      rewriter.replaceOp(op, static_cast<Value>(ifElse.getResult(0)));
+    }
     return mlir::success();
   }
 };
 
-struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLoweringPass, FunctionPass> {
-  void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect>();
-  }
-  void runOnFunction() final {
-    // [BUG!!] TODO Since MLIR runs this pass multi-threaded, if multiple passes access these globals, they need to be protected!
-    
-    // Clear the global maps that store the mappings for the ensemble constants
-    ClearGlobalMaps();
-
-    ConversionTarget target(getContext());
-
-    target.addLegalDialect<AffineDialect, memref::MemRefDialect, StandardOpsDialect, 
-                           scf::SCFDialect, decisionforest::DecisionForestDialect, vector::VectorDialect,
-                           math::MathDialect, arith::ArithmeticDialect>();
-
-    target.addIllegalOp<decisionforest::EnsembleConstantOp,
-                        decisionforest::GetTreeFromEnsembleOp,
-                        decisionforest::GetRootOp,
-                        decisionforest::IsLeafOp,
-                        decisionforest::TraverseTreeTileOp,
-                        decisionforest::GetLeafValueOp>();
-
-    RewritePatternSet patterns(&getContext());
-    if (mlir::decisionforest::UseSparseTreeRepresentation)
-      decisionforest::PopulateLowerToSparseRepresentationPatterns(patterns);
-    else
-      decisionforest::PopulateLowerToArrayRepresentationPatterns(patterns);
-      
-    if (failed(applyPartialConversion(getFunction(), target, std::move(patterns))))
-        signalPassFailure();
-  }
-};
-}
+} // anonymous
 
 namespace mlir
 {
 namespace decisionforest
 {
-
-void PopulateLowerToArrayRepresentationPatterns(RewritePatternSet& patterns) {
+void PopulateLowerToSparseRepresentationPatterns(RewritePatternSet& patterns) {
     patterns.add<EnsembleConstantOpLowering,
                 GetTreeOpLowering,
                 GetRootOpLowering,
                 IsLeafOpLowering,
                 TraverseTreeTileOpLowering,
                 GetLeafValueOpLowering>(patterns.getContext());
-}
-
-void LowerEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module) {
-  // Lower from high-level IR to mid-level IR
-  mlir::PassManager pm(&context);
-  mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
-  optPM.addPass(std::make_unique<MidLevelIRToMemrefLoweringPass>());
-
-  if (mlir::failed(pm.run(module))) {
-    llvm::errs() << "Lowering to memrefs failed.\n";
-  }
 }
 
 } // decisionforest

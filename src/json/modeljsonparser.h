@@ -80,6 +80,7 @@ protected:
     mlir::ModuleOp m_module;
     mlir::OpBuilder m_builder;
     int32_t m_batchSize;
+    int32_t m_childIndexBitWidth;
 
     void SetReductionType(mlir::decisionforest::ReductionType reductionType) { m_forest->SetReductionType(reductionType); }
     void AddFeature(const std::string& featureName, const std::string& type) { m_forest->AddFeature(featureName, type); }
@@ -96,15 +97,13 @@ protected:
     void SetNodeRightChild(NodeIndexType node, NodeIndexType child) { m_currentTree->SetNodeRightChild(node, child); }
     // Set left child of a node
     void SetNodeLeftChild(NodeIndexType node, NodeIndexType child) { m_currentTree->SetNodeLeftChild(node, child); }
-    mlir::Type GetInputRowType()
-    {
+    mlir::Type GetInputRowType() {
         const auto& features = m_forest->GetFeatures();
         mlir::Type elementType = GetMLIRType(InputElementType(), m_builder); // GetMLIRTypeFromString(features.front().type, m_builder);
         int64_t shape[] = { static_cast<int64_t>(features.size()) };
         return mlir::MemRefType::get(shape, elementType);
     }
-    mlir::Type GetFunctionArgumentType()
-    {
+    mlir::Type GetFunctionArgumentType() {
         const auto& features = m_forest->GetFeatures();
         mlir::Type elementType = GetMLIRType(InputElementType(), m_builder); //GetMLIRTypeFromString(features.front().type, m_builder);
         int64_t shape[] = { m_batchSize, static_cast<int64_t>(features.size())};
@@ -112,31 +111,29 @@ protected:
         // return mlir::MemRefType::get(shape, elementType, affineMap);
         return mlir::MemRefType::get(shape, elementType);
     }
-    mlir::Type GetFunctionResultType()
-    {
+    mlir::Type GetFunctionResultType() {
         return mlir::MemRefType::get(m_batchSize, GetMLIRType(ReturnType(), m_builder));
     }
-    mlir::FunctionType GetFunctionType()
-    {
+    mlir::FunctionType GetFunctionType() {
         auto argType = GetFunctionArgumentType();
         auto resultType = GetFunctionResultType();
         return m_builder.getFunctionType({argType, resultType}, resultType);
     }
-    mlir::FuncOp GetFunctionPrototype()
-    {
+    mlir::FuncOp GetFunctionPrototype() {
         auto location = m_builder.getUnknownLoc();
         auto functionType = GetFunctionType();
         // TODO the function name needs to be an input or derived from the input
         // return mlir::FuncOp::create(location, std::string("Prediction_Function"), functionType);
         return m_builder.create<mlir::FuncOp>(location, std::string("Prediction_Function"), functionType, m_builder.getStringAttr("public"));
     }
-    virtual mlir::decisionforest::TreeEnsembleType GetEnsembleType()
-    {
+    virtual mlir::decisionforest::TreeEnsembleType GetEnsembleType() {
         // All trees have the default tiling to start with.
         int32_t tileSize = 1;
         auto treeType = mlir::decisionforest::TreeType::get(GetMLIRType(ReturnType(), m_builder), tileSize, 
                                                             GetMLIRType(ThresholdType(), m_builder), 
-                                                            GetMLIRType(FeatureIndexType(), m_builder));
+                                                            GetMLIRType(FeatureIndexType(), m_builder), GetMLIRType(int32_t(), m_builder),
+                                                            mlir::decisionforest::UseSparseTreeRepresentation, 
+                                                            m_builder.getIntegerType(m_childIndexBitWidth));
 
         auto forestType = mlir::decisionforest::TreeEnsembleType::get(GetMLIRType(ReturnType(), m_builder),
                                                                       m_forest->NumTrees(), GetInputRowType(), 
@@ -145,7 +142,8 @@ protected:
     }
 public:
     ModelJSONParser(mlir::MLIRContext& context, int32_t batchSize, double_t initialValue)
-        : m_forest(new DecisionForestType(initialValue)), m_currentTree(nullptr), m_context(context), m_builder(&context), m_batchSize(batchSize)
+        : m_forest(new DecisionForestType(initialValue)), m_currentTree(nullptr), m_context(context), m_builder(&context),
+          m_batchSize(batchSize), m_childIndexBitWidth(1)
     {
         m_module = mlir::ModuleOp::create(m_builder.getUnknownLoc(), llvm::StringRef("MyModule"));
     }
@@ -160,8 +158,7 @@ public:
     // Get the forest pointer
     DecisionForestType* GetForest() { return m_forest; }
 
-    mlir::ModuleOp GetEvaluationFunction() 
-    { 
+    mlir::ModuleOp GetEvaluationFunction() { 
         mlir::FuncOp function(GetFunctionPrototype());
         if (!function)
             return nullptr;
@@ -197,6 +194,8 @@ public:
 
         return m_module;
     }
+
+    void SetChildIndexBitWidth(int32_t value) { m_childIndexBitWidth = value; }
 };
 }
 

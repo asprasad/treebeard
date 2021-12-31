@@ -64,7 +64,7 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
   if (!dumpLLVMToFile)
     return false;
   std::string jsonFile, llvmIRFile;
-  int32_t thresholdTypeWidth=32, returnTypeWidth=32, featureIndexTypeWidth=32;
+  int32_t thresholdTypeWidth=32, returnTypeWidth=32, featureIndexTypeWidth=16, tileShapeBitWidth=16, childIndexBitWidth=16;
   int32_t nodeIndexTypeWidth=32, inputElementTypeWidth=32, batchSize=4, tileSize=1;
   for (int32_t i=0 ; i<argc ; ) {
     if (ContainsString(argv[i], "-o")) {
@@ -78,6 +78,10 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
       assert (jsonFile == "");
       jsonFile = argv[i+1];
       i += 2;
+    }
+    else if (ContainsString(argv[i], "--sparse")) {
+      mlir::decisionforest::UseSparseTreeRepresentation = true;
+      i += 1;
     }
     else if (ContainsString(argv[i], "-thresholdBitWidth")) {
       ReadIntegerFromCommandLineArgument(argc, argv, i, thresholdTypeWidth);
@@ -94,6 +98,12 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
     else if (ContainsString(argv[i], "-inputBitWidth")) {
       ReadIntegerFromCommandLineArgument(argc, argv, i, inputElementTypeWidth);
     }
+    else if (ContainsString(argv[i], "-tileShapeBitWidth")) {
+      ReadIntegerFromCommandLineArgument(argc, argv, i, tileShapeBitWidth);
+    }
+    else if (ContainsString(argv[i], "-childIndexBitWidth")) {
+      ReadIntegerFromCommandLineArgument(argc, argv, i, childIndexBitWidth);
+    }
     else if (ContainsString(argv[i], "-batchSize")) {
       ReadIntegerFromCommandLineArgument(argc, argv, i, batchSize);
     }
@@ -104,7 +114,8 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
       ++i;
   }
   assert (jsonFile != "" && llvmIRFile != "");
-  TreeBeard::ConvertXGBoostJSONToLLVMIR(jsonFile, llvmIRFile, thresholdTypeWidth, returnTypeWidth, featureIndexTypeWidth, nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize);
+  TreeBeard::ConvertXGBoostJSONToLLVMIR(jsonFile, llvmIRFile, thresholdTypeWidth, returnTypeWidth, featureIndexTypeWidth,
+                                        nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
   return true;
 }
 
@@ -120,7 +131,7 @@ bool RunInferenceFromSO(int argc, char *argv[]) {
   if (!runInferenceFromSO)
     return false;
   std::string jsonFile, soPath, inputCSVFile;
-  int32_t thresholdTypeWidth=32, returnTypeWidth=32, featureIndexTypeWidth=32;
+  int32_t thresholdTypeWidth=32, returnTypeWidth=32, featureIndexTypeWidth=16, tileShapeBitWidth=16, childIndexBitWidth=16;
   int32_t nodeIndexTypeWidth=32, inputElementTypeWidth=32, batchSize=4, tileSize=1;
   for (int32_t i=0 ; i<argc ; ) {
     if (ContainsString(argv[i], "-so")) {
@@ -134,6 +145,10 @@ bool RunInferenceFromSO(int argc, char *argv[]) {
       assert (jsonFile == "");
       jsonFile = argv[i+1];
       i += 2;
+    }
+    else if (ContainsString(argv[i], "--sparse")) {
+      mlir::decisionforest::UseSparseTreeRepresentation = true;
+      i += 1;
     }
     else if (ContainsString(argv[i], "-i")) {
       assert ((i+1) < argc);
@@ -156,6 +171,12 @@ bool RunInferenceFromSO(int argc, char *argv[]) {
     else if (ContainsString(argv[i], "-inputBitWidth")) {
       ReadIntegerFromCommandLineArgument(argc, argv, i, inputElementTypeWidth);
     }
+    else if (ContainsString(argv[i], "-tileShapeBitWidth")) {
+      ReadIntegerFromCommandLineArgument(argc, argv, i, tileShapeBitWidth);
+    }
+    else if (ContainsString(argv[i], "-childIndexBitWidth")) {
+      ReadIntegerFromCommandLineArgument(argc, argv, i, childIndexBitWidth);
+    }
     else if (ContainsString(argv[i], "-batchSize")) {
       ReadIntegerFromCommandLineArgument(argc, argv, i, batchSize);
     }
@@ -166,7 +187,8 @@ bool RunInferenceFromSO(int argc, char *argv[]) {
       ++i;
   }
   assert (jsonFile != "" && soPath != "");
-  TreeBeard::RunInferenceUsingSO(jsonFile, soPath, inputCSVFile, thresholdTypeWidth, returnTypeWidth, featureIndexTypeWidth, nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize);
+  TreeBeard::RunInferenceUsingSO(jsonFile, soPath, inputCSVFile, thresholdTypeWidth, returnTypeWidth, featureIndexTypeWidth, 
+                                 nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
   return true;
 }
 
