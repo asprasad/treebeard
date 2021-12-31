@@ -72,6 +72,16 @@ Performance Tuning for Tiled Code
 
 [Done] SO support for sparse representation
 
+- Locality Optimizations
+    - Decide the tiling of the (batch, forest) iteration space and make it a property of the predictForest op
+    - Properties
+        - How many trees to travese at a time?
+        - How many rows to traverse per tree?
+        - Order in which to traverse trees
+            - Which trees need dedicated code and which trees share code
+        - Which trees to pipeline
+        - Which trees to SIMDize
+        
 Pipeline container
 SIMD container
 
