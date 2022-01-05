@@ -1372,6 +1372,15 @@ bool Test_TileSize8_AirlineOHE_TestInputs(TestArgs_t &args) {
   return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, true, 16, 16, csvPath);
 }
 
+bool Test_TileSize8_Airline_TestInputs(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
+}
+
 bool Test_TileSize8_Bosch_TestInputs(TestArgs_t &args) {
   auto repoPath = GetTreeBeardRepoPath();
   auto testModelsDir = repoPath + "/xgb_models";

@@ -214,6 +214,7 @@ bool Test_SparseTileSize8_Year(TestArgs_t &args);
 
 // Tests for actual model inputs
 bool Test_TileSize8_Abalone_TestInputs(TestArgs_t &args);
+bool Test_TileSize8_Airline_TestInputs(TestArgs_t &args);
 bool Test_TileSize8_AirlineOHE_TestInputs(TestArgs_t &args);
 bool Test_TileSize8_Bosch_TestInputs(TestArgs_t &args);
 bool Test_TileSize8_Epsilon_TestInputs(TestArgs_t &args);
@@ -875,6 +876,7 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_SparseTileSize4_Year),
   TEST_LIST_ENTRY(Test_SparseTileSize8_Year),
   TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs),
+  TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs),
   TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs),
   TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs),
   TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs),
@@ -882,7 +884,7 @@ TestDescriptor testList[] = {
 };
 
 // TestDescriptor testList[] = {
-  // TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs),
+//   TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs),
   // TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs),
   // TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs),
   // TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4),
