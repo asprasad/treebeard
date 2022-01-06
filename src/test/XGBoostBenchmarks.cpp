@@ -39,18 +39,24 @@ std::string GetTypeName(float f) {
   return "float";
 }
 
-constexpr int32_t NUM_RUNS = 3;
+// #define PROFILE_MODE
+
+#ifndef PROFILE_MODE
+constexpr int32_t NUM_RUNS = 1000;
+#else
+constexpr int32_t NUM_RUNS = 1000;
+#endif
 
 template<typename FloatType>
-int64_t Test_CodeGenForJSON_VariableBatchSize(int64_t batchSize, const std::string& modelJsonPath, int32_t tileSize) {
-  using FeatureIndexType = int32_t;
+int64_t Test_CodeGenForJSON_VariableBatchSize(int64_t batchSize, const std::string& modelJsonPath, int32_t tileSize, int32_t tileShapeBitWidth, int32_t childIndexBitWidth) {
+  using FeatureIndexType = int16_t;
   mlir::MLIRContext context;
 
   TreeBeard::InitializeMLIRContext(context);
-  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, FloatType, FeatureIndexType, int32_t, FloatType>(context, modelJsonPath, batchSize, tileSize);
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, FloatType, FeatureIndexType, int32_t, FloatType>(context, modelJsonPath, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
   decisionforest::InferenceRunner inferenceRunner(module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
   
-  TestCSVReader csvReader(modelJsonPath + ".csv");
+  TestCSVReader csvReader(modelJsonPath + ".test.sampled.csv");
   std::vector<std::vector<FloatType>> inputData;
   for (size_t i=batchSize  ; i<csvReader.NumberOfRows()-1 ; i += batchSize) {
     std::vector<FloatType> batch, preds;
@@ -62,24 +68,28 @@ int64_t Test_CodeGenForJSON_VariableBatchSize(int64_t batchSize, const std::stri
     }
     inputData.push_back(batch);
   }
-  // char ch;
-  // std::cout << "Attach profiler and press any key...";
-  // std::cin >> ch;
+
+#ifdef PROFILE_MODE
+  char ch;
+  std::cout << "Attach profiler and press any key...";
+  std::cin >> ch;
+#endif
 
   size_t rowSize = csvReader.GetRow(0).size() - 1; // The last entry is the xgboost prediction
+  std::vector<FloatType> result(batchSize, -1);
   std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
   for (int32_t trial=0 ; trial<NUM_RUNS ; ++trial) {
     for(auto& batch : inputData) {
-      assert (batch.size() % batchSize == 0);
-      std::vector<FloatType> result(batchSize, -1);
+      // assert (batch.size() % batchSize == 0);
       inferenceRunner.RunInference<FloatType, FloatType>(batch.data(), result.data(), rowSize, batchSize);
     }
   }
   std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 
-  // std::cout << "Detach profiler and press any key...";
-  // std::cin >> ch;
-
+#ifdef PROFILE_MODE
+  std::cout << "Detach profiler and press any key...";
+  std::cin >> ch;
+#endif
   return std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
 }
 
@@ -88,7 +98,7 @@ void RunSingleBenchmark_SingleConfig(const std::string& modelName) {
   auto repoPath = GetTreeBeardRepoPath();
   auto testModelsDir = repoPath + "/xgb_models";
   auto modelJSONPath = testModelsDir + "/" + modelName + "_xgb_model_save.json";
-  auto time = Test_CodeGenForJSON_VariableBatchSize<FPType>(BatchSize, modelJSONPath, TileSize);
+  auto time = Test_CodeGenForJSON_VariableBatchSize<FPType>(BatchSize, modelJSONPath, TileSize, 16, 16);
   std::cout << "\t" + modelName << "\t" << time << std::endl;
 }
 
@@ -99,52 +109,63 @@ void RunBenchmark_SingleConfig() {
   RunSingleBenchmark_SingleConfig<FPType, TileSize, BatchSize>("abalone");
   RunSingleBenchmark_SingleConfig<FPType, TileSize, BatchSize>("airline");
   RunSingleBenchmark_SingleConfig<FPType, TileSize, BatchSize>("airline-ohe");
-  RunSingleBenchmark_SingleConfig<FPType, TileSize, BatchSize>("bosch");
+  // RunSingleBenchmark_SingleConfig<FPType, TileSize, BatchSize>("bosch");
   RunSingleBenchmark_SingleConfig<FPType, TileSize, BatchSize>("epsilon");
   RunSingleBenchmark_SingleConfig<FPType, TileSize, BatchSize>("higgs");
   RunSingleBenchmark_SingleConfig<FPType, TileSize, BatchSize>("year_prediction_msd");
 }
 
-void RunXGBoostBenchmarks() {
-  {
-    using FPType = double;
-    RunBenchmark_SingleConfig<FPType, 1, 1>();
-    RunBenchmark_SingleConfig<FPType, 1, 2>();
-    RunBenchmark_SingleConfig<FPType, 1, 4>();
+void RunAllBenchmarks() {
+  // {
+  //   using FPType = double;
+  //   RunBenchmark_SingleConfig<FPType, 1, 1>();
+  //   RunBenchmark_SingleConfig<FPType, 1, 2>();
+  //   RunBenchmark_SingleConfig<FPType, 1, 4>();
 
-    RunBenchmark_SingleConfig<FPType, 2, 1>();
-    RunBenchmark_SingleConfig<FPType, 2, 2>();
-    RunBenchmark_SingleConfig<FPType, 2, 4>();
+  //   RunBenchmark_SingleConfig<FPType, 2, 1>();
+  //   RunBenchmark_SingleConfig<FPType, 2, 2>();
+  //   RunBenchmark_SingleConfig<FPType, 2, 4>();
 
-    RunBenchmark_SingleConfig<FPType, 3, 1>();
-    RunBenchmark_SingleConfig<FPType, 3, 2>();
-    RunBenchmark_SingleConfig<FPType, 3, 4>();
+  //   RunBenchmark_SingleConfig<FPType, 3, 1>();
+  //   RunBenchmark_SingleConfig<FPType, 3, 2>();
+  //   RunBenchmark_SingleConfig<FPType, 3, 4>();
 
-    RunBenchmark_SingleConfig<FPType, 4, 1>();
-    RunBenchmark_SingleConfig<FPType, 4, 2>();
-    RunBenchmark_SingleConfig<FPType, 4, 4>();
-  }
+  //   RunBenchmark_SingleConfig<FPType, 4, 1>();
+  //   RunBenchmark_SingleConfig<FPType, 4, 2>();
+  //   RunBenchmark_SingleConfig<FPType, 4, 4>();
+  // }
   {
     using FPType = float;
-    RunBenchmark_SingleConfig<FPType, 1, 1>();
-    RunBenchmark_SingleConfig<FPType, 1, 2>();
-    RunBenchmark_SingleConfig<FPType, 1, 4>();
+    // RunBenchmark_SingleConfig<FPType, 1, 1>();
+    // RunBenchmark_SingleConfig<FPType, 1, 2>();
+    RunBenchmark_SingleConfig<FPType, 1, 200>();
 
-    RunBenchmark_SingleConfig<FPType, 2, 1>();
-    RunBenchmark_SingleConfig<FPType, 2, 2>();
-    RunBenchmark_SingleConfig<FPType, 2, 4>();
+    // RunBenchmark_SingleConfig<FPType, 2, 1>();
+    // RunBenchmark_SingleConfig<FPType, 2, 2>();
+    // RunBenchmark_SingleConfig<FPType, 2, 4>();
 
-    RunBenchmark_SingleConfig<FPType, 3, 1>();
-    RunBenchmark_SingleConfig<FPType, 3, 2>();
-    RunBenchmark_SingleConfig<FPType, 3, 4>();
+    // RunBenchmark_SingleConfig<FPType, 3, 1>();
+    // RunBenchmark_SingleConfig<FPType, 3, 2>();
+    // RunBenchmark_SingleConfig<FPType, 3, 4>();
 
-    RunBenchmark_SingleConfig<FPType, 4, 1>();
-    RunBenchmark_SingleConfig<FPType, 4, 2>();
-    RunBenchmark_SingleConfig<FPType, 4, 4>();
-    RunBenchmark_SingleConfig<FPType, 5, 4>();
-    RunBenchmark_SingleConfig<FPType, 6, 4>();
-    RunBenchmark_SingleConfig<FPType, 8, 4>();
+    // RunBenchmark_SingleConfig<FPType, 4, 1>();
+    // RunBenchmark_SingleConfig<FPType, 4, 2>();
+    RunBenchmark_SingleConfig<FPType, 4, 200>();
+    // RunBenchmark_SingleConfig<FPType, 5, 4>();
+    // RunBenchmark_SingleConfig<FPType, 6, 4>();
+    RunBenchmark_SingleConfig<FPType, 8, 200>();
   }
+}
+
+void RunSparseXGBoostBenchmarks() {
+  decisionforest::UseSparseTreeRepresentation = true;
+  std::cout << "Running sparse benchmarks ... \n\n\n";
+  RunAllBenchmarks();
+}
+
+void RunXGBoostBenchmarks() {
+  RunAllBenchmarks();
+  RunSparseXGBoostBenchmarks();
 }
 
 
