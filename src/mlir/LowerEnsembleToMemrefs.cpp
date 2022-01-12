@@ -70,6 +70,7 @@ namespace decisionforest
 
 void PopulateLowerToSparseRepresentationPatterns(RewritePatternSet& patterns);
 void PopulateLowerToArrayRepresentationPatterns(RewritePatternSet& patterns);
+void ClearSparseGlobalMaps();
 
 } // decisionforest
 } // mlir
@@ -750,6 +751,7 @@ struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLowe
     
     // Clear the global maps that store the mappings for the ensemble constants
     ClearGlobalMaps();
+    mlir::decisionforest::ClearSparseGlobalMaps();
 
     ConversionTarget target(getContext());
 

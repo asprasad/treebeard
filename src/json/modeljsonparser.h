@@ -76,6 +76,7 @@ protected:
 
     DecisionForestType *m_forest;
     DecisionTreeType *m_currentTree;
+    mlir::decisionforest::Schedule *m_schedule;
     mlir::MLIRContext& m_context;
     mlir::ModuleOp m_module;
     mlir::OpBuilder m_builder;
@@ -142,8 +143,8 @@ protected:
     }
 public:
     ModelJSONParser(mlir::MLIRContext& context, int32_t batchSize, double_t initialValue)
-        : m_forest(new DecisionForestType(initialValue)), m_currentTree(nullptr), m_context(context), m_builder(&context),
-          m_batchSize(batchSize), m_childIndexBitWidth(1)
+        : m_forest(new DecisionForestType(initialValue)), m_currentTree(nullptr), m_schedule(nullptr), m_context(context), m_builder(&context),
+          m_batchSize(batchSize), m_childIndexBitWidth(1) 
     {
         m_module = mlir::ModuleOp::create(m_builder.getUnknownLoc(), llvm::StringRef("MyModule"));
     }
@@ -152,6 +153,13 @@ public:
         : ModelJSONParser(context, batchSize, 0.0)
     {
     }
+    
+    virtual ~ModelJSONParser() {
+        delete m_schedule;
+        delete m_forest;
+    }
+
+    mlir::decisionforest::Schedule* GetSchedule() { return m_schedule; }
     
     virtual void Parse() = 0;
 
@@ -178,12 +186,16 @@ public:
                                                                 mlir::ArrayRef<mlir::OpFoldResult>({oneIndexAttr, oneIndexAttr}));
         auto forestType = GetEnsembleType();
         auto forestAttribute = mlir::decisionforest::DecisionForestAttribute::get(forestType, *m_forest);
-
+        
+        auto scheduleType = mlir::decisionforest::ScheduleType::get(&m_context);
+        m_schedule = new mlir::decisionforest::Schedule(m_batchSize, m_forest->NumTrees());
+        auto scheduleAttribute = mlir::decisionforest::ScheduleAttribute::get(scheduleType, m_schedule);
+        
         auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(
             m_builder.getUnknownLoc(),GetFunctionResultType(),
             forestAttribute,
             subviewOfArg,
-            entryBlock.getArguments()[1]);
+            entryBlock.getArguments()[1], scheduleAttribute);
 
         m_builder.create<mlir::ReturnOp>(m_builder.getUnknownLoc(), static_cast<mlir::Value>(predictOp));
         if (failed(mlir::verify(m_module))) {

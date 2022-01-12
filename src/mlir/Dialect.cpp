@@ -40,8 +40,8 @@ void DecisionForestDialect::initialize() {
 #define GET_OP_LIST
 #include "Ops.cpp.inc"
       >();
-  addTypes<TreeEnsembleType, TreeType, NodeType, LeafNodeType, NumericalNodeType, TiledNumericalNodeType>();
-  addAttributes<DecisionTreeAttribute, DecisionForestAttribute>();
+  addTypes<TreeEnsembleType, TreeType, NodeType, LeafNodeType, NumericalNodeType, TiledNumericalNodeType, ScheduleType>();
+  addAttributes<DecisionTreeAttribute, DecisionForestAttribute, ScheduleAttribute>();
 }
 
 /// Parse a type registered to this dialect.
@@ -83,6 +83,10 @@ void DecisionForestDialect::printType(::mlir::Type type,
         auto tiledNodeType = type.cast<mlir::decisionforest::TiledNumericalNodeType>();
         tiledNodeType.print(os);
     }
+    else if(type.isa<mlir::decisionforest::ScheduleType>()) {
+        auto scheduleType = type.cast<mlir::decisionforest::ScheduleType>();
+        scheduleType.print(os);
+    }
     else {
         llvm_unreachable("Invalid decisionforest dialect type");
     }
@@ -107,6 +111,11 @@ void DecisionForestDialect::printAttribute(::mlir::Attribute attr,
     {
         DecisionTreeAttribute decisionTreeAttr = attr.cast<DecisionTreeAttribute>();
         decisionTreeAttr.Print(os);
+    }
+    else if (attr.isa<ScheduleAttribute>())
+    {
+        auto scheduleAttr = attr.cast<ScheduleAttribute>();
+        scheduleAttr.Print(os);
     }
     else
     {

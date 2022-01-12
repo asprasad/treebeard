@@ -11,6 +11,7 @@
 #include "DecisionTreeAttributes.h"
 #include "DecisionTreeTypes.h"
 #include "MemrefTypes.h"
+#include "ScheduleAttribute.h"
 
 #include "Dialect.h.inc"
 
