@@ -8,4 +8,5 @@ ConvertNodeTypeToIndexType.cpp
 LowerToLLVM.cpp
 ExecutionHelpers.cpp
 LowerDebugHelpers.cpp
-UniformTilingTransformation.cpp)
+UniformTilingTransformation.cpp
+WalkDecisionTreeLoweringPass.cpp)

@@ -62,6 +62,7 @@ public:
 class IndexVariable : public IndexDerivationTreeNode {
   friend class Schedule;
 public:
+  enum class IndexVariableType { kBatch, kTree, kUnknown };
   struct IndexRange {
     int32_t m_start = -1;
     int32_t m_stop = -1;
@@ -72,6 +73,7 @@ protected:
   IndexRange m_range;
   IndexVariable* m_containingLoop;
   std::vector<IndexVariable*> m_containedLoops;
+  IndexVariableType m_type = IndexVariableType::kUnknown; 
 
   // Fields for the index modifier tree
   IndexModifier *m_parentModifier; // The modifier that resulted in this index variable
@@ -90,18 +92,22 @@ protected:
   // Index variables can't be copied
   IndexVariable(const IndexVariable& other) = delete;
 public:
-  IndexVariable* GetContainingLoop() { return m_containingLoop; }
-  const std::vector<IndexVariable*>& GetContainedLoops() { return m_containedLoops; }
-  IndexRange GetRange() { return m_range; }
+  IndexVariable* GetContainingLoop() const { return m_containingLoop; }
+  const std::vector<IndexVariable*>& GetContainedLoops() const { return m_containedLoops; }
+  IndexRange GetRange() const { return m_range; }
   void SetRange(IndexRange range) { m_range = range; }
   
-  bool Pipelined() { return m_pipelined; }
-  bool Simdized() { return m_simdized; }
-  bool Parallel() { return m_parallel; }
-  bool Unroll() { return m_unrolled; }
+  bool Pipelined() const { return m_pipelined; }
+  bool Simdized() const { return m_simdized; }
+  bool Parallel() const { return m_parallel; }
+  bool Unroll() const { return m_unrolled; }
 
   void Visit(IndexDerivationTreeVisitor& visitor) override;
   void Validate() override;
+
+  IndexModifier* GetParentModifier() const { return m_parentModifier; }
+  IndexModifier* GetIndexModifier() const { return m_modifier; }
+  IndexVariableType GetType() const { return m_type; }
 };
 
 class Schedule {
@@ -131,6 +137,9 @@ public:
   Schedule& Parallel(IndexVariable& index);
   Schedule& Unroll(IndexVariable& index);
 
+  IndexVariable* GetRootIndex() const { return m_rootIndex; }
+  IndexVariable& GetBatchIndex() { return m_batchIndex; }
+  IndexVariable& GetTreeIndex() { return m_treeIndex; }
   std::string PrintToString();
 };
 

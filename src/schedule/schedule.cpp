@@ -12,10 +12,14 @@ Schedule::Schedule(int32_t batchSize, int32_t forestSize)
  :m_treeIndex("tree"), m_batchIndex("batch"), m_batchSize(batchSize), m_forestSize(forestSize)
 {
   m_treeIndex.m_range = IndexVariable::IndexRange{0, forestSize, 1};
+  m_treeIndex.m_type = IndexVariable::IndexVariableType::kTree;
+
   m_batchIndex.m_range = IndexVariable::IndexRange{0, m_batchSize, 1};
+  m_batchIndex.m_type = IndexVariable::IndexVariableType::kBatch;
   
   m_rootIndex = &m_batchIndex;
   m_batchIndex.m_containedLoops.push_back(&m_treeIndex);
+  m_treeIndex.m_containingLoop = &m_batchIndex;
 }
 
 IndexVariable& Schedule::NewIndexVariable(const std::string& name) {
@@ -68,8 +72,14 @@ Schedule& Schedule::Split(IndexVariable& index, IndexVariable& first, IndexVaria
 }
 
 Schedule& Schedule::Reorder(const std::vector<IndexVariable*>& indices) {
+  assert (!indices.empty());
   // First, make sure that the specified indices are "contiguous"
   std::set<IndexVariable*> indexSet(indices.begin(), indices.end());
+
+  // If the root is one of the loops being reordered, then change the root pointer
+  if (indexSet.find(m_rootIndex) != indexSet.end())
+    m_rootIndex = indices.front();
+
   IndexVariable* outermostIndex=nullptr;
   IndexVariable* innermostIndex=nullptr;
   for (auto indexPtr : indices) {
@@ -77,7 +87,9 @@ Schedule& Schedule::Reorder(const std::vector<IndexVariable*>& indices) {
       assert (outermostIndex == nullptr && "Only one index can have a containing loop outside the specified set of indices");
       outermostIndex = indexPtr;
     }
-    if (indexPtr->m_containedLoops.size() > 1 || indexSet.find(indexPtr->m_containedLoops.front())==indexSet.end()) {
+    if (indexPtr->m_containedLoops.empty() || 
+        indexPtr->m_containedLoops.size() > 1 || 
+        indexSet.find(indexPtr->m_containedLoops.front())==indexSet.end()) {
       assert (innermostIndex == nullptr && "Specified set of loops must be a perfectly nested set of loops");
       innermostIndex = indexPtr;
     }
@@ -137,10 +149,10 @@ void TileIndexModifier::Visit(IndexDerivationTreeVisitor& visitor) {
 }
 
 void TileIndexModifier::Validate() {
-  auto sourceIndexRange = this->m_sourceIndex->GetRange();
-  m_outerIndex->SetRange(IndexVariable::IndexRange{sourceIndexRange.m_start, sourceIndexRange.m_stop, sourceIndexRange.m_step*m_tileSize});
-  // TODO this needs to take into account the actual bounds of the index variable when the original range was not a multiple of the step
-  m_innerIndex->SetRange(IndexVariable::IndexRange{0, m_tileSize*sourceIndexRange.m_step, sourceIndexRange.m_step});
+  // auto sourceIndexRange = this->m_sourceIndex->GetRange();
+  // m_outerIndex->SetRange(IndexVariable::IndexRange{sourceIndexRange.m_start, sourceIndexRange.m_stop, sourceIndexRange.m_step*m_tileSize});
+  // // TODO this needs to take into account the actual bounds of the index variable when the original range was not a multiple of the step
+  // m_innerIndex->SetRange(IndexVariable::IndexRange{0, m_tileSize*sourceIndexRange.m_step, sourceIndexRange.m_step});
 
   m_outerIndex->Validate();
   m_innerIndex->Validate();
