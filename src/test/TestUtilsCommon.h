@@ -7,6 +7,7 @@
 #include <random>
 #include <functional>
 #include "DecisionForest.h"
+#include "schedule.h"
 
 namespace mlir
 {
@@ -104,6 +105,8 @@ void GenerateRandomModelJSONs(const std::string& dirname, int32_t numberOfModels
 void RunTests();
 void RunXGBoostBenchmarks();
 
+typedef void (*ScheduleManipulator_t)(mlir::decisionforest::Schedule* schedule);
+void OneTreeAtATimeSchedule(mlir::decisionforest::Schedule* schedule);
 
 // ===---------------------------------------------=== //
 // Configuration for tests
