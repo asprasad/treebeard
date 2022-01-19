@@ -49,6 +49,7 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
 
   // module->dump();
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  // module->dump();
   mlir::decisionforest::DoUniformTiling(args.context, module, tileSize, tileShapeBitWidth);
   mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module);
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
@@ -1647,6 +1648,10 @@ bool Test_SparseTileSize8_Year(TestArgs_t &args) {
   return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
 }
 
+// ===---------------------------------------------------=== //
+// XGBoost Test Inputs Code Gen Correctness Tests
+// ===---------------------------------------------------=== //
+
 bool Test_TileSize8_Abalone_TestInputs(TestArgs_t &args) {
   auto repoPath = GetTreeBeardRepoPath();
   auto testModelsDir = repoPath + "/xgb_models";
@@ -1709,6 +1714,74 @@ bool Test_TileSize8_Year_TestInputs(TestArgs_t &args) {
   int32_t tileSize = 8;
   return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
 }
+
+// ===--------------------------------------------------------=== //
+// XGBoost Test Inputs Tiled Schedule Code Gen Correctness Tests
+// ===--------------------------------------------------------=== //
+
+bool Test_TileSize8_Abalone_TestInputs_TiledSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_TileSize8_AirlineOHE_TestInputs_TiledSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, true, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_TileSize8_Airline_TestInputs_TiledSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_TileSize8_Bosch_TestInputs_TiledSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/bosch_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, true, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_TileSize8_Epsilon_TestInputs_TiledSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, true, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_TileSize8_Higgs_TestInputs_TiledSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_TileSize8_Year_TestInputs_TiledSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/year_prediction_msd_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
 
 } // test
 } // TreeBeard

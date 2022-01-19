@@ -243,9 +243,13 @@ struct PredictForestOpLowering: public ConversionPattern {
     }
     auto iter = values.begin();
     auto valueType = iter->getType();
-    auto accumulator = rewriter.create<arith::AddFOp>(location, valueType, *(iter++), *iter);
+    auto lhs = *iter;
+    ++iter;
+    auto rhs = *iter;
+    ++iter;
+    auto accumulator = rewriter.create<arith::AddIOp>(location, valueType, lhs, rhs);
     for (; iter!=values.end() ; ++iter) {
-      accumulator = rewriter.create<arith::AddFOp>(location, valueType, static_cast<Value>(accumulator), *iter);
+      accumulator = rewriter.create<arith::AddIOp>(location, valueType, static_cast<Value>(accumulator), *iter);
     }
     return accumulator;
   }
@@ -263,7 +267,7 @@ struct PredictForestOpLowering: public ConversionPattern {
     return row;
   }
 
-  void GenerateLeafLoopForTreeIndex(ConversionPatternRewriter &rewriter, Location location, decisionforest::IndexVariable& indexVar, 
+  void GenerateLeafLoopForTreeIndex(ConversionPatternRewriter &rewriter, Location location, const decisionforest::IndexVariable& indexVar, 
                         std::list<Value> batchIndices, std::list<Value> treeIndices, Value resultMemref, MemRefType resultMemrefType,
                         Value data, MemRefType dataMemrefType, Value forestConst) const {
     
@@ -315,7 +319,7 @@ struct PredictForestOpLowering: public ConversionPattern {
     rewriter.create<memref::StoreOp>(location, newMemrefElem, resultMemref, ValueRange{rowIndex});
   }
 
-  void GenerateLeafLoopForBatchIndex(ConversionPatternRewriter &rewriter, Location location, decisionforest::IndexVariable& indexVar, 
+  void GenerateLeafLoopForBatchIndex(ConversionPatternRewriter &rewriter, Location location, const decisionforest::IndexVariable& indexVar, 
                         std::list<Value> batchIndices, std::list<Value> treeIndices, Value resultMemref, MemRefType resultMemrefType,
                         Value data, MemRefType dataMemrefType, Value forestConst) const {
 
@@ -361,7 +365,7 @@ struct PredictForestOpLowering: public ConversionPattern {
     rewriter.setInsertionPointAfter(loop);
   }
 
-  void GenerateLeafLoop(ConversionPatternRewriter &rewriter, Location location, decisionforest::IndexVariable& indexVar, 
+  void GenerateLeafLoop(ConversionPatternRewriter &rewriter, Location location, const decisionforest::IndexVariable& indexVar, 
                         std::list<Value> batchIndices, std::list<Value> treeIndices, Value resultMemref, MemRefType resultMemrefType,
                         Value data, MemRefType dataMemrefType, Value forestConst) const {
     if (indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kTree) {    
@@ -372,12 +376,12 @@ struct PredictForestOpLowering: public ConversionPattern {
     }
   }
 
-  void GenerateLoop(ConversionPatternRewriter &rewriter, Location location, decisionforest::IndexVariable& indexVar, 
+  void GenerateLoop(ConversionPatternRewriter &rewriter, Location location, const decisionforest::IndexVariable& indexVar, 
                     std::list<Value> batchIndices, std::list<Value> treeIndices, Value resultMemref, MemRefType resultMemrefType,
                     Value data, MemRefType dataMemrefType, Value forestConst) const {
     auto range = indexVar.GetRange();
     // This assert should be removed once we start supporting code generation for tiled loops
-    assert (indexVar.GetParentModifier() == nullptr);
+    // assert (indexVar.GetParentModifier() == nullptr);
     // Any index in the actual loop nest should not have indices derived from it
     assert (indexVar.GetIndexModifier() == nullptr);
 
@@ -437,9 +441,10 @@ struct PredictForestOpLowering: public ConversionPattern {
     auto& schedule = *scheduleAttribute.GetSchedule();
 
     // Generate the loop nest
-    auto index = schedule.GetRootIndex();
-    assert (index);
-    GenerateLoop(rewriter, location, *index, std::list<Value>{}, std::list<Value>{}, resultMemref, resultMemrefType, data, dataMemrefType, forestConst);
+    auto rootIndex = schedule.GetRootIndex();
+    assert (rootIndex);
+    for (auto index : rootIndex->GetContainedLoops())
+      GenerateLoop(rewriter, location, *index, std::list<Value>{}, std::list<Value>{}, resultMemref, resultMemrefType, data, dataMemrefType, forestConst);
 
     // Generate the transformations to compute final prediction (sigmoid etc)
     TransformResultMemref(resultMemref, resultMemrefType, batchSize, forestAttribute.GetDecisionForest().GetPredictionTransformation(), 

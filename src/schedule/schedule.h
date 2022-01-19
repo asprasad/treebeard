@@ -116,12 +116,11 @@ class Schedule {
 
   IndexVariable m_treeIndex;
   IndexVariable m_batchIndex;
+  IndexVariable m_rootIndex;
 
   int32_t m_batchSize;
   int32_t m_forestSize;
 
-  IndexVariable *m_rootIndex;
-  
   Schedule(const Schedule&) = delete;
 public:
   Schedule(int32_t batchSize, int32_t forestSize); 
@@ -137,10 +136,12 @@ public:
   Schedule& Parallel(IndexVariable& index);
   Schedule& Unroll(IndexVariable& index);
 
-  IndexVariable* GetRootIndex() const { return m_rootIndex; }
+  const IndexVariable* GetRootIndex() const { return &m_rootIndex; }
   IndexVariable& GetBatchIndex() { return m_batchIndex; }
   IndexVariable& GetTreeIndex() { return m_treeIndex; }
   std::string PrintToString();
+
+  void Finalize();
 };
 
 class IndexDerivationTreeVisitor {

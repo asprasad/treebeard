@@ -54,7 +54,8 @@ struct TestDescriptor {
 
 template<typename FPType>
 inline bool FPEqual(FPType a, FPType b) {
-  const FPType threshold = 1e-6;
+  const FPType scaledThreshold = std::max(std::fabs(a), std::fabs(b))/1e8;
+  const FPType threshold = std::max(FPType(1e-6), scaledThreshold);
   auto sqDiff = (a-b) * (a-b);
   return sqDiff < threshold;
 }
@@ -107,6 +108,22 @@ void RunXGBoostBenchmarks();
 
 typedef void (*ScheduleManipulator_t)(mlir::decisionforest::Schedule* schedule);
 void OneTreeAtATimeSchedule(mlir::decisionforest::Schedule* schedule);
+
+template<int32_t BatchTileSize, int32_t TreeTileSize>
+void TiledSchedule(mlir::decisionforest::Schedule* schedule) {
+  auto& batchIndexVar = schedule->GetBatchIndex();
+  auto& treeIndexVar = schedule->GetTreeIndex();
+  auto& b0 = schedule->NewIndexVariable("b0");
+  auto& b1 = schedule->NewIndexVariable("b1");
+  auto& t0 = schedule->NewIndexVariable("t0");
+  auto& t1 = schedule->NewIndexVariable("t1");
+  
+  schedule->Tile(batchIndexVar, b0, b1, BatchTileSize);
+  schedule->Tile(treeIndexVar, t0, t1, TreeTileSize);
+
+  schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &t0, &b0, &b1, &t1 });
+}
+
 
 // ===---------------------------------------------=== //
 // Configuration for tests

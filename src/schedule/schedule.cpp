@@ -9,7 +9,7 @@ namespace decisionforest
 {
 
 Schedule::Schedule(int32_t batchSize, int32_t forestSize)
- :m_treeIndex("tree"), m_batchIndex("batch"), m_batchSize(batchSize), m_forestSize(forestSize)
+ :m_treeIndex("tree"), m_batchIndex("batch"), m_rootIndex("root"), m_batchSize(batchSize), m_forestSize(forestSize)
 {
   m_treeIndex.m_range = IndexVariable::IndexRange{0, forestSize, 1};
   m_treeIndex.m_type = IndexVariable::IndexVariableType::kTree;
@@ -17,7 +17,8 @@ Schedule::Schedule(int32_t batchSize, int32_t forestSize)
   m_batchIndex.m_range = IndexVariable::IndexRange{0, m_batchSize, 1};
   m_batchIndex.m_type = IndexVariable::IndexVariableType::kBatch;
   
-  m_rootIndex = &m_batchIndex;
+  m_rootIndex.m_containedLoops.push_back(&m_batchIndex);
+  m_batchIndex.m_containingLoop = &m_rootIndex;
   m_batchIndex.m_containedLoops.push_back(&m_treeIndex);
   m_treeIndex.m_containingLoop = &m_batchIndex;
 }
@@ -29,6 +30,12 @@ IndexVariable& Schedule::NewIndexVariable(const std::string& name) {
 }
 
 Schedule& Schedule::Tile(IndexVariable& index, IndexVariable& outer, IndexVariable& inner, int32_t tileSize) {
+  auto sourceIndexRange = index.GetRange();
+  // Since we don't handle generation of code for partial tiles yet, asserting that there should be no partial tiles
+  assert (((sourceIndexRange.m_stop - sourceIndexRange.m_start) % tileSize) == 0);
+  // Don't allow tiling of strided index variables (But shouldn't be a big problem to support)
+  assert (sourceIndexRange.m_step == 1);
+  
   auto tileModifierPtr = new TileIndexModifier(index, outer, inner, tileSize);
   m_indexModifiers.push_back(tileModifierPtr);
 
@@ -38,6 +45,9 @@ Schedule& Schedule::Tile(IndexVariable& index, IndexVariable& outer, IndexVariab
   outer.m_parentModifier = tileModifierPtr;
   inner.m_parentModifier = tileModifierPtr;
 
+  // The two new index variables have the same type as the source index variable
+  outer.m_type = inner.m_type = index.m_type;
+  
   // Make the inner loop contained in the outer loop
   outer.m_containedLoops = std::vector<IndexVariable*>{ &inner };
   inner.m_containingLoop = &outer;
@@ -47,15 +57,16 @@ Schedule& Schedule::Tile(IndexVariable& index, IndexVariable& outer, IndexVariab
   std::replace(index.m_containingLoop->m_containedLoops.begin(), index.m_containingLoop->m_containedLoops.end(), &index, &outer);
 
   inner.m_containedLoops = index.m_containedLoops;
+  for (auto nestedLoop : inner.m_containedLoops)
+    nestedLoop->m_containingLoop = &inner;
   
   // Blank out the links in the old index
   index.m_containedLoops.resize(0);
   index.m_containingLoop = nullptr;
   
   // Set the bounds on the derived index variables
-  auto sourceIndexRange = index.GetRange();
-  outer.SetRange(IndexVariable::IndexRange{sourceIndexRange.m_start, sourceIndexRange.m_stop, sourceIndexRange.m_step*tileSize});
   // TODO this needs to take into account the actual bounds of the index variable when the original range was not a multiple of the step
+  outer.SetRange(IndexVariable::IndexRange{sourceIndexRange.m_start, sourceIndexRange.m_stop, sourceIndexRange.m_step*tileSize});
   inner.SetRange(IndexVariable::IndexRange{0, tileSize*sourceIndexRange.m_step, sourceIndexRange.m_step});
 
   return *this;
@@ -76,10 +87,6 @@ Schedule& Schedule::Reorder(const std::vector<IndexVariable*>& indices) {
   // First, make sure that the specified indices are "contiguous"
   std::set<IndexVariable*> indexSet(indices.begin(), indices.end());
 
-  // If the root is one of the loops being reordered, then change the root pointer
-  if (indexSet.find(m_rootIndex) != indexSet.end())
-    m_rootIndex = indices.front();
-
   IndexVariable* outermostIndex=nullptr;
   IndexVariable* innermostIndex=nullptr;
   for (auto indexPtr : indices) {
@@ -95,10 +102,12 @@ Schedule& Schedule::Reorder(const std::vector<IndexVariable*>& indices) {
     }
   }
   assert (innermostIndex && outermostIndex);
+  assert (outermostIndex->GetContainingLoop() != nullptr);
 
   auto outermostIndexContainingLoop = outermostIndex->m_containingLoop;
   auto innermostIndexContainedLoops = innermostIndex->m_containedLoops;
   
+  std::replace(outermostIndexContainingLoop->m_containedLoops.begin(), outermostIndexContainingLoop->m_containedLoops.end(), outermostIndex, indices.front());
   indices.front()->m_containingLoop = outermostIndexContainingLoop;
   for (size_t i=0 ; i<indices.size() - 1 ; ++i) {
     indices.at(i)->m_containedLoops = { indices.at(i+1) };
@@ -133,6 +142,12 @@ Schedule& Schedule::Simdize(IndexVariable& index) {
 
 std::string Schedule::PrintToString() {
   return std::string("");
+}
+
+void Schedule::Finalize() {
+  // TODO Go over all the nodes in the loop nest and check to see if any of them need to be peeled to handle partial tiles
+  m_batchIndex.Validate();
+  m_treeIndex.Validate();
 }
 
 void IndexVariable::Visit(IndexDerivationTreeVisitor& visitor) {
