@@ -117,11 +117,15 @@ public:
 
     const std::vector<Node>& GetNodes() { return m_nodes; }
     void SetNodes(const std::vector<Node>& nodes) { m_nodes=nodes; }
+
+    void SetGroupId(int32_t groupId) { m_groupId = groupId; }
+    int32_t GetGroupId() { return m_groupId; }
 private:
     std::vector<Node> m_nodes;
     size_t m_numFeatures;
     ThresholdType m_scale;
     TreeTilingDescriptor m_tilingDescriptor;
+    int32_t m_groupId;
 
     int32_t GetTreeDepthHelper(size_t node) const;
     

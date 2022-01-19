@@ -88,6 +88,7 @@ protected:
     void EndTree() { m_currentTree = nullptr; }
     void SetTreeNumberOfFeatures(size_t numFeatures) { m_currentTree->SetNumberOfFeatures(numFeatures); }
     void SetTreeScalingFactor(ThresholdType scale) { m_currentTree->SetTreeScalingFactor(scale); }
+    void SetTreeGroupId(int32_t groupId) { m_currentTree->SetGroupId(groupId); }
     void SetInitialOffset(ReturnType val) { m_forest->SetInitialOffset(val); } 
     // Create a new node in the current tree
     NodeIndexType NewNode(ThresholdType threshold, FeatureIndexType featureIndex) { return m_currentTree->NewNode(threshold, featureIndex); }

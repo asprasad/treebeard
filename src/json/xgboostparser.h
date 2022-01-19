@@ -121,11 +121,17 @@ void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexTyp
     auto& modelJSON = boosterJSON["model"];
     size_t numTrees = static_cast<size_t>(std::stoi(modelJSON["gbtree_model_param"]["num_trees"].get<std::string>()));
     auto& treesJSON = modelJSON["trees"];
+    auto& treeInfoJSON = modelJSON["tree_info"];
+
     assert (numTrees == treesJSON.size());
+    assert (numTrees == treeInfoJSON.size());
+
+    int32_t treeIndex = 0;
     for (auto& treeJSON : treesJSON)
     {
         this->NewTree();
         ConstructSingleTree(treeJSON);
+        this->SetTreeGroupId(treeInfoJSON[treeIndex++]);
         this->EndTree();
     }
 }
