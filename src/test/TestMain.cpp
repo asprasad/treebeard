@@ -283,6 +283,14 @@ bool Test_SparseTileSize8_Higgs_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_SparseScalar_Year_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_SparseTileSize8_Year_OneTreeAtATimeSchedule(TestArgs_t &args);
 
+bool Test_SparseTileSize8_Abalone_TestInputs_TiledSchedule(TestArgs_t &args);
+bool Test_SparseTileSize8_AirlineOHE_TestInputs_TiledSchedule(TestArgs_t &args);
+bool Test_SparseTileSize8_Airline_TestInputs_TiledSchedule(TestArgs_t &args);
+bool Test_SparseTileSize8_Bosch_TestInputs_TiledSchedule(TestArgs_t &args);
+bool Test_SparseTileSize8_Epsilon_TestInputs_TiledSchedule(TestArgs_t &args);
+bool Test_SparseTileSize8_Higgs_TestInputs_TiledSchedule(TestArgs_t &args);
+bool Test_SparseTileSize8_Year_TestInputs_TiledSchedule(TestArgs_t &args);
+
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
     vec[i] = (double)rand()/RAND_MAX;
@@ -1046,6 +1054,14 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_SparseTileSize8_Higgs_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_SparseScalar_Year_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_SparseTileSize8_Year_OneTreeAtATimeSchedule),
+
+  // Sparse code gen tests with loops tiled
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Abalone_TestInputs_TiledSchedule),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_AirlineOHE_TestInputs_TiledSchedule),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Airline_TestInputs_TiledSchedule),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Epsilon_TestInputs_TiledSchedule),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Higgs_TestInputs_TiledSchedule),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Year_TestInputs_TiledSchedule),
 };
 
 // TestDescriptor testList[] = {

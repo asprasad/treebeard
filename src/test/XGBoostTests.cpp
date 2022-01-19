@@ -1912,6 +1912,80 @@ bool Test_SparseTileSize8_Year_OneTreeAtATimeSchedule(TestArgs_t &args) {
   return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 16, 16, "", OneTreeAtATimeSchedule);
 }
 
+// ===-------------------------------------------------------------=== //
+// XGBoost Test Inputs Tiled Schedule Sparse Code Gen Correctness Tests
+// ===-------------------------------------------------------------=== //
+
+bool Test_SparseTileSize8_Abalone_TestInputs_TiledSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_SparseTileSize8_AirlineOHE_TestInputs_TiledSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, true, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_SparseTileSize8_Airline_TestInputs_TiledSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_SparseTileSize8_Bosch_TestInputs_TiledSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/bosch_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, true, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_SparseTileSize8_Epsilon_TestInputs_TiledSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, true, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_SparseTileSize8_Higgs_TestInputs_TiledSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_SparseTileSize8_Year_TestInputs_TiledSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/year_prediction_msd_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
 
 } // test
 } // TreeBeard
