@@ -267,6 +267,22 @@ bool Test_TileSize8_Epsilon_TestInputs_TiledSchedule(TestArgs_t &args);
 bool Test_TileSize8_Higgs_TestInputs_TiledSchedule(TestArgs_t &args);
 bool Test_TileSize8_Year_TestInputs_TiledSchedule(TestArgs_t &args);
 
+// Sparse tests with flipped loops
+bool Test_SparseScalar_Abalone_OneTreeAtATimeSchedule(TestArgs_t &args);
+bool Test_SparseTileSize8_Abalone_OneTreeAtATimeSchedule(TestArgs_t &args);
+bool Test_SparseScalar_Airline_OneTreeAtATimeSchedule(TestArgs_t &args);
+bool Test_SparseTileSize8_Airline_OneTreeAtATimeSchedule(TestArgs_t &args);
+bool Test_SparseScalar_AirlineOHE_OneTreeAtATimeSchedule(TestArgs_t &args);
+bool Test_SparseTileSize8_AirlineOHE_OneTreeAtATimeSchedule(TestArgs_t &args);
+bool Test_SparseScalar_Bosch_OneTreeAtATimeSchedule(TestArgs_t &args);
+bool Test_SparseTileSize8_Bosch_OneTreeAtATimeSchedule(TestArgs_t &args);
+bool Test_SparseScalar_Epsilon_OneTreeAtATimeSchedule(TestArgs_t &args);
+bool Test_SparseTileSize8_Epsilon_OneTreeAtATimeSchedule(TestArgs_t &args);
+bool Test_SparseScalar_Higgs_OneTreeAtATimeSchedule(TestArgs_t &args);
+bool Test_SparseTileSize8_Higgs_OneTreeAtATimeSchedule(TestArgs_t &args);
+bool Test_SparseScalar_Year_OneTreeAtATimeSchedule(TestArgs_t &args);
+bool Test_SparseTileSize8_Year_OneTreeAtATimeSchedule(TestArgs_t &args);
+
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
     vec[i] = (double)rand()/RAND_MAX;
@@ -1014,10 +1030,25 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_TiledSchedule),
   TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_TiledSchedule),
   TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_TiledSchedule),
+
+  // Sparse code gen tests with loops interchanged
+  TEST_LIST_ENTRY(Test_SparseScalar_Abalone_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Abalone_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_SparseScalar_Airline_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Airline_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_SparseScalar_AirlineOHE_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_AirlineOHE_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_SparseScalar_Bosch_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Bosch_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_SparseScalar_Epsilon_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Epsilon_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_SparseScalar_Higgs_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Higgs_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_SparseScalar_Year_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Year_OneTreeAtATimeSchedule),
 };
 
 // TestDescriptor testList[] = {
-//
 //   TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs),
   // TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs),
   // TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs),
