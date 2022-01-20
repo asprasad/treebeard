@@ -18,6 +18,7 @@
 #include "TreeTilingDescriptor.h"
 #include "TreeTilingUtils.h"
 #include "ForestTestUtils.h"
+#include "CompileUtils.h"
 
 using namespace mlir;
 
@@ -35,28 +36,17 @@ bool RunSingleBatchSizeForXGBoostTests = true;
 template<typename FloatType, typename FeatureIndexType=int32_t>
 bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, const std::string& modelJsonPath, const std::string& csvPath, 
                                            int32_t tileSize, int32_t tileShapeBitWidth, int32_t childIndexBitWidth,
-                                           ScheduleManipulator_t scheduleManipulator=nullptr) {
+                                           ScheduleManipulator_t scheduleManipulatorFunc=nullptr) {
   TestCSVReader csvReader(csvPath);
-  TreeBeard::XGBoostJSONParser<FloatType, FloatType, FeatureIndexType, int32_t, FloatType> xgBoostParser(args.context, modelJsonPath, batchSize);
-  xgBoostParser.Parse();
-  xgBoostParser.SetChildIndexBitWidth(childIndexBitWidth);
-  auto module = xgBoostParser.GetEvaluationFunction();
 
-  if (scheduleManipulator) {
-    auto schedule = xgBoostParser.GetSchedule();
-    scheduleManipulator(schedule);
-  }
+  using NodeIndexType = int32_t;
+  int32_t floatTypeBitWidth = sizeof(FloatType)*8;
+  ScheduleManipulationFunctionWrapper scheduleManipulator(scheduleManipulatorFunc);
+  TreeBeard::CompilerOptions options(floatTypeBitWidth, floatTypeBitWidth, sizeof(FeatureIndexType)*8, sizeof(NodeIndexType)*8,
+                                     floatTypeBitWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth,
+                                     scheduleManipulatorFunc ? &scheduleManipulator : nullptr);
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON(args.context, modelJsonPath, options);
 
-  // module->dump();
-  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
-  // module->dump();
-  mlir::decisionforest::DoUniformTiling(args.context, module, tileSize, tileShapeBitWidth);
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module);
-  mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
-  // module->dump();
-  mlir::decisionforest::LowerToLLVM(args.context, module);
-  // module->dump();
-  // mlir::decisionforest::dumpLLVMIR(module);
   decisionforest::InferenceRunner inferenceRunner(module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
   
   // inferenceRunner.PrintLengthsArray();
@@ -86,9 +76,10 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
       // This needs to be a vector of doubles because the type is hardcoded for Forest::Predict
       std::vector<double> row(batch.begin() + rowIdx*rowSize, batch.begin() + (rowIdx+1)*rowSize);
       FloatType expectedResult = (*currentPredictionsIter)[rowIdx];
-      FloatType forestPrediction = xgBoostParser.GetForest()->Predict_Float(row);
+      
+      // FloatType forestPrediction = xgBoostParser.GetForest()->Predict_Float(row);
+      // Test_ASSERT(FPEqual<FloatType>(forestPrediction, expectedResult));
 
-      Test_ASSERT(FPEqual<FloatType>(forestPrediction, expectedResult));
       Test_ASSERT(FPEqual<FloatType>(result[rowIdx], expectedResult));
       // std::cout << forestPrediction << "\t" << result[rowIdx] << "\t" << expectedResult << std::endl;
     }

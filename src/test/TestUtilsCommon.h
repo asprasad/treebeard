@@ -124,6 +124,14 @@ void TiledSchedule(mlir::decisionforest::Schedule* schedule) {
   schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &t0, &b0, &b1, &t1 });
 }
 
+class ScheduleManipulationFunctionWrapper : public mlir::decisionforest::ScheduleManipulator {
+  ScheduleManipulator_t m_func;
+public:
+  ScheduleManipulationFunctionWrapper(ScheduleManipulator_t func) :m_func(func) { }
+  void Run(mlir::decisionforest::Schedule* schedule) override {
+    m_func(schedule);
+  }
+};
 
 // ===---------------------------------------------=== //
 // Configuration for tests
