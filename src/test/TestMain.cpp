@@ -469,6 +469,11 @@ void OneTreeAtATimeSchedule(decisionforest::Schedule* schedule) {
   schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &treeIndexVar, &batchIndexVar });
 }
 
+void UnrollTreeLoop(decisionforest::Schedule* schedule) {
+  auto& treeIndexVar = schedule->GetTreeIndex();
+  schedule->Unroll(treeIndexVar);
+}
+
 // IR Tests
 bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestConstructor, std::vector< std::vector<double> >& inputData,
                                    int32_t childIndexBitWidth=1, ScheduleManipulator_t scheduleManipulator=nullptr) {
@@ -610,6 +615,11 @@ bool Test_CodeGeneration_RightHeavy_BatchSize2_XGBoostSchedule(TestArgs_t& args)
 bool Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_XGBoostSchedule(TestArgs_t& args) {
   auto data = GetBatchSize2Data();
   return Test_ForestCodeGen_VariableBatchSize(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 2, data, 1, OneTreeAtATimeSchedule);
+}
+
+bool Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_UnrollTreeLoop(TestArgs_t& args) {
+  auto data = GetBatchSize2Data();
+  return Test_ForestCodeGen_VariableBatchSize(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 2, data, 1, UnrollTreeLoop);
 }
 
 // ===----------------------------------------=== //
@@ -782,6 +792,9 @@ void TestTileStringGen() {
     tileMap.ComputeTileLookUpTable();
 }
 
+#define RUN_ALL_TESTS
+
+#ifdef RUN_ALL_TESTS
 TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy),
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Int16),
@@ -1064,35 +1077,39 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_SparseTileSize8_Year_TestInputs_TiledSchedule),
 };
 
-// TestDescriptor testList[] = {
-//   TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs),
+#else // RUN_ALL_TESTS
+
+TestDescriptor testList[] = {
+  TEST_LIST_ENTRY(Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_UnrollTreeLoop),
+  // TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs),
   // TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs),
   // TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs),
   // TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4),
   // TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
   // TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
-//   TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape),
-//   TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape),
-//   TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize),
-//   TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1),
-//   TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize),
-//   TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1),
-//   TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape),
-//   TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape),
-//   TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize1_I32ChildIdx),
-//   TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize1_I32ChildIdx),
-//   TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize2_I32ChildIdx),
-//   TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize2_I32ChildIdx),
-//   TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx),
+  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape),
+  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape),
+  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize),
+  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1),
+  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize),
+  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1),
+  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape),
+  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape),
+  // TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize1_I32ChildIdx),
+  // TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize1_I32ChildIdx),
+  // TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize2_I32ChildIdx),
+  // TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize2_I32ChildIdx),
+  // TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx),
   // TEST_LIST_ENTRY(Test_TileSize8_Airline),
   // TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE),
   // TEST_LIST_ENTRY(Test_TileSize8_Bosch),
   // TEST_LIST_ENTRY(Test_TileSize8_Epsilon),
   // TEST_LIST_ENTRY(Test_TileSize8_Higgs),
   // TEST_LIST_ENTRY(Test_TileSize8_Year),
-//   TEST_LIST_ENTRY(Test_TileSize3_Abalone),
-//   TEST_LIST_ENTRY(Test_TileSize4_Abalone),
-// };
+  // TEST_LIST_ENTRY(Test_TileSize3_Abalone),
+  // TEST_LIST_ENTRY(Test_TileSize4_Abalone),
+};
+#endif // RUN_ALL_TESTS
 
 const size_t numTests = sizeof(testList) / sizeof(testList[0]);
 

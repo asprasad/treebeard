@@ -267,29 +267,9 @@ struct PredictForestOpLowering: public ConversionPattern {
     return row;
   }
 
-  void GenerateLeafLoopForTreeIndex(ConversionPatternRewriter &rewriter, Location location, const decisionforest::IndexVariable& indexVar, 
-                        std::list<Value> batchIndices, std::list<Value> treeIndices, Value resultMemref, MemRefType resultMemrefType,
-                        Value data, MemRefType dataMemrefType, Value forestConst) const {
-    
-    assert (indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kTree);
-    
-    Value rowIndex = SumOfValues(rewriter, location, batchIndices);
-    
-    // Get the current row
-    Value row = GetRow(rewriter, location, data, rowIndex, dataMemrefType);
-
-    // Generate leaf loop for tree index var
-    auto range = indexVar.GetRange();
-    auto stopConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_stop); 
-    auto startConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_start);
-    auto stepConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_step);
-
-    auto zeroConst = CreateFPConstant(rewriter, location, resultMemrefType.getElementType(), 0.0);      
-
-    scf::ForOp loop = rewriter.create<scf::ForOp>(location, startConst, stopConst, stepConst, ValueRange{ zeroConst });
-    rewriter.setInsertionPointToStart(loop.getBody());
-    
-    treeIndices.push_back(loop.getInductionVar());
+  Value GenerateTreeIndexLeafLoopBody(ConversionPatternRewriter &rewriter, Location location, const decisionforest::IndexVariable& indexVar, 
+                        std::list<Value> treeIndices, MemRefType resultMemrefType, Value forestConst, Value row, Value prevAccumulatorValue) const {
+   
     Value treeIndex = SumOfValues(rewriter, location, treeIndices);
 
     // Get the current tree
@@ -303,20 +283,83 @@ struct PredictForestOpLowering: public ConversionPattern {
 
     // Accumulate the tree prediction
     assert(forestType.getReductionType() == decisionforest::ReductionType::kAdd);
-    auto accumulatedValue = rewriter.create<arith::AddFOp>(location, resultMemrefType.getElementType(), loop.getBody()->getArguments()[1], walkOp);
+    auto accumulatedValue = rewriter.create<arith::AddFOp>(location, resultMemrefType.getElementType(), prevAccumulatorValue, walkOp);
 
     if (mlir::decisionforest::InsertDebugHelpers) {
       rewriter.create<decisionforest::PrintTreePredictionOp>(location, walkOp, treeIndex);
     }
     // auto updatedResultTensor = rewriter.create<tensor::InsertOp>(location, resultMemrefType, accumulatedValue, treeLoop.getBody()->getArguments()[1], i);
-    rewriter.create<scf::YieldOp>(location, static_cast<Value>(accumulatedValue));
+    return accumulatedValue;
+  }                          
 
-    rewriter.setInsertionPointAfter(loop);
+
+  void GenerateLeafLoopForTreeIndex(ConversionPatternRewriter &rewriter, Location location, const decisionforest::IndexVariable& indexVar, 
+                        std::list<Value> batchIndices, std::list<Value> treeIndices, Value resultMemref, MemRefType resultMemrefType,
+                        Value data, MemRefType dataMemrefType, Value forestConst) const {
     
-    // Generate the store back in to the result memref
+    assert (indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kTree);
+    
+    Value rowIndex = SumOfValues(rewriter, location, batchIndices);
+    
+    // Get the current row
+    Value row = GetRow(rewriter, location, data, rowIndex, dataMemrefType);
+
+    if(indexVar.Unroll()) {
+      auto range = indexVar.GetRange();
+      auto zeroConst = CreateFPConstant(rewriter, location, resultMemrefType.getElementType(), 0.0);      
+      Value accumulatedValue = zeroConst;
+      for (int32_t i=range.m_start ; i<range.m_stop ; i+=range.m_step) {
+        auto treeIndex = rewriter.create<arith::ConstantIndexOp>(location, i);
+        treeIndices.push_back(treeIndex);  
+        accumulatedValue = GenerateTreeIndexLeafLoopBody(rewriter, location, indexVar, treeIndices, resultMemrefType, forestConst, row, accumulatedValue);
+      }
+      // Generate the store back in to the result memref
+      auto currentMemrefElem = rewriter.create<memref::LoadOp>(location, resultMemref, ValueRange{rowIndex});
+      auto newMemrefElem = rewriter.create<arith::AddFOp>(location, resultMemrefType.getElementType(), accumulatedValue, currentMemrefElem);
+      rewriter.create<memref::StoreOp>(location, newMemrefElem, resultMemref, ValueRange{rowIndex});
+    }
+    else {
+      // Generate leaf loop for tree index var
+      auto range = indexVar.GetRange();
+      auto stopConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_stop); 
+      auto startConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_start);
+      auto stepConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_step);
+
+      auto zeroConst = CreateFPConstant(rewriter, location, resultMemrefType.getElementType(), 0.0);      
+
+      scf::ForOp loop = rewriter.create<scf::ForOp>(location, startConst, stopConst, stepConst, ValueRange{ zeroConst });
+      rewriter.setInsertionPointToStart(loop.getBody());
+      treeIndices.push_back(loop.getInductionVar());
+      auto accumulatedValue = GenerateTreeIndexLeafLoopBody(rewriter, location, indexVar, treeIndices, resultMemrefType, forestConst, row, loop.getBody()->getArguments()[1]);
+      rewriter.create<scf::YieldOp>(location, static_cast<Value>(accumulatedValue));
+      rewriter.setInsertionPointAfter(loop);
+      
+      // Generate the store back in to the result memref
+      auto currentMemrefElem = rewriter.create<memref::LoadOp>(location, resultMemref, ValueRange{rowIndex});
+      auto newMemrefElem = rewriter.create<arith::AddFOp>(location, resultMemrefType.getElementType(), loop.getResults()[0], currentMemrefElem);
+      rewriter.create<memref::StoreOp>(location, newMemrefElem, resultMemref, ValueRange{rowIndex});
+    }
+  }
+
+  void GenerateBatchIndexLeafLoopBody(ConversionPatternRewriter &rewriter, Location location, const decisionforest::IndexVariable& indexVar, 
+                        std::list<Value> batchIndices, Value resultMemref, MemRefType resultMemrefType,
+                        Value data, MemRefType dataMemrefType, decisionforest::TreeType treeType, Value tree, Value treeIndex) const {
+    Value rowIndex = SumOfValues(rewriter, location, batchIndices);
+    
+    // Get the current row
+    Value row = GetRow(rewriter, location, data, rowIndex, dataMemrefType);
+
+    // Walk the tree
+    auto walkOp = rewriter.create<decisionforest::WalkDecisionTreeOp>(location, treeType.getResultType(), tree, row);
+
+    // Accumulate the tree prediction and generate the store back in to the result memref
     auto currentMemrefElem = rewriter.create<memref::LoadOp>(location, resultMemref, ValueRange{rowIndex});
-    auto newMemrefElem = rewriter.create<arith::AddFOp>(location, resultMemrefType.getElementType(), loop.getResults()[0], currentMemrefElem);
-    rewriter.create<memref::StoreOp>(location, newMemrefElem, resultMemref, ValueRange{rowIndex});
+    auto accumulatedValue = rewriter.create<arith::AddFOp>(location, resultMemrefType.getElementType(), static_cast<Value>(walkOp), currentMemrefElem);
+    rewriter.create<memref::StoreOp>(location, accumulatedValue, resultMemref, ValueRange{rowIndex});
+
+    if (mlir::decisionforest::InsertDebugHelpers) {
+      rewriter.create<decisionforest::PrintTreePredictionOp>(location, walkOp, treeIndex);
+    }
   }
 
   void GenerateLeafLoopForBatchIndex(ConversionPatternRewriter &rewriter, Location location, const decisionforest::IndexVariable& indexVar, 
@@ -330,39 +373,31 @@ struct PredictForestOpLowering: public ConversionPattern {
     // Get the current tree
     auto forestType = forestConst.getType().cast<decisionforest::TreeEnsembleType>();
     assert (forestType.doAllTreesHaveSameTileSize()); // TODO how do we check which type of tree we'll get here?
+    assert(forestType.getReductionType() == decisionforest::ReductionType::kAdd);
     auto treeType = forestType.getTreeType(0).cast<mlir::decisionforest::TreeType>();
     auto tree = rewriter.create<decisionforest::GetTreeFromEnsembleOp>(location, treeType, forestConst, treeIndex);
-    
-    // Generate leaf loop for tree index var
-    auto range = indexVar.GetRange();
-    auto stopConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_stop); 
-    auto startConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_start);
-    auto stepConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_step);
 
-    scf::ForOp loop = rewriter.create<scf::ForOp>(location, startConst, stopConst, stepConst);
-    rewriter.setInsertionPointToStart(loop.getBody());
-
-    batchIndices.push_back(loop.getInductionVar());
-    Value rowIndex = SumOfValues(rewriter, location, batchIndices);
-    
-    // Get the current row
-    Value row = GetRow(rewriter, location, data, rowIndex, dataMemrefType);
-
-    // Walk the tree
-    auto walkOp = rewriter.create<decisionforest::WalkDecisionTreeOp>(location, treeType.getResultType(), tree, row);
-
-    // Accumulate the tree prediction
-    assert(forestType.getReductionType() == decisionforest::ReductionType::kAdd);
-    
-    // Generate the store back in to the result memref
-    auto currentMemrefElem = rewriter.create<memref::LoadOp>(location, resultMemref, ValueRange{rowIndex});
-    auto accumulatedValue = rewriter.create<arith::AddFOp>(location, resultMemrefType.getElementType(), static_cast<Value>(walkOp), currentMemrefElem);
-    rewriter.create<memref::StoreOp>(location, accumulatedValue, resultMemref, ValueRange{rowIndex});
-
-    if (mlir::decisionforest::InsertDebugHelpers) {
-      rewriter.create<decisionforest::PrintTreePredictionOp>(location, walkOp, treeIndex);
+    if (indexVar.Unroll()) {
+      auto range = indexVar.GetRange();
+      for (int32_t i=range.m_start ; i<range.m_stop ; i+=range.m_step) {
+        auto batchIndex = rewriter.create<arith::ConstantIndexOp>(location, i);
+        batchIndices.push_back(batchIndex);
+        GenerateBatchIndexLeafLoopBody(rewriter, location, indexVar, batchIndices, resultMemref, resultMemrefType, data, dataMemrefType, treeType, tree, treeIndex);
+      }
     }
-    rewriter.setInsertionPointAfter(loop);
+    else {
+      // Generate leaf loop for tree index var
+      auto range = indexVar.GetRange();
+      auto stopConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_stop); 
+      auto startConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_start);
+      auto stepConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_step);
+
+      scf::ForOp loop = rewriter.create<scf::ForOp>(location, startConst, stopConst, stepConst);
+      rewriter.setInsertionPointToStart(loop.getBody());
+      batchIndices.push_back(loop.getInductionVar());
+      GenerateBatchIndexLeafLoopBody(rewriter, location, indexVar, batchIndices, resultMemref, resultMemrefType, data, dataMemrefType, treeType, tree, treeIndex);
+      rewriter.setInsertionPointAfter(loop);
+    }
   }
 
   void GenerateLeafLoop(ConversionPatternRewriter &rewriter, Location location, const decisionforest::IndexVariable& indexVar, 
@@ -376,10 +411,56 @@ struct PredictForestOpLowering: public ConversionPattern {
     }
   }
 
-  void GenerateLoop(ConversionPatternRewriter &rewriter, Location location, const decisionforest::IndexVariable& indexVar, 
+  void GenerateUnrolledLoop(ConversionPatternRewriter &rewriter, Location location, const decisionforest::IndexVariable& indexVar, 
+                        std::list<Value> batchIndices, std::list<Value> treeIndices, Value resultMemref, MemRefType resultMemrefType,
+                        Value data, MemRefType dataMemrefType, Value forestConst) const {
+    auto range = indexVar.GetRange();
+
+    for (int32_t i=range.m_start ; i<range.m_stop ; ++i) {
+      auto indexVal = rewriter.create<arith::ConstantIndexOp>(location, i);
+
+      if (indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kBatch)
+        batchIndices.push_back(indexVal);
+      else if (indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kTree)
+        treeIndices.push_back(indexVal);
+      else
+        assert (false && "Unknown index variable type!");
+
+      for (auto nestedIndexVar : indexVar.GetContainedLoops()) {
+        GenerateLoop(rewriter, location, *nestedIndexVar, batchIndices, treeIndices, resultMemref, resultMemrefType, data, dataMemrefType, forestConst);
+      }
+    }
+  }
+
+  void GenerateSingleLoop(ConversionPatternRewriter &rewriter, Location location, const decisionforest::IndexVariable& indexVar, 
                     std::list<Value> batchIndices, std::list<Value> treeIndices, Value resultMemref, MemRefType resultMemrefType,
                     Value data, MemRefType dataMemrefType, Value forestConst) const {
     auto range = indexVar.GetRange();
+    auto stopConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_stop); 
+    auto startConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_start);
+    auto stepConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_step);
+
+    auto loop = rewriter.create<scf::ForOp>(location, startConst, stopConst, stepConst);
+  
+    rewriter.setInsertionPointToStart(loop.getBody());
+    auto i = loop.getInductionVar();
+
+    if (indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kBatch)
+      batchIndices.push_back(i);
+    else if (indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kTree)
+      treeIndices.push_back(i);
+    else
+      assert (false && "Unknown index variable type!");
+
+    for (auto nestedIndexVar : indexVar.GetContainedLoops()) {
+      GenerateLoop(rewriter, location, *nestedIndexVar, batchIndices, treeIndices, resultMemref, resultMemrefType, data, dataMemrefType, forestConst);
+    }
+    rewriter.setInsertionPointAfter(loop);
+  }    
+  
+  void GenerateLoop(ConversionPatternRewriter &rewriter, Location location, const decisionforest::IndexVariable& indexVar, 
+                    std::list<Value> batchIndices, std::list<Value> treeIndices, Value resultMemref, MemRefType resultMemrefType,
+                    Value data, MemRefType dataMemrefType, Value forestConst) const {
     // This assert should be removed once we start supporting code generation for tiled loops
     // assert (indexVar.GetParentModifier() == nullptr);
     // Any index in the actual loop nest should not have indices derived from it
@@ -390,28 +471,13 @@ struct PredictForestOpLowering: public ConversionPattern {
       GenerateLeafLoop(rewriter, location, indexVar, batchIndices, treeIndices, resultMemref, resultMemrefType, data, dataMemrefType, forestConst);
     }
     else {
-      auto stopConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_stop); 
-      auto startConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_start);
-      auto stepConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_step);
-
-      auto loop = rewriter.create<scf::ForOp>(location, startConst, stopConst, stepConst);
-    
-      rewriter.setInsertionPointToStart(loop.getBody());
-      auto i = loop.getInductionVar();
-
-      if (indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kBatch)
-        batchIndices.push_back(i);
-      else if (indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kTree)
-        treeIndices.push_back(i);
-      else
-        assert (false && "Unknown index variable type!");
-
-      for (auto nestedIndexVar : indexVar.GetContainedLoops()) {
-        GenerateLoop(rewriter, location, *nestedIndexVar, batchIndices, treeIndices, resultMemref, resultMemrefType, data, dataMemrefType, forestConst);
+      if (indexVar.Unroll()) {
+        GenerateUnrolledLoop(rewriter, location, indexVar, batchIndices, treeIndices, resultMemref, resultMemrefType, data, dataMemrefType, forestConst);
       }
-      rewriter.setInsertionPointAfter(loop);
+      else {
+        GenerateSingleLoop(rewriter, location, indexVar, batchIndices, treeIndices, resultMemref, resultMemrefType, data, dataMemrefType, forestConst);
+      }
     }
-    
   }
 
   LogicalResult
