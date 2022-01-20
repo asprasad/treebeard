@@ -49,12 +49,18 @@ constexpr int32_t NUM_RUNS = 1000;
 
 template<typename FloatType>
 int64_t Test_CodeGenForJSON_VariableBatchSize(int64_t batchSize, const std::string& modelJsonPath, int32_t tileSize, int32_t tileShapeBitWidth, int32_t childIndexBitWidth) {
+  // TODO consider changing this so that you use the smallest possible type possible (need to make it a parameter)
   using FeatureIndexType = int16_t;
-  mlir::MLIRContext context;
+  using NodeIndexType = int16_t;
 
+  mlir::MLIRContext context;
+  int32_t floatTypeBitWidth = sizeof(FloatType)*8;
+  TreeBeard::CompilerOptions options(floatTypeBitWidth, floatTypeBitWidth, sizeof(FeatureIndexType)*8, sizeof(NodeIndexType)*8,
+                                     floatTypeBitWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, nullptr);
   TreeBeard::InitializeMLIRContext(context);
-  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, FloatType, FeatureIndexType, int32_t, FloatType>(context, modelJsonPath, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
-  decisionforest::InferenceRunner inferenceRunner(module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, FloatType, FeatureIndexType, int32_t, FloatType>(context, modelJsonPath, options);
+
+  decisionforest::InferenceRunner inferenceRunner(module, tileSize, floatTypeBitWidth, sizeof(FeatureIndexType)*8);
   
   TestCSVReader csvReader(modelJsonPath + ".test.sampled.csv");
   std::vector<std::vector<FloatType>> inputData;

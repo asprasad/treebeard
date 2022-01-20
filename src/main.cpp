@@ -114,8 +114,9 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
       ++i;
   }
   assert (jsonFile != "" && llvmIRFile != "");
-  TreeBeard::ConvertXGBoostJSONToLLVMIR(jsonFile, llvmIRFile, thresholdTypeWidth, returnTypeWidth, featureIndexTypeWidth,
-                                        nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
+  TreeBeard::CompilerOptions options(thresholdTypeWidth, returnTypeWidth, featureIndexTypeWidth,
+                                     nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, nullptr);
+  TreeBeard::ConvertXGBoostJSONToLLVMIR(jsonFile, llvmIRFile, options);
   return true;
 }
 
@@ -187,8 +188,9 @@ bool RunInferenceFromSO(int argc, char *argv[]) {
       ++i;
   }
   assert (jsonFile != "" && soPath != "");
-  TreeBeard::RunInferenceUsingSO(jsonFile, soPath, inputCSVFile, thresholdTypeWidth, returnTypeWidth, featureIndexTypeWidth, 
-                                 nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
+  TreeBeard::CompilerOptions options(thresholdTypeWidth, returnTypeWidth, featureIndexTypeWidth,
+                                     nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, nullptr);
+  TreeBeard::RunInferenceUsingSO(jsonFile, soPath, inputCSVFile, options);
   return true;
 }
 

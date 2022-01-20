@@ -150,6 +150,11 @@ public:
   virtual void VisitIndexVariable(IndexVariable& indexVar) = 0;
 };
 
+class ScheduleManipulator {
+public:
+  virtual void Run(Schedule* schedule) = 0;
+};
+
 } // decisionforest
 } // mlir
 
