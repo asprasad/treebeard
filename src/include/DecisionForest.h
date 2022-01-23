@@ -12,6 +12,8 @@
 #include <map>
 #include <iostream>
 #include "TreeTilingDescriptor.h"
+#include <numeric>
+#include <algorithm>
 
 namespace mlir
 {
@@ -119,7 +121,7 @@ public:
     void SetNodes(const std::vector<Node>& nodes) { m_nodes=nodes; }
 
     void SetGroupId(int32_t groupId) { m_groupId = groupId; }
-    int32_t GetGroupId() { return m_groupId; }
+    int32_t GetGroupId() const { return m_groupId; }
 private:
     std::vector<Node> m_nodes;
     size_t m_numFeatures;
@@ -194,12 +196,16 @@ public:
     // TODO Currently assumes that all nodes are numerical
     void GetDenseSerialization(std::vector<ThresholdType>& thresholds, std::vector<FeatureIndexType>& featureIndices,
                                std::vector<int32_t>& offsets);
+
+    void SetNumClasses(int32_t numClasses) { m_numClasses = numClasses; }
+    int32_t GetNumClasses() { return m_numClasses; }
 private:
     std::vector<Feature> m_features;
     std::vector<DecisionTreeType> m_trees;
     ReductionType m_reductionType = ReductionType::kAdd;
     ReturnType m_initialValue;
     PredictionTransformation m_predictionTransform;
+    int32_t m_numClasses;
 };
 
 template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
@@ -367,47 +373,98 @@ FPType sigmoid(FPType val) {
   return 1.0/(1.0 + std::exp(-val));
 }
 
+template<typename FPType, typename ReturnType>
+ReturnType softmax(std::vector<FPType>& classProbabilities) {
+    // Note: Commented out code implements the actual formula of softmax. 
+    // For our purpose, we dont' really need this since softmax is monotonically increasing.
+    // std::transform(
+    //     classProbabilities.begin(),
+    //     classProbabilities.end(),
+    //     classProbabilities.begin(),
+    //     [](const FPType& n) { return std::exp(n); });
+    
+    // FPType sum = std::accumulate(classProbabilities.begin(), classProbabilities.end(), 0);
+
+    // std::transform(
+    //     classProbabilities.begin(),
+    //     classProbabilities.end(),
+    //     classProbabilities.begin(),
+    //     [=](const FPType& n) { return std::exp(n) / sum; });
+    
+    return std::distance(classProbabilities.begin(), std::max_element(classProbabilities.begin(), classProbabilities.end()));
+}
+
 template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
 ReturnType DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::Predict(std::vector<ThresholdType>& data) const
 {
-    std::vector<ReturnType> predictions;
+    std::map<int32_t, std::vector<ThresholdType>> predictions;
     for (auto& tree: m_trees) {
         auto prediction = tree.PredictTree(data);
         // std::cout << "Tree " << predictions.size() << " prediction : " << prediction << std::endl;
-        predictions.push_back(prediction);
+        predictions[tree.GetGroupId()].push_back(prediction);
     }
     
     assert(m_reductionType == ReductionType::kAdd);
-    auto rawPrediction = std::accumulate(predictions.begin(), predictions.end(), m_initialValue);
-    // std::cout << "Raw prediction : " << rawPrediction << std::endl;
-    if (m_predictionTransform == PredictionTransformation::kIdentity)
-      return rawPrediction;
-    else if (m_predictionTransform == PredictionTransformation::kSigmoid)
-      return sigmoid(rawPrediction);
-    else
-      assert(false);
-    return -1; 
+
+    if (m_numClasses == 0) {
+        auto rawPrediction = std::accumulate(predictions[0].begin(), predictions[0].end(), m_initialValue);
+        // std::cout << "Raw prediction : " << rawPrediction << std::endl;
+        if (m_predictionTransform == PredictionTransformation::kIdentity)
+        return rawPrediction;
+        else if (m_predictionTransform == PredictionTransformation::kSigmoid)
+        return sigmoid(rawPrediction);
+        else
+        assert(false);
+        return -1;
+    }
+    else {
+        assert(m_predictionTransform == PredictionTransformation::kSoftMax);
+        std::vector<ThresholdType> classProbabilities(m_numClasses, 0);
+        std::for_each(
+            predictions.begin(),
+            predictions.end(),
+            [&](std::pair<const int32_t, std::vector<ThresholdType>>& pair) {
+                classProbabilities[pair.first] = std::accumulate(pair.second.begin(), pair.second.end(), m_initialValue);
+            });
+        
+        return softmax<ThresholdType, ReturnType>(classProbabilities);
+    }
 }
 
 template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
 float DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::Predict_Float(std::vector<ThresholdType>& data) const
 {
-    std::vector<float> predictions;
+    std::map<int32_t, std::vector<float>> predictions;
     for (auto& tree: m_trees) {
-        auto prediction = tree.PredictTree_Float(data);
+        auto prediction = tree.PredictTree(data);
         // std::cout << "Tree " << predictions.size() << " prediction : " << prediction << std::endl;
-        predictions.push_back(prediction);
+        predictions[tree.GetGroupId()].push_back(prediction);
     }
     
     assert(m_reductionType == ReductionType::kAdd);
-    auto rawPrediction = std::accumulate(predictions.begin(), predictions.end(), (float)m_initialValue);
-    if (m_predictionTransform == PredictionTransformation::kIdentity)
-      return rawPrediction;
-    else if (m_predictionTransform == PredictionTransformation::kSigmoid)
-      return sigmoid(rawPrediction);
-    else
-      assert(false);
-    return -1; 
+
+    if (m_numClasses == 0) {
+        auto rawPrediction = std::accumulate(predictions[0].begin(), predictions[0].end(), m_initialValue);
+        if (m_predictionTransform == PredictionTransformation::kIdentity)
+        return rawPrediction;
+        else if (m_predictionTransform == PredictionTransformation::kSigmoid)
+        return sigmoid(rawPrediction);
+        else
+        assert(false);
+        return -1;
+    }
+    else {
+        assert(m_predictionTransform == PredictionTransformation::kSoftMax);
+        std::vector<float> classProbabilities(m_numClasses, 0);
+        std::for_each(
+            predictions.begin(),
+            predictions.end(),
+            [&](std::pair<const int32_t, std::vector<float>>& pair) {
+                classProbabilities[pair.first] = std::accumulate(pair.second.begin(), pair.second.end(), m_initialValue);
+            });
+        
+        return softmax<float, ReturnType>(classProbabilities);
+    }
 }
 
 template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>

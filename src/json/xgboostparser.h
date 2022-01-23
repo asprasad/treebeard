@@ -89,6 +89,7 @@ void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexTyp
     auto baseScore = std::stod(baseScoreStr);
     auto objectiveName = learnerJSON["objective"]["name"].get<std::string>();
     this->SetInitialOffset(TransformBaseScore(objectiveName, baseScore));
+    this->SetNumberOfClasses(std::stoi(learnerJSON["learner_model_param"]["num_class"].get<std::string>()));
     this->m_forest->SetPredictionTransformation(GetPredictionTransformType(objectiveName));
     
     // Assert is not valid since feature_names is not required. 
@@ -158,6 +159,7 @@ void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexTyp
     assert (left_children.size() == right_childen.size() && 
             left_children.size() == parents.size());
     this->SetTreeNumberOfFeatures(num_features);
+
     std::vector<NodeIndexType> nodes;
     for (size_t i=0 ; i< num_nodes ; ++i)
     {

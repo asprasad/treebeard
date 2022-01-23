@@ -58,6 +58,11 @@ inline bool FPEqual(FPType a, FPType b) {
   return sqDiff < threshold;
 }
 
+template <>
+inline bool FPEqual<int32_t>(int32_t a, int32_t b) {
+  return a == b;
+}
+
 using RandomIntGenerator = std::function<int32_t()>;
 using RandomRealGenerator = std::function<double()>;
 
