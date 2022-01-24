@@ -121,7 +121,19 @@ void TiledSchedule(mlir::decisionforest::Schedule* schedule) {
   schedule->Tile(batchIndexVar, b0, b1, BatchTileSize);
   schedule->Tile(treeIndexVar, t0, t1, TreeTileSize);
 
-  schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &t0, &b0, &b1, &t1 });
+  schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &t0, &b0, &t1, &b1 });
+}
+
+template<int32_t TreeTileSize>
+void TileTreeDimensionSchedule(mlir::decisionforest::Schedule* schedule) {
+  auto& batchIndexVar = schedule->GetBatchIndex();
+  auto& treeIndexVar = schedule->GetTreeIndex();
+  auto& t0 = schedule->NewIndexVariable("t0");
+  auto& t1 = schedule->NewIndexVariable("t1");
+  
+  schedule->Tile(treeIndexVar, t0, t1, TreeTileSize);
+  // t1.Unroll();
+  schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &t0, &batchIndexVar, &t1 });
 }
 
 class ScheduleManipulationFunctionWrapper : public mlir::decisionforest::ScheduleManipulator {

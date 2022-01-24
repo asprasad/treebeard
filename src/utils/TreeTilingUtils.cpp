@@ -448,6 +448,14 @@ int32_t ForestJSONReader::GetTotalNumberOfLeaves() {
     return numLeaves;
 }
 
+void LogLeafDepths(const std::vector<int32_t>& depths) {
+    std::string out;
+    for (auto depth : depths) {
+        out += std::to_string(depth) + ", ";
+    }
+    TreeBeard::Logging::Log(out);
+}
+
 void LogTreeStats(const std::vector<TiledTreeStats>& tiledTreeStats) {
     int32_t numDummyNodes=0, numEmptyTiles=0, numLeafNodesInTiledTree=0, numLeavesInOrigModel=0, numTiles=0, numUniqueTiles=0;
     int32_t numNodesInOrigModel=0, numLeavesWithAllSiblingsLeaves=0;
@@ -474,6 +482,8 @@ void LogTreeStats(const std::vector<TiledTreeStats>& tiledTreeStats) {
         avgOrigTreeDepth += treeStats.originalTreeDepth;
         numNodesInOrigModel += treeStats.originalTreeNumNodes;
         numLeavesWithAllSiblingsLeaves += treeStats.numLeavesWithAllLeafSiblings;
+        // TreeBeard::Logging::Log(std::to_string(treeStats.numberOfFeatures));
+        // LogLeafDepths(treeStats.leafDepths);
     }
     averageDepth /= tiledTreeStats.size();
     avgOrigTreeDepth /= tiledTreeStats.size();
@@ -1146,6 +1156,22 @@ int32_t TiledTree::NumberOfTiles() {
     return numTiles;
 }
 
+std::vector<int32_t> TiledTree::GetLeafDepths() {
+    std::vector<int32_t> depths;
+    for (auto& tile : m_tiles) {
+        if (!tile.IsLeafTile())
+            continue;
+        int32_t depth = 0;
+        auto currentTile = &tile;
+        while (currentTile->m_parent != DecisionTree<>::INVALID_NODE_INDEX) {
+            currentTile = &(m_tiles.at(currentTile->m_parent));
+            ++depth;
+        }
+        depths.push_back(depth);
+    }
+    return depths;
+}
+
 TiledTreeStats TiledTree::GetTreeStats() {
     TiledTreeStats treeStats;
     treeStats.tileSize = TileSize();
@@ -1159,6 +1185,8 @@ TiledTreeStats TiledTree::GetTreeStats() {
     treeStats.originalTreeNumberOfLeaves = m_owningTree.NumLeaves();
     treeStats.tiledTreeNumberOfLeafTiles = NumberOfLeafTiles();
     treeStats.numLeavesWithAllLeafSiblings = NumberOfLeavesWithAllLeafSiblings(0 /*root tile index*/ );
+    treeStats.numberOfFeatures = m_owningTree.NumFeatures();
+    treeStats.leafDepths = GetLeafDepths();
     return treeStats;
 }
 

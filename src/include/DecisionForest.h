@@ -117,6 +117,8 @@ public:
 
     const std::vector<Node>& GetNodes() { return m_nodes; }
     void SetNodes(const std::vector<Node>& nodes) { m_nodes=nodes; }
+
+    int32_t NumFeatures();
 private:
     std::vector<Node> m_nodes;
     size_t m_numFeatures;
@@ -338,6 +340,17 @@ void DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::W
 {
     std::ofstream fout(filename);
     WriteToDOTFile(fout);
+}
+
+template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+int32_t DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::NumFeatures()
+{
+    std::set<int32_t> featureSet;
+    for (auto& node : m_nodes) {
+        if (!node.IsLeaf())
+            featureSet.insert(node.featureIndex);
+    }
+    return featureSet.size();
 }
 
 template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>

@@ -114,6 +114,8 @@ struct TiledTreeStats {
     int32_t tiledTreeNumberOfLeafTiles;
     // Num leaves that have only leaves for siblings
     int32_t numLeavesWithAllLeafSiblings;
+    int32_t numberOfFeatures;
+    std::vector<int32_t> leafDepths;
 };
 
 class TiledTree {
@@ -155,6 +157,7 @@ class TiledTree {
     // The number of tiles required to store this tree if duplicated nodes are considered unique
     int32_t NumberOfTiles();
     bool AreAllSiblingsLeaves(TiledTreeNode& tile, const std::vector<TiledTreeNode>& tiles);
+    std::vector<int32_t> GetLeafDepths();
 public:
     TiledTree(DecisionTree<>& owningTree);
     
