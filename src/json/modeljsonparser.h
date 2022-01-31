@@ -5,7 +5,8 @@
 #include <vector>
 #include "json.hpp"
 #include "DecisionForest.h"
-#include "../mlir/Dialect.h"
+#include "TreeTilingUtils.h"
+#include "Dialect.h"
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -74,6 +75,7 @@ protected:
     using DecisionForestType = mlir::decisionforest::DecisionForest<>; //<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>;
     using DecisionTreeType = typename DecisionForestType::DecisionTreeType;
 
+    std::string m_jsonFilePath;
     DecisionForestType *m_forest;
     DecisionTreeType *m_currentTree;
     mlir::decisionforest::Schedule *m_schedule;
@@ -142,15 +144,19 @@ protected:
         return forestType;
     }
 public:
-    ModelJSONParser(mlir::MLIRContext& context, int32_t batchSize, double_t initialValue)
-        : m_forest(new DecisionForestType(initialValue)), m_currentTree(nullptr), m_schedule(nullptr), m_context(context), m_builder(&context),
+    ModelJSONParser(const std::string& jsonFilePath, mlir::MLIRContext& context, 
+                    int32_t batchSize, double_t initialValue)
+        : m_jsonFilePath(jsonFilePath), m_forest(new DecisionForestType(initialValue)), 
+          m_currentTree(nullptr), m_schedule(nullptr), m_context(context), m_builder(&context),
           m_batchSize(batchSize), m_childIndexBitWidth(1) 
     {
         m_module = mlir::ModuleOp::create(m_builder.getUnknownLoc(), llvm::StringRef("MyModule"));
+        auto treebeardGlobalsJSONPath = jsonFilePath + ".treebeard-globals.json";
+        mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(treebeardGlobalsJSONPath);
     }
 
-    ModelJSONParser(mlir::MLIRContext& context, int32_t batchSize)
-        : ModelJSONParser(context, batchSize, 0.0)
+    ModelJSONParser(const std::string& jsonFilePath, mlir::MLIRContext& context, int32_t batchSize)
+        : ModelJSONParser(jsonFilePath, context, batchSize, 0.0)
     {
     }
     

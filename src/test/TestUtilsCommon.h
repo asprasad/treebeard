@@ -96,6 +96,8 @@ public:
 };
 
 std::string GetTreeBeardRepoPath();
+std::string GetTempFilePath();
+std::string GetGlobalJSONNameForTests();
 
 mlir::decisionforest::DecisionForest<> GenerateRandomDecisionForest(int32_t numTrees, int32_t numFeatures, double thresholdMin,
                                                                     double thresholdMax, int32_t maxDepth);
@@ -151,7 +153,6 @@ public:
 
 // Defined in XGBoostTests.cpp
 extern bool RunSingleBatchSizeForXGBoostTests;
-
 
 } // test
 } // TreeBeard

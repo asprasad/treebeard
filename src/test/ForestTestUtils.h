@@ -187,7 +187,7 @@ class FixedTreeIRConstructor : public TreeBeard::ModelJSONParser<ThresholdType, 
   ForestConstructor_t m_constructForest;
 public:
   FixedTreeIRConstructor(MLIRContext& context, int32_t batchSize, ForestConstructor_t constructForest)
-    : TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(context, batchSize), m_constructForest(constructForest)
+    : TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(TreeBeard::test::GetGlobalJSONNameForTests(), context, batchSize), m_constructForest(constructForest)
   {  }
   void Parse() override {
     m_treeSerialization = m_constructForest(*this->m_forest);

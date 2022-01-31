@@ -312,6 +312,7 @@ bool Test_BufferInit_RightHeavy(TestArgs_t& args) {
   //(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType, Type treeType)
   auto forestType = mlir::decisionforest::TreeEnsembleType::get(thresholdType, 1, thresholdType /*HACK type doesn't matter for this test*/,
                                                                 mlir::decisionforest::ReductionType::kAdd, treeType);
+  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
   mlir::decisionforest::PersistDecisionForest(forest, forestType);
   std::vector<TileType> serializedTree(std::pow(2, 3) - 1); //Depth of the tree is 3, so this is the size of the dense array
   // InitializeBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets)
@@ -377,6 +378,7 @@ bool Test_BufferInitialization_TwoTrees(TestArgs_t& args) {
   //(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType, Type treeType)
   auto forestType = mlir::decisionforest::TreeEnsembleType::get(thresholdType, 1, thresholdType /*HACK type doesn't matter for this test*/,
                                                                 mlir::decisionforest::ReductionType::kAdd, treeType);
+  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
   mlir::decisionforest::PersistDecisionForest(forest, forestType);
   std::vector<TileType> serializedTree(2*(std::pow(2, 3) - 1)); //Depth of the tree is 3, so this is the size of the dense array
   // InitializeBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets)
@@ -417,6 +419,7 @@ bool Test_BufferInitializationWithOneTree_LeftHeavy(TestArgs_t& args) {
   //(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType, Type treeType)
   auto forestType = mlir::decisionforest::TreeEnsembleType::get(doubleType, 1, doubleType /*HACK type doesn't matter for this test*/,
                                                                 mlir::decisionforest::ReductionType::kAdd, treeType);
+  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
   mlir::decisionforest::PersistDecisionForest(forest, forestType);
   std::vector<DoubleInt32Tile> serializedTree(std::pow(2, 3) - 1); //Depth of the tree is 3, so this is the size of the dense array
 
@@ -685,6 +688,7 @@ bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t fore
   std::vector<Type> treeTypes = {treeType};
   auto forestType = mlir::decisionforest::TreeEnsembleType::get(thresholdType, 1, thresholdType /*HACK type doesn't matter for this test*/,
                                                                 mlir::decisionforest::ReductionType::kAdd, treeTypes);
+  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
   mlir::decisionforest::PersistDecisionForest(forest, forestType);
 
   mlir::decisionforest::TiledTree tiledTree(forest.GetTree(0));
@@ -1080,7 +1084,7 @@ TestDescriptor testList[] = {
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_SparseTileSize8_Abalone_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1),
   // TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs),
   // TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs),
   // TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs),
