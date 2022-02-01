@@ -58,9 +58,10 @@ mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& cont
 mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, const std::string&modelJsonPath, const CompilerOptions& options);
 
 void InitializeMLIRContext(mlir::MLIRContext& context);
-void ConvertXGBoostJSONToLLVMIR(const std::string&modelJsonPath, const std::string& llvmIRFilePath, const CompilerOptions& options);
+void ConvertXGBoostJSONToLLVMIR(const std::string&modelJsonPath, const std::string& llvmIRFilePath, const std::string& modelGlobalsJSONPath, const CompilerOptions& options);
 
-void RunInferenceUsingSO(const std::string&modelJsonPath, const std::string& soPath, const std::string& csvPath, const CompilerOptions& options);
+void RunInferenceUsingSO(const std::string&modelJsonPath, const std::string& soPath, const std::string& modelGlobalsJSONPath, 
+                         const std::string& csvPath, const CompilerOptions& options);
 }
 
 

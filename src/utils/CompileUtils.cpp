@@ -144,8 +144,10 @@ void InitializeMLIRContext(mlir::MLIRContext& context) {
   context.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
 }
 
-void ConvertXGBoostJSONToLLVMIR(const std::string&modelJsonPath, const std::string& llvmIRFilePath,
+void ConvertXGBoostJSONToLLVMIR(const std::string&modelJsonPath, const std::string& llvmIRFilePath, const std::string& modelGlobalsJSONPath,
                                 const CompilerOptions& options) {
+  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(modelGlobalsJSONPath);
+
   mlir::MLIRContext context;
   InitializeMLIRContext(context);
   auto module = ConstructLLVMDialectModuleFromXGBoostJSON(context, modelJsonPath, options);
@@ -189,13 +191,9 @@ int64_t RunXGBoostInferenceOnCSVInput(const std::string& csvPath, mlir::decision
   return std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
 }
 
-void RunInferenceUsingSO(const std::string&modelJsonPath, const std::string& soPath, const std::string& csvPath, const CompilerOptions& options) {
-  assert(false && "Model globals JSON file path needs to be passed");
-  mlir::MLIRContext context;
-  TreeBeard::InitializeMLIRContext(context);
-  TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON(context, modelJsonPath, options);
-  
-  mlir::decisionforest::SharedObjectInferenceRunner inferenceRunner("", soPath, options.tileSize, options.thresholdTypeWidth, options.featureIndexTypeWidth);
+void RunInferenceUsingSO(const std::string&modelJsonPath, const std::string& soPath, const std::string& modelGlobalsJSONPath, 
+                         const std::string& csvPath, const CompilerOptions& options) {
+  mlir::decisionforest::SharedObjectInferenceRunner inferenceRunner(modelGlobalsJSONPath, soPath, options.tileSize, options.thresholdTypeWidth, options.featureIndexTypeWidth);
   assert (options.inputElementTypeWidth == options.returnTypeWidth);
   int64_t time;
   if (options.inputElementTypeWidth == 32)
