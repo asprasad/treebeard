@@ -61,7 +61,8 @@ int64_t Test_CodeGenForJSON_VariableBatchSize(int64_t batchSize, const std::stri
   TreeBeard::InitializeMLIRContext(context);
   auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, FloatType, FeatureIndexType, int32_t, FloatType>(context, modelJsonPath, options);
 
-  decisionforest::InferenceRunner inferenceRunner(module, tileSize, floatTypeBitWidth, sizeof(FeatureIndexType)*8);
+  auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
+  decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, floatTypeBitWidth, sizeof(FeatureIndexType)*8);
   
   TestCSVReader csvReader(modelJsonPath + ".csv");
   std::vector<std::vector<FloatType>> inputData;
@@ -174,11 +175,21 @@ void RunXGBoostBenchmarks() {
   RunAllBenchmarks(nullptr);
   RunSparseXGBoostBenchmarks(nullptr);
   
-  decisionforest::UseSparseTreeRepresentation = false;
-  std::cout << "\n\n\nOne Tree at a Time Schedule\n\n";
-  TreeBeard::test::ScheduleManipulationFunctionWrapper scheduleManipulator(OneTreeAtATimeSchedule);
-  RunAllBenchmarks(&scheduleManipulator);
-  RunSparseXGBoostBenchmarks(&scheduleManipulator);
+  {
+    decisionforest::UseSparseTreeRepresentation = false;
+    std::cout << "\n\n\nOne Tree at a Time Schedule\n\n";
+    TreeBeard::test::ScheduleManipulationFunctionWrapper scheduleManipulator(OneTreeAtATimeSchedule);
+    RunAllBenchmarks(&scheduleManipulator);
+    RunSparseXGBoostBenchmarks(&scheduleManipulator);
+  }
+
+  {
+    decisionforest::UseSparseTreeRepresentation = false;
+    std::cout << "\n\n\nMultiple Trees at a Time Schedule\n\n";
+    TreeBeard::test::ScheduleManipulationFunctionWrapper scheduleManipulator(TileTreeDimensionSchedule<20>);
+    RunAllBenchmarks(&scheduleManipulator);
+    RunSparseXGBoostBenchmarks(&scheduleManipulator);
+  }
 }
 
 

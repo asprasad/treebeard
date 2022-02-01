@@ -252,8 +252,8 @@ int32_t InferenceRunnerBase::InitializeLeafArrays() {
 // Shared object inference runner 
 // ===------------------------------------------------------=== //
 
-SharedObjectInferenceRunner::SharedObjectInferenceRunner(const std::string& soPath, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize)
-  : InferenceRunnerBase(tileSize, thresholdSize, featureIndexSize)
+SharedObjectInferenceRunner::SharedObjectInferenceRunner(const std::string& modelGlobalsJSONFilePath, const std::string& soPath, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize)
+  : InferenceRunnerBase(modelGlobalsJSONFilePath, tileSize, thresholdSize, featureIndexSize)
 {
   m_so = dlopen(soPath.c_str(), RTLD_NOW);
   Init();
@@ -299,8 +299,9 @@ llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> InferenceRunner::CreateEx
   return maybeEngine;
 }
 
-InferenceRunner::InferenceRunner(mlir::ModuleOp module, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize) 
-  :InferenceRunnerBase(tileSize, thresholdSize, featureIndexSize), m_maybeEngine(CreateExecutionEngine(module)), m_engine(m_maybeEngine.get()), m_module(module)
+InferenceRunner::InferenceRunner(const std::string& modelGlobalsJSONFilePath, mlir::ModuleOp module, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize) 
+  :InferenceRunnerBase(modelGlobalsJSONFilePath, tileSize, thresholdSize, featureIndexSize),
+   m_maybeEngine(CreateExecutionEngine(module)), m_engine(m_maybeEngine.get()), m_module(module)
 {
   Init();
 }

@@ -53,11 +53,12 @@ using OffsetMemrefType = Memref<int64_t, 1>;
 
 class InferenceRunnerBase {
 protected:
+  std::string m_modelGlobalsJSONFilePath;
   int32_t m_tileSize;
   int32_t m_thresholdSize;
   int32_t m_featureIndexSize;
   void *m_inferenceFuncPtr;
-
+  
   template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType, typename ChildIndexType>
   int32_t CallInitMethod();
   
@@ -71,8 +72,12 @@ protected:
   
   void Init();
 public:
-  InferenceRunnerBase(int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize)
-    : m_tileSize(tileSize), m_thresholdSize(thresholdSize), m_featureIndexSize(featureIndexSize) { }
+  InferenceRunnerBase(const std::string& modelGlobalsJSONFilePath, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize)
+    : m_modelGlobalsJSONFilePath(modelGlobalsJSONFilePath), m_tileSize(tileSize), m_thresholdSize(thresholdSize), m_featureIndexSize(featureIndexSize) 
+  { 
+    decisionforest::ForestJSONReader::GetInstance().SetFilePath(modelGlobalsJSONFilePath);
+    decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
+  }
 
   int32_t InitializeLengthsArray();
   int32_t InitializeOffsetsArray();
@@ -108,7 +113,7 @@ protected:
   void* GetFunctionAddress(const std::string& functionName) override;
 public:
   static llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> CreateExecutionEngine(mlir::ModuleOp module);
-  InferenceRunner(mlir::ModuleOp module, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize);
+  InferenceRunner(const std::string& modelGlobalsJSONFilePath, mlir::ModuleOp module, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize);
 };
 
 class SharedObjectInferenceRunner : public InferenceRunnerBase{
@@ -116,7 +121,7 @@ class SharedObjectInferenceRunner : public InferenceRunnerBase{
 protected:
   void* GetFunctionAddress(const std::string& functionName) override;
 public:
-  SharedObjectInferenceRunner(const std::string& soPath, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize);
+  SharedObjectInferenceRunner(const std::string& modelGlobalsJSONFilePath, const std::string& soPath, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize);
   ~SharedObjectInferenceRunner();
 };
 

@@ -107,7 +107,7 @@ void ForestJSONReader::ParseSingleTileSizeEntry(json& tileSizeEntryJSON, ForestJ
 }
 
 void ForestJSONReader::ParseJSONFile() {
-    // ClearAllData();
+    ClearAllData();
     assert (m_jsonFilePath != "");
     m_json.clear();
     std::ifstream fin(m_jsonFilePath);
@@ -124,7 +124,6 @@ void ForestJSONReader::ParseJSONFile() {
         ParseSingleTileSizeEntry(tileSizeEntryJSON, tileSizeEntry);
         newEntries.push_back(tileSizeEntry);
     }
-    assert (newEntries == m_tileSizeEntries);
     m_tileSizeEntries = newEntries;
 }
 
@@ -245,6 +244,8 @@ void ForestJSONReader::AddSingleSparseTree(int32_t treeIndex, int32_t numTiles, 
 
 void ForestJSONReader::ClearAllData() {
     m_tileSizeEntries.clear();
+    // Can't clear the json path here because PersistForest calls Clear!
+    // m_jsonFilePath.clear();
     m_tileShapeBitWidth = -1;
     m_childIndexBitWidth = -1;
     m_numberOfTrees = -1;
@@ -677,7 +678,11 @@ void PersistDecisionForestImpl(mlir::decisionforest::DecisionForest<>& forest, m
         LogTreeStats(treeStats);
     }
     mlir::decisionforest::ForestJSONReader::GetInstance().WriteJSONFile();
-    mlir::decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
+    // mlir::decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
+    
+    // The below lines clear all state that is currently persisted. This is to ensure that 
+    // all state is correctly being read back from the model globals json file.
+    mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath("");
 }
 
 // Ultimately, this will write a JSON file. For now, we're just 

@@ -190,11 +190,12 @@ int64_t RunXGBoostInferenceOnCSVInput(const std::string& csvPath, mlir::decision
 }
 
 void RunInferenceUsingSO(const std::string&modelJsonPath, const std::string& soPath, const std::string& csvPath, const CompilerOptions& options) {
+  assert(false && "Model globals JSON file path needs to be passed");
   mlir::MLIRContext context;
   TreeBeard::InitializeMLIRContext(context);
   TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON(context, modelJsonPath, options);
   
-  mlir::decisionforest::SharedObjectInferenceRunner inferenceRunner(soPath, options.tileSize, options.thresholdTypeWidth, options.featureIndexTypeWidth);
+  mlir::decisionforest::SharedObjectInferenceRunner inferenceRunner("", soPath, options.tileSize, options.thresholdTypeWidth, options.featureIndexTypeWidth);
   assert (options.inputElementTypeWidth == options.returnTypeWidth);
   int64_t time;
   if (options.inputElementTypeWidth == 32)
