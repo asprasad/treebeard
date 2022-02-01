@@ -149,19 +149,19 @@ public:
         return jsonFilePath + ".treebeard-globals.json";
     }
 
-    ModelJSONParser(const std::string& jsonFilePath, mlir::MLIRContext& context, 
+    ModelJSONParser(const std::string& jsonFilePath, const std::string& modelGlobalsJSONFilePath, mlir::MLIRContext& context, 
                     int32_t batchSize, double_t initialValue)
-        : m_jsonFilePath(jsonFilePath), m_forest(new DecisionForestType(initialValue)), 
+        : m_jsonFilePath(jsonFilePath), m_modelGlobalsJSONFilePath(modelGlobalsJSONFilePath), m_forest(new DecisionForestType(initialValue)), 
           m_currentTree(nullptr), m_schedule(nullptr), m_context(context), m_builder(&context),
           m_batchSize(batchSize), m_childIndexBitWidth(1) 
     {
         m_module = mlir::ModuleOp::create(m_builder.getUnknownLoc(), llvm::StringRef("MyModule"));
-        m_modelGlobalsJSONFilePath = ModelGlobalJSONFilePathFromJSONFilePath(jsonFilePath);
+        // m_modelGlobalsJSONFilePath = ModelGlobalJSONFilePathFromJSONFilePath(jsonFilePath);
         mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_modelGlobalsJSONFilePath);
     }
 
-    ModelJSONParser(const std::string& jsonFilePath, mlir::MLIRContext& context, int32_t batchSize)
-        : ModelJSONParser(jsonFilePath, context, batchSize, 0.0)
+    ModelJSONParser(const std::string& jsonFilePath, const std::string& modelGlobalsJSONFilePath, mlir::MLIRContext& context, int32_t batchSize)
+        : ModelJSONParser(jsonFilePath, modelGlobalsJSONFilePath, context, batchSize, 0.0)
     {
     }
     

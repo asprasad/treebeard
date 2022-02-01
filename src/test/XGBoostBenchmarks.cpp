@@ -59,9 +59,9 @@ int64_t Test_CodeGenForJSON_VariableBatchSize(int64_t batchSize, const std::stri
   TreeBeard::CompilerOptions options(floatTypeBitWidth, floatTypeBitWidth, sizeof(FeatureIndexType)*8, sizeof(NodeIndexType)*8,
                                      floatTypeBitWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator);
   TreeBeard::InitializeMLIRContext(context);
-  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, FloatType, FeatureIndexType, int32_t, FloatType>(context, modelJsonPath, options);
-
   auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, FloatType, FeatureIndexType, int32_t, FloatType>(context, modelJsonPath, modelGlobalsJSONFilePath, options);
+
   decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, floatTypeBitWidth, sizeof(FeatureIndexType)*8);
   
   TestCSVReader csvReader(modelJsonPath + ".csv");

@@ -28,7 +28,7 @@ MODEL_JSON="$TREEBEARD_DIR/xgb_models/${MODEL}_xgb_model_save.json"
 BASE_NAME="${MODEL}_t${TILE_SIZE}_b${BATCH_SIZE}_f_i16${BASE_NAME_SPARSE_EXT}"
 SO_FILE="$OUTPUT_DIR/$BASE_NAME.so"
 INPUT_FILE="$TREEBEARD_DIR/xgb_models/${MODEL}_xgb_model_save.json.csv"
-MODEL_GLOBALS_JSON="$MODEL_JSON.treebeard-globals.json"
+MODEL_GLOBALS_JSON="$SO_FILE.treebeard-globals.json"
 
 # bin/tree-heavy --loadSO -json ~/mlir-build/llvm-project/mlir/examples/tree-heavy/xgb_models/abalone_xgb_model_save.json 
 # -so ~/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/bin/abalone_b4_t8_f.so -batchSize 4 -tileSize 8 -i ~/mlir-build/llvm-project/mlir/examples/tree-heavy/xgb_models/abalone_xgb_model_save.json.csv

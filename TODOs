@@ -96,6 +96,22 @@ Scheduling Language
         - [Done] Make them part of the Predict forest op
         - [Done] Expose APIs from JSONParser to construct and modify schedule object
     - Lowering using the schedule
+        - [Done] Tiling
+        - [Done] Unrolling
+        - [Done] Reordering
+        - [Done] Splitting
+        - Pipelining
+        - Simdize
+        - Unroll walk
+        - Parallel
+        - Expand
+
+XGBoost comparison
+    - [Done] Write JSON file from ForestJSONReader
+    - [Done] Read the JSON file from the execution helper
+    - [Done] Change SO APIs to take value JSON filename and use that for execution
+    - Build a separate SO for execution part
+    - Python wrappers
 
 Pipeline container
 SIMD container

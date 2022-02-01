@@ -34,8 +34,9 @@ struct CompilerOptions {
 
 template<typename ThresholdType=double, typename ReturnType=double, typename FeatureIndexType=int32_t, 
          typename NodeIndexType=int32_t, typename InputElementType=double>
-mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, const std::string& modelJsonPath, const CompilerOptions& options) {
-  TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType> xgBoostParser(context, modelJsonPath, options.batchSize);
+mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, const std::string& modelJsonPath, 
+                                                         const std::string& modelGlobalsJSONPath, const CompilerOptions& options) {
+  TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType> xgBoostParser(context, modelJsonPath, modelGlobalsJSONPath, options.batchSize);
   xgBoostParser.Parse();
   xgBoostParser.SetChildIndexBitWidth(options.childIndexBitWidth);
   auto module = xgBoostParser.GetEvaluationFunction();
@@ -55,7 +56,8 @@ mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& cont
   return module;
 }
 
-mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, const std::string&modelJsonPath, const CompilerOptions& options);
+mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, const std::string&modelJsonPath, 
+                                                         const std::string& modelGlobalsJSONPath, const CompilerOptions& options);
 
 void InitializeMLIRContext(mlir::MLIRContext& context);
 void ConvertXGBoostJSONToLLVMIR(const std::string&modelJsonPath, const std::string& llvmIRFilePath, const std::string& modelGlobalsJSONPath, const CompilerOptions& options);

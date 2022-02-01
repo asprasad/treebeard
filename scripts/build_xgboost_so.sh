@@ -40,7 +40,7 @@ BASE_NAME="${MODEL}_t${TILE_SIZE}_b${BATCH_SIZE}_f_i16${BASE_NAME_SPARSE_EXT}"
 LLVM_IR_FILE="$OUTPUT_DIR/$BASE_NAME.ll"
 ASM_FILE="$OUTPUT_DIR/$BASE_NAME.s"
 SO_FILE="$OUTPUT_DIR/$BASE_NAME.so"
-MODEL_GLOBALS_JSON="$MODEL_JSON.treebeard-globals.json"
+MODEL_GLOBALS_JSON="$SO_FILE.treebeard-globals.json"
 
 # bin/tree-heavy --dumpLLVM -json ~/mlir-build/llvm-project/mlir/examples/tree-heavy/xgb_models/abalone_xgb_model_save.json 
 # -o ~/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/bin/abalone_b4_t8_f.ll -batchSize 4 -tileSize 8

@@ -343,7 +343,9 @@ class FixedTiledTreeIRConstructor : public TreeBeard::ModelJSONParser<ThresholdT
 public:
   FixedTiledTreeIRConstructor(mlir::MLIRContext& context, int32_t batchSize, ForestConstructor_t constructForest,
                               std::vector<decisionforest::TreeTilingDescriptor>& tilingDescriptors, int32_t tileShapeBitWidth)
-    : TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(GetGlobalJSONNameForTests(), context, batchSize),
+    : TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(GetGlobalJSONNameForTests(),
+                                TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>::ModelGlobalJSONFilePathFromJSONFilePath(GetGlobalJSONNameForTests()),
+                                context, batchSize),
       m_constructForest(constructForest), m_tilingDescriptors(tilingDescriptors), m_tileShapeBitWidth(tileShapeBitWidth)
   {
     // Only for tiled scenarios
