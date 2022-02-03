@@ -69,6 +69,8 @@ class ForestJSONReader
                    serializedLeaves==that.serializedLeaves;
         };
     };
+    int32_t m_rowSize;
+    int32_t m_batchSize;
     int32_t m_tileShapeBitWidth;
     int32_t m_childIndexBitWidth;
     std::list<SingleTileSizeEntry> m_tileSizeEntries;
@@ -138,6 +140,12 @@ public:
     int32_t GetChildIndexBitWidth() { return m_childIndexBitWidth; }
     void SetChildIndexBitWidth(int32_t val) { m_childIndexBitWidth=val; }
 
+    void SetRowSize(int32_t val) { m_rowSize = val; }
+    int32_t GetRowSize() { return m_rowSize; }
+
+    void SetBatchSize(int32_t val) { m_batchSize = val; }
+    int32_t GetBatchSize() { return m_batchSize; }
+    
     static ForestJSONReader& GetInstance() {
         return m_instance;
     }

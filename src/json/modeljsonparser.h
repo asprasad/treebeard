@@ -111,6 +111,8 @@ protected:
         const auto& features = m_forest->GetFeatures();
         mlir::Type elementType = GetMLIRType(InputElementType(), m_builder); //GetMLIRTypeFromString(features.front().type, m_builder);
         int64_t shape[] = { m_batchSize, static_cast<int64_t>(features.size())};
+        // TODO This needs to be moved elsewhere. Seems too obscure a place for this!
+        mlir::decisionforest::ForestJSONReader::GetInstance().SetRowSize(features.size());
         // auto affineMap = mlir::makeStridedLinearLayoutMap(mlir::ArrayRef<int64_t>({ static_cast<int64_t>(features.size()), 1 }), 0, elementType.getContext());
         // return mlir::MemRefType::get(shape, elementType, affineMap);
         return mlir::MemRefType::get(shape, elementType);
@@ -158,6 +160,7 @@ public:
         m_module = mlir::ModuleOp::create(m_builder.getUnknownLoc(), llvm::StringRef("MyModule"));
         // m_modelGlobalsJSONFilePath = ModelGlobalJSONFilePathFromJSONFilePath(jsonFilePath);
         mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_modelGlobalsJSONFilePath);
+        mlir::decisionforest::ForestJSONReader::GetInstance().SetBatchSize(batchSize);
     }
 
     ModelJSONParser(const std::string& jsonFilePath, const std::string& modelGlobalsJSONFilePath, mlir::MLIRContext& context, int32_t batchSize)

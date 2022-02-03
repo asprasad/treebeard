@@ -10,3 +10,16 @@ ExecutionHelpers.cpp
 LowerDebugHelpers.cpp
 UniformTilingTransformation.cpp
 WalkDecisionTreeLoweringPass.cpp)
+
+target_sources(treebeard-runtime 
+PRIVATE
+Dialect.cpp
+LowerToMidLevelIR.cpp
+LowerEnsembleToMemrefs.cpp
+LowerSparseEnsembleToMemrefs.cpp
+ConvertNodeTypeToIndexType.cpp
+LowerToLLVM.cpp
+ExecutionHelpers.cpp
+LowerDebugHelpers.cpp
+UniformTilingTransformation.cpp
+WalkDecisionTreeLoweringPass.cpp)
