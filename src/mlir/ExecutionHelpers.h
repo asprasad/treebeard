@@ -49,6 +49,8 @@ struct Memref {
 
 using LengthMemrefType = Memref<int64_t, 1>;
 using OffsetMemrefType = Memref<int64_t, 1>;
+using ClassMemrefType = Memref<int8_t, 1>;
+
 // using ResultMemrefType = Memref<double, 1>;
 
 class InferenceRunnerBase {
@@ -79,6 +81,7 @@ public:
   int32_t InitializeModelArray();
   int32_t InitializeLUT();
   int32_t InitializeLeafArrays();
+  void InitializeClassInformation();
 
   void PrintLengthsArray();
   void PrintOffsetsArray();

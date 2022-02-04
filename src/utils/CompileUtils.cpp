@@ -117,7 +117,7 @@ mlir::ModuleOp SpecializeReturnType(mlir::MLIRContext& context, const std::strin
                                     int32_t nodeIndexTypeWidth, int32_t inputElementTypeWidth, int32_t batchSize, int32_t tileSize,
                                     int32_t tileShapeBitWidth, int32_t childIndexBitWidth) {
   if (returnTypeWidth == 32) {
-    return SpecializeFeatureIndexType<ThresholdType, float>(context, modelJsonPath, featureIndexTypeWidth, 
+    return SpecializeFeatureIndexType<ThresholdType, int8_t>(context, modelJsonPath, featureIndexTypeWidth, 
                                                             nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
   }
   else if (returnTypeWidth == 64) {

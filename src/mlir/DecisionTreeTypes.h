@@ -184,53 +184,118 @@ struct TreeTypeKey {
     Type tileShapeType;
     bool sparseRepresentation;
     Type childIndexType;
+    Type classIdType;
     bool operator==(const TreeTypeKey& that) const
     {
-        return this->resultType==that.resultType && this->tileSize==that.tileSize &&
-               this->thresholdType==that.thresholdType && this->featureIndexType==that.featureIndexType &&
-               this->tileShapeType==that.tileShapeType && this->sparseRepresentation==that.sparseRepresentation &&
-               (this->sparseRepresentation ? this->childIndexType==that.childIndexType : true);
+        return this->resultType==that.resultType
+                && this->tileSize==that.tileSize
+                && this->thresholdType==that.thresholdType
+                && this->featureIndexType==that.featureIndexType
+                && this->tileShapeType==that.tileShapeType
+                && this->sparseRepresentation==that.sparseRepresentation
+                && (this->sparseRepresentation ? this->childIndexType==that.childIndexType : true)
+                && (this->childIndexType == that.childIndexType);
     }
 };
 
 struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
     TreeTypeStorage(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType, 
-                    Type tileShapeType, bool sparseRep, Type childIndexType)
-        : m_resultType(resultType), m_tileSize(tileSize), m_thresholdType(thresholdType), 
-          m_featureIndexType(featureIndexType), m_tileShapeType(tileShapeType), m_sparseRepresentation(sparseRep),
-          m_childIndexType(childIndexType) {}
+                    Type tileShapeType, bool sparseRep, Type childIndexType, Type classIdType)
+        :
+        m_resultType(resultType),
+        m_tileSize(tileSize),
+        m_thresholdType(thresholdType),
+        m_featureIndexType(featureIndexType),
+        m_tileShapeType(tileShapeType),
+        m_sparseRepresentation(sparseRep),
+        m_childIndexType(childIndexType),
+        m_classIdType(classIdType) {}
 
     using KeyTy = TreeTypeKey;
 
     bool operator==(const KeyTy &key) const {
-        KeyTy myKey{ m_resultType, m_tileSize, m_thresholdType, m_featureIndexType, m_tileShapeType, m_sparseRepresentation, m_childIndexType };
+        KeyTy myKey
+        { 
+            m_resultType,
+            m_tileSize,
+            m_thresholdType,
+            m_featureIndexType,
+            m_tileShapeType,
+            m_sparseRepresentation,
+            m_childIndexType,
+            m_classIdType
+        };
         return key == myKey;
     }
 
     static llvm::hash_code hashKey(const KeyTy &key) {
         std::string tileSizeStr = std::to_string(key.tileSize);
-        return llvm::hash_combine(key.resultType, tileSizeStr, key.thresholdType, key.featureIndexType, 
-                                  key.tileShapeType, key.sparseRepresentation, key.childIndexType);
+        return llvm::hash_combine(
+            key.resultType,
+            tileSizeStr,
+            key.thresholdType,
+            key.featureIndexType,
+            key.tileShapeType,
+            key.sparseRepresentation,
+            key.childIndexType,
+            key.classIdType);
     }
 
     static KeyTy getKey(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType) {
         auto context = resultType.getContext();
-        return KeyTy{ resultType, tileSize, thresholdType, featureIndexType, IntegerType::get(context, 32), false, IntegerType::get(context, 32) };
+        return KeyTy 
+        { 
+            resultType, 
+            tileSize, 
+            thresholdType, 
+            featureIndexType, 
+            IntegerType::get(context, 32),
+            false, 
+            IntegerType::get(context, 32),
+            IntegerType::get(context, 8)
+        };
     }
 
     static KeyTy getKey(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType, Type tileShapeType) {
         auto context = resultType.getContext();
-        return KeyTy{ resultType, tileSize, thresholdType, featureIndexType, tileShapeType, false, IntegerType::get(context, 32) };
+        return KeyTy
+        {
+            resultType,
+            tileSize, 
+            thresholdType, 
+            featureIndexType, 
+            tileShapeType, 
+            false, 
+            IntegerType::get(context, 32),
+            IntegerType::get(context, 8)
+        };
     }
 
     static KeyTy getKey(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType, Type tileShapeType, bool sparseRep, Type childIndexType) {
-        return KeyTy{ resultType, tileSize, thresholdType, featureIndexType, tileShapeType, sparseRep, childIndexType };
+        return KeyTy
+        {
+            resultType, 
+            tileSize, 
+            thresholdType, 
+            featureIndexType, 
+            tileShapeType, 
+            sparseRep, 
+            childIndexType,
+            IntegerType::get(resultType.getContext(), 8)
+        };
     }
 
     static TreeTypeStorage *construct(TypeStorageAllocator &allocator,
                                       const KeyTy &key) {
-        return new (allocator.allocate<TreeTypeStorage>()) TreeTypeStorage(key.resultType, key.tileSize, key.thresholdType, 
-                                                                           key.featureIndexType, key.tileShapeType, key.sparseRepresentation, key.childIndexType);
+        return new (allocator.allocate<TreeTypeStorage>()) TreeTypeStorage(
+            key.resultType,
+            key.tileSize,
+            key.thresholdType,
+            key.featureIndexType,
+            key.tileShapeType,
+            key.sparseRepresentation,
+            key.childIndexType,
+            key.classIdType);
     }
 
     Type m_resultType;
@@ -240,6 +305,7 @@ struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
     Type m_tileShapeType;
     bool m_sparseRepresentation;
     Type m_childIndexType;
+    Type m_classIdType;
 public:
     void print(mlir::DialectAsmPrinter &printer) override;
 };
@@ -271,6 +337,7 @@ public:
     mlir::Type getTileShapeType() const { return getImpl()->m_tileShapeType; }
     bool isSparseRepresentation() const { return getImpl()->m_sparseRepresentation; }
     mlir::Type getChildIndexType() const { return getImpl()->m_childIndexType; }
+    mlir::Type getClassIdType() const { return getImpl()-> m_classIdType; }
 
     void print(mlir::DialectAsmPrinter &printer) { getImpl()->print(printer); }
 };

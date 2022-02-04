@@ -199,6 +199,7 @@ public:
 
     void SetNumClasses(int32_t numClasses) { m_numClasses = numClasses; }
     int32_t GetNumClasses() { return m_numClasses; }
+    bool IsMultiClassClassifier() { return m_numClasses > 0; }
 private:
     std::vector<Feature> m_features;
     std::vector<DecisionTreeType> m_trees;

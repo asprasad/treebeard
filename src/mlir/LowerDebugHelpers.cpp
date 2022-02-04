@@ -334,7 +334,7 @@ namespace decisionforest
 {
 
 void populateDebugOpLoweringPatterns(RewritePatternSet& patterns, LLVMTypeConverter& typeConverter) {
-  if (InsertDebugHelpers)
+  if (PrintVectors)
     patterns.add<PrintTreePredictionOpLowering,
                  PrintTreeNodeOpLowering,
                  PrintTreeToDOTFileOpLowering,

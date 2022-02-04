@@ -183,7 +183,8 @@ public:
         auto forestAttribute = mlir::decisionforest::DecisionForestAttribute::get(forestType, *m_forest);
 
         auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(
-            m_builder.getUnknownLoc(),GetFunctionResultType(),
+            m_builder.getUnknownLoc(),
+            GetFunctionResultType(),
             forestAttribute,
             subviewOfArg,
             entryBlock.getArguments()[1]);

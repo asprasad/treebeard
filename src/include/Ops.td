@@ -92,8 +92,11 @@ class DecisionForest_Op<string mnemonic, list<OpTrait> traits = []> :
 // TODO Need to parameterize 
 // * The number of return values (may have multiple return probablities, class ID etc)
 def InputDataType : AnyTypeOf<[F16MemRef, F32MemRef, F64MemRef]>;
-def ReturnType : AnyTypeOf<[F16, F32, F64, F16Tensor, F32Tensor, F64Tensor, F16MemRef, F32MemRef, F64MemRef]>;
+def ReturnType : AnyTypeOf<[I8, F16, F32, F64, F16Tensor, F32Tensor, F64Tensor, I8MemRef, F16MemRef, F32MemRef, F64MemRef]>;
 def LeafNodeValueType : AnyTypeOf<[F16, F32, F64]>;
+def ClassIdValueType : AnyTypeOf<[I8, I16]>;
+def TreeClassInfoMemref : AnyTypeOf<[I8MemRef, I16MemRef]>;
+def SoftMaxInputType : AnyTypeOf<[F16MemRef, F32MemRef, F64MemRef]>;
 
 def PredictForestOp : DecisionForest_Op<"predict_ensemble"> {
     let summary = "Predict forest operation";
@@ -171,6 +174,22 @@ def GetTreeFromEnsembleOp : DecisionForest_Op<"getTree", [NoSideEffect]> {
   let results = (outs TreeType);
 }
 
+def GetTreeClassFromEnsembleOp : DecisionForest_Op<"getTreeClass", [NoSideEffect]> {
+  let summary = "Get tree class from ensemble.";
+  let description = "Index the forest and get the class Id of the tree at that index. Takes two arguments -- an ensemble and an integer and returns a tree value.";
+  let arguments = (ins TreeEnsembleType:$forest);
+
+  let results = (outs TreeClassInfoMemref);
+}
+
+def GetTreeClassIdOp : DecisionForest_Op<"getTreeClassId", [NoSideEffect]> {
+  let summary = "Get tree class from ensemble.";
+  let description = "Index the forest and get the class Id of the tree at that index. Takes two arguments -- an ensemble and an integer and returns a tree value.";
+  let arguments = (ins TreeClassInfoMemref:$treeClassInfo, Index:$treeIndex);
+
+  let results = (outs ClassIdValueType);
+}
+
 def GetRootOp : DecisionForest_Op<"getRoot", [NoSideEffect]> {
   let summary = "Get the root of a tree from the forest.";
   let description = "Get the root of the tree passed as an argument. Takes one argument -- a tree and returns a Node value.";
@@ -194,6 +213,14 @@ def GetLeafValueOp : DecisionForest_Op<"getLeafValue", [NoSideEffect]> {
   let arguments = (ins TreeType:$tree, NodeType:$node);
 
   let results = (outs LeafNodeValueType);
+}
+
+def GetSoftMaxValueOp : DecisionForest_Op<"getSoftMaxValue", [NoSideEffect]> {
+  let summary = "Gets index of the value in the input memref that has the largest value for softmax function.";
+  let description = "Gets the index of the value with the highest value of softmax function.";
+  let arguments = (ins SoftMaxInputType:$inputMemref, ClassIdValueType:$count);
+
+  let results = (outs ClassIdValueType);
 }
 
 def TraverseTreeTileOp : DecisionForest_Op<"traverseTreeTile", [NoSideEffect]> {

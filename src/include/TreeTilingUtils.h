@@ -66,6 +66,9 @@ class ForestJSONReader
     std::list<SingleTileSizeEntry> m_tileSizeEntries;
     json m_json;
     int32_t m_numberOfTrees;
+    int8_t m_numberOfClasses;
+    std::vector<int8_t> m_classIds;
+
     void ParseJSONFile();
     std::list<SingleTileSizeEntry>::iterator FindEntry(int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth);
     static ForestJSONReader m_instance;
@@ -91,7 +94,7 @@ public:
     //===----------------------------------------===/
     void AddSingleTree(int32_t treeIndex, int32_t numTiles, std::vector<ThresholdType>& serializedThresholds, 
                        std::vector<FeatureIndexType>& serializedFetureIndices, std::vector<int32_t>& tileShapeIDs,
-                       const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth);
+                       const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth, const int8_t classId);
     void AddSingleSparseTree(int32_t treeIndex, int32_t numTiles, std::vector<ThresholdType>& serializedThresholds,
                              std::vector<FeatureIndexType>& serializedFetureIndices, std::vector<int32_t>& tileShapeIDs, 
                              std::vector<int32_t>& childIndices, std::vector<ThresholdType>& leaves,
@@ -104,6 +107,7 @@ public:
     void InitializeOffsetBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth);
     void InitializeLengthBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth);
     void InitializeLookUpTable(void* bufPtr, int32_t tileSize, int32_t entryBitWidth);
+    void InitializeClassInformation(void *classInfoBuf);
     
     void InitializeLeaves(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth);
     void InitializeLeavesOffsetBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth);
@@ -123,6 +127,8 @@ public:
 
     int32_t GetChildIndexBitWidth() { return m_childIndexBitWidth; }
     void SetChildIndexBitWidth(int32_t val) { m_childIndexBitWidth=val; }
+
+    void SetNumberOfClasses(int8_t nclasses) { m_numberOfClasses = nclasses; }
 
     static ForestJSONReader& GetInstance() {
         return m_instance;

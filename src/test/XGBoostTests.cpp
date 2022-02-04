@@ -39,17 +39,18 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
   TreeBeard::XGBoostJSONParser<FloatType, ResultType, FeatureIndexType, int32_t, FloatType> xgBoostParser(args.context, modelJsonPath, batchSize);
   xgBoostParser.Parse();
   xgBoostParser.SetChildIndexBitWidth(childIndexBitWidth);
-  // auto module = xgBoostParser.GetEvaluationFunction();
+  auto module = xgBoostParser.GetEvaluationFunction();
   // module->dump();
-  // mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
-  // mlir::decisionforest::DoUniformTiling(args.context, module, tileSize, tileShapeBitWidth);
-  // mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module);
-  // mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
-  // // module->dump();
-  // mlir::decisionforest::LowerToLLVM(args.context, module);
-  // // module->dump();
+  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  // module->dump();
+  mlir::decisionforest::DoUniformTiling(args.context, module, tileSize, tileShapeBitWidth);
+  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module);
+  mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  module->dump();
+  mlir::decisionforest::LowerToLLVM(args.context, module);
+  // module->dump();
   // // mlir::decisionforest::dumpLLVMIR(module);
-  // decisionforest::InferenceRunner inferenceRunner(module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
+  decisionforest::InferenceRunner inferenceRunner(module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
   
   // inferenceRunner.PrintLengthsArray();
   // inferenceRunner.PrintOffsetsArray();
@@ -72,17 +73,18 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
   auto currentPredictionsIter = xgBoostPredictions.begin();
   for(auto& batch : inputData) {
     assert (batch.size() % batchSize == 0);
-    std::vector<FloatType> result(batchSize, -1);
-    // inferenceRunner.RunInference<FloatType, FloatType>(batch.data(), result.data(), rowSize, batchSize);
+    std::vector<ResultType> result(batchSize, -1);
+    inferenceRunner.RunInference<FloatType, ResultType>(batch.data(), result.data(), rowSize, batchSize);
     for(int64_t rowIdx=0 ; rowIdx<batchSize ; ++rowIdx) {
       // This needs to be a vector of doubles because the type is hardcoded for Forest::Predict
       std::vector<double> row(batch.begin() + rowIdx*rowSize, batch.begin() + (rowIdx+1)*rowSize);
       ResultType expectedResult = (*currentPredictionsIter)[rowIdx];
       ResultType forestPrediction = xgBoostParser.GetForest()->Predict_Float(row);
 
+      std::cout << forestPrediction << "\t" << result[rowIdx] << "\t" << expectedResult << std::endl;
+
       Test_ASSERT(FPEqual<ResultType>(forestPrediction, expectedResult));
-      // Test_ASSERT(FPEqual<ResultType>(result[rowIdx], expectedResult));
-      // std::cout << forestPrediction << "\t" << result[rowIdx] << "\t" << expectedResult << std::endl;
+      Test_ASSERT(FPEqual<ResultType>(result[rowIdx], expectedResult));
     }
     ++currentPredictionsIter;
   }
@@ -759,7 +761,7 @@ bool Test_MultiClass_Int32ReturnType(TestArgs_t &args, const std::string& modelJ
                                      bool skipInt8 = false, int32_t tileShapeBitWidth=32, int32_t childIndexBitWidth=1, std::string csvPath="") {
   if (csvPath == "")
     csvPath = modelJSONPath + ".csv";
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int32_t, int32_t>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int32_t, int8_t>(args, 8, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
   return true;
 }
 

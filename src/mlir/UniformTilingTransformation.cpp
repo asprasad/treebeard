@@ -72,14 +72,16 @@ struct TileEnsembleConstants : public RewritePattern {
     auto uses = op->getResult(0).getUses();
     for (auto& use : uses) {
       Operation *useOp = use.getOwner();
-      auto getTreeOp = AssertOpIsOfType<decisionforest::GetTreeFromEnsembleOp>(useOp);
-      auto oldTreeType = getTreeOp.getResult().getType().cast<decisionforest::TreeType>();
-      auto newTreeType = decisionforest::TreeType::get(oldTreeType.getResultType(), m_tileSize, oldTreeType.getThresholdType(), oldTreeType.getFeatureIndexType());
-      
-      mlir::OpBuilder::InsertionGuard insertionGuard(rewriter);
-      rewriter.setInsertionPointAfter(useOp);
-      auto newGetTreeOp = rewriter.create<decisionforest::GetTreeFromEnsembleOp>(location, newTreeType, static_cast<Value>(newConstant), getTreeOp.treeIndex());
-      rewriter.replaceOp(useOp, static_cast<Value>(newGetTreeOp));
+      if (auto getTreeOp = llvm::dyn_cast<decisionforest::GetTreeFromEnsembleOp>(useOp))
+      {
+        auto oldTreeType = getTreeOp.getResult().getType().cast<decisionforest::TreeType>();
+        auto newTreeType = decisionforest::TreeType::get(oldTreeType.getResultType(), m_tileSize, oldTreeType.getThresholdType(), oldTreeType.getFeatureIndexType());
+
+        mlir::OpBuilder::InsertionGuard insertionGuard(rewriter);
+        rewriter.setInsertionPointAfter(useOp);
+        auto newGetTreeOp = rewriter.create<decisionforest::GetTreeFromEnsembleOp>(location, newTreeType, static_cast<Value>(newConstant), getTreeOp.treeIndex());
+        rewriter.replaceOp(useOp, static_cast<Value>(newGetTreeOp));
+      }
     }
     rewriter.replaceOp(op, static_cast<Value>(newConstant));
     return mlir::success();

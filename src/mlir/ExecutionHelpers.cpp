@@ -33,6 +33,7 @@ void InferenceRunnerBase::Init() {
   InitializeLengthsArray();
   InitializeOffsetsArray();
   InitializeModelArray();
+  InitializeClassInformation();
   assert(m_tileSize > 0);
   if (m_tileSize != 1) {
     InitializeLUT();
@@ -248,6 +249,16 @@ int32_t InferenceRunnerBase::InitializeLeafArrays() {
   return 0;
 }
 
+void InferenceRunnerBase::InitializeClassInformation() {
+  // TODO The ForestJSONReader class needs to provide an interface to iterate over tile sizes and bit widths
+  // We need to construct the name of the getter function based on those. 
+  typedef ClassMemrefType (*GetClassMemref_t)();
+  auto getClassInfoPtr = reinterpret_cast<GetClassMemref_t>(GetFunctionAddress("Get_treeClassInfo"));
+  ClassMemrefType treeClassInfo = getClassInfoPtr();
+
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeClassInformation(treeClassInfo.alignedPtr); 
+}
+
 // ===------------------------------------------------------=== //
 // Shared object inference runner 
 // ===------------------------------------------------------=== //
@@ -286,7 +297,7 @@ llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> InferenceRunner::CreateEx
   SmallVector<StringRef, 4> executionEngineLibs;
 
   std::string debugSOPath;
-  if (decisionforest::InsertDebugHelpers) {
+  if (decisionforest::PrintVectors) {
     debugSOPath = GetDebugSOPath();
     // std::cout << "Calculated debug SO path : " << debugSOPath << std::endl;
     executionEngineLibs.push_back(debugSOPath.data());

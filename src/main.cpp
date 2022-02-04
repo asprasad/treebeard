@@ -21,7 +21,8 @@ bool ContainsString(char *arg, const std::string& str) {
 void SetInsertDebugHelpers(int argc, char *argv[]) {
   for (int32_t i=0 ; i<argc ; ++i)
     if (std::string(argv[i]).find(std::string("--debugJIT")) != std::string::npos) {
-      mlir::decisionforest::InsertDebugHelpers = true;
+      // mlir::decisionforest::InsertDebugHelpers = true;
+      mlir::decisionforest::PrintVectors = true;
       return;
     }
 }
