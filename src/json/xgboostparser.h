@@ -17,8 +17,8 @@ class XGBoostJSONParser : public ModelJSONParser<ThresholdType, ReturnType, Feat
     static constexpr double_t INITIAL_VALUE = 0;
 
 public:
-    XGBoostJSONParser(mlir::MLIRContext& context, const std::string& filename, int32_t batchSize)
-        :ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(context, batchSize, INITIAL_VALUE)
+    XGBoostJSONParser(mlir::MLIRContext& context, const std::string& filename, const std::string& modelGlobalsJSONFilePath, int32_t batchSize)
+        :ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(filename, modelGlobalsJSONFilePath, context, batchSize, INITIAL_VALUE)
     {
         std::ifstream fin(filename);
         assert (fin);

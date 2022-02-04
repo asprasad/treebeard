@@ -343,7 +343,9 @@ class FixedTiledTreeIRConstructor : public TreeBeard::ModelJSONParser<ThresholdT
 public:
   FixedTiledTreeIRConstructor(mlir::MLIRContext& context, int32_t batchSize, ForestConstructor_t constructForest,
                               std::vector<decisionforest::TreeTilingDescriptor>& tilingDescriptors, int32_t tileShapeBitWidth)
-    : TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(context, batchSize),
+    : TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(GetGlobalJSONNameForTests(),
+                                TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>::ModelGlobalJSONFilePathFromJSONFilePath(GetGlobalJSONNameForTests()),
+                                context, batchSize),
       m_constructForest(constructForest), m_tilingDescriptors(tilingDescriptors), m_tileShapeBitWidth(tileShapeBitWidth)
   {
     // Only for tiled scenarios
@@ -456,7 +458,7 @@ bool Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(TestArgs_t& args, Fore
   decisionforest::LowerToLLVM(args.context, module);
   // module->dump();
   // decisionforest::dumpLLVMIR(module);
-  decisionforest::InferenceRunner inferenceRunner(module, tileSize, sizeof(ThresholdType)*8, sizeof(FeatureIndexType)*8);
+  decisionforest::InferenceRunner inferenceRunner(irGenerator.GetModelGlobalsJSONFilePath(), module, tileSize, sizeof(ThresholdType)*8, sizeof(FeatureIndexType)*8);
   
   auto inputData = GetBatchSize1Data();
   for(auto& row : inputData) {
@@ -710,7 +712,7 @@ bool Test_ModelInitialization(TestArgs_t& args, ForestConstructor_t forestConstr
   // decisionforest::dumpLLVMIR(module);
   int32_t thresholdSize = sizeof(ThresholdType)*8;
   int32_t featureIndexSize = sizeof(FeatureIndexType)*8;
-  InferenceRunnerForTest inferenceRunner(module, tileSize, thresholdSize, featureIndexSize);
+  InferenceRunnerForTest inferenceRunner(irGenerator.GetModelGlobalsJSONFilePath(), module, tileSize, thresholdSize, featureIndexSize);
   
   std::vector<ThresholdType> thresholds;
   std::vector<FeatureIndexType> featureIndices;
@@ -1129,7 +1131,7 @@ bool Test_UniformTiling_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   decisionforest::LowerToLLVM(args.context, module);
   // module->dump();
   // decisionforest::dumpLLVMIR(module);
-  decisionforest::InferenceRunner inferenceRunner(module, tileSize, sizeof(ThresholdType)*8, sizeof(FeatureIndexType)*8);
+  decisionforest::InferenceRunner inferenceRunner(irGenerator.GetModelGlobalsJSONFilePath(), module, tileSize, sizeof(ThresholdType)*8, sizeof(FeatureIndexType)*8);
   
   auto inputData = GetBatchSize1Data();
   for(auto& row : inputData) {

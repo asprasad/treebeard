@@ -60,7 +60,17 @@ class ForestJSONReader
         std::list<std::vector<int32_t>> serializedTileShapeIDs;
         std::list<std::vector<int32_t>> serializedChildIndices;
         std::list<std::vector<ThresholdType>> serializedLeaves;
+
+        bool operator==(const SingleTileSizeEntry& that) const {
+            return tileSize==that.tileSize && thresholdBitWidth==that.thresholdBitWidth && indexBitWidth==that.indexBitWidth &&
+                   treeIndices==that.treeIndices && numberOfTiles==that.numberOfTiles && 
+                   serializedThresholds==that.serializedThresholds && serializedFetureIndices == that.serializedFetureIndices &&
+                   serializedTileShapeIDs==that.serializedTileShapeIDs && serializedChildIndices==that.serializedChildIndices &&
+                   serializedLeaves==that.serializedLeaves;
+        };
     };
+    int32_t m_rowSize;
+    int32_t m_batchSize;
     int32_t m_tileShapeBitWidth;
     int32_t m_childIndexBitWidth;
     std::list<SingleTileSizeEntry> m_tileSizeEntries;
@@ -69,10 +79,14 @@ class ForestJSONReader
     int8_t m_numberOfClasses;
     std::vector<int8_t> m_classIds;
 
-    void ParseJSONFile();
+    std::string m_jsonFilePath;
+
     std::list<SingleTileSizeEntry>::iterator FindEntry(int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth);
     static ForestJSONReader m_instance;
     ForestJSONReader() { }
+    
+    void WriteSingleTileSizeEntryToJSON(json& tileSizeEntryJSON, ForestJSONReader::SingleTileSizeEntry& tileSizeEntry);
+    void ParseSingleTileSizeEntry(json& tileSizeEntryJSON, ForestJSONReader::SingleTileSizeEntry& tileSizeEntry);
 
     void AddSingleTileSizeEntry(std::list<int32_t>& treeIndices, std::list<int32_t>& numTilesList, std::list<std::vector<ThresholdType>>& serializedThresholds, 
                             std::list<std::vector<FeatureIndexType>>& serializedFetureIndices, std::list<std::vector<int32_t>>& serializedTileShapeIDs,
@@ -83,11 +97,6 @@ class ForestJSONReader
     void InitializeLeavesImpl(LeafType *bufPtr, std::list<ForestJSONReader::SingleTileSizeEntry>::iterator listIter);
 
 public:
-    ForestJSONReader(const std::string& filename) {
-        std::ifstream fin;
-        fin >> m_json;
-        ParseJSONFile();
-    }
 
     //===----------------------------------------===/
     // Persist routines
@@ -99,6 +108,13 @@ public:
                              std::vector<FeatureIndexType>& serializedFetureIndices, std::vector<int32_t>& tileShapeIDs, 
                              std::vector<int32_t>& childIndices, std::vector<ThresholdType>& leaves,
                              const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth);
+
+    //===----------------------------------------===/
+    // JSON routines
+    //===----------------------------------------===/
+    void SetFilePath(const std::string& jsonFilePath) { m_jsonFilePath = jsonFilePath; }
+    void ParseJSONFile();
+    void WriteJSONFile();
 
     //===----------------------------------------===/
     // Initialization routines
@@ -130,6 +146,12 @@ public:
 
     void SetNumberOfClasses(int8_t nclasses) { m_numberOfClasses = nclasses; }
 
+    void SetRowSize(int32_t val) { m_rowSize = val; }
+    int32_t GetRowSize() { return m_rowSize; }
+
+    void SetBatchSize(int32_t val) { m_batchSize = val; }
+    int32_t GetBatchSize() { return m_batchSize; }
+    
     static ForestJSONReader& GetInstance() {
         return m_instance;
     }

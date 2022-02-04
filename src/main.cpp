@@ -64,7 +64,7 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
     }
   if (!dumpLLVMToFile)
     return false;
-  std::string jsonFile, llvmIRFile;
+  std::string jsonFile, llvmIRFile, modelGlobalsJSONFile;
   int32_t thresholdTypeWidth=32, returnTypeWidth=32, featureIndexTypeWidth=16, tileShapeBitWidth=16, childIndexBitWidth=16;
   int32_t nodeIndexTypeWidth=32, inputElementTypeWidth=32, batchSize=4, tileSize=1;
   for (int32_t i=0 ; i<argc ; ) {
@@ -78,6 +78,12 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
       assert ((i+1) < argc);
       assert (jsonFile == "");
       jsonFile = argv[i+1];
+      i += 2;
+    }
+    else if (ContainsString(argv[i], "-globalValuesJSON")) {
+      assert ((i+1) < argc);
+      assert (modelGlobalsJSONFile == "");
+      modelGlobalsJSONFile = argv[i+1];
       i += 2;
     }
     else if (ContainsString(argv[i], "--sparse")) {
@@ -115,8 +121,11 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
       ++i;
   }
   assert (jsonFile != "" && llvmIRFile != "");
-  TreeBeard::ConvertXGBoostJSONToLLVMIR(jsonFile, llvmIRFile, thresholdTypeWidth, returnTypeWidth, featureIndexTypeWidth,
-                                        nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
+  // TreeBeard::test::ScheduleManipulationFunctionWrapper scheduleManipulator(TreeBeard::test::OneTreeAtATimeSchedule);
+  // TreeBeard::test::ScheduleManipulationFunctionWrapper scheduleManipulator(TreeBeard::test::TileTreeDimensionSchedule<10>);
+  TreeBeard::CompilerOptions options(thresholdTypeWidth, returnTypeWidth, featureIndexTypeWidth,
+                                     nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, nullptr);
+  TreeBeard::ConvertXGBoostJSONToLLVMIR(jsonFile, llvmIRFile, modelGlobalsJSONFile, options);
   return true;
 }
 
@@ -131,7 +140,7 @@ bool RunInferenceFromSO(int argc, char *argv[]) {
     }
   if (!runInferenceFromSO)
     return false;
-  std::string jsonFile, soPath, inputCSVFile;
+  std::string jsonFile, soPath, inputCSVFile, modelGlobalsJSONFile;
   int32_t thresholdTypeWidth=32, returnTypeWidth=32, featureIndexTypeWidth=16, tileShapeBitWidth=16, childIndexBitWidth=16;
   int32_t nodeIndexTypeWidth=32, inputElementTypeWidth=32, batchSize=4, tileSize=1;
   for (int32_t i=0 ; i<argc ; ) {
@@ -145,6 +154,12 @@ bool RunInferenceFromSO(int argc, char *argv[]) {
       assert ((i+1) < argc);
       assert (jsonFile == "");
       jsonFile = argv[i+1];
+      i += 2;
+    }
+    else if (ContainsString(argv[i], "-globalValuesJSON")) {
+      assert ((i+1) < argc);
+      assert (modelGlobalsJSONFile == "");
+      modelGlobalsJSONFile = argv[i+1];
       i += 2;
     }
     else if (ContainsString(argv[i], "--sparse")) {
@@ -188,8 +203,9 @@ bool RunInferenceFromSO(int argc, char *argv[]) {
       ++i;
   }
   assert (jsonFile != "" && soPath != "");
-  TreeBeard::RunInferenceUsingSO(jsonFile, soPath, inputCSVFile, thresholdTypeWidth, returnTypeWidth, featureIndexTypeWidth, 
-                                 nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
+  TreeBeard::CompilerOptions options(thresholdTypeWidth, returnTypeWidth, featureIndexTypeWidth,
+                                     nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, nullptr);
+  TreeBeard::RunInferenceUsingSO(jsonFile, soPath, modelGlobalsJSONFile, inputCSVFile, options);
   return true;
 }
 

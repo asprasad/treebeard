@@ -51,5 +51,21 @@ std::string GetTreeBeardRepoPath() {
   return repoPath;
 }
 
+std::string GetTempFilePath() {
+  char filename[] = "treebeard_temp_XXXXXX";
+  auto fd = mkstemp(filename);
+  close(fd);
+  return std::string(filename);
+}
+
+std::string GetGlobalJSONNameForTests() {
+  char exePath[PATH_MAX];
+  memset(exePath, 0, sizeof(exePath)); 
+  if (readlink("/proc/self/exe", exePath, PATH_MAX) == -1)
+    return std::string("");
+  char *execDir = dirname(exePath);
+  return std::string(execDir) + "/treebeard_test.json";
+}
+
 } // test 
 } // TreeBeard

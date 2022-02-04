@@ -81,7 +81,38 @@ Performance Tuning for Tiled Code
             - Which trees need dedicated code and which trees share code
         - Which trees to pipeline
         - Which trees to SIMDize
-        
+Scheduling Language
+    - Schedule class
+        - [Done] Lineage tree
+        - [Done] Nesting tree
+        - [Done] Reorder
+        - [Done] Tile
+        - Split -- duplication of nested loops causes problems
+        - [Done] Flags for optimizations on the IndexVariable class
+            - Unroll, Simdize, Pipeline, Parallelize
+            - Expand, PeelWalk, Prefetch
+    - Schedule attribute
+        - [Done] MLIR attribute classes for schedule
+        - [Done] Make them part of the Predict forest op
+        - [Done] Expose APIs from JSONParser to construct and modify schedule object
+    - Lowering using the schedule
+        - [Done] Tiling
+        - [Done] Unrolling
+        - [Done] Reordering
+        - [Done] Splitting
+        - Pipelining
+        - Simdize
+        - Unroll walk
+        - Parallel
+        - Expand
+
+XGBoost comparison
+    - [Done] Write JSON file from ForestJSONReader
+    - [Done] Read the JSON file from the execution helper
+    - [Done] Change SO APIs to take value JSON filename and use that for execution
+    - Build a separate SO for execution part
+    - Python wrappers
+
 Pipeline container
 SIMD container
 

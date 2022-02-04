@@ -92,11 +92,6 @@ struct GetTreeLoweringInfo {
 // Maps a GetTree operation to a memref that represents the tree once the ensemble constant has been replaced
 std::map<Operation*, GetTreeLoweringInfo> getTreeOperationMap;
 
-void ClearGlobalMaps() {
-  ensembleConstantToMemrefsMap.clear();
-  getTreeOperationMap.clear();
-}
-
 template<typename T>
 T AssertOpIsOfType(Operation* operation) {
   T typedOp = llvm::dyn_cast<T>(operation);
@@ -877,6 +872,12 @@ namespace mlir
 {
 namespace decisionforest
 {
+
+void ClearSparseGlobalMaps() {
+  ensembleConstantToMemrefsMap.clear();
+  getTreeOperationMap.clear();
+}
+
 void PopulateLowerToSparseRepresentationPatterns(RewritePatternSet& patterns) {
     patterns.add<EnsembleConstantOpLowering,
                 GetTreeOpLowering,

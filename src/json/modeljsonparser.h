@@ -5,7 +5,8 @@
 #include <vector>
 #include "json.hpp"
 #include "DecisionForest.h"
-#include "../mlir/Dialect.h"
+#include "TreeTilingUtils.h"
+#include "Dialect.h"
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -74,8 +75,11 @@ protected:
     using DecisionForestType = mlir::decisionforest::DecisionForest<>; //<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>;
     using DecisionTreeType = typename DecisionForestType::DecisionTreeType;
 
+    std::string m_jsonFilePath;
+    std::string m_modelGlobalsJSONFilePath;
     DecisionForestType *m_forest;
     DecisionTreeType *m_currentTree;
+    mlir::decisionforest::Schedule *m_schedule;
     mlir::MLIRContext& m_context;
     mlir::ModuleOp m_module;
     mlir::OpBuilder m_builder;
@@ -110,6 +114,8 @@ protected:
         const auto& features = m_forest->GetFeatures();
         mlir::Type elementType = GetMLIRType(InputElementType(), m_builder); //GetMLIRTypeFromString(features.front().type, m_builder);
         int64_t shape[] = { m_batchSize, static_cast<int64_t>(features.size())};
+        // TODO This needs to be moved elsewhere. Seems too obscure a place for this!
+        mlir::decisionforest::ForestJSONReader::GetInstance().SetRowSize(features.size());
         // auto affineMap = mlir::makeStridedLinearLayoutMap(mlir::ArrayRef<int64_t>({ static_cast<int64_t>(features.size()), 1 }), 0, elementType.getContext());
         // return mlir::MemRefType::get(shape, elementType, affineMap);
         return mlir::MemRefType::get(shape, elementType);
@@ -144,18 +150,35 @@ protected:
         return forestType;
     }
 public:
-    ModelJSONParser(mlir::MLIRContext& context, int32_t batchSize, double_t initialValue)
-        : m_forest(new DecisionForestType(initialValue)), m_currentTree(nullptr), m_context(context), m_builder(&context),
-          m_batchSize(batchSize), m_childIndexBitWidth(1)
-    {
-        m_module = mlir::ModuleOp::create(m_builder.getUnknownLoc(), llvm::StringRef("MyModule"));
+    static std::string ModelGlobalJSONFilePathFromJSONFilePath(const std::string& jsonFilePath) {
+        return jsonFilePath + ".treebeard-globals.json";
     }
 
-    ModelJSONParser(mlir::MLIRContext& context, int32_t batchSize)
-        : ModelJSONParser(context, batchSize, 0.0)
+    ModelJSONParser(const std::string& jsonFilePath, const std::string& modelGlobalsJSONFilePath, mlir::MLIRContext& context, 
+                    int32_t batchSize, double_t initialValue)
+        : m_jsonFilePath(jsonFilePath), m_modelGlobalsJSONFilePath(modelGlobalsJSONFilePath), m_forest(new DecisionForestType(initialValue)), 
+          m_currentTree(nullptr), m_schedule(nullptr), m_context(context), m_builder(&context),
+          m_batchSize(batchSize), m_childIndexBitWidth(1) 
+    {
+        m_module = mlir::ModuleOp::create(m_builder.getUnknownLoc(), llvm::StringRef("MyModule"));
+        // m_modelGlobalsJSONFilePath = ModelGlobalJSONFilePathFromJSONFilePath(jsonFilePath);
+        mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_modelGlobalsJSONFilePath);
+        mlir::decisionforest::ForestJSONReader::GetInstance().SetBatchSize(batchSize);
+    }
+
+    ModelJSONParser(const std::string& jsonFilePath, const std::string& modelGlobalsJSONFilePath, mlir::MLIRContext& context, int32_t batchSize)
+        : ModelJSONParser(jsonFilePath, modelGlobalsJSONFilePath, context, batchSize, 0.0)
     {
     }
     
+    virtual ~ModelJSONParser() {
+        delete m_schedule;
+        delete m_forest;
+    }
+
+    mlir::decisionforest::Schedule* GetSchedule() { return m_schedule; }
+    const std::string& GetModelGlobalsJSONFilePath() { return m_modelGlobalsJSONFilePath; }
+
     virtual void Parse() = 0;
 
     // Get the forest pointer
@@ -181,13 +204,17 @@ public:
                                                                 mlir::ArrayRef<mlir::OpFoldResult>({oneIndexAttr, oneIndexAttr}));
         auto forestType = GetEnsembleType();
         auto forestAttribute = mlir::decisionforest::DecisionForestAttribute::get(forestType, *m_forest);
-
+        
+        auto scheduleType = mlir::decisionforest::ScheduleType::get(&m_context);
+        m_schedule = new mlir::decisionforest::Schedule(m_batchSize, m_forest->NumTrees());
+        auto scheduleAttribute = mlir::decisionforest::ScheduleAttribute::get(scheduleType, m_schedule);
+        
         auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(
             m_builder.getUnknownLoc(),
             GetFunctionResultType(),
             forestAttribute,
             subviewOfArg,
-            entryBlock.getArguments()[1]);
+            entryBlock.getArguments()[1], scheduleAttribute);
 
         m_builder.create<mlir::ReturnOp>(m_builder.getUnknownLoc(), static_cast<mlir::Value>(predictOp));
         if (failed(mlir::verify(m_module))) {

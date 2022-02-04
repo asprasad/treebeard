@@ -7,6 +7,7 @@
 #include <random>
 #include <functional>
 #include "DecisionForest.h"
+#include "schedule.h"
 
 namespace mlir
 {
@@ -53,7 +54,8 @@ struct TestDescriptor {
 
 template<typename FPType>
 inline bool FPEqual(FPType a, FPType b) {
-  const FPType threshold = 1e-6;
+  const FPType scaledThreshold = std::max(std::fabs(a), std::fabs(b))/1e8;
+  const FPType threshold = std::max(FPType(1e-6), scaledThreshold);
   auto sqDiff = (a-b) * (a-b);
   return sqDiff < threshold;
 }
@@ -104,6 +106,8 @@ public:
 };
 
 std::string GetTreeBeardRepoPath();
+std::string GetTempFilePath();
+std::string GetGlobalJSONNameForTests();
 
 mlir::decisionforest::DecisionForest<> GenerateRandomDecisionForest(int32_t numTrees, int32_t numFeatures, double thresholdMin,
                                                                     double thresholdMax, int32_t maxDepth);
@@ -114,6 +118,44 @@ void GenerateRandomModelJSONs(const std::string& dirname, int32_t numberOfModels
 void RunTests();
 void RunXGBoostBenchmarks();
 
+typedef void (*ScheduleManipulator_t)(mlir::decisionforest::Schedule* schedule);
+void OneTreeAtATimeSchedule(mlir::decisionforest::Schedule* schedule);
+
+template<int32_t BatchTileSize, int32_t TreeTileSize>
+void TiledSchedule(mlir::decisionforest::Schedule* schedule) {
+  auto& batchIndexVar = schedule->GetBatchIndex();
+  auto& treeIndexVar = schedule->GetTreeIndex();
+  auto& b0 = schedule->NewIndexVariable("b0");
+  auto& b1 = schedule->NewIndexVariable("b1");
+  auto& t0 = schedule->NewIndexVariable("t0");
+  auto& t1 = schedule->NewIndexVariable("t1");
+  
+  schedule->Tile(batchIndexVar, b0, b1, BatchTileSize);
+  schedule->Tile(treeIndexVar, t0, t1, TreeTileSize);
+
+  schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &t0, &b0, &t1, &b1 });
+}
+
+template<int32_t TreeTileSize>
+void TileTreeDimensionSchedule(mlir::decisionforest::Schedule* schedule) {
+  auto& batchIndexVar = schedule->GetBatchIndex();
+  auto& treeIndexVar = schedule->GetTreeIndex();
+  auto& t0 = schedule->NewIndexVariable("t0");
+  auto& t1 = schedule->NewIndexVariable("t1");
+  
+  schedule->Tile(treeIndexVar, t0, t1, TreeTileSize);
+  // t1.Unroll();
+  schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &t0, &batchIndexVar, &t1 });
+}
+
+class ScheduleManipulationFunctionWrapper : public mlir::decisionforest::ScheduleManipulator {
+  ScheduleManipulator_t m_func;
+public:
+  ScheduleManipulationFunctionWrapper(ScheduleManipulator_t func) :m_func(func) { }
+  void Run(mlir::decisionforest::Schedule* schedule) override {
+    m_func(schedule);
+  }
+};
 
 // ===---------------------------------------------=== //
 // Configuration for tests
@@ -121,7 +163,6 @@ void RunXGBoostBenchmarks();
 
 // Defined in XGBoostTests.cpp
 extern bool RunSingleBatchSizeForXGBoostTests;
-
 
 } // test
 } // TreeBeard

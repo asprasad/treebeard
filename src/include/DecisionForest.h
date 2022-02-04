@@ -122,6 +122,7 @@ public:
 
     void SetGroupId(int32_t groupId) { m_groupId = groupId; }
     int32_t GetGroupId() const { return m_groupId; }
+    int32_t NumFeatures();
 private:
     std::vector<Node> m_nodes;
     size_t m_numFeatures;
@@ -349,6 +350,17 @@ void DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::W
 {
     std::ofstream fout(filename);
     WriteToDOTFile(fout);
+}
+
+template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+int32_t DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::NumFeatures()
+{
+    std::set<int32_t> featureSet;
+    for (auto& node : m_nodes) {
+        if (!node.IsLeaf())
+            featureSet.insert(node.featureIndex);
+    }
+    return featureSet.size();
 }
 
 template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>

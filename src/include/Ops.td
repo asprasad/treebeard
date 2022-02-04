@@ -82,6 +82,17 @@ def DecisionForestAttr : Attr<
   let convertFromStorage = "$_self";
 }
 
+def ScheduleAttr : Attr<
+  CPred<"$_self.isa<::mlir::decisionforest::ScheduleAttribute>()">,
+  "Schedule attribute"> {
+
+  let storageType = [{ ::mlir::decisionforest::ScheduleAttribute }];
+  let returnType = [{ ::mlir::decisionforest::ScheduleAttribute }];
+  
+  let constBuilderCall = "::mlir::decisionforest::ScheduleAttribute::get()";
+  let convertFromStorage = "$_self";
+}
+
 //-------   Operations   ----------------------
 
 class DecisionForest_Op<string mnemonic, list<OpTrait> traits = []> : 
@@ -91,6 +102,7 @@ class DecisionForest_Op<string mnemonic, list<OpTrait> traits = []> :
 //------- High level IR Ops ------------------
 // TODO Need to parameterize 
 // * The number of return values (may have multiple return probablities, class ID etc)
+
 def InputDataType : AnyTypeOf<[F16MemRef, F32MemRef, F64MemRef]>;
 def ReturnType : AnyTypeOf<[I8, F16, F32, F64, F16Tensor, F32Tensor, F64Tensor, I8MemRef, F16MemRef, F32MemRef, F64MemRef]>;
 def LeafNodeValueType : AnyTypeOf<[F16, F32, F64]>;
@@ -103,7 +115,7 @@ def PredictForestOp : DecisionForest_Op<"predict_ensemble"> {
     let description = "Represents the actual inference computation on the forest. Takes a tensor operand and produces a result."
                       "Contains the actual forest as an attribute.";
 
-    let arguments = (ins DecisionForestAttr:$ensemble, InputDataType:$data, InputDataType:$result);
+    let arguments = (ins DecisionForestAttr:$ensemble, InputDataType:$data, InputDataType:$result, ScheduleAttr:$schedule);
 
     // Just returns its result argument after filling in the results
     let results = (outs InputDataType);
