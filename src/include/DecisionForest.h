@@ -140,7 +140,7 @@ template <typename ThresholdType=double, typename ReturnType=double, typename Fe
 class DecisionForest
 {
 public:
-    DecisionForest(ReturnType initialValue) : m_initialValue(initialValue), m_predictionTransform(PredictionTransformation::kUnknown) {}
+    DecisionForest(ReturnType initialValue) : m_initialValue(initialValue), m_predictionTransform(PredictionTransformation::kUnknown), m_numClasses(0) {}
     DecisionForest() : DecisionForest(0.0) {}
 
     struct Feature
@@ -431,7 +431,6 @@ ReturnType DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndex
         return -1;
     }
     else {
-        assert(m_predictionTransform == PredictionTransformation::kSoftMax);
         std::vector<ThresholdType> classProbabilities(m_numClasses, 0);
         std::for_each(
             predictions.begin(),

@@ -250,8 +250,9 @@ int32_t InferenceRunnerBase::InitializeLeafArrays() {
 }
 
 void InferenceRunnerBase::InitializeClassInformation() {
-  // TODO The ForestJSONReader class needs to provide an interface to iterate over tile sizes and bit widths
-  // We need to construct the name of the getter function based on those. 
+  
+  if (mlir::decisionforest::ForestJSONReader::GetInstance().GetNumberOfClasses() == 0) return;
+   
   typedef ClassMemrefType (*GetClassMemref_t)();
   auto getClassInfoPtr = reinterpret_cast<GetClassMemref_t>(GetFunctionAddress("Get_treeClassInfo"));
   ClassMemrefType treeClassInfo = getClassInfoPtr();

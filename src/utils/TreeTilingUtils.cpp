@@ -118,6 +118,10 @@ void ForestJSONReader::ParseJSONFile() {
     m_numberOfTrees = m_json["NumberOfTrees"];
     m_childIndexBitWidth = m_json["ChildIndexBitWidth"];
     m_tileShapeBitWidth = m_json["TileShapeBitWidth"];
+    m_numberOfClasses = m_json["NumberOfClasses"];
+    for (auto classId : m_json["TreeClassIDs"]) {
+        m_classIds.push_back(classId);
+    }
     decisionforest::UseSparseTreeRepresentation = m_json["SparseRepresentation"];
 
     std::list<SingleTileSizeEntry> newEntries;
@@ -173,6 +177,13 @@ void ForestJSONReader::WriteJSONFile() {
     m_json["ChildIndexBitWidth"] = m_childIndexBitWidth;
     m_json["TileShapeBitWidth"] = m_tileShapeBitWidth;
     m_json["SparseRepresentation"] = decisionforest::UseSparseTreeRepresentation;
+    m_json["NumberOfClasses"] = m_numberOfClasses;
+
+    // #TODO - Persist the bit width of the class ID type as well.
+    for (auto classId : m_classIds) {
+        m_json["TreeClassIDs"].push_back(classId);
+    }
+
     for (auto& tileSizeEntry : m_tileSizeEntries) {
         json tileSizeJSON;
         WriteSingleTileSizeEntryToJSON(tileSizeJSON, tileSizeEntry);
@@ -250,6 +261,7 @@ void ForestJSONReader::AddSingleSparseTree(int32_t treeIndex, int32_t numTiles, 
 
 void ForestJSONReader::ClearAllData() {
     m_tileSizeEntries.clear();
+    m_classIds.clear();
     // Can't clear the json path here because PersistForest calls Clear!
     // m_jsonFilePath.clear();
     m_tileShapeBitWidth = -1;

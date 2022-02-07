@@ -76,7 +76,7 @@ class ForestJSONReader
     std::list<SingleTileSizeEntry> m_tileSizeEntries;
     json m_json;
     int32_t m_numberOfTrees;
-    int8_t m_numberOfClasses;
+    int32_t m_numberOfClasses;
     std::vector<int8_t> m_classIds;
 
     std::string m_jsonFilePath;
@@ -145,6 +145,7 @@ public:
     void SetChildIndexBitWidth(int32_t val) { m_childIndexBitWidth=val; }
 
     void SetNumberOfClasses(int8_t nclasses) { m_numberOfClasses = nclasses; }
+    int32_t GetNumberOfClasses() const { return m_numberOfClasses; }
 
     void SetRowSize(int32_t val) { m_rowSize = val; }
     int32_t GetRowSize() { return m_rowSize; }

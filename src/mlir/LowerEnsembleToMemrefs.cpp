@@ -195,11 +195,7 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     auto getModelGlobal = rewriter.create<memref::GetGlobalOp>(location, memrefTypes.model, modelMemrefName);
     auto getOffsetGlobal = rewriter.create<memref::GetGlobalOp>(location, memrefTypes.offset, offsetMemrefName);
     auto getLengthGlobal = rewriter.create<memref::GetGlobalOp>(location, memrefTypes.offset, lengthMemrefName);
-    
-    memref::GetGlobalOp classInfoGlobal;
-    if (ensembleConstOp.forest().GetDecisionForest().IsMultiClassClassifier()) {
-      classInfoGlobal = rewriter.create<memref::GetGlobalOp>(location, memrefTypes.classInfo, classInfoMemrefName);
-    }
+    auto classInfoGlobal = rewriter.create<memref::GetGlobalOp>(location, memrefTypes.classInfo, classInfoMemrefName);
 
     auto forestType = ensembleConstOp.getResult().getType().cast<decisionforest::TreeEnsembleType>();
     auto firstTreeType = forestType.getTreeType(0).cast<mlir::decisionforest::TreeType>();
@@ -399,23 +395,19 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
                                       offsetMemrefType, rewriter.getUnitAttr(), false, IntegerAttr());
     AddGlobalMemrefGetter(module, lengthMemrefName, offsetMemrefType, rewriter, location);
 
-    if (forest.IsMultiClassClassifier()) {
-      auto classInfoMemrefType = MemRefType::get({offsetSize}, treeType.getResultType());
-      rewriter.create<memref::GlobalOp>(
-        location,
-        treeInfo,
-        rewriter.getStringAttr("public"),
-        classInfoMemrefType,
-        rewriter.getUnitAttr(),
-        false,
-        IntegerAttr());
-        AddGlobalMemrefGetter(module, treeInfo, classInfoMemrefType, rewriter, location);
+    auto classInfoSize = forest.IsMultiClassClassifier() ? offsetSize : 0;
+    auto classInfoMemrefType = MemRefType::get({classInfoSize}, treeType.getResultType());
+    rewriter.create<memref::GlobalOp>(
+      location,
+      treeInfo,
+      rewriter.getStringAttr("public"),
+      classInfoMemrefType,
+      rewriter.getUnitAttr(),
+      false,
+      IntegerAttr());
+      AddGlobalMemrefGetter(module, treeInfo, classInfoMemrefType, rewriter, location);
 
-        return GlobalMemrefTypes { modelMemrefType, offsetMemrefType, classInfoMemrefType };
-    }
-    else {
-      return GlobalMemrefTypes { modelMemrefType, offsetMemrefType };
-    }
+      return GlobalMemrefTypes { modelMemrefType, offsetMemrefType, classInfoMemrefType };
   }
 };
 
@@ -459,44 +451,6 @@ struct GetTreeOpLowering: public ConversionPattern {
   }
 };
 
-struct GetTreeClassOpLowering: public ConversionPattern {
-  GetTreeClassOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::GetTreeClassFromEnsembleOp::getOperationName(), 1 /*benefit*/, ctx) {}
-
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
-    // Create a subview of the model memref corresponding to this ensemble with the index equal to offsetMemref[treeIndex]
-    mlir::decisionforest::GetTreeClassFromEnsembleOp getTreeClassOp = llvm::dyn_cast<mlir::decisionforest::GetTreeClassFromEnsembleOp>(op);
-    assert(getTreeClassOp);
-    assert(operands.size() == 1);
-    if (!getTreeClassOp)
-        return mlir::failure();
-
-    auto location = op->getLoc();
-
-    Operation* ensembleConstOp = operands[0].getDefiningOp();
-    auto ensembleOp = AssertOpIsOfType<mlir::decisionforest::EnsembleConstantOp>(ensembleConstOp);
-    
-    auto mapIter = ensembleConstantToMemrefsMap.find(ensembleConstOp);
-    assert (mapIter != ensembleConstantToMemrefsMap.end());
-    auto& ensembleInfo = mapIter->second;
-    
-    auto forestType = ensembleOp.getResult().getType().cast<decisionforest::TreeEnsembleType>();
-    auto treeClassInfoMemref = rewriter.create<memref::SubViewOp>(
-      location,
-      ensembleInfo.classInfoType.cast<MemRefType>(),
-      ensembleInfo.classInfoGlobal,
-      ArrayRef<int64_t>({0}),
-      ArrayRef<int64_t>({forestType.getNumberOfTrees()}),
-      ArrayRef<int64_t>({1}));
-
-    getTreeOperationMap[op] = static_cast<Value>(treeClassInfoMemref);
-    
-    rewriter.eraseOp(op);
-
-    return mlir::success();
-  }
-};
-
 Value GetTreeMemrefFromTreeOperand(Value treeValue) {
   auto getTreeOp = treeValue.getDefiningOp();
   AssertOpIsOfType<mlir::decisionforest::GetTreeFromEnsembleOp>(getTreeOp);
@@ -504,15 +458,6 @@ Value GetTreeMemrefFromTreeOperand(Value treeValue) {
   assert(getTreeOperationMapIter != getTreeOperationMap.end());
   auto treeMemref = getTreeOperationMapIter->second;
   return treeMemref;
-}
-
-Value GetTreeClassMemrefFromTreeOperand(Value treeValue) {
-  auto getTreeOp = treeValue.getDefiningOp();
-  AssertOpIsOfType<mlir::decisionforest::GetTreeClassFromEnsembleOp>(getTreeOp);
-  auto getTreeOperationMapIter = getTreeOperationMap.find(getTreeOp);
-  assert(getTreeOperationMapIter != getTreeOperationMap.end());
-  auto treeClassInfoMemref = getTreeOperationMapIter->second;
-  return treeClassInfoMemref;
 }
 
 Value GetLUTFromTreeOperand(Value treeValue) {
@@ -533,7 +478,16 @@ struct GetTreeClassIdOpLowering: public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     // auto getClassIdOp = AssertOpIsOfType<mlir::decisionforest::GetTreeClassIdOp>(op);
-    auto treeClassMemref = GetTreeClassMemrefFromTreeOperand(operands[0]);
+    assert(operands.size() == 2);
+
+    Operation* ensembleConstOp = operands[0].getDefiningOp();
+    AssertOpIsOfType<mlir::decisionforest::EnsembleConstantOp>(ensembleConstOp);
+    
+    auto mapIter = ensembleConstantToMemrefsMap.find(ensembleConstOp);
+    assert (mapIter != ensembleConstantToMemrefsMap.end());
+    auto& ensembleInfo = mapIter->second;
+
+    auto treeClassMemref = ensembleInfo.classInfoGlobal;
     auto treeClassMemrefType = treeClassMemref.getType().cast<mlir::MemRefType>();
 
     Value treeIndex = operands[1];
@@ -885,7 +839,6 @@ struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLowe
 
     target.addIllegalOp<decisionforest::EnsembleConstantOp,
                         decisionforest::GetTreeFromEnsembleOp,
-                        decisionforest::GetTreeClassFromEnsembleOp,
                         decisionforest::GetRootOp,
                         decisionforest::IsLeafOp,
                         decisionforest::TraverseTreeTileOp,
@@ -912,7 +865,6 @@ namespace decisionforest
 void PopulateLowerToArrayRepresentationPatterns(RewritePatternSet& patterns) {
     patterns.add<EnsembleConstantOpLowering,
                 GetTreeOpLowering,
-                GetTreeClassOpLowering,
                 GetTreeClassIdOpLowering,
                 GetRootOpLowering,
                 IsLeafOpLowering,

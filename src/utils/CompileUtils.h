@@ -33,7 +33,7 @@ struct CompilerOptions {
 };
 
 template<typename ThresholdType=double, typename ReturnType=double, typename FeatureIndexType=int32_t, 
-         typename NodeIndexType=int32_t, typename InputElementType=double>
+         typename NodeIndexType=int32_t, typename InputElementType=ThresholdType>
 mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, const std::string& modelJsonPath, 
                                                          const std::string& modelGlobalsJSONPath, const CompilerOptions& options) {
   TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType> xgBoostParser(context, modelJsonPath, modelGlobalsJSONPath, options.batchSize);

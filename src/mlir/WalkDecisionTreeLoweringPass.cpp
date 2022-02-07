@@ -65,7 +65,7 @@ struct WalkDecisionTreeOpLowering: public ConversionPattern {
         rewriter.create<scf::YieldOp>(location, static_cast<Value>(traverseTile));
     }
     rewriter.setInsertionPointAfter(whileLoop);
-    auto treePrediction = rewriter.create<decisionforest::GetLeafValueOp>(location, treeType.getResultType(), tree, whileLoop.results()[0]);
+    auto treePrediction = rewriter.create<decisionforest::GetLeafValueOp>(location, treeType.getThresholdType(), tree, whileLoop.results()[0]);
     rewriter.replaceOp(op, static_cast<Value>(treePrediction));
 
     return mlir::success();

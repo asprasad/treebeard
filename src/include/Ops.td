@@ -186,18 +186,10 @@ def GetTreeFromEnsembleOp : DecisionForest_Op<"getTree", [NoSideEffect]> {
   let results = (outs TreeType);
 }
 
-def GetTreeClassFromEnsembleOp : DecisionForest_Op<"getTreeClass", [NoSideEffect]> {
-  let summary = "Get tree class from ensemble.";
-  let description = "Index the forest and get the class Id of the tree at that index. Takes two arguments -- an ensemble and an integer and returns a tree value.";
-  let arguments = (ins TreeEnsembleType:$forest);
-
-  let results = (outs TreeClassInfoMemref);
-}
-
 def GetTreeClassIdOp : DecisionForest_Op<"getTreeClassId", [NoSideEffect]> {
   let summary = "Get tree class from ensemble.";
   let description = "Index the forest and get the class Id of the tree at that index. Takes two arguments -- an ensemble and an integer and returns a tree value.";
-  let arguments = (ins TreeClassInfoMemref:$treeClassInfo, Index:$treeIndex);
+  let arguments = (ins TreeEnsembleType:$forest, Index:$treeIndex);
 
   let results = (outs ClassIdValueType);
 }

@@ -47,7 +47,7 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
                                      scheduleManipulatorFunc ? &scheduleManipulator : nullptr);
   
   auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
-  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON(args.context, modelJsonPath, modelGlobalsJSONFilePath, options);
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType>(args.context, modelJsonPath, modelGlobalsJSONFilePath, options);
 
   decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
   
@@ -1716,13 +1716,32 @@ bool Test_TileSize8_Year_TestInputs(TestArgs_t &args) {
   return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
 }
 
-bool Test_TileSize1_CovType_TestInputs(TestArgs_t &args) {
+static bool Test_TileSizeVariable_CovType_TestInputs(TestArgs_t &args, int32_t tileSize) {
   auto repoPath = GetTreeBeardRepoPath();
   auto testModelsDir = repoPath + "/xgb_models";
   auto modelJSONPath = testModelsDir + "/covtype_xgb_model_save.json";
   auto csvPath = modelJSONPath + ".csv";
-  int32_t tileSize = 8;
   return Test_MultiClass_Int32ReturnType(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
+}
+
+bool Test_TileSize1_CovType_TestInputs(TestArgs_t &args) {
+  return Test_TileSizeVariable_CovType_TestInputs(args, 1);
+}
+
+bool Test_TileSize2_CovType_TestInputs(TestArgs_t &args) {
+  return Test_TileSizeVariable_CovType_TestInputs(args, 2);
+}
+
+bool Test_TileSize3_CovType_TestInputs(TestArgs_t &args) {
+  return Test_TileSizeVariable_CovType_TestInputs(args, 3);
+}
+
+bool Test_TileSize4_CovType_TestInputs(TestArgs_t &args) {
+  return Test_TileSizeVariable_CovType_TestInputs(args, 4);
+}
+
+bool Test_TileSize8_CovType_TestInputs(TestArgs_t &args) {
+  return Test_TileSizeVariable_CovType_TestInputs(args, 8);
 }
 
 // ===--------------------------------------------------------=== //
