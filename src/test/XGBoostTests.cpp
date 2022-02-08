@@ -47,7 +47,7 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
                                      scheduleManipulatorFunc ? &scheduleManipulator : nullptr);
   
   auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
-  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType>(args.context, modelJsonPath, modelGlobalsJSONFilePath, options);
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType>(args.context, modelJsonPath, modelGlobalsJSONFilePath, options);
 
   decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
   

@@ -119,7 +119,7 @@ void ForestJSONReader::ParseJSONFile() {
     m_childIndexBitWidth = m_json["ChildIndexBitWidth"];
     m_tileShapeBitWidth = m_json["TileShapeBitWidth"];
     m_numberOfClasses = m_json["NumberOfClasses"];
-    for (auto classId : m_json["TreeClassIDs"]) {
+    for (auto& classId : m_json["TreeClassIDs"]) {
         m_classIds.push_back(classId);
     }
     decisionforest::UseSparseTreeRepresentation = m_json["SparseRepresentation"];
