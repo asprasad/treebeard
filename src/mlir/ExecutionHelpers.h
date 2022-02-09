@@ -91,6 +91,10 @@ public:
   int32_t InitializeLUT();
   int32_t InitializeLeafArrays();
 
+  int32_t GetBatchSize() { return m_batchSize; }
+  int32_t GetRowSize() { return m_rowSize; }
+  int32_t GetThresholdWidth() { return m_thresholdSize; }
+
   void PrintLengthsArray();
   void PrintOffsetsArray();
   void PrintModelArray();
