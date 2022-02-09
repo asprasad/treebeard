@@ -72,8 +72,7 @@ struct TileEnsembleConstants : public RewritePattern {
     auto uses = op->getResult(0).getUses();
     for (auto& use : uses) {
       Operation *useOp = use.getOwner();
-      if (auto getTreeOp = llvm::dyn_cast<decisionforest::GetTreeFromEnsembleOp>(useOp))
-      {
+      if (auto getTreeOp = llvm::dyn_cast<decisionforest::GetTreeFromEnsembleOp>(useOp)) {
         auto oldTreeType = getTreeOp.getResult().getType().cast<decisionforest::TreeType>();
         auto newTreeType = decisionforest::TreeType::get(oldTreeType.getResultType(), m_tileSize, oldTreeType.getThresholdType(), oldTreeType.getFeatureIndexType());
 

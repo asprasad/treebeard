@@ -49,6 +49,7 @@ struct Memref {
 
 using LengthMemrefType = Memref<int64_t, 1>;
 using OffsetMemrefType = Memref<int64_t, 1>;
+// #TODO Tree-Beard#19
 using ClassMemrefType = Memref<int8_t, 1>;
 
 // using ResultMemrefType = Memref<double, 1>;

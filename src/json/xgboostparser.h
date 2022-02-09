@@ -132,7 +132,7 @@ void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexTyp
     {
         this->NewTree();
         ConstructSingleTree(treeJSON);
-        this->SetTreeGroupId(treeInfoJSON[treeIndex++]);
+        this->SetTreeClassId(treeInfoJSON[treeIndex++]);
         this->EndTree();
     }
 }

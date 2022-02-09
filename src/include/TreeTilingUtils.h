@@ -77,6 +77,7 @@ class ForestJSONReader
     json m_json;
     int32_t m_numberOfTrees;
     int32_t m_numberOfClasses;
+    // #TODO Tree-Beard#19 - Fix all the usages as well.
     std::vector<int8_t> m_classIds;
 
     std::string m_jsonFilePath;

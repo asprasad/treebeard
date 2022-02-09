@@ -120,15 +120,15 @@ public:
     const std::vector<Node>& GetNodes() { return m_nodes; }
     void SetNodes(const std::vector<Node>& nodes) { m_nodes=nodes; }
 
-    void SetGroupId(int32_t groupId) { m_groupId = groupId; }
-    int32_t GetGroupId() const { return m_groupId; }
+    void SetClassId(int32_t classId) { m_classId = classId; }
+    int32_t GetClassId() const { return m_classId; }
     int32_t NumFeatures();
 private:
     std::vector<Node> m_nodes;
     size_t m_numFeatures;
     ThresholdType m_scale;
     TreeTilingDescriptor m_tilingDescriptor;
-    int32_t m_groupId;
+    int32_t m_classId;
 
     int32_t GetTreeDepthHelper(size_t node) const;
     
@@ -414,7 +414,7 @@ ReturnType DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndex
     for (auto& tree: m_trees) {
         auto prediction = tree.PredictTree(data);
         // std::cout << "Tree " << predictions.size() << " prediction : " << prediction << std::endl;
-        predictions[tree.GetGroupId()].push_back(prediction);
+        predictions[tree.GetClassId()].push_back(prediction);
     }
     
     assert(m_reductionType == ReductionType::kAdd);
@@ -450,7 +450,7 @@ float DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>
     for (auto& tree: m_trees) {
         auto prediction = tree.PredictTree(data);
         // std::cout << "Tree " << predictions.size() << " prediction : " << prediction << std::endl;
-        predictions[tree.GetGroupId()].push_back(prediction);
+        predictions[tree.GetClassId()].push_back(prediction);
     }
     
     assert(m_reductionType == ReductionType::kAdd);

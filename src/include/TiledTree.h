@@ -193,7 +193,7 @@ public:
     }
     int32_t NumberOfLeafTiles();
     TiledTreeStats GetTreeStats();
-    int32_t GetGroupId() { return m_owningTree.GetGroupId(); } 
+    int32_t GetClassId() { return m_owningTree.GetClassId(); } 
     using LevelOrderSorterNodeType = TiledTreeNode;
 
     class LevelOrderTraversal {

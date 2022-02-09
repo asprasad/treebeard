@@ -194,7 +194,8 @@ struct TreeTypeKey {
                 && this->tileShapeType==that.tileShapeType
                 && this->sparseRepresentation==that.sparseRepresentation
                 && (this->sparseRepresentation ? this->childIndexType==that.childIndexType : true)
-                && (this->childIndexType == that.childIndexType);
+                && this->childIndexType == that.childIndexType
+                && this->classIdType == that.classIdType;
     }
 };
 

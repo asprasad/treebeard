@@ -129,16 +129,7 @@ extern "C" int64_t PrintVector(int32_t kind, int32_t elementSize, int32_t vector
   const int32_t integerKind = 1;
   std::va_list args;
   if (kind == floatingPointKind) {
-    if (elementSize == 32) {
-      std::cout << "(";
-      va_start(args, vectorSize);
-      for (int i=0 ; i<vectorSize ; ++i) {
-        auto vaargs = va_arg(args, float);
-        std::cout << " " << vaargs;
-      }
-    std::cout << " )\n";
-    }
-    else if (elementSize == 64) {
+    if (elementSize == 64) {
       std::cout << "(";
       va_start(args, vectorSize);
       for (int i=0 ; i<vectorSize ; ++i)
@@ -150,14 +141,7 @@ extern "C" int64_t PrintVector(int32_t kind, int32_t elementSize, int32_t vector
     }
   }
   else if (kind == integerKind) {
-    if (elementSize == 8) {
-      std::cout << "(";
-      va_start(args, vectorSize);
-      for (int i=0 ; i<vectorSize ; ++i)
-        std::cout << " " << va_arg(args, int8_t);
-      std::cout << " )\n";
-    }
-    else if (elementSize == 32) {
+    if (elementSize == 32) {
       std::cout << "(";
       va_start(args, vectorSize);
       for (int i=0 ; i<vectorSize ; ++i)

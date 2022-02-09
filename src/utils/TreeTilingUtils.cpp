@@ -231,6 +231,7 @@ void ForestJSONReader::AddSingleTileSizeEntry(std::list<int32_t>& treeIndices, s
 void ForestJSONReader::AddSingleTree(int32_t treeIndex, int32_t numTiles, std::vector<ThresholdType>& serializedThresholds,
                                      std::vector<FeatureIndexType>& serializedFetureIndices, std::vector<int32_t>& tileShapeIDs,
                                      const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth,
+                                     // #TODO Tree-Beard#19
                                      const int8_t classId) {
     std::list<int32_t> treeIndices = { treeIndex };
     std::list<int32_t> numTilesList = { numTiles };
@@ -502,6 +503,8 @@ void ForestJSONReader::InitializeLookUpTable(void* bufPtr, int32_t tileSize, int
 
 void ForestJSONReader::InitializeClassInformation(void *classInfoBuf) {
     if (m_numberOfClasses == 0) return;
+
+    // #TODO Tree-Beard#19
     int8_t *classInfoBufferPtr = reinterpret_cast<int8_t*>(classInfoBuf);
     int32_t i = 0;
     for (auto x : m_classIds) {
@@ -735,7 +738,7 @@ void PersistDecisionForestArrayBased(mlir::decisionforest::DecisionForest<>& for
                     tileSize,
                     treeType.getThresholdType().getIntOrFloatBitWidth(),
                     treeType.getFeatureIndexType().getIntOrFloatBitWidth(),
-                    (int8_t)tree.GetGroupId());
+                    (int8_t)tree.GetClassId());
             },
             [](TiledTree& tiledTree, int32_t treeNumber, decisionforest::TreeType treeType) {
                 std::vector<ThresholdType> thresholds = tiledTree.SerializeThresholds();
@@ -750,7 +753,7 @@ void PersistDecisionForestArrayBased(mlir::decisionforest::DecisionForest<>& for
                     featureIndices,tileShapeIDs, tileSize,
                     treeType.getThresholdType().getIntOrFloatBitWidth(),
                     treeType.getFeatureIndexType().getIntOrFloatBitWidth(),
-                    (int8_t)tiledTree.GetGroupId()); // TODO - Support tiled trees.
+                    (int8_t)tiledTree.GetClassId()); // TODO - Support tiled trees.
             }
     );
 }

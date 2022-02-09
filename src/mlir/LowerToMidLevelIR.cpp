@@ -28,17 +28,29 @@ void InsertPrintMemrefOp(
   int64_t tileSize,
   Value memref,
   Type elementType) {
+  
+  /* Search for 'default argument promotions in C' to see why.
+   Making all this 64-bit to avoid unecessary noise. */
+  if (bitWidth < 64) {
+    bitWidth = 64;
+  }
 
   auto tileSizeConst = rewriter.create<arith::ConstantIntOp>(location, tileSize, rewriter.getI32Type());
   auto kindConst = rewriter.create<arith::ConstantIntOp>(location, kind, rewriter.getI32Type());
-  auto bitWidthConst = rewriter.create<arith::ConstantIntOp>(location, bitWidth * 2, rewriter.getI32Type());
+  auto bitWidthConst = rewriter.create<arith::ConstantIntOp>(location, bitWidth, rewriter.getI32Type());
   
   std::vector<Value> vectorValues;
   for (int32_t i=0; i<tileSize ; ++i) {
     auto index = rewriter.create<arith::ConstantIndexOp>(location, i);
     auto ithValue = rewriter.create<memref::LoadOp>(location, elementType, memref, static_cast<Value>(index));
-    auto doubleValue = rewriter.create<arith::ExtFOp>(location, ithValue, rewriter.getF64Type());
-    vectorValues.push_back(doubleValue);
+    if (kind == 0)  { // Integer
+      auto i64Value = rewriter.create<arith::IndexCastOp>(location, ithValue, rewriter.getI64Type());
+      vectorValues.push_back(i64Value);
+    }
+    else {
+      auto doubleValue = rewriter.create<arith::ExtFOp>(location, ithValue, rewriter.getF64Type());
+      vectorValues.push_back(doubleValue);
+    }
   }
   rewriter.create<decisionforest::PrintVectorOp>(location, kindConst, bitWidthConst, tileSizeConst, ValueRange(vectorValues));
 }
@@ -188,14 +200,16 @@ struct PredictForestOpLowering: public ConversionPattern {
       auto treeClassesMemref = GetRow(rewriter, location, state.treeClassesMemref, index, state.treeClassesMemrefType);
       auto treeClassElementType = treeClassesMemref.getType().cast<MemRefType>().getElementType();
 
-      // InsertPrintMemrefOp(
-      //   rewriter,
-      //   location,
-      //   0, /*int kind*/
-      //   sizeof(float) * 8, /*bit width*/
-      //   state.numClassesConst.value(), /* nelts in memref */
-      //   treeClassesMemref,
-      //   treeClassElementType);
+      if (decisionforest::InsertDebugHelpers) {
+        InsertPrintMemrefOp(
+          rewriter,
+          location,
+          0, /*int kind*/
+          sizeof(float) * 8, /*bit width*/
+          state.numClassesConst.value(), /* nelts in memref */
+          treeClassesMemref,
+          treeClassElementType);
+      }
 
       auto firstValue = rewriter.create<memref::LoadOp>(
         location,
@@ -251,7 +265,10 @@ struct PredictForestOpLowering: public ConversionPattern {
         ifElse.getResults());
       
       rewriter.setInsertionPointAfter(maxClassLoop);
-      // InsertPrintElementOp(rewriter, location, 1, sizeof(int64_t) * 8, maxClassLoop.getResult(1));
+
+      if (decisionforest::InsertDebugHelpers) {
+        InsertPrintElementOp(rewriter, location, 1, sizeof(int64_t) * 8, maxClassLoop.getResult(1));
+      }
 
       return rewriter.create<arith::IndexCastOp>(location, state.treeType.getResultType(), static_cast<Value>(maxClassLoop.getResult(1)));
   }
@@ -336,7 +353,7 @@ struct PredictForestOpLowering: public ConversionPattern {
         // Accumulate the tree prediction
         
         if (state.isMultiClass) {
-          GenerateAccumulatedValueStore(rewriter, location, static_cast<Value>(walkOp), i, j, state);
+          GenerateMultiClassAccumulate(rewriter, location, static_cast<Value>(walkOp), i, j, state);
             // rewriter.create<scf::YieldOp>(location, static_cast<Value>(accumulatedValue));
         }
         else {
@@ -469,7 +486,7 @@ struct PredictForestOpLowering: public ConversionPattern {
     return accumulator;
   }
   
-  void GenerateAccumulatedValueStore(ConversionPatternRewriter& rewriter, Location location, Value result, Value rowIndex, Value index, PredictOpLoweringState& state) const {
+  void GenerateMultiClassAccumulate(ConversionPatternRewriter& rewriter, Location location, Value result, Value rowIndex, Value index, PredictOpLoweringState& state) const {
     if (state.isMultiClass) {
       auto batchTreeClassMemref = GetRow(rewriter, location, state.treeClassesMemref, rowIndex, state.treeClassesMemrefType);
       auto classId = rewriter.create<decisionforest::GetTreeClassIdOp>(location, state.treeType.getResultType(), state.forestConst, index);
@@ -498,7 +515,7 @@ struct PredictForestOpLowering: public ConversionPattern {
 
     // Walk the tree
     auto walkOp = rewriter.create<decisionforest::WalkDecisionTreeOp>(location, treeType.getThresholdType(), tree, row);
-    GenerateAccumulatedValueStore(rewriter, location, static_cast<Value>(walkOp), rowIndex, treeIndex, state);
+    GenerateMultiClassAccumulate(rewriter, location, static_cast<Value>(walkOp), rowIndex, treeIndex, state);
 
     if (state.isMultiClass) return prevAccumulatorValue;
 
@@ -534,6 +551,7 @@ struct PredictForestOpLowering: public ConversionPattern {
         accumulatedValue = GenerateTreeIndexLeafLoopBody(rewriter, location, indexVar, treeIndices, state, row, rowIndex, accumulatedValue);
       }
 
+      // Don't accumulate into memref in case of multiclass.
       if (state.isMultiClass) return;
 
       // Generate the store back in to the result memref
@@ -557,6 +575,7 @@ struct PredictForestOpLowering: public ConversionPattern {
       rewriter.create<scf::YieldOp>(location, static_cast<Value>(accumulatedValue));
       rewriter.setInsertionPointAfter(loop);
       
+      // Don't accumulate into memref in case of multiclass.
       if (state.isMultiClass) return;
       
       // Generate the store back in to the result memref
@@ -576,8 +595,9 @@ struct PredictForestOpLowering: public ConversionPattern {
 
     // Walk the tree
     auto walkOp = rewriter.create<decisionforest::WalkDecisionTreeOp>(location, treeType.getThresholdType(), tree, row);
-    GenerateAccumulatedValueStore(rewriter, location, static_cast<Value>(walkOp), rowIndex, treeIndex, state);
+    GenerateMultiClassAccumulate(rewriter, location, static_cast<Value>(walkOp), rowIndex, treeIndex, state);
 
+    // Don't accumulate into memref in case of multiclass.
     if (state.isMultiClass) return;
 
     // Accumulate the tree prediction and generate the store back in to the result memref

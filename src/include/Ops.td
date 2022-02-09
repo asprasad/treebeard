@@ -104,10 +104,10 @@ class DecisionForest_Op<string mnemonic, list<OpTrait> traits = []> :
 // * The number of return values (may have multiple return probablities, class ID etc)
 
 def InputDataType : AnyTypeOf<[F16MemRef, F32MemRef, F64MemRef]>;
-def ReturnType : AnyTypeOf<[I8, F16, F32, F64, F16Tensor, F32Tensor, F64Tensor, I8MemRef, F16MemRef, F32MemRef, F64MemRef]>;
+def ReturnType : AnyTypeOf<[I8, I16, I32, F16, F32, F64, F16Tensor, F32Tensor, F64Tensor, I8MemRef, I16MemRef, I32MemRef, F16MemRef, F32MemRef, F64MemRef]>;
 def LeafNodeValueType : AnyTypeOf<[F16, F32, F64]>;
-def ClassIdValueType : AnyTypeOf<[I8, I16]>;
-def TreeClassInfoMemref : AnyTypeOf<[I8MemRef, I16MemRef]>;
+def ClassIdValueType : AnyTypeOf<[I8, I16, I32]>;
+def TreeClassInfoMemref : AnyTypeOf<[I8MemRef, I16MemRef, I32MemRef]>;
 def SoftMaxInputType : AnyTypeOf<[F16MemRef, F32MemRef, F64MemRef]>;
 
 def PredictForestOp : DecisionForest_Op<"predict_ensemble"> {
@@ -217,14 +217,6 @@ def GetLeafValueOp : DecisionForest_Op<"getLeafValue", [NoSideEffect]> {
   let arguments = (ins TreeType:$tree, NodeType:$node);
 
   let results = (outs LeafNodeValueType);
-}
-
-def GetSoftMaxValueOp : DecisionForest_Op<"getSoftMaxValue", [NoSideEffect]> {
-  let summary = "Gets index of the value in the input memref that has the largest value for softmax function.";
-  let description = "Gets the index of the value with the highest value of softmax function.";
-  let arguments = (ins SoftMaxInputType:$inputMemref, ClassIdValueType:$count);
-
-  let results = (outs ClassIdValueType);
 }
 
 def TraverseTreeTileOp : DecisionForest_Op<"traverseTreeTile", [NoSideEffect]> {

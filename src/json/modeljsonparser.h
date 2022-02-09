@@ -92,7 +92,7 @@ protected:
     void EndTree() { m_currentTree = nullptr; }
     void SetTreeNumberOfFeatures(size_t numFeatures) { m_currentTree->SetNumberOfFeatures(numFeatures); }
     void SetTreeScalingFactor(ThresholdType scale) { m_currentTree->SetTreeScalingFactor(scale); }
-    void SetTreeGroupId(int32_t groupId) { m_currentTree->SetGroupId(groupId); }
+    void SetTreeClassId(int32_t classId) { m_currentTree->SetClassId(classId); }
     void SetInitialOffset(ReturnType val) { m_forest->SetInitialOffset(val); } 
     void SetNumberOfClasses(int32_t numClasses) { m_forest->SetNumClasses(numClasses); }
     
