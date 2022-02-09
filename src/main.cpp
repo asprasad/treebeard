@@ -66,6 +66,7 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
   std::string jsonFile, llvmIRFile, modelGlobalsJSONFile;
   int32_t thresholdTypeWidth=32, returnTypeWidth=32, featureIndexTypeWidth=16, tileShapeBitWidth=16, childIndexBitWidth=16;
   int32_t nodeIndexTypeWidth=32, inputElementTypeWidth=32, batchSize=4, tileSize=1;
+  bool invertLoops = false;
   for (int32_t i=0 ; i<argc ; ) {
     if (ContainsString(argv[i], "-o")) {
       assert ((i+1) < argc);
@@ -87,6 +88,10 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
     }
     else if (ContainsString(argv[i], "--sparse")) {
       mlir::decisionforest::UseSparseTreeRepresentation = true;
+      i += 1;
+    }
+    else if (ContainsString(argv[i], "--invertLoops")) {
+      invertLoops = true;
       i += 1;
     }
     else if (ContainsString(argv[i], "-thresholdBitWidth")) {
@@ -120,10 +125,11 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
       ++i;
   }
   assert (jsonFile != "" && llvmIRFile != "");
-  // TreeBeard::test::ScheduleManipulationFunctionWrapper scheduleManipulator(TreeBeard::test::OneTreeAtATimeSchedule);
+  TreeBeard::test::ScheduleManipulationFunctionWrapper scheduleManipulator(TreeBeard::test::OneTreeAtATimeSchedule);
   // TreeBeard::test::ScheduleManipulationFunctionWrapper scheduleManipulator(TreeBeard::test::TileTreeDimensionSchedule<10>);
   TreeBeard::CompilerOptions options(thresholdTypeWidth, returnTypeWidth, featureIndexTypeWidth,
-                                     nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, nullptr);
+                                     nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, 
+                                     invertLoops ? &scheduleManipulator : nullptr);
   TreeBeard::ConvertXGBoostJSONToLLVMIR(jsonFile, llvmIRFile, modelGlobalsJSONFile, options);
   return true;
 }
