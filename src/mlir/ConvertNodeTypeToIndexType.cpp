@@ -150,6 +150,7 @@ struct ConvertNodeTypeToIndexTypePass : public PassWrapper<ConvertNodeTypeToInde
 
     target.addIllegalOp<decisionforest::EnsembleConstantOp,
                         decisionforest::GetTreeFromEnsembleOp,
+                        decisionforest::GetTreeClassIdOp,
                         decisionforest::GetRootOp,
                         decisionforest::IsLeafOp,
                         decisionforest::TraverseTreeTileOp,

@@ -69,8 +69,131 @@ void ForestJSONBuilder::AddTreesToJSON(std::list<int32_t>& treeIndices, std::lis
     m_json.push_back(treeSet);
 }
 
+template<typename ContainerType, typename ElemType>
+void ParseJSONList(ContainerType& container, json& jsonList) {
+    for (auto& elemJSON : jsonList) {
+        ElemType elem = elemJSON.get<ElemType>();
+        container.push_back(elem);
+    }
+}
+
+template<typename ContainerType, typename ElemType>
+void ParseJSONListOfLists(std::list<ContainerType>& container, json& jsonListOfLists) {
+    for (auto& jsonList : jsonListOfLists) {
+        ContainerType elem;
+        ParseJSONList<ContainerType, ElemType>(elem, jsonList);
+        container.push_back(elem);
+    }
+}
+
+void ForestJSONReader::ParseSingleTileSizeEntry(json& tileSizeEntryJSON, ForestJSONReader::SingleTileSizeEntry& tileSizeEntry) {
+    tileSizeEntry.tileSize = tileSizeEntryJSON["TileSize"].get<int32_t>();
+    tileSizeEntry.thresholdBitWidth = tileSizeEntryJSON["ThresholdBitWidth"].get<int32_t>();
+    tileSizeEntry.indexBitWidth = tileSizeEntryJSON["FeatureIndexBitWidth"].get<int32_t>();
+    // std::list<int32_t> treeIndices;
+    ParseJSONList<std::list<int32_t>, int32_t>(tileSizeEntry.treeIndices, tileSizeEntryJSON["TreeIndices"]);
+    // std::list<int32_t> numberOfTiles;
+    ParseJSONList<std::list<int32_t>, int32_t>(tileSizeEntry.numberOfTiles, tileSizeEntryJSON["NumberOfTiles"]);
+    // std::list<std::vector<ThresholdType>> serializedThresholds;
+    ParseJSONListOfLists<std::vector<ThresholdType>, ThresholdType>(tileSizeEntry.serializedThresholds, tileSizeEntryJSON["SerializedThresholds"]);
+    // std::list<std::vector<FeatureIndexType>> serializedFetureIndices;
+    ParseJSONListOfLists<std::vector<FeatureIndexType>, FeatureIndexType>(tileSizeEntry.serializedFetureIndices, tileSizeEntryJSON["SerializedFeatureIndices"]);
+    // std::list<std::vector<int32_t>> serializedTileShapeIDs;
+    ParseJSONListOfLists<std::vector<int32_t>, int32_t>(tileSizeEntry.serializedTileShapeIDs, tileSizeEntryJSON["SerializedTileShapeIDs"]);
+    // std::list<std::vector<int32_t>> serializedChildIndices;
+    ParseJSONListOfLists<std::vector<int32_t>, int32_t>(tileSizeEntry.serializedChildIndices, tileSizeEntryJSON["SerializedChildIndices"]);
+    // std::list<std::vector<ThresholdType>> serializedLeaves;
+    ParseJSONListOfLists<std::vector<ThresholdType>, ThresholdType>(tileSizeEntry.serializedLeaves, tileSizeEntryJSON["SerializedLeaves"]);
+}
+
 void ForestJSONReader::ParseJSONFile() {
-    assert (false && "Function not implemented!");
+    ClearAllData();
+    assert (m_jsonFilePath != "");
+    m_json.clear();
+    std::ifstream fin(m_jsonFilePath);
+    fin >> m_json;
+
+    m_rowSize = m_json["RowSize"];
+    m_batchSize = m_json["BatchSize"];
+    m_numberOfTrees = m_json["NumberOfTrees"];
+    m_childIndexBitWidth = m_json["ChildIndexBitWidth"];
+    m_tileShapeBitWidth = m_json["TileShapeBitWidth"];
+    m_numberOfClasses = m_json["NumberOfClasses"];
+    for (auto& classId : m_json["TreeClassIDs"]) {
+        m_classIds.push_back(classId);
+    }
+    decisionforest::UseSparseTreeRepresentation = m_json["SparseRepresentation"];
+
+    std::list<SingleTileSizeEntry> newEntries;
+    for (auto& tileSizeEntryJSON : m_json["TileSizeEntries"]) {
+        SingleTileSizeEntry tileSizeEntry;
+        ParseSingleTileSizeEntry(tileSizeEntryJSON, tileSizeEntry);
+        newEntries.push_back(tileSizeEntry);
+    }
+    m_tileSizeEntries = newEntries;
+}
+
+template<typename T>
+json WriteListOfVectorsToJSON(std::list<std::vector<T>>& values) {
+    json retJSON;
+    for (auto& val : values) {
+        json currJSON = val;
+        retJSON.push_back(currJSON);
+    }
+    return retJSON;
+}
+
+void ForestJSONReader::WriteSingleTileSizeEntryToJSON(json& tileSizeEntryJSON, ForestJSONReader::SingleTileSizeEntry& tileSizeEntry) {
+    // int32_t tileSize;
+    tileSizeEntryJSON["TileSize"] = tileSizeEntry.tileSize;
+    // int32_t thresholdBitWidth;
+    tileSizeEntryJSON["ThresholdBitWidth"] = tileSizeEntry.thresholdBitWidth;
+    // int32_t indexBitWidth;
+    tileSizeEntryJSON["FeatureIndexBitWidth"] = tileSizeEntry.indexBitWidth;
+    // std::list<int32_t> treeIndices;
+    tileSizeEntryJSON["TreeIndices"] = tileSizeEntry.treeIndices;
+    // std::list<int32_t> numberOfTiles;
+    tileSizeEntryJSON["NumberOfTiles"] = tileSizeEntry.numberOfTiles;
+    // std::list<std::vector<ThresholdType>> serializedThresholds;
+    tileSizeEntryJSON["SerializedThresholds"] = WriteListOfVectorsToJSON(tileSizeEntry.serializedThresholds);
+    // std::list<std::vector<FeatureIndexType>> serializedFetureIndices;
+    tileSizeEntryJSON["SerializedFeatureIndices"] = WriteListOfVectorsToJSON(tileSizeEntry.serializedFetureIndices);
+    // std::list<std::vector<int32_t>> serializedTileShapeIDs;
+    tileSizeEntryJSON["SerializedTileShapeIDs"] = WriteListOfVectorsToJSON(tileSizeEntry.serializedTileShapeIDs);
+    // std::list<std::vector<int32_t>> serializedChildIndices;
+    tileSizeEntryJSON["SerializedChildIndices"] = WriteListOfVectorsToJSON(tileSizeEntry.serializedChildIndices);
+    // std::list<std::vector<ThresholdType>> serializedLeaves;
+    tileSizeEntryJSON["SerializedLeaves"] = WriteListOfVectorsToJSON(tileSizeEntry.serializedLeaves);
+}
+
+void ForestJSONReader::WriteJSONFile() {
+    // m_jsonFilePath = "/home/ashwin/temp/modelValues.json";
+    assert (m_jsonFilePath != "");
+    m_json.clear();
+
+    m_json["RowSize"] = m_rowSize;
+    m_json["BatchSize"] = m_batchSize;
+    m_json["NumberOfTrees"] = m_numberOfTrees;
+    m_json["ChildIndexBitWidth"] = m_childIndexBitWidth;
+    m_json["TileShapeBitWidth"] = m_tileShapeBitWidth;
+    m_json["SparseRepresentation"] = decisionforest::UseSparseTreeRepresentation;
+    m_json["NumberOfClasses"] = m_numberOfClasses;
+
+    // #TODO - Persist the bit width of the class ID type as well.
+    for (auto classId : m_classIds) {
+        m_json["TreeClassIDs"].push_back(classId);
+    }
+
+    for (auto& tileSizeEntry : m_tileSizeEntries) {
+        json tileSizeJSON;
+        WriteSingleTileSizeEntryToJSON(tileSizeJSON, tileSizeEntry);
+        m_json["TileSizeEntries"].push_back(tileSizeJSON);
+    }
+
+    std::ofstream fout(m_jsonFilePath);
+    assert(fout);
+    fout << m_json;
+    fout.close();
 }
 
 template<typename T>
@@ -107,13 +230,16 @@ void ForestJSONReader::AddSingleTileSizeEntry(std::list<int32_t>& treeIndices, s
 
 void ForestJSONReader::AddSingleTree(int32_t treeIndex, int32_t numTiles, std::vector<ThresholdType>& serializedThresholds,
                                      std::vector<FeatureIndexType>& serializedFetureIndices, std::vector<int32_t>& tileShapeIDs,
-                                     const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth) {
+                                     const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth,
+                                     // #TODO Tree-Beard#19
+                                     const int8_t classId) {
     std::list<int32_t> treeIndices = { treeIndex };
     std::list<int32_t> numTilesList = { numTiles };
     std::list<std::vector<ThresholdType>> serializedThresholdsList = { serializedThresholds }, serializedLeaves;
     std::list<std::vector<FeatureIndexType>> serializedFetureIndicesList = { serializedFetureIndices };
     std::list<std::vector<int32_t>> serializedTileShapeIDs = { tileShapeIDs };
     std::list<std::vector<int32_t>> serializedChildIndices;
+    m_classIds.push_back(classId);
 
     AddSingleTileSizeEntry(treeIndices, numTilesList, serializedThresholdsList, serializedFetureIndicesList, serializedTileShapeIDs, 
                            serializedChildIndices, serializedLeaves, tileSize, thresholdBitWidth, indexBitWidth);
@@ -136,6 +262,12 @@ void ForestJSONReader::AddSingleSparseTree(int32_t treeIndex, int32_t numTiles, 
 
 void ForestJSONReader::ClearAllData() {
     m_tileSizeEntries.clear();
+    m_classIds.clear();
+    // Can't clear the json path here because PersistForest calls Clear!
+    // m_jsonFilePath.clear();
+    m_tileShapeBitWidth = -1;
+    m_childIndexBitWidth = -1;
+    m_numberOfTrees = -1;
 }
 
 template<typename DestType, typename SourceType>
@@ -369,6 +501,18 @@ void ForestJSONReader::InitializeLookUpTable(void* bufPtr, int32_t tileSize, int
     }
 }
 
+void ForestJSONReader::InitializeClassInformation(void *classInfoBuf) {
+    if (m_numberOfClasses == 0) return;
+
+    // #TODO Tree-Beard#19
+    int8_t *classInfoBufferPtr = reinterpret_cast<int8_t*>(classInfoBuf);
+    int32_t i = 0;
+    for (auto x : m_classIds) {
+        classInfoBufferPtr[i++] = x;
+    }
+}
+
+
 template<typename LeafType>
 void ForestJSONReader::InitializeLeavesImpl(LeafType *bufPtr, std::list<ForestJSONReader::SingleTileSizeEntry>::iterator listIter) {
     auto treeIndexIter = listIter->treeIndices.begin();
@@ -448,6 +592,14 @@ int32_t ForestJSONReader::GetTotalNumberOfLeaves() {
     return numLeaves;
 }
 
+void LogLeafDepths(const std::vector<int32_t>& depths) {
+    std::string out;
+    for (auto depth : depths) {
+        out += std::to_string(depth) + ", ";
+    }
+    TreeBeard::Logging::Log(out);
+}
+
 void LogTreeStats(const std::vector<TiledTreeStats>& tiledTreeStats) {
     int32_t numDummyNodes=0, numEmptyTiles=0, numLeafNodesInTiledTree=0, numLeavesInOrigModel=0, numTiles=0, numUniqueTiles=0;
     int32_t numNodesInOrigModel=0, numLeavesWithAllSiblingsLeaves=0;
@@ -474,6 +626,8 @@ void LogTreeStats(const std::vector<TiledTreeStats>& tiledTreeStats) {
         avgOrigTreeDepth += treeStats.originalTreeDepth;
         numNodesInOrigModel += treeStats.originalTreeNumNodes;
         numLeavesWithAllSiblingsLeaves += treeStats.numLeavesWithAllLeafSiblings;
+        // TreeBeard::Logging::Log(std::to_string(treeStats.numberOfFeatures));
+        // LogLeafDepths(treeStats.leafDepths);
     }
     averageDepth /= tiledTreeStats.size();
     avgOrigTreeDepth /= tiledTreeStats.size();
@@ -504,10 +658,13 @@ void LogTreeStats(const std::vector<TiledTreeStats>& tiledTreeStats) {
 template<typename PersistTreeScalarType, typename PersistTreeTiledType>
 void PersistDecisionForestImpl(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType,
                                PersistTreeScalarType persistTreeScalar, PersistTreeTiledType persistTreeTiled) {
-        mlir::decisionforest::ForestJSONReader::GetInstance().ClearAllData();
+    
+    mlir::decisionforest::ForestJSONReader::GetInstance().ClearAllData();
 
     auto numTrees = forest.NumTrees();
     mlir::decisionforest::ForestJSONReader::GetInstance().SetNumberOfTrees(numTrees);
+    mlir::decisionforest::ForestJSONReader::GetInstance().SetNumberOfClasses(forest.GetNumClasses());
+
     std::vector<TiledTreeStats> treeStats;
     uint tileShapeBitWidth = 0;
     int32_t childIndexBitWidth = -1;
@@ -553,6 +710,12 @@ void PersistDecisionForestImpl(mlir::decisionforest::DecisionForest<>& forest, m
     if (TreeBeard::Logging::loggingOptions.logTreeStats) {
         LogTreeStats(treeStats);
     }
+    mlir::decisionforest::ForestJSONReader::GetInstance().WriteJSONFile();
+    // mlir::decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
+    
+    // The below lines clear all state that is currently persisted. This is to ensure that 
+    // all state is correctly being read back from the model globals json file.
+    mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath("");
 }
 
 // Ultimately, this will write a JSON file. For now, we're just 
@@ -566,9 +729,16 @@ void PersistDecisionForestArrayBased(mlir::decisionforest::DecisionForest<>& for
                 std::vector<int32_t> tileShapeIDs = { };
                 int32_t numTiles = tree.GetNumberOfTiles();
                 int32_t tileSize = tree.TilingDescriptor().MaxTileSize();
-                mlir::decisionforest::ForestJSONReader::GetInstance().AddSingleTree(treeNumber, numTiles, thresholds, featureIndices, tileShapeIDs, tileSize, 
-                                                                                    treeType.getThresholdType().getIntOrFloatBitWidth(), 
-                                                                                    treeType.getFeatureIndexType().getIntOrFloatBitWidth());
+                mlir::decisionforest::ForestJSONReader::GetInstance().AddSingleTree(
+                    treeNumber,
+                    numTiles,
+                    thresholds,
+                    featureIndices,
+                    tileShapeIDs,
+                    tileSize,
+                    treeType.getThresholdType().getIntOrFloatBitWidth(),
+                    treeType.getFeatureIndexType().getIntOrFloatBitWidth(),
+                    (int8_t)tree.GetClassId());
             },
             [](TiledTree& tiledTree, int32_t treeNumber, decisionforest::TreeType treeType) {
                 std::vector<ThresholdType> thresholds = tiledTree.SerializeThresholds();
@@ -576,9 +746,14 @@ void PersistDecisionForestArrayBased(mlir::decisionforest::DecisionForest<>& for
                 std::vector<int32_t> tileShapeIDs = tiledTree.SerializeTileShapeIDs();
                 int32_t numTiles = tiledTree.GetNumberOfTiles();
                 int32_t tileSize = tiledTree.TileSize();
-                mlir::decisionforest::ForestJSONReader::GetInstance().AddSingleTree(treeNumber, numTiles, thresholds, featureIndices, tileShapeIDs, tileSize, 
-                                                                                    treeType.getThresholdType().getIntOrFloatBitWidth(), 
-                                                                                    treeType.getFeatureIndexType().getIntOrFloatBitWidth());
+                mlir::decisionforest::ForestJSONReader::GetInstance().AddSingleTree(
+                    treeNumber,
+                    numTiles,
+                    thresholds,
+                    featureIndices,tileShapeIDs, tileSize,
+                    treeType.getThresholdType().getIntOrFloatBitWidth(),
+                    treeType.getFeatureIndexType().getIntOrFloatBitWidth(),
+                    (int8_t)tiledTree.GetClassId()); // TODO - Support tiled trees.
             }
     );
 }
@@ -1146,6 +1321,22 @@ int32_t TiledTree::NumberOfTiles() {
     return numTiles;
 }
 
+std::vector<int32_t> TiledTree::GetLeafDepths() {
+    std::vector<int32_t> depths;
+    for (auto& tile : m_tiles) {
+        if (!tile.IsLeafTile())
+            continue;
+        int32_t depth = 0;
+        auto currentTile = &tile;
+        while (currentTile->m_parent != DecisionTree<>::INVALID_NODE_INDEX) {
+            currentTile = &(m_tiles.at(currentTile->m_parent));
+            ++depth;
+        }
+        depths.push_back(depth);
+    }
+    return depths;
+}
+
 TiledTreeStats TiledTree::GetTreeStats() {
     TiledTreeStats treeStats;
     treeStats.tileSize = TileSize();
@@ -1159,6 +1350,8 @@ TiledTreeStats TiledTree::GetTreeStats() {
     treeStats.originalTreeNumberOfLeaves = m_owningTree.NumLeaves();
     treeStats.tiledTreeNumberOfLeafTiles = NumberOfLeafTiles();
     treeStats.numLeavesWithAllLeafSiblings = NumberOfLeavesWithAllLeafSiblings(0 /*root tile index*/ );
+    treeStats.numberOfFeatures = m_owningTree.NumFeatures();
+    treeStats.leafDepths = GetLeafDepths();
     return treeStats;
 }
 

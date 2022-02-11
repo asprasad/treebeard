@@ -101,6 +101,7 @@ extern "C" int64_t PrintTreeToDOTFile(TreeTileType *treeBuf, int64_t length, int
 
 using SparseTreeTileType = SparseTileType<double, int32_t, 1, int32_t, int32_t>;
 extern "C" int64_t PrintSparseTreeToDOTFile(SparseTreeTileType *treeBuf, int64_t length, int64_t treeIndex, int64_t tileSize) {
+  return 42;
 }
 
 extern "C" int64_t PrintInputRow(double *treeBuf, int64_t length, int64_t rowIndex) {

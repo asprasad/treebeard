@@ -1,4 +1,7 @@
 build/
 debug/
+runtime_test_binaries/
 .vscode/
 *.so
+*.treebeard-globals.json
+*.pyc

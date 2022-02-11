@@ -52,13 +52,13 @@ bool loggingEnabled = InitLoggingOptions();
 } // Logging
 
 template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-mlir::ModuleOp SpecializeInputElementType(mlir::MLIRContext& context, const std::string&modelJsonPath, int32_t inputElementTypeWidth, 
-                                          int32_t batchSize, int32_t tileSize, int32_t tileShapeBitWidth, int32_t childIndexBitWidth) {
-  if (inputElementTypeWidth == 32) {
-    return ConstructLLVMDialectModuleFromXGBoostJSON<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, float>(context, modelJsonPath, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
+mlir::ModuleOp SpecializeInputElementType(mlir::MLIRContext& context, const std::string&modelJsonPath,
+                                          const std::string& modelGlobalsJSONPath, const CompilerOptions& options) {
+  if (options.inputElementTypeWidth == 32) {
+    return ConstructLLVMDialectModuleFromXGBoostJSON<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, float>(context, modelJsonPath, modelGlobalsJSONPath, options);
   }
-  else if (inputElementTypeWidth == 64) {
-    return ConstructLLVMDialectModuleFromXGBoostJSON<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, double>(context, modelJsonPath, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
+  else if (options.inputElementTypeWidth == 64) {
+    return ConstructLLVMDialectModuleFromXGBoostJSON<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, double>(context, modelJsonPath, modelGlobalsJSONPath, options);
   }
   else {
     assert (false && "Unknown input element type");
@@ -67,20 +67,19 @@ mlir::ModuleOp SpecializeInputElementType(mlir::MLIRContext& context, const std:
 }
 
 template<typename ThresholdType, typename ReturnType, typename FeatureIndexType>
-mlir::ModuleOp SpecializeNodeIndexType(mlir::MLIRContext& context, const std::string&modelJsonPath,
-                                       int32_t nodeIndexTypeWidth, int32_t inputElementTypeWidth, int32_t batchSize, int32_t tileSize,
-                                       int32_t tileShapeBitWidth, int32_t childIndexBitWidth) {
-  if (nodeIndexTypeWidth == 8) {
-    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int8_t>(context, modelJsonPath, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
+mlir::ModuleOp SpecializeNodeIndexType(mlir::MLIRContext& context, const std::string&modelJsonPath, 
+                                       const std::string& modelGlobalsJSONPath, const CompilerOptions& options) {
+  if (options.nodeIndexTypeWidth == 8) {
+    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int8_t>(context, modelJsonPath, modelGlobalsJSONPath, options);
   } 
-  else if (nodeIndexTypeWidth == 16) {
-    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int16_t>(context, modelJsonPath, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
+  else if (options.nodeIndexTypeWidth == 16) {
+    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int16_t>(context, modelJsonPath, modelGlobalsJSONPath, options);
   } 
-  else if (nodeIndexTypeWidth == 32) {
-    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int32_t>(context, modelJsonPath, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
+  else if (options.nodeIndexTypeWidth == 32) {
+    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int32_t>(context, modelJsonPath, modelGlobalsJSONPath, options);
   }
-  else if (nodeIndexTypeWidth == 64) {
-    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int64_t>(context, modelJsonPath, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
+  else if (options.nodeIndexTypeWidth == 64) {
+    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int64_t>(context, modelJsonPath, modelGlobalsJSONPath, options);
   } 
   else {
     assert (false && "Unknown feature index type");
@@ -90,20 +89,19 @@ mlir::ModuleOp SpecializeNodeIndexType(mlir::MLIRContext& context, const std::st
 
 
 template<typename ThresholdType, typename ReturnType>
-mlir::ModuleOp SpecializeFeatureIndexType(mlir::MLIRContext& context, const std::string&modelJsonPath,
-                                          int32_t featureIndexTypeWidth, int32_t nodeIndexTypeWidth, int32_t inputElementTypeWidth,
-                                          int32_t batchSize, int32_t tileSize, int32_t tileShapeBitWidth, int32_t childIndexBitWidth) {
-  if (featureIndexTypeWidth == 8) {
-    return SpecializeNodeIndexType<ThresholdType, ReturnType, int8_t>(context, modelJsonPath, nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
+mlir::ModuleOp SpecializeFeatureIndexType(mlir::MLIRContext& context, const std::string&modelJsonPath, 
+                                          const std::string& modelGlobalsJSONPath, const CompilerOptions& options) {
+  if (options.featureIndexTypeWidth == 8) {
+    return SpecializeNodeIndexType<ThresholdType, ReturnType, int8_t>(context, modelJsonPath, modelGlobalsJSONPath, options);
   } 
-  else if (featureIndexTypeWidth == 16) {
-    return SpecializeNodeIndexType<ThresholdType, ReturnType, int16_t>(context, modelJsonPath, nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
+  else if (options.featureIndexTypeWidth == 16) {
+    return SpecializeNodeIndexType<ThresholdType, ReturnType, int16_t>(context, modelJsonPath, modelGlobalsJSONPath, options);
   } 
-  else if (featureIndexTypeWidth == 32) {
-    return SpecializeNodeIndexType<ThresholdType, ReturnType, int32_t>(context, modelJsonPath, nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
+  else if (options.featureIndexTypeWidth == 32) {
+    return SpecializeNodeIndexType<ThresholdType, ReturnType, int32_t>(context, modelJsonPath, modelGlobalsJSONPath, options);
   }
-  else if (featureIndexTypeWidth == 64) {
-    return SpecializeNodeIndexType<ThresholdType, ReturnType, int64_t>(context, modelJsonPath, nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
+  else if (options.featureIndexTypeWidth == 64) {
+    return SpecializeNodeIndexType<ThresholdType, ReturnType, int64_t>(context, modelJsonPath, modelGlobalsJSONPath, options);
   } 
   else {
     assert (false && "Unknown feature index type");
@@ -112,17 +110,13 @@ mlir::ModuleOp SpecializeFeatureIndexType(mlir::MLIRContext& context, const std:
 }
 
 template<typename ThresholdType>
-mlir::ModuleOp SpecializeReturnType(mlir::MLIRContext& context, const std::string&modelJsonPath,
-                                    int32_t returnTypeWidth, int32_t featureIndexTypeWidth, 
-                                    int32_t nodeIndexTypeWidth, int32_t inputElementTypeWidth, int32_t batchSize, int32_t tileSize,
-                                    int32_t tileShapeBitWidth, int32_t childIndexBitWidth) {
-  if (returnTypeWidth == 32) {
-    return SpecializeFeatureIndexType<ThresholdType, float>(context, modelJsonPath, featureIndexTypeWidth, 
-                                                            nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
+mlir::ModuleOp SpecializeReturnType(mlir::MLIRContext& context, const std::string&modelJsonPath, 
+                                    const std::string& modelGlobalsJSONPath, const CompilerOptions& options) {
+  if (options.returnTypeWidth == 32) {
+    return SpecializeFeatureIndexType<ThresholdType, float>(context, modelJsonPath, modelGlobalsJSONPath, options);
   }
-  else if (returnTypeWidth == 64) {
-    return SpecializeFeatureIndexType<ThresholdType, double>(context, modelJsonPath, featureIndexTypeWidth, 
-                                                             nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
+  else if (options.returnTypeWidth == 64) {
+    return SpecializeFeatureIndexType<ThresholdType, double>(context, modelJsonPath, modelGlobalsJSONPath, options);
   } 
   else {
     assert (false && "Unknown return type");
@@ -131,15 +125,13 @@ mlir::ModuleOp SpecializeReturnType(mlir::MLIRContext& context, const std::strin
 }
 
 
-mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, const std::string&modelJsonPath,
-                                                         int32_t thresholdTypeWidth, int32_t returnTypeWidth, int32_t featureIndexTypeWidth, 
-                                                         int32_t nodeIndexTypeWidth, int32_t inputElementTypeWidth, int32_t batchSize, int32_t tileSize,
-                                                         int32_t tileShapeBitWidth, int32_t childIndexBitWidth) {
-  if (thresholdTypeWidth == 32) {
-    return SpecializeReturnType<float>(context, modelJsonPath, returnTypeWidth, featureIndexTypeWidth, nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
+mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, const std::string&modelJsonPath, 
+                                                         const std::string& modelGlobalsJSONPath, const CompilerOptions& options) {
+  if (options.thresholdTypeWidth == 32) {
+    return SpecializeReturnType<float>(context, modelJsonPath, modelGlobalsJSONPath, options);
   }
-  else if (thresholdTypeWidth == 64) {
-    return SpecializeReturnType<double>(context, modelJsonPath, returnTypeWidth, featureIndexTypeWidth, nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
+  else if (options.thresholdTypeWidth == 64) {
+    return SpecializeReturnType<double>(context, modelJsonPath, modelGlobalsJSONPath, options);
   }
   else {
     assert (false && "Unknown threshold type");
@@ -157,14 +149,11 @@ void InitializeMLIRContext(mlir::MLIRContext& context) {
   context.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
 }
 
-void ConvertXGBoostJSONToLLVMIR(const std::string&modelJsonPath, const std::string& llvmIRFilePath,
-                                int32_t thresholdTypeWidth, int32_t returnTypeWidth, int32_t featureIndexTypeWidth, 
-                                int32_t nodeIndexTypeWidth, int32_t inputElementTypeWidth, int32_t batchSize, int32_t tileSize,
-                                int32_t tileShapeBitWidth, int32_t childIndexBitWidth) {
+void ConvertXGBoostJSONToLLVMIR(const std::string&modelJsonPath, const std::string& llvmIRFilePath, const std::string& modelGlobalsJSONPath,
+                                const CompilerOptions& options) {
   mlir::MLIRContext context;
   InitializeMLIRContext(context);
-  auto module = ConstructLLVMDialectModuleFromXGBoostJSON(context, modelJsonPath, thresholdTypeWidth, returnTypeWidth, featureIndexTypeWidth, 
-                                                          nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
+  auto module = ConstructLLVMDialectModuleFromXGBoostJSON(context, modelJsonPath, modelGlobalsJSONPath, options);
   mlir::decisionforest::dumpLLVMIRToFile(module, llvmIRFilePath);
 }
 
@@ -205,22 +194,15 @@ int64_t RunXGBoostInferenceOnCSVInput(const std::string& csvPath, mlir::decision
   return std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
 }
 
-void RunInferenceUsingSO(const std::string&modelJsonPath, const std::string& soPath, const std::string& csvPath,
-                         int32_t thresholdTypeWidth, int32_t returnTypeWidth, int32_t featureIndexTypeWidth, 
-                         int32_t nodeIndexTypeWidth, int32_t inputElementTypeWidth, int32_t batchSize, int32_t tileSize,
-                         int32_t tileShapeBitWidth, int32_t childIndexBitWidth) {
-  mlir::MLIRContext context;
-  TreeBeard::InitializeMLIRContext(context);
-  TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON(context, modelJsonPath, thresholdTypeWidth, returnTypeWidth, featureIndexTypeWidth, 
-                                                       nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth);
-  
-  mlir::decisionforest::SharedObjectInferenceRunner inferenceRunner(soPath, tileSize, thresholdTypeWidth, featureIndexTypeWidth);
-  assert (inputElementTypeWidth == returnTypeWidth);
+void RunInferenceUsingSO(const std::string&modelJsonPath, const std::string& soPath, const std::string& modelGlobalsJSONPath, 
+                         const std::string& csvPath, const CompilerOptions& options) {
+  mlir::decisionforest::SharedObjectInferenceRunner inferenceRunner(modelGlobalsJSONPath, soPath, options.tileSize, options.thresholdTypeWidth, options.featureIndexTypeWidth);
+  assert (options.inputElementTypeWidth == options.returnTypeWidth);
   int64_t time;
-  if (inputElementTypeWidth == 32)
-    time = RunXGBoostInferenceOnCSVInput<float>(csvPath, inferenceRunner, batchSize);
-  else if (inputElementTypeWidth == 64)
-    time = RunXGBoostInferenceOnCSVInput<double>(csvPath, inferenceRunner, batchSize);
+  if (options.inputElementTypeWidth == 32)
+    time = RunXGBoostInferenceOnCSVInput<float>(csvPath, inferenceRunner, options.batchSize);
+  else if (options.inputElementTypeWidth == 64)
+    time = RunXGBoostInferenceOnCSVInput<double>(csvPath, inferenceRunner, options.batchSize);
   else
     assert(false && "Unknow floating point type");
   std::cout << "Execution time (us) : " << time << std::endl;

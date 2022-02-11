@@ -49,15 +49,21 @@ struct Memref {
 
 using LengthMemrefType = Memref<int64_t, 1>;
 using OffsetMemrefType = Memref<int64_t, 1>;
+// #TODO Tree-Beard#19
+using ClassMemrefType = Memref<int8_t, 1>;
+
 // using ResultMemrefType = Memref<double, 1>;
 
 class InferenceRunnerBase {
 protected:
+  std::string m_modelGlobalsJSONFilePath;
   int32_t m_tileSize;
   int32_t m_thresholdSize;
   int32_t m_featureIndexSize;
+  int32_t m_batchSize;
+  int32_t m_rowSize;
   void *m_inferenceFuncPtr;
-
+  
   template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType, typename ChildIndexType>
   int32_t CallInitMethod();
   
@@ -71,14 +77,27 @@ protected:
   
   void Init();
 public:
-  InferenceRunnerBase(int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize)
-    : m_tileSize(tileSize), m_thresholdSize(thresholdSize), m_featureIndexSize(featureIndexSize) { }
-
+  InferenceRunnerBase(const std::string& modelGlobalsJSONFilePath, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize)
+    : m_modelGlobalsJSONFilePath(modelGlobalsJSONFilePath), m_tileSize(tileSize), m_thresholdSize(thresholdSize), m_featureIndexSize(featureIndexSize) 
+  { 
+    decisionforest::ForestJSONReader::GetInstance().SetFilePath(modelGlobalsJSONFilePath);
+    decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
+    // TODO read the thresholdSize and featureIndexSize from the JSON!
+    m_batchSize = decisionforest::ForestJSONReader::GetInstance().GetBatchSize();
+    m_rowSize = decisionforest::ForestJSONReader::GetInstance().GetRowSize();
+  }
+  virtual ~InferenceRunnerBase() { }
+  
   int32_t InitializeLengthsArray();
   int32_t InitializeOffsetsArray();
   int32_t InitializeModelArray();
   int32_t InitializeLUT();
   int32_t InitializeLeafArrays();
+  void InitializeClassInformation();
+
+  int32_t GetBatchSize() { return m_batchSize; }
+  int32_t GetRowSize() { return m_rowSize; }
+  int32_t GetThresholdWidth() { return m_thresholdSize; }
 
   void PrintLengthsArray();
   void PrintOffsetsArray();
@@ -86,6 +105,9 @@ public:
 
   template<typename InputElementType, typename ReturnType>
   int32_t RunInference(InputElementType *input, ReturnType *returnValue, int32_t inputRowSize, int32_t batchSize) {
+    assert (batchSize == m_batchSize);
+    assert (inputRowSize == m_rowSize);
+
     typedef Memref<ReturnType, 1> (*InferenceFunc_t)(InputElementType*, InputElementType*, int64_t, int64_t, int64_t, int64_t, int64_t, 
                                                      ReturnType*, ReturnType*, int64_t, int64_t, int64_t);
     auto inferenceFuncPtr = reinterpret_cast<InferenceFunc_t>(m_inferenceFuncPtr);
@@ -96,6 +118,11 @@ public:
     inferenceFuncPtr(ptr, alignedPtr, offset, batchSize, rowSize, stride, stride, 
                      resultPtr, resultAlignedPtr, offset, resultLen, stride);
     return 0;
+  }
+
+  template<typename InputElementType, typename ReturnType>
+  int32_t RunInference(InputElementType *input, ReturnType *returnValue) {
+    return RunInference<InputElementType, ReturnType>(input, returnValue, m_rowSize, m_batchSize);
   }
 };
 
@@ -108,7 +135,8 @@ protected:
   void* GetFunctionAddress(const std::string& functionName) override;
 public:
   static llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> CreateExecutionEngine(mlir::ModuleOp module);
-  InferenceRunner(mlir::ModuleOp module, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize);
+  InferenceRunner(const std::string& modelGlobalsJSONFilePath, mlir::ModuleOp module, int32_t tileSize, 
+                  int32_t thresholdSize, int32_t featureIndexSize);
 };
 
 class SharedObjectInferenceRunner : public InferenceRunnerBase{
@@ -116,7 +144,7 @@ class SharedObjectInferenceRunner : public InferenceRunnerBase{
 protected:
   void* GetFunctionAddress(const std::string& functionName) override;
 public:
-  SharedObjectInferenceRunner(const std::string& soPath, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize);
+  SharedObjectInferenceRunner(const std::string& modelGlobalsJSONFilePath, const std::string& soPath, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize);
   ~SharedObjectInferenceRunner();
 };
 

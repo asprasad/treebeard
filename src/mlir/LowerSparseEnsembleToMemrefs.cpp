@@ -92,11 +92,6 @@ struct GetTreeLoweringInfo {
 // Maps a GetTree operation to a memref that represents the tree once the ensemble constant has been replaced
 std::map<Operation*, GetTreeLoweringInfo> getTreeOperationMap;
 
-void ClearGlobalMaps() {
-  ensembleConstantToMemrefsMap.clear();
-  getTreeOperationMap.clear();
-}
-
 template<typename T>
 T AssertOpIsOfType(Operation* operation) {
   T typedOp = llvm::dyn_cast<T>(operation);
@@ -631,7 +626,7 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
 
     // result = Compare
     // TODO we need a cast here to make sure the threshold and the row element are the same type. The op expects both operands to be the same type.
-    auto comparison = rewriter.create<arith::CmpFOp>(location,  mlir::arith::CmpFPredicate::UGT, static_cast<Value>(feature), static_cast<Value>(loadThresholdOp));
+    auto comparison = rewriter.create<arith::CmpFOp>(location,  mlir::arith::CmpFPredicate::UGE, static_cast<Value>(feature), static_cast<Value>(loadThresholdOp));
     auto comparisonUnsigned = rewriter.create<arith::ExtUIOp>(location, rewriter.getI32Type(), static_cast<Value>(comparison));
 
     // index = childIndex + result
@@ -772,7 +767,7 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
 
     // result = Compare
     // TODO we need a cast here to make sure the threshold and the row element are the same type. The op expects both operands to be the same type.
-    auto comparison = rewriter.create<arith::CmpFOp>(location,  mlir::arith::CmpFPredicate::ULE, static_cast<Value>(features), static_cast<Value>(loadThresholdOp));
+    auto comparison = rewriter.create<arith::CmpFOp>(location,  mlir::arith::CmpFPredicate::ULT, static_cast<Value>(features), static_cast<Value>(loadThresholdOp));
     Value comparisonIndex;
     if (decisionforest::UseBitcastForComparisonOutcome)
       comparisonIndex = ReduceComparisonResultVectorToInt_Bitcast(comparison, tileSize, rewriter, location);
@@ -877,6 +872,12 @@ namespace mlir
 {
 namespace decisionforest
 {
+
+void ClearSparseGlobalMaps() {
+  ensembleConstantToMemrefsMap.clear();
+  getTreeOperationMap.clear();
+}
+
 void PopulateLowerToSparseRepresentationPatterns(RewritePatternSet& patterns) {
     patterns.add<EnsembleConstantOpLowering,
                 GetTreeOpLowering,

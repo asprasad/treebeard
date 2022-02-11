@@ -11,6 +11,7 @@
 #include "DecisionTreeAttributes.h"
 #include "DecisionTreeTypes.h"
 #include "MemrefTypes.h"
+#include "ScheduleAttribute.h"
 
 #include "Dialect.h.inc"
 
@@ -26,6 +27,7 @@ class LLVMTypeConverter;
 namespace decisionforest
 {
 extern bool InsertDebugHelpers;
+extern bool PrintVectors;
 extern bool UseBitcastForComparisonOutcome;
 extern bool UseSparseTreeRepresentation;
 extern bool VectorizeShapeAndChildIndexLoad;

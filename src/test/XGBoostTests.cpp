@@ -18,6 +18,7 @@
 #include "TreeTilingDescriptor.h"
 #include "TreeTilingUtils.h"
 #include "ForestTestUtils.h"
+#include "CompileUtils.h"
 
 using namespace mlir;
 
@@ -32,24 +33,23 @@ bool RunSingleBatchSizeForXGBoostTests = true;
 // XGBoost Scalar Inference Tests
 // ===---------------------------------------------------=== //
 
-template<typename FloatType, typename FeatureIndexType=int32_t>
-bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, const std::string& modelJsonPath, 
-                                           int32_t tileSize, int32_t tileShapeBitWidth, int32_t childIndexBitWidth) {
-  TestCSVReader csvReader(modelJsonPath + ".csv");
-  TreeBeard::XGBoostJSONParser<FloatType, FloatType, FeatureIndexType, int32_t, FloatType> xgBoostParser(args.context, modelJsonPath, batchSize);
-  xgBoostParser.Parse();
-  xgBoostParser.SetChildIndexBitWidth(childIndexBitWidth);
-  auto module = xgBoostParser.GetEvaluationFunction();
-  // module->dump();
-  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
-  mlir::decisionforest::DoUniformTiling(args.context, module, tileSize, tileShapeBitWidth);
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module);
-  mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
-  // module->dump();
-  mlir::decisionforest::LowerToLLVM(args.context, module);
-  // module->dump();
-  // mlir::decisionforest::dumpLLVMIR(module);
-  decisionforest::InferenceRunner inferenceRunner(module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
+template<typename FloatType, typename FeatureIndexType=int32_t, typename ResultType=FloatType>
+bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, const std::string& modelJsonPath, const std::string& csvPath, 
+                                           int32_t tileSize, int32_t tileShapeBitWidth, int32_t childIndexBitWidth,
+                                           ScheduleManipulator_t scheduleManipulatorFunc=nullptr) {
+  TestCSVReader csvReader(csvPath);
+
+  using NodeIndexType = int32_t;
+  int32_t floatTypeBitWidth = sizeof(FloatType)*8;
+  ScheduleManipulationFunctionWrapper scheduleManipulator(scheduleManipulatorFunc);
+  TreeBeard::CompilerOptions options(floatTypeBitWidth, floatTypeBitWidth, sizeof(FeatureIndexType)*8, sizeof(NodeIndexType)*8,
+                                     floatTypeBitWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth,
+                                     scheduleManipulatorFunc ? &scheduleManipulator : nullptr);
+  
+  auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType>(args.context, modelJsonPath, modelGlobalsJSONFilePath, options);
+
+  decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
   
   // inferenceRunner.PrintLengthsArray();
   // inferenceRunner.PrintOffsetsArray();
@@ -72,16 +72,18 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
   auto currentPredictionsIter = xgBoostPredictions.begin();
   for(auto& batch : inputData) {
     assert (batch.size() % batchSize == 0);
-    std::vector<FloatType> result(batchSize, -1);
-    inferenceRunner.RunInference<FloatType, FloatType>(batch.data(), result.data(), rowSize, batchSize);
+    std::vector<ResultType> result(batchSize, -1);
+    inferenceRunner.RunInference<FloatType, ResultType>(batch.data(), result.data(), rowSize, batchSize);
     for(int64_t rowIdx=0 ; rowIdx<batchSize ; ++rowIdx) {
       // This needs to be a vector of doubles because the type is hardcoded for Forest::Predict
-      std::vector<double> row(batch.begin() + rowIdx*rowSize, batch.begin() + (rowIdx+1)*rowSize);
-      FloatType expectedResult = (*currentPredictionsIter)[rowIdx];
-      FloatType forestPrediction = xgBoostParser.GetForest()->Predict(row);
+      // std::vector<double> row(batch.begin() + rowIdx*rowSize, batch.begin() + (rowIdx+1)*rowSize);
+      ResultType expectedResult = (*currentPredictionsIter)[rowIdx];
+      
+      // FloatType forestPrediction = xgBoostParser.GetForest()->Predict_Float(row);
+      // Test_ASSERT(FPEqual<ResultType>(forestPrediction, expectedResult));
 
-      Test_ASSERT(FPEqual<FloatType>(forestPrediction, expectedResult));
-      Test_ASSERT(FPEqual<FloatType>(result[rowIdx], expectedResult));
+      Test_ASSERT(FPEqual<ResultType>(result[rowIdx], expectedResult));
+      // std::cout << forestPrediction << "\t" << result[rowIdx] << "\t" << expectedResult << std::endl;
     }
     ++currentPredictionsIter;
   }
@@ -103,7 +105,7 @@ bool Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize(TestArgs_t& args, i
     std::getline(fin, modelJSONName);
     auto modelJSONPath = testModelsDir + "/" + modelJSONName;
     // std::cout << "Model file : " << modelJSONPath << std::endl;
-    Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FloatType>(args, batchSize, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth));
+    Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FloatType>(args, batchSize, modelJSONPath, modelJSONPath+".csv", tileSize, tileShapeBitWidth, childIndexBitWidth));
   }
   return true;
 }
@@ -659,62 +661,108 @@ bool Test_SparseUniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4(TestArgs_t& a
 // ===---------------------------------------------------=== //
 
 bool Test_SingleTileSize_SingleModel(TestArgs_t &args, const std::string& modelJSONPath, int32_t tileSize, 
-                                     bool skipInt8 = false, int32_t tileShapeBitWidth=32, int32_t childIndexBitWidth=1) {
+                                     bool skipInt8 = false, int32_t tileShapeBitWidth=32, int32_t childIndexBitWidth=1, std::string csvPath="",
+                                     ScheduleManipulator_t scheduleManipulator=nullptr) {
+  if (csvPath == "")
+    csvPath = modelJSONPath + ".csv";
   {
     using FPType = double;
     if (!RunSingleBatchSizeForXGBoostTests) {
-      Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth));
-      Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth));
+      Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator));
+      Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator));
     }
-    Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth));
+    Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator));
   }
   {
     using FPType = double;
     using IntType = int16_t;
     if (!RunSingleBatchSizeForXGBoostTests) {
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
     }
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
   }
   if (!skipInt8)
   {
     using FPType = double;
     using IntType = int8_t;
     if (!RunSingleBatchSizeForXGBoostTests) {
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
     }
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
   }
 
   {
     using FPType = float;
     if (!RunSingleBatchSizeForXGBoostTests) {
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
     }
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
   }
   {
     using FPType = float;
     using IntType = int16_t;
     if (!RunSingleBatchSizeForXGBoostTests) {
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
     }
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
   }
   if (!skipInt8)
   {
     using FPType = float;
     using IntType = int8_t;
     if (!RunSingleBatchSizeForXGBoostTests) {
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
     }
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
   }
+  return true;
+}
+
+bool Test_SingleTileSize_SingleModel_FloatOnly(TestArgs_t &args, const std::string& modelJSONPath, int32_t tileSize, 
+                                     bool skipInt8 = false, int32_t tileShapeBitWidth=32, int32_t childIndexBitWidth=1, std::string csvPath="",
+                                     ScheduleManipulator_t scheduleManipulator=nullptr) {
+  if (csvPath == "")
+    csvPath = modelJSONPath + ".csv";
+  {
+    using FPType = float;
+    if (!RunSingleBatchSizeForXGBoostTests) {
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
+    }
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
+  }
+  {
+    using FPType = float;
+    using IntType = int16_t;
+    if (!RunSingleBatchSizeForXGBoostTests) {
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
+    }
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
+  }
+  if (!skipInt8)
+  {
+    using FPType = float;
+    using IntType = int8_t;
+    if (!RunSingleBatchSizeForXGBoostTests) {
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
+    }
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
+  }
+  return true;
+}
+
+bool Test_MultiClass_Int32ReturnType(TestArgs_t &args, const std::string& modelJSONPath, int32_t tileSize, 
+                                     bool skipInt8 = false, int32_t tileShapeBitWidth=32, int32_t childIndexBitWidth=1, std::string csvPath="") {
+  if (csvPath == "")
+    csvPath = modelJSONPath + ".csv";
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int32_t, int8_t>(args, 8, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
   return true;
 }
 
@@ -996,6 +1044,290 @@ bool Test_TileSize8_Year(TestArgs_t &args) {
   auto modelJSONPath = testModelsDir + "/year_prediction_msd_xgb_model_save.json";
   int32_t tileSize = 8;
   return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize);
+}
+
+// ===----------------------------------------------------------------=== //
+// XGBoost Benchmark Code Gen Correctness Tests With XGBoost Schedule
+// ===----------------------------------------------------------------=== //
+
+bool Test_Scalar_Abalone_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  int32_t tileSize = 1;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize2_Abalone_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  int32_t tileSize = 2;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize3_Abalone_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  int32_t tileSize = 3;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize4_Abalone_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  int32_t tileSize = 4;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize8_Abalone_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_Scalar_Airline_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  int32_t tileSize = 1;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize2_Airline_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  int32_t tileSize = 2;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize3_Airline_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  int32_t tileSize = 3;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize4_Airline_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  int32_t tileSize = 4;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize8_Airline_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_Scalar_AirlineOHE_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  int32_t tileSize = 1;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize2_AirlineOHE_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  int32_t tileSize = 2;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize3_AirlineOHE_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  int32_t tileSize = 3;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize4_AirlineOHE_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  int32_t tileSize = 4;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize8_AirlineOHE_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_Scalar_Bosch_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/bosch_xgb_model_save.json";
+  int32_t tileSize = 1;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize2_Bosch_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/bosch_xgb_model_save.json";
+  int32_t tileSize = 2;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize3_Bosch_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/bosch_xgb_model_save.json";
+  int32_t tileSize = 3;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize4_Bosch_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/bosch_xgb_model_save.json";
+  int32_t tileSize = 4;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize8_Bosch_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/bosch_xgb_model_save.json";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_Scalar_Epsilon_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
+  int32_t tileSize = 1;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize2_Epsilon_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
+  int32_t tileSize = 2;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize3_Epsilon_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
+  int32_t tileSize = 3;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize4_Epsilon_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
+  int32_t tileSize = 4;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize8_Epsilon_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_Scalar_Higgs_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
+  int32_t tileSize = 1;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize2_Higgs_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
+  int32_t tileSize = 2;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize3_Higgs_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
+  int32_t tileSize = 3;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize4_Higgs_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
+  int32_t tileSize = 4;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize8_Higgs_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_Scalar_Year_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/year_prediction_msd_xgb_model_save.json";
+  int32_t tileSize = 1;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize2_Year_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/year_prediction_msd_xgb_model_save.json";
+  int32_t tileSize = 2;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize3_Year_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/year_prediction_msd_xgb_model_save.json";
+  int32_t tileSize = 3;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize4_Year_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/year_prediction_msd_xgb_model_save.json";
+  int32_t tileSize = 4;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize8_Year_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/year_prediction_msd_xgb_model_save.json";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 1, "", OneTreeAtATimeSchedule);
 }
 
 // ===---------------------------------------------------=== //
@@ -1316,6 +1648,373 @@ bool Test_SparseTileSize8_Year(TestArgs_t &args) {
   int32_t tileSize = 8;
   return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
 }
+
+// ===---------------------------------------------------=== //
+// XGBoost Test Inputs Code Gen Correctness Tests
+// ===---------------------------------------------------=== //
+
+bool Test_TileSize8_Abalone_TestInputs(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
+}
+
+bool Test_TileSize8_AirlineOHE_TestInputs(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, true, 16, 16, csvPath);
+}
+
+bool Test_TileSize8_Airline_TestInputs(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
+}
+
+bool Test_TileSize8_Bosch_TestInputs(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/bosch_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, true, 16, 16, csvPath);
+}
+
+bool Test_TileSize8_Epsilon_TestInputs(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, true, 16, 16, csvPath);
+}
+
+bool Test_TileSize8_Higgs_TestInputs(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
+}
+
+bool Test_TileSize8_Year_TestInputs(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/year_prediction_msd_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
+}
+
+static bool Test_TileSizeVariable_CovType_Int8Type(TestArgs_t &args, int32_t tileSize) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/covtype_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".csv";
+  return Test_MultiClass_Int32ReturnType(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
+}
+
+bool Test_TileSize1_CovType_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_CovType_Int8Type(args, 1);
+}
+
+bool Test_TileSize2_CovType_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_CovType_Int8Type(args, 2);
+}
+
+bool Test_TileSize3_CovType_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_CovType_Int8Type(args, 3);
+}
+
+bool Test_TileSize4_CovType_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_CovType_Int8Type(args, 4);
+}
+
+bool Test_TileSize8_CovType_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_CovType_Int8Type(args, 8);
+}
+
+// ===--------------------------------------------------------=== //
+// XGBoost Test Inputs Tiled Schedule Code Gen Correctness Tests
+// ===--------------------------------------------------------=== //
+
+bool Test_TileSize8_Abalone_TestInputs_TiledSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_TileSize8_AirlineOHE_TestInputs_TiledSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, true, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_TileSize8_Airline_TestInputs_TiledSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_TileSize8_Bosch_TestInputs_TiledSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/bosch_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, true, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_TileSize8_Epsilon_TestInputs_TiledSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, true, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_TileSize8_Higgs_TestInputs_TiledSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_TileSize8_Year_TestInputs_TiledSchedule(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/year_prediction_msd_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+// ===----------------------------------------------------------------=== //
+// XGBoost Benchmark Sparse Code Gen Correctness Tests With XGBoost Schedule
+// ===----------------------------------------------------------------=== //
+
+bool Test_SparseScalar_Abalone_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  int32_t tileSize = 1;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 16, 16, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_SparseTileSize8_Abalone_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 16, 16, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_SparseScalar_Airline_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  int32_t tileSize = 1;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 16, 16, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_SparseTileSize8_Airline_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 16, 16, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_SparseScalar_AirlineOHE_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  int32_t tileSize = 1;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 16, 16, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_SparseTileSize8_AirlineOHE_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 16, 16, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_SparseScalar_Bosch_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/bosch_xgb_model_save.json";
+  int32_t tileSize = 1;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 16, 16, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_SparseTileSize8_Bosch_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/bosch_xgb_model_save.json";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 16, 16, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_SparseScalar_Epsilon_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
+  int32_t tileSize = 1;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 16, 16, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_SparseTileSize8_Epsilon_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 16, 16, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_SparseScalar_Higgs_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
+  int32_t tileSize = 1;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 16, 16, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_SparseTileSize8_Higgs_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 16, 16, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_SparseScalar_Year_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/year_prediction_msd_xgb_model_save.json";
+  int32_t tileSize = 1;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 16, 16, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_SparseTileSize8_Year_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/year_prediction_msd_xgb_model_save.json";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 16, 16, "", OneTreeAtATimeSchedule);
+}
+
+// ===-------------------------------------------------------------=== //
+// XGBoost Test Inputs Tiled Schedule Sparse Code Gen Correctness Tests
+// ===-------------------------------------------------------------=== //
+
+bool Test_SparseTileSize8_Abalone_TestInputs_TiledSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_SparseTileSize8_AirlineOHE_TestInputs_TiledSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, true, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_SparseTileSize8_Airline_TestInputs_TiledSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_SparseTileSize8_Bosch_TestInputs_TiledSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/bosch_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, true, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_SparseTileSize8_Epsilon_TestInputs_TiledSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, true, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_SparseTileSize8_Higgs_TestInputs_TiledSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_SparseTileSize8_Year_TestInputs_TiledSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/year_prediction_msd_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
 
 } // test
 } // TreeBeard

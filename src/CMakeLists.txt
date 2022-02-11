@@ -30,14 +30,17 @@ target_link_libraries(tree-heavy PRIVATE ${LIBS})
 
 mlir_check_all_link_libraries(tree-heavy)
 
+add_subdirectory(runtime)
 add_subdirectory(include)
 add_subdirectory(test)
 add_subdirectory(mlir)
 add_subdirectory(utils)
 add_subdirectory(debug-helpers)
+add_subdirectory(schedule)
 
 include_directories(include)
 include_directories(json)
 include_directories(mlir)
 include_directories(test)
 include_directories(utils)
+include_directories(schedule)

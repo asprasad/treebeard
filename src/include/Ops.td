@@ -82,6 +82,17 @@ def DecisionForestAttr : Attr<
   let convertFromStorage = "$_self";
 }
 
+def ScheduleAttr : Attr<
+  CPred<"$_self.isa<::mlir::decisionforest::ScheduleAttribute>()">,
+  "Schedule attribute"> {
+
+  let storageType = [{ ::mlir::decisionforest::ScheduleAttribute }];
+  let returnType = [{ ::mlir::decisionforest::ScheduleAttribute }];
+  
+  let constBuilderCall = "::mlir::decisionforest::ScheduleAttribute::get()";
+  let convertFromStorage = "$_self";
+}
+
 //-------   Operations   ----------------------
 
 class DecisionForest_Op<string mnemonic, list<OpTrait> traits = []> : 
@@ -91,16 +102,19 @@ class DecisionForest_Op<string mnemonic, list<OpTrait> traits = []> :
 //------- High level IR Ops ------------------
 // TODO Need to parameterize 
 // * The number of return values (may have multiple return probablities, class ID etc)
+
 def InputDataType : AnyTypeOf<[F16MemRef, F32MemRef, F64MemRef]>;
-def ReturnType : AnyTypeOf<[F16, F32, F64, F16Tensor, F32Tensor, F64Tensor, F16MemRef, F32MemRef, F64MemRef]>;
+def ReturnType : AnyTypeOf<[I8, I16, I32, F16, F32, F64, F16Tensor, F32Tensor, F64Tensor, I8MemRef, I16MemRef, I32MemRef, F16MemRef, F32MemRef, F64MemRef]>;
 def LeafNodeValueType : AnyTypeOf<[F16, F32, F64]>;
+def ClassIdValueType : AnyTypeOf<[I8, I16, I32]>;
+def TreeClassInfoMemref : AnyTypeOf<[I8MemRef, I16MemRef, I32MemRef]>;
 
 def PredictForestOp : DecisionForest_Op<"predict_ensemble"> {
     let summary = "Predict forest operation";
     let description = "Represents the actual inference computation on the forest. Takes a tensor operand and produces a result."
                       "Contains the actual forest as an attribute.";
 
-    let arguments = (ins DecisionForestAttr:$ensemble, InputDataType:$data, InputDataType:$result);
+    let arguments = (ins DecisionForestAttr:$ensemble, InputDataType:$data, InputDataType:$result, ScheduleAttr:$schedule);
 
     // Just returns its result argument after filling in the results
     let results = (outs InputDataType);
@@ -169,6 +183,14 @@ def GetTreeFromEnsembleOp : DecisionForest_Op<"getTree", [NoSideEffect]> {
   let arguments = (ins TreeEnsembleType:$forest, Index:$treeIndex);
 
   let results = (outs TreeType);
+}
+
+def GetTreeClassIdOp : DecisionForest_Op<"getTreeClassId", [NoSideEffect]> {
+  let summary = "Get tree class from ensemble.";
+  let description = "Index the forest and get the class Id of the tree at that index. Takes two arguments -- an ensemble and an integer and returns a tree value.";
+  let arguments = (ins TreeEnsembleType:$forest, Index:$treeIndex);
+
+  let results = (outs ClassIdValueType);
 }
 
 def GetRootOp : DecisionForest_Op<"getRoot", [NoSideEffect]> {

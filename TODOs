@@ -1,3 +1,103 @@
+- Locality Optimizations
+    - Decide the tiling of the (batch, forest) iteration space and make it a property of the predictForest op
+    - Properties
+        - How many trees to travese at a time?
+        - How many rows to traverse per tree?
+        - Order in which to traverse trees
+            - Which trees need dedicated code and which trees share code
+        - Which trees to pipeline
+        - Which trees to SIMDize
+
+Scheduling Language
+    - Schedule class
+        - [Done] Lineage tree
+        - [Done] Nesting tree
+        - [Done] Reorder
+        - [Done] Tile
+        - Split -- duplication of nested loops causes problems
+        - [Done] Flags for optimizations on the IndexVariable class
+            - Unroll, Simdize, Pipeline, Parallelize
+            - Expand, PeelWalk, Prefetch
+    - Schedule attribute
+        - [Done] MLIR attribute classes for schedule
+        - [Done] Make them part of the Predict forest op
+        - [Done] Expose APIs from JSONParser to construct and modify schedule object
+    - Lowering using the schedule
+        - [Done] Tiling
+        - [Done] Unrolling
+        - [Done] Reordering
+        - [Done] Splitting
+        - Pipelining
+        - Simdize
+        - Unroll walk
+        - Parallel
+        - Expand
+    - How do we use schedules from the command line?
+
+XGBoost comparison
+    - [Done] Write JSON file from ForestJSONReader
+    - [Done] Read the JSON file from the execution helper
+    - [Done] Change SO APIs to take value JSON filename and use that for execution
+    - [Done] Build a separate SO for execution part
+    - Python wrappers
+        - [Done] Write python tests for correctness (same as runtime tests, but on real data when possible)
+        - [Done] For benchmarking, write runtime method that iterates over a large dataset in batches (for fair comparison with Xgboost)
+        - [Done] Write a python wrapper to run benchmarks (on real data)
+        - Inference method -- Remove the assumption that inputs and outputs are float type
+            - Persist input and return types in the JSON
+        - Expose JIT through Python API
+
+Merge multiclass support
+Fix generated code to work with nans
+Finish the microbenchmarking for gather
+LightGBM support
+Tiling optimization (DP to minimize skew?)
+Unrolling Treewalk + new representation  
+Pipeline
+Parallelization
+Schedule exploration
+SIMD 
+
+Code gen for unequal tile size across trees
+    - Serialization when tile sizes are unequal across trees
+    - Generate >1 model memrefs
+    - ??
+    - Make the look-up in ForestJSONReader based on the name of a global rather than the tile size etc. We're unnecessarily constraining the IR to only have a single ensemble constant with a particular (tile size, threshold type, feature index type) combination now. Instead we should just generate a unique global name for each ensemble constant.
+
+*[Done] Generate method to initialize model memref that takes buffers containing actual values as arguments
+    - This will be safer than guessing the layout of the tile struct (since we'll pass the thresholds and indices as separate arrays)
+
+* [Done] Memref of memrefs, Memref of struct types
+* [Done] Initialization of the model memrefs
+    - Method to figure out the storage needed for each tree (number of nodes, size of each node)
+    - Generate constants that can be used to initialize the model memref
+* Add SIMD and Pipeline Containers
+    - How will an Op contain other Ops?!
+* Type inference and checking passes (NodeType and TreeType)
+* [Done] Verify whether the features of the input are indexed with base 1 or 0 in XGBoost
+* [Done] Tree types need to be part of the ensemble type (we may need to be able to tell tree tiling for a certain tree for example)
+
+* [Defer] MLIR parse routines
+
+* [Done] Add tiling information to tree types
+    - Tiling info needs to be in two places -- the DecisionTree class and the TreeType class
+* [Done] [Bug] The tensor from which result[i] is being read is not the "iteration tensor" of the the tree loop. 
+* [Done] TreeEnsemble attribute
+    - Needs to take the TreeEnsemble object and construct a storage class and attribute object
+    - Hash for the storage key needs to be figured out (Type, TreeEnsemble)
+* [Done] API to build TreeEnsembleAttribute from JSON parser
+* [Done] Calls to Builder interface from JSON parser
+    - Build methods for the predict op
+    - Only needs to build two ops and set the corresponding attributes
+* [Done] MLIR print routines for dialect
+* [Done] Add batch size to high level IR 
+* [Done] Tree constant op
+* [Done] Forest constant op
+* [Done] Figure out how to implement node types (sub-typing)
+* [Done] Add document to describe the next level IR
+* [Done] Implement the tree attribute
+* [Done] Add TraverseTile for constant tree
+
 CodeGen for tile size == 1 for all trees
     * [Done] Add threshold and feature index type to tree type
     * [Done] Add tree types to forest type (list of individual tree types)
@@ -22,7 +122,7 @@ CodeGen for tile size == 1 for all trees
             - JSON file
             - Input and output CSV
         * [Done] Write tests in C++ that read these, compile and check results
-    * Compare results with XGBoost for full models
+    * [Done] Compare results with XGBoost for full models
 
 
 CodeGen for tile size != 1
@@ -71,60 +171,6 @@ Performance Tuning for Tiled Code
     - [Done] Store leaves in a "different" array so leaf values don't have to be duplicated as full tiles
 
 [Done] SO support for sparse representation
-
-- Locality Optimizations
-    - Decide the tiling of the (batch, forest) iteration space and make it a property of the predictForest op
-    - Properties
-        - How many trees to travese at a time?
-        - How many rows to traverse per tree?
-        - Order in which to traverse trees
-            - Which trees need dedicated code and which trees share code
-        - Which trees to pipeline
-        - Which trees to SIMDize
-        
-Pipeline container
-SIMD container
-
-Code gen for unequal tile size across trees
-    - Serialization when tile sizes are unequal across trees
-    - Generate >1 model memrefs
-    - ??
-
-* Make the look-up in ForestJSONReader based on the name of a global rather than the tile size etc. We're unnecessarily constraining the IR to only have a single ensemble constant with a particular (tile size, threshold type, feature index type) combination now. Instead we should just generate a unique global name for each ensemble constant.
-
-* Generate method to initialize model memref that takes buffers containing actual values as arguments
-    - This will be safer than guessing the layout of the tile struct (since we'll pass the thresholds and indices as separate arrays)
-
-* [Done] Memref of memrefs, Memref of struct types
-* [Done] Initialization of the model memrefs
-    - Method to figure out the storage needed for each tree (number of nodes, size of each node)
-    - Generate constants that can be used to initialize the model memref
-* Add SIMD and Pipeline Containers
-    - How will an Op contain other Ops?!
-* Type inference and checking passes (NodeType and TreeType)
-* Verify whether the features of the input are indexed with base 1 or 0 in XGBoost
-* Tree types need to be part of the ensemble type (we may need to be able to tell tree tiling for a certain tree for example)
-
-* [Defer] MLIR parse routines
-
-* [Done] Add tiling information to tree types
-    - Tiling info needs to be in two places -- the DecisionTree class and the TreeType class
-* [Done] [Bug] The tensor from which result[i] is being read is not the "iteration tensor" of the the tree loop. 
-* [Done] TreeEnsemble attribute
-    - Needs to take the TreeEnsemble object and construct a storage class and attribute object
-    - Hash for the storage key needs to be figured out (Type, TreeEnsemble)
-* [Done] API to build TreeEnsembleAttribute from JSON parser
-* [Done] Calls to Builder interface from JSON parser
-    - Build methods for the predict op
-    - Only needs to build two ops and set the corresponding attributes
-* [Done] MLIR print routines for dialect
-* [Done] Add batch size to high level IR 
-* [Done] Tree constant op
-* [Done] Forest constant op
-* [Done] Figure out how to implement node types (sub-typing)
-* [Done] Add document to describe the next level IR
-* [Done] Implement the tree attribute
-* [Done] Add TraverseTile for constant tree
 
 
 ISSUES
