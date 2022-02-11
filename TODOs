@@ -47,8 +47,16 @@ XGBoost comparison
             - Persist input and return types in the JSON
         - Expose JIT through Python API
 
-Pipeline container
-SIMD container
+Merge multiclass support
+Fix generated code to work with nans
+Finish the microbenchmarking for gather
+LightGBM support
+Tiling optimization (DP to minimize skew?)
+Unrolling Treewalk + new representation  
+Pipeline
+Parallelization
+Schedule exploration
+SIMD 
 
 Code gen for unequal tile size across trees
     - Serialization when tile sizes are unequal across trees

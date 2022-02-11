@@ -1,5 +1,3 @@
-from glob import glob
-from pyexpat import model
 import sys
 import os
 from xmlrpc.client import Boolean
@@ -51,14 +49,14 @@ def RunSingleTest(soPath, globalsJSONPath, csvPath) -> Boolean:
 
 def RunTestOnSingleModelRandomInputs(modelName : str) -> Boolean:
   print("Running random input test", modelName, "...", end=" ")
-  soPath = os.path.join(os.path.join(treebeard_repo_dir, "runtime_test_binaries"), modelName + "_t8_b200_f_i16.so")
+  soPath = os.path.join(os.path.join(treebeard_repo_dir, "runtime_test_binaries"), modelName + "_t8_b200_f_i16_invert.so")
   globalsJSONPath = soPath + ".treebeard-globals.json"
   csvPath = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), modelName + "_xgb_model_save.json.csv")
   return RunSingleTest(soPath, globalsJSONPath, csvPath)
 
 def RunTestOnSingleModelTestInputs(modelName : str) -> Boolean:
   print("Running actual input test",  modelName, "...", end=" ")
-  soPath = os.path.join(os.path.join(treebeard_repo_dir, "runtime_test_binaries"), modelName + "_t8_b200_f_i16.so")
+  soPath = os.path.join(os.path.join(treebeard_repo_dir, "runtime_test_binaries"), modelName + "_t8_b200_f_i16_invert.so")
   globalsJSONPath = soPath + ".treebeard-globals.json"
   csvPath = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), modelName + "_xgb_model_save.json.test.sampled.csv")
   return RunSingleTest(soPath, globalsJSONPath, csvPath)
@@ -81,14 +79,14 @@ def RunSingleTest_Multibatch(soPath, globalsJSONPath, csvPath) -> Boolean:
 
 def RunTestOnSingleModelRandomInputs_Multibatch(modelName : str) -> Boolean:
   print("Running multibatch random input test", modelName, "...", end=" ")
-  soPath = os.path.join(os.path.join(treebeard_repo_dir, "runtime_test_binaries"), modelName + "_t8_b200_f_i16.so")
+  soPath = os.path.join(os.path.join(treebeard_repo_dir, "runtime_test_binaries"), modelName + "_t8_b200_f_i16_invert.so")
   globalsJSONPath = soPath + ".treebeard-globals.json"
   csvPath = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), modelName + "_xgb_model_save.json.csv")
   return RunSingleTest_Multibatch(soPath, globalsJSONPath, csvPath)
 
 def RunTestOnSingleModelTestInputs_Multibatch(modelName : str) -> Boolean:
   print("Running multibatch actual input test",  modelName, "...", end=" ")
-  soPath = os.path.join(os.path.join(treebeard_repo_dir, "runtime_test_binaries"), modelName + "_t8_b200_f_i16.so")
+  soPath = os.path.join(os.path.join(treebeard_repo_dir, "runtime_test_binaries"), modelName + "_t8_b200_f_i16_invert.so")
   globalsJSONPath = soPath + ".treebeard-globals.json"
   csvPath = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), modelName + "_xgb_model_save.json.test.sampled.csv")
   return RunSingleTest_Multibatch(soPath, globalsJSONPath, csvPath)
