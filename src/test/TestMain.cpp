@@ -176,6 +176,11 @@ bool Test_TileSize2_Year_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_TileSize3_Year_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_TileSize4_Year_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_TileSize8_Year_OneTreeAtATimeSchedule(TestArgs_t &args);
+bool Test_TileSize1_CovType_Int8Type(TestArgs_t &args);
+bool Test_TileSize2_CovType_Int8Type(TestArgs_t &args);
+bool Test_TileSize3_CovType_Int8Type(TestArgs_t &args);
+bool Test_TileSize4_CovType_Int8Type(TestArgs_t &args);
+bool Test_TileSize8_CovType_Int8Type(TestArgs_t &args);
 
 // Sparse XGBoost Scalar Tests
 bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args);
@@ -258,11 +263,6 @@ bool Test_TileSize8_Bosch_TestInputs(TestArgs_t &args);
 bool Test_TileSize8_Epsilon_TestInputs(TestArgs_t &args);
 bool Test_TileSize8_Higgs_TestInputs(TestArgs_t &args);
 bool Test_TileSize8_Year_TestInputs(TestArgs_t &args);
-bool Test_TileSize1_CovType_TestInputs(TestArgs_t &args);
-bool Test_TileSize2_CovType_TestInputs(TestArgs_t &args);
-bool Test_TileSize3_CovType_TestInputs(TestArgs_t &args);
-bool Test_TileSize4_CovType_TestInputs(TestArgs_t &args);
-bool Test_TileSize8_CovType_TestInputs(TestArgs_t &args);
 
 // Tiled schedule test
 bool Test_TileSize8_Abalone_TestInputs_TiledSchedule(TestArgs_t &args);
@@ -949,11 +949,11 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TileSize3_Year),
   TEST_LIST_ENTRY(Test_TileSize4_Year),
   TEST_LIST_ENTRY(Test_TileSize8_Year),
-  TEST_LIST_ENTRY(Test_TileSize1_CovType_TestInputs),
-  TEST_LIST_ENTRY(Test_TileSize2_CovType_TestInputs),
-  TEST_LIST_ENTRY(Test_TileSize3_CovType_TestInputs),
-  TEST_LIST_ENTRY(Test_TileSize4_CovType_TestInputs),
-  TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs),
+  TEST_LIST_ENTRY(Test_TileSize1_CovType_Int8Type),
+  TEST_LIST_ENTRY(Test_TileSize2_CovType_Int8Type),
+  TEST_LIST_ENTRY(Test_TileSize3_CovType_Int8Type),
+  TEST_LIST_ENTRY(Test_TileSize4_CovType_Int8Type),
+  TEST_LIST_ENTRY(Test_TileSize8_CovType_Int8Type),
 
   // Sparse tests
   TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize1_I32ChildIdx),
@@ -1214,8 +1214,8 @@ void RunTests() {
   auto totalTime = std::chrono::duration_cast<std::chrono::seconds>(end - begin).count();
 
   std::cout << std::endl << boldBlue << underline << numPassed << "/" << numTests << reset << white << " tests passed.";
-  std::cout << std::endl <<"Total time taken : " << totalTime << " seconds.";
-  std::cout << std::endl << underline << (overallPass ? boldGreen + "\nTest Suite Passed." : boldRed + "\nTest Suite Failed.") << reset << std::endl << std::endl;
+  std::cout << underline << (overallPass ? boldGreen + "\nTest Suite Passed." : boldRed + "\nTest Suite Failed.") << reset;
+  std::cout << std::endl <<"Total time taken : " << totalTime << " seconds." << std::endl << std::endl;
 }
 
 } // test

@@ -200,7 +200,7 @@ struct PredictForestOpLowering: public ConversionPattern {
       auto treeClassesMemref = GetRow(rewriter, location, state.treeClassesMemref, index, state.treeClassesMemrefType);
       auto treeClassElementType = treeClassesMemref.getType().cast<MemRefType>().getElementType();
 
-      if (decisionforest::InsertDebugHelpers) {
+      if (decisionforest::PrintVectors) {
         InsertPrintMemrefOp(
           rewriter,
           location,
@@ -266,7 +266,7 @@ struct PredictForestOpLowering: public ConversionPattern {
       
       rewriter.setInsertionPointAfter(maxClassLoop);
 
-      if (decisionforest::InsertDebugHelpers) {
+      if (decisionforest::PrintVectors) {
         InsertPrintElementOp(rewriter, location, 1, sizeof(int64_t) * 8, maxClassLoop.getResult(1));
       }
 

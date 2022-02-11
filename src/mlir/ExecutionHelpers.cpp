@@ -298,7 +298,7 @@ llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> InferenceRunner::CreateEx
   SmallVector<StringRef, 4> executionEngineLibs;
 
   std::string debugSOPath;
-  if (decisionforest::PrintVectors) {
+  if (decisionforest::InsertDebugHelpers) {
     debugSOPath = GetDebugSOPath();
     // std::cout << "Calculated debug SO path : " << debugSOPath << std::endl;
     executionEngineLibs.push_back(debugSOPath.data());

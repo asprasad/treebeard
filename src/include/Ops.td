@@ -108,7 +108,6 @@ def ReturnType : AnyTypeOf<[I8, I16, I32, F16, F32, F64, F16Tensor, F32Tensor, F
 def LeafNodeValueType : AnyTypeOf<[F16, F32, F64]>;
 def ClassIdValueType : AnyTypeOf<[I8, I16, I32]>;
 def TreeClassInfoMemref : AnyTypeOf<[I8MemRef, I16MemRef, I32MemRef]>;
-def SoftMaxInputType : AnyTypeOf<[F16MemRef, F32MemRef, F64MemRef]>;
 
 def PredictForestOp : DecisionForest_Op<"predict_ensemble"> {
     let summary = "Predict forest operation";

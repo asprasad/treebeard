@@ -145,7 +145,7 @@ public:
     int32_t GetChildIndexBitWidth() { return m_childIndexBitWidth; }
     void SetChildIndexBitWidth(int32_t val) { m_childIndexBitWidth=val; }
 
-    void SetNumberOfClasses(int8_t nclasses) { m_numberOfClasses = nclasses; }
+    void SetNumberOfClasses(int32_t nclasses) { m_numberOfClasses = nclasses; }
     int32_t GetNumberOfClasses() const { return m_numberOfClasses; }
 
     void SetRowSize(int32_t val) { m_rowSize = val; }

@@ -387,7 +387,7 @@ FPType sigmoid(FPType val) {
 }
 
 template<typename FPType, typename ReturnType>
-ReturnType softmax(std::vector<FPType>& classProbabilities) {
+ReturnType argmax(std::vector<FPType>& classProbabilities) {
     // Note: Commented out code implements the actual formula of softmax. 
     // For our purpose, we dont' really need this since softmax is monotonically increasing.
     // std::transform(
@@ -439,7 +439,7 @@ ReturnType DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndex
                 classProbabilities[pair.first] = std::accumulate(pair.second.begin(), pair.second.end(), m_initialValue);
             });
         
-        return softmax<ThresholdType, ReturnType>(classProbabilities);
+        return argmax<ThresholdType, ReturnType>(classProbabilities);
     }
 }
 
@@ -475,7 +475,7 @@ float DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>
                 classProbabilities[pair.first] = std::accumulate(pair.second.begin(), pair.second.end(), m_initialValue);
             });
         
-        return softmax<float, ReturnType>(classProbabilities);
+        return argmax<float, ReturnType>(classProbabilities);
     }
 }
 

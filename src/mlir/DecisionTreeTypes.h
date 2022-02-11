@@ -282,7 +282,21 @@ struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
             tileShapeType, 
             sparseRep, 
             childIndexType,
-            IntegerType::get(resultType.getContext(), 8)
+            IntegerType::get(resultType.getContext(), 8) // #TODO Tree-Beard#19
+        };
+    }
+
+    static KeyTy getKey(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType, Type tileShapeType, bool sparseRep, Type childIndexType, Type classIdType) {
+        return KeyTy
+        {
+            resultType, 
+            tileSize, 
+            thresholdType, 
+            featureIndexType, 
+            tileShapeType, 
+            sparseRep, 
+            childIndexType,
+            classIdType, 
         };
     }
 
