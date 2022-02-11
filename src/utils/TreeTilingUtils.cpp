@@ -118,6 +118,10 @@ void ForestJSONReader::ParseJSONFile() {
     m_numberOfTrees = m_json["NumberOfTrees"];
     m_childIndexBitWidth = m_json["ChildIndexBitWidth"];
     m_tileShapeBitWidth = m_json["TileShapeBitWidth"];
+    m_numberOfClasses = m_json["NumberOfClasses"];
+    for (auto& classId : m_json["TreeClassIDs"]) {
+        m_classIds.push_back(classId);
+    }
     decisionforest::UseSparseTreeRepresentation = m_json["SparseRepresentation"];
 
     std::list<SingleTileSizeEntry> newEntries;
@@ -173,6 +177,13 @@ void ForestJSONReader::WriteJSONFile() {
     m_json["ChildIndexBitWidth"] = m_childIndexBitWidth;
     m_json["TileShapeBitWidth"] = m_tileShapeBitWidth;
     m_json["SparseRepresentation"] = decisionforest::UseSparseTreeRepresentation;
+    m_json["NumberOfClasses"] = m_numberOfClasses;
+
+    // #TODO - Persist the bit width of the class ID type as well.
+    for (auto classId : m_classIds) {
+        m_json["TreeClassIDs"].push_back(classId);
+    }
+
     for (auto& tileSizeEntry : m_tileSizeEntries) {
         json tileSizeJSON;
         WriteSingleTileSizeEntryToJSON(tileSizeJSON, tileSizeEntry);
@@ -219,13 +230,16 @@ void ForestJSONReader::AddSingleTileSizeEntry(std::list<int32_t>& treeIndices, s
 
 void ForestJSONReader::AddSingleTree(int32_t treeIndex, int32_t numTiles, std::vector<ThresholdType>& serializedThresholds,
                                      std::vector<FeatureIndexType>& serializedFetureIndices, std::vector<int32_t>& tileShapeIDs,
-                                     const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth) {
+                                     const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth,
+                                     // #TODO Tree-Beard#19
+                                     const int8_t classId) {
     std::list<int32_t> treeIndices = { treeIndex };
     std::list<int32_t> numTilesList = { numTiles };
     std::list<std::vector<ThresholdType>> serializedThresholdsList = { serializedThresholds }, serializedLeaves;
     std::list<std::vector<FeatureIndexType>> serializedFetureIndicesList = { serializedFetureIndices };
     std::list<std::vector<int32_t>> serializedTileShapeIDs = { tileShapeIDs };
     std::list<std::vector<int32_t>> serializedChildIndices;
+    m_classIds.push_back(classId);
 
     AddSingleTileSizeEntry(treeIndices, numTilesList, serializedThresholdsList, serializedFetureIndicesList, serializedTileShapeIDs, 
                            serializedChildIndices, serializedLeaves, tileSize, thresholdBitWidth, indexBitWidth);
@@ -248,6 +262,7 @@ void ForestJSONReader::AddSingleSparseTree(int32_t treeIndex, int32_t numTiles, 
 
 void ForestJSONReader::ClearAllData() {
     m_tileSizeEntries.clear();
+    m_classIds.clear();
     // Can't clear the json path here because PersistForest calls Clear!
     // m_jsonFilePath.clear();
     m_tileShapeBitWidth = -1;
@@ -486,6 +501,18 @@ void ForestJSONReader::InitializeLookUpTable(void* bufPtr, int32_t tileSize, int
     }
 }
 
+void ForestJSONReader::InitializeClassInformation(void *classInfoBuf) {
+    if (m_numberOfClasses == 0) return;
+
+    // #TODO Tree-Beard#19
+    int8_t *classInfoBufferPtr = reinterpret_cast<int8_t*>(classInfoBuf);
+    int32_t i = 0;
+    for (auto x : m_classIds) {
+        classInfoBufferPtr[i++] = x;
+    }
+}
+
+
 template<typename LeafType>
 void ForestJSONReader::InitializeLeavesImpl(LeafType *bufPtr, std::list<ForestJSONReader::SingleTileSizeEntry>::iterator listIter) {
     auto treeIndexIter = listIter->treeIndices.begin();
@@ -636,6 +663,8 @@ void PersistDecisionForestImpl(mlir::decisionforest::DecisionForest<>& forest, m
 
     auto numTrees = forest.NumTrees();
     mlir::decisionforest::ForestJSONReader::GetInstance().SetNumberOfTrees(numTrees);
+    mlir::decisionforest::ForestJSONReader::GetInstance().SetNumberOfClasses(forest.GetNumClasses());
+
     std::vector<TiledTreeStats> treeStats;
     uint tileShapeBitWidth = 0;
     int32_t childIndexBitWidth = -1;
@@ -700,9 +729,16 @@ void PersistDecisionForestArrayBased(mlir::decisionforest::DecisionForest<>& for
                 std::vector<int32_t> tileShapeIDs = { };
                 int32_t numTiles = tree.GetNumberOfTiles();
                 int32_t tileSize = tree.TilingDescriptor().MaxTileSize();
-                mlir::decisionforest::ForestJSONReader::GetInstance().AddSingleTree(treeNumber, numTiles, thresholds, featureIndices, tileShapeIDs, tileSize, 
-                                                                                    treeType.getThresholdType().getIntOrFloatBitWidth(), 
-                                                                                    treeType.getFeatureIndexType().getIntOrFloatBitWidth());
+                mlir::decisionforest::ForestJSONReader::GetInstance().AddSingleTree(
+                    treeNumber,
+                    numTiles,
+                    thresholds,
+                    featureIndices,
+                    tileShapeIDs,
+                    tileSize,
+                    treeType.getThresholdType().getIntOrFloatBitWidth(),
+                    treeType.getFeatureIndexType().getIntOrFloatBitWidth(),
+                    (int8_t)tree.GetClassId());
             },
             [](TiledTree& tiledTree, int32_t treeNumber, decisionforest::TreeType treeType) {
                 std::vector<ThresholdType> thresholds = tiledTree.SerializeThresholds();
@@ -710,9 +746,14 @@ void PersistDecisionForestArrayBased(mlir::decisionforest::DecisionForest<>& for
                 std::vector<int32_t> tileShapeIDs = tiledTree.SerializeTileShapeIDs();
                 int32_t numTiles = tiledTree.GetNumberOfTiles();
                 int32_t tileSize = tiledTree.TileSize();
-                mlir::decisionforest::ForestJSONReader::GetInstance().AddSingleTree(treeNumber, numTiles, thresholds, featureIndices, tileShapeIDs, tileSize, 
-                                                                                    treeType.getThresholdType().getIntOrFloatBitWidth(), 
-                                                                                    treeType.getFeatureIndexType().getIntOrFloatBitWidth());
+                mlir::decisionforest::ForestJSONReader::GetInstance().AddSingleTree(
+                    treeNumber,
+                    numTiles,
+                    thresholds,
+                    featureIndices,tileShapeIDs, tileSize,
+                    treeType.getThresholdType().getIntOrFloatBitWidth(),
+                    treeType.getFeatureIndexType().getIntOrFloatBitWidth(),
+                    (int8_t)tiledTree.GetClassId()); // TODO - Support tiled trees.
             }
     );
 }

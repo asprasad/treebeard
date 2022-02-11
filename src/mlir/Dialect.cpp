@@ -11,6 +11,7 @@ using namespace mlir::decisionforest;
 #include "Dialect.cpp.inc"
 
 bool mlir::decisionforest::InsertDebugHelpers = false;
+bool mlir::decisionforest::PrintVectors = false;
 bool mlir::decisionforest::UseBitcastForComparisonOutcome = true;
 bool mlir::decisionforest::UseSparseTreeRepresentation = false;
 bool mlir::decisionforest::VectorizeShapeAndChildIndexLoad = false;

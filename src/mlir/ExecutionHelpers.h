@@ -49,6 +49,9 @@ struct Memref {
 
 using LengthMemrefType = Memref<int64_t, 1>;
 using OffsetMemrefType = Memref<int64_t, 1>;
+// #TODO Tree-Beard#19
+using ClassMemrefType = Memref<int8_t, 1>;
+
 // using ResultMemrefType = Memref<double, 1>;
 
 class InferenceRunnerBase {
@@ -90,6 +93,7 @@ public:
   int32_t InitializeModelArray();
   int32_t InitializeLUT();
   int32_t InitializeLeafArrays();
+  void InitializeClassInformation();
 
   int32_t GetBatchSize() { return m_batchSize; }
   int32_t GetRowSize() { return m_rowSize; }

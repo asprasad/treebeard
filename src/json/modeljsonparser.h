@@ -92,7 +92,15 @@ protected:
     void EndTree() { m_currentTree = nullptr; }
     void SetTreeNumberOfFeatures(size_t numFeatures) { m_currentTree->SetNumberOfFeatures(numFeatures); }
     void SetTreeScalingFactor(ThresholdType scale) { m_currentTree->SetTreeScalingFactor(scale); }
+    void SetTreeClassId(int32_t classId) { 
+        if (m_forest->IsMultiClassClassifier())
+            assert(classId < m_forest->GetNumClasses() && "ClassId should be lesser than number of classes for multi-class classifiers.");
+        
+        m_currentTree->SetClassId(classId);
+    }
     void SetInitialOffset(ReturnType val) { m_forest->SetInitialOffset(val); } 
+    void SetNumberOfClasses(int32_t numClasses) { m_forest->SetNumClasses(numClasses); }
+    
     // Create a new node in the current tree
     NodeIndexType NewNode(ThresholdType threshold, FeatureIndexType featureIndex) { return m_currentTree->NewNode(threshold, featureIndex); }
     // Set the parent of a node
@@ -207,7 +215,8 @@ public:
         auto scheduleAttribute = mlir::decisionforest::ScheduleAttribute::get(scheduleType, m_schedule);
         
         auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(
-            m_builder.getUnknownLoc(),GetFunctionResultType(),
+            m_builder.getUnknownLoc(),
+            GetFunctionResultType(),
             forestAttribute,
             subviewOfArg,
             entryBlock.getArguments()[1], scheduleAttribute);

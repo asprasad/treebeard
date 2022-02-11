@@ -82,10 +82,13 @@ struct EnsembleConstantLoweringInfo {
   Value offsetGlobal;
   Value lengthGlobal;
   Value lutGlobal;
+  Value classInfoGlobal;
+
   Type modelGlobalType;
   Type offsetGlobaltype;
   Type lengthGlobalType;
   Type lutGlobalType;
+  Type classInfoType;
 };
 
 // Maps an ensemble constant operation to a model memref and an offsets memref
@@ -173,13 +176,27 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     // TODO the getter function names need to be persisted with the actual tree values in the JSON so the runtime can call them. 
     std::string modelMemrefName = "model";
     std::string offsetMemrefName = "offsets";
-    std::string lengthMemrefName = "lengths";    
-    auto memrefTypes = AddGlobalMemrefs(owningModule, ensembleConstOp, rewriter, location, modelMemrefName, offsetMemrefName, lengthMemrefName);
-    AddModelMemrefInitFunction(owningModule, modelMemrefName, std::get<0>(memrefTypes).cast<MemRefType>(), rewriter, location);
-    auto getModelGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<0>(memrefTypes), modelMemrefName);
-    auto getOffsetGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<1>(memrefTypes), offsetMemrefName);
-    auto getLengthGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<1>(memrefTypes), lengthMemrefName);
-    
+    std::string lengthMemrefName = "lengths";
+    std::string classInfoMemrefName = "treeClassInfo";
+
+
+    auto memrefTypes = AddGlobalMemrefs(
+      owningModule,
+      ensembleConstOp,
+      rewriter,
+      location,
+      modelMemrefName,
+      offsetMemrefName,
+      lengthMemrefName,
+      classInfoMemrefName);
+
+
+    AddModelMemrefInitFunction(owningModule, modelMemrefName, memrefTypes.model.cast<MemRefType>(), rewriter, location);
+    auto getModelGlobal = rewriter.create<memref::GetGlobalOp>(location, memrefTypes.model, modelMemrefName);
+    auto getOffsetGlobal = rewriter.create<memref::GetGlobalOp>(location, memrefTypes.offset, offsetMemrefName);
+    auto getLengthGlobal = rewriter.create<memref::GetGlobalOp>(location, memrefTypes.offset, lengthMemrefName);
+    auto classInfoGlobal = rewriter.create<memref::GetGlobalOp>(location, memrefTypes.classInfo, classInfoMemrefName);
+
     auto forestType = ensembleConstOp.getResult().getType().cast<decisionforest::TreeEnsembleType>();
     auto firstTreeType = forestType.getTreeType(0).cast<mlir::decisionforest::TreeType>();
     auto firstTreeTileSize = firstTreeType.getTileSize();
@@ -192,8 +209,19 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
       getLUT = rewriter.create<memref::GetGlobalOp>(location, lookUpTableMemrefType, lookupTableMemrefName);
     }
 
-    EnsembleConstantLoweringInfo info {static_cast<Value>(getModelGlobal), static_cast<Value>(getOffsetGlobal), static_cast<Value>(getLengthGlobal), getLUT,
-                                       std::get<0>(memrefTypes), std::get<1>(memrefTypes), std::get<1>(memrefTypes), lookUpTableMemrefType};
+    EnsembleConstantLoweringInfo info 
+    {
+      static_cast<Value>(getModelGlobal),
+      static_cast<Value>(getOffsetGlobal),
+      static_cast<Value>(getLengthGlobal),
+      getLUT,
+      static_cast<Value>(classInfoGlobal),
+      memrefTypes.model,
+      memrefTypes.offset,
+      memrefTypes.offset,
+      lookUpTableMemrefType,
+      memrefTypes.classInfo,
+    };
     ensembleConstantToMemrefsMap[op] = info;
     
     // rewriter.replaceOp(op, static_cast<Value>(getModelGlobal));
@@ -314,9 +342,21 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     module.push_back(initModelMemrefFunc);
   }
 
-  std::tuple<Type, Type> AddGlobalMemrefs(mlir::ModuleOp module, mlir::decisionforest::EnsembleConstantOp& ensembleConstOp,
-                                          ConversionPatternRewriter &rewriter, Location location,
-                                          const std::string& modelMemrefName, const std::string& offsetMemrefName, const std::string& lengthMemrefName) const {
+  typedef struct Memrefs {
+    Type model;
+    Type offset;
+    Type classInfo;
+  } GlobalMemrefTypes;
+
+  GlobalMemrefTypes AddGlobalMemrefs(
+    mlir::ModuleOp module,
+    mlir::decisionforest::EnsembleConstantOp& ensembleConstOp,
+    ConversionPatternRewriter &rewriter,
+    Location location,
+    const std::string& modelMemrefName,
+    const std::string& offsetMemrefName,
+    const std::string& lengthMemrefName,
+    const std::string& treeInfo) const {
     mlir::decisionforest::DecisionForestAttribute forestAttribute = ensembleConstOp.forest();
     mlir::decisionforest::DecisionForest<>& forest = forestAttribute.GetDecisionForest();
 
@@ -355,7 +395,19 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
                                       offsetMemrefType, rewriter.getUnitAttr(), false, IntegerAttr());
     AddGlobalMemrefGetter(module, lengthMemrefName, offsetMemrefType, rewriter, location);
 
-    return std::make_tuple(modelMemrefType, offsetMemrefType);
+    auto classInfoSize = forest.IsMultiClassClassifier() ? offsetSize : 0;
+    auto classInfoMemrefType = MemRefType::get({classInfoSize}, treeType.getResultType());
+    rewriter.create<memref::GlobalOp>(
+      location,
+      treeInfo,
+      rewriter.getStringAttr("public"),
+      classInfoMemrefType,
+      rewriter.getUnitAttr(),
+      false,
+      IntegerAttr());
+      AddGlobalMemrefGetter(module, treeInfo, classInfoMemrefType, rewriter, location);
+
+      return GlobalMemrefTypes { modelMemrefType, offsetMemrefType, classInfoMemrefType };
   }
 };
 
@@ -387,7 +439,7 @@ struct GetTreeOpLowering: public ConversionPattern {
     auto treeLength = rewriter.create<memref::LoadOp>(location, ensembleInfo.lengthGlobal, treeIndex);; // TODO Need to put this into the map too
     auto treeMemref = rewriter.create<memref::SubViewOp>(location, ensembleInfo.modelGlobal, ArrayRef<OpFoldResult>({static_cast<Value>(modelMemrefIndex)}),
                                                          ArrayRef<OpFoldResult>({static_cast<Value>(treeLength)}), ArrayRef<OpFoldResult>({rewriter.getIndexAttr(1)}));
-
+    
     // if (decisionforest::InsertDebugHelpers) {
     //   rewriter.create<decisionforest::PrintTreeToDOTFileOp>(location, treeMemref, treeIndex);
     // }
@@ -419,6 +471,32 @@ Value GetLUTFromTreeOperand(Value treeValue) {
   auto& ensembleInfo = mapIter->second;
   return ensembleInfo.lutGlobal;
 }
+
+struct GetTreeClassIdOpLowering: public ConversionPattern {
+  GetTreeClassIdOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::GetTreeClassIdOp::getOperationName(), 1 /*benefit*/, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    // auto getClassIdOp = AssertOpIsOfType<mlir::decisionforest::GetTreeClassIdOp>(op);
+    assert(operands.size() == 2);
+
+    Operation* ensembleConstOp = operands[0].getDefiningOp();
+    AssertOpIsOfType<mlir::decisionforest::EnsembleConstantOp>(ensembleConstOp);
+    
+    auto mapIter = ensembleConstantToMemrefsMap.find(ensembleConstOp);
+    assert (mapIter != ensembleConstantToMemrefsMap.end());
+    auto& ensembleInfo = mapIter->second;
+
+    auto treeClassMemref = ensembleInfo.classInfoGlobal;
+    auto treeClassMemrefType = treeClassMemref.getType().cast<mlir::MemRefType>();
+
+    Value treeIndex = operands[1];
+    auto classId = rewriter.create<memref::LoadOp>(op->getLoc(), treeClassMemrefType.getElementType(), treeClassMemref, treeIndex);
+    
+    rewriter.replaceOp(op, static_cast<Value>(classId));
+    return mlir::success();
+  }
+};
 
 struct GetRootOpLowering: public ConversionPattern {
   GetRootOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::GetRootOp::getOperationName(), 1 /*benefit*/, ctx) {}
@@ -764,7 +842,8 @@ struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLowe
                         decisionforest::GetRootOp,
                         decisionforest::IsLeafOp,
                         decisionforest::TraverseTreeTileOp,
-                        decisionforest::GetLeafValueOp>();
+                        decisionforest::GetLeafValueOp,
+                        decisionforest::GetTreeClassIdOp>();
 
     RewritePatternSet patterns(&getContext());
     if (mlir::decisionforest::UseSparseTreeRepresentation)
@@ -786,6 +865,7 @@ namespace decisionforest
 void PopulateLowerToArrayRepresentationPatterns(RewritePatternSet& patterns) {
     patterns.add<EnsembleConstantOpLowering,
                 GetTreeOpLowering,
+                GetTreeClassIdOpLowering,
                 GetRootOpLowering,
                 IsLeafOpLowering,
                 TraverseTreeTileOpLowering,

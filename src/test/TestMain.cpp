@@ -1,5 +1,6 @@
 #include <vector>
 #include <sstream>
+#include <chrono>
 #include "TreeTilingUtils.h"
 #include "ExecutionHelpers.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -175,6 +176,11 @@ bool Test_TileSize2_Year_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_TileSize3_Year_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_TileSize4_Year_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_TileSize8_Year_OneTreeAtATimeSchedule(TestArgs_t &args);
+bool Test_TileSize1_CovType_Int8Type(TestArgs_t &args);
+bool Test_TileSize2_CovType_Int8Type(TestArgs_t &args);
+bool Test_TileSize3_CovType_Int8Type(TestArgs_t &args);
+bool Test_TileSize4_CovType_Int8Type(TestArgs_t &args);
+bool Test_TileSize8_CovType_Int8Type(TestArgs_t &args);
 
 // Sparse XGBoost Scalar Tests
 bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args);
@@ -943,6 +949,11 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TileSize3_Year),
   TEST_LIST_ENTRY(Test_TileSize4_Year),
   TEST_LIST_ENTRY(Test_TileSize8_Year),
+  TEST_LIST_ENTRY(Test_TileSize1_CovType_Int8Type),
+  TEST_LIST_ENTRY(Test_TileSize2_CovType_Int8Type),
+  TEST_LIST_ENTRY(Test_TileSize3_CovType_Int8Type),
+  TEST_LIST_ENTRY(Test_TileSize4_CovType_Int8Type),
+  TEST_LIST_ENTRY(Test_TileSize8_CovType_Int8Type),
 
   // Sparse tests
   TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize1_I32ChildIdx),
@@ -1157,9 +1168,11 @@ bool RunTest(TestDescriptor test, TestArgs_t& args) {
 	std::cout << white << "Running test " << blue << test.m_testName << reset << ".... ";
 	bool pass = false;
   // try
+  std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
 	{
 		pass = test.m_testFunc(args);
 	}
+  std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
 	// catch s(...)
 	// {
 	// 	std::exception_ptr eptr = std::current_exception();
@@ -1167,7 +1180,8 @@ bool RunTest(TestDescriptor test, TestArgs_t& args) {
 	// 	PrintExceptionInfo(eptr);
 	// 	pass = false;
 	// }
-	std::cout << (pass ? green + "Passed" : red + "Failed") << reset << std::endl;
+  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+	std::cout << (pass ? green + "Passed" : red + "Failed") << white + " (Duration : " << duration << " ms)" << reset << std::endl;
 	return pass;
 }
 
@@ -1176,6 +1190,7 @@ void RunTests() {
 
   std::cout << "Running Treebeard Tests " << std::endl << std::endl;
   int32_t numPassed = 0;
+  std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
   for (size_t i = 0; i < numTests; ++i) {
     mlir::MLIRContext context;
     context.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
@@ -1195,8 +1210,12 @@ void RunTests() {
     numPassed += pass ? 1 : 0;
     overallPass = overallPass && pass;
   }
+  std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+  auto totalTime = std::chrono::duration_cast<std::chrono::seconds>(end - begin).count();
+
   std::cout << std::endl << boldBlue << underline << numPassed << "/" << numTests << reset << white << " tests passed.";
-  std::cout << underline << (overallPass ? boldGreen + "\nTest Suite Passed." : boldRed + "\nTest Suite Failed.") << reset << std::endl << std::endl;
+  std::cout << underline << (overallPass ? boldGreen + "\nTest Suite Passed." : boldRed + "\nTest Suite Failed.") << reset;
+  std::cout << std::endl <<"Total time taken : " << totalTime << " seconds." << std::endl << std::endl;
 }
 
 } // test

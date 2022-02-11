@@ -104,8 +104,10 @@ class DecisionForest_Op<string mnemonic, list<OpTrait> traits = []> :
 // * The number of return values (may have multiple return probablities, class ID etc)
 
 def InputDataType : AnyTypeOf<[F16MemRef, F32MemRef, F64MemRef]>;
-def ReturnType : AnyTypeOf<[F16, F32, F64, F16Tensor, F32Tensor, F64Tensor, F16MemRef, F32MemRef, F64MemRef]>;
+def ReturnType : AnyTypeOf<[I8, I16, I32, F16, F32, F64, F16Tensor, F32Tensor, F64Tensor, I8MemRef, I16MemRef, I32MemRef, F16MemRef, F32MemRef, F64MemRef]>;
 def LeafNodeValueType : AnyTypeOf<[F16, F32, F64]>;
+def ClassIdValueType : AnyTypeOf<[I8, I16, I32]>;
+def TreeClassInfoMemref : AnyTypeOf<[I8MemRef, I16MemRef, I32MemRef]>;
 
 def PredictForestOp : DecisionForest_Op<"predict_ensemble"> {
     let summary = "Predict forest operation";
@@ -181,6 +183,14 @@ def GetTreeFromEnsembleOp : DecisionForest_Op<"getTree", [NoSideEffect]> {
   let arguments = (ins TreeEnsembleType:$forest, Index:$treeIndex);
 
   let results = (outs TreeType);
+}
+
+def GetTreeClassIdOp : DecisionForest_Op<"getTreeClassId", [NoSideEffect]> {
+  let summary = "Get tree class from ensemble.";
+  let description = "Index the forest and get the class Id of the tree at that index. Takes two arguments -- an ensemble and an integer and returns a tree value.";
+  let arguments = (ins TreeEnsembleType:$forest, Index:$treeIndex);
+
+  let results = (outs ClassIdValueType);
 }
 
 def GetRootOp : DecisionForest_Op<"getRoot", [NoSideEffect]> {

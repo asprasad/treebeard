@@ -33,7 +33,7 @@ bool RunSingleBatchSizeForXGBoostTests = true;
 // XGBoost Scalar Inference Tests
 // ===---------------------------------------------------=== //
 
-template<typename FloatType, typename FeatureIndexType=int32_t>
+template<typename FloatType, typename FeatureIndexType=int32_t, typename ResultType=FloatType>
 bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, const std::string& modelJsonPath, const std::string& csvPath, 
                                            int32_t tileSize, int32_t tileShapeBitWidth, int32_t childIndexBitWidth,
                                            ScheduleManipulator_t scheduleManipulatorFunc=nullptr) {
@@ -47,7 +47,7 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
                                      scheduleManipulatorFunc ? &scheduleManipulator : nullptr);
   
   auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
-  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON(args.context, modelJsonPath, modelGlobalsJSONFilePath, options);
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType>(args.context, modelJsonPath, modelGlobalsJSONFilePath, options);
 
   decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
   
@@ -72,17 +72,17 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
   auto currentPredictionsIter = xgBoostPredictions.begin();
   for(auto& batch : inputData) {
     assert (batch.size() % batchSize == 0);
-    std::vector<FloatType> result(batchSize, -1);
-    inferenceRunner.RunInference<FloatType, FloatType>(batch.data(), result.data(), rowSize, batchSize);
+    std::vector<ResultType> result(batchSize, -1);
+    inferenceRunner.RunInference<FloatType, ResultType>(batch.data(), result.data(), rowSize, batchSize);
     for(int64_t rowIdx=0 ; rowIdx<batchSize ; ++rowIdx) {
       // This needs to be a vector of doubles because the type is hardcoded for Forest::Predict
-      std::vector<double> row(batch.begin() + rowIdx*rowSize, batch.begin() + (rowIdx+1)*rowSize);
-      FloatType expectedResult = (*currentPredictionsIter)[rowIdx];
+      // std::vector<double> row(batch.begin() + rowIdx*rowSize, batch.begin() + (rowIdx+1)*rowSize);
+      ResultType expectedResult = (*currentPredictionsIter)[rowIdx];
       
       // FloatType forestPrediction = xgBoostParser.GetForest()->Predict_Float(row);
-      // Test_ASSERT(FPEqual<FloatType>(forestPrediction, expectedResult));
+      // Test_ASSERT(FPEqual<ResultType>(forestPrediction, expectedResult));
 
-      Test_ASSERT(FPEqual<FloatType>(result[rowIdx], expectedResult));
+      Test_ASSERT(FPEqual<ResultType>(result[rowIdx], expectedResult));
       // std::cout << forestPrediction << "\t" << result[rowIdx] << "\t" << expectedResult << std::endl;
     }
     ++currentPredictionsIter;
@@ -755,6 +755,14 @@ bool Test_SingleTileSize_SingleModel_FloatOnly(TestArgs_t &args, const std::stri
     }
     Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
   }
+  return true;
+}
+
+bool Test_MultiClass_Int32ReturnType(TestArgs_t &args, const std::string& modelJSONPath, int32_t tileSize, 
+                                     bool skipInt8 = false, int32_t tileShapeBitWidth=32, int32_t childIndexBitWidth=1, std::string csvPath="") {
+  if (csvPath == "")
+    csvPath = modelJSONPath + ".csv";
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int32_t, int8_t>(args, 8, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
   return true;
 }
 
@@ -1706,6 +1714,34 @@ bool Test_TileSize8_Year_TestInputs(TestArgs_t &args) {
   auto csvPath = modelJSONPath + ".test.sampled.csv";
   int32_t tileSize = 8;
   return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
+}
+
+static bool Test_TileSizeVariable_CovType_Int8Type(TestArgs_t &args, int32_t tileSize) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/covtype_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".csv";
+  return Test_MultiClass_Int32ReturnType(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
+}
+
+bool Test_TileSize1_CovType_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_CovType_Int8Type(args, 1);
+}
+
+bool Test_TileSize2_CovType_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_CovType_Int8Type(args, 2);
+}
+
+bool Test_TileSize3_CovType_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_CovType_Int8Type(args, 3);
+}
+
+bool Test_TileSize4_CovType_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_CovType_Int8Type(args, 4);
+}
+
+bool Test_TileSize8_CovType_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_CovType_Int8Type(args, 8);
 }
 
 // ===--------------------------------------------------------=== //
