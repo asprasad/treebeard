@@ -48,6 +48,9 @@ XGBoost comparison
         - Expose JIT through Python API
 
 Merge multiclass support
+    - Add tests on actual inputs for covtype
+    - [Done] Add code to xgboostbenchmarks to benchmark covtype
+    - Modify code in compileutils.cpp to be able to handle multi-class
 Fix generated code to work with nans
 Finish the microbenchmarking for gather
 LightGBM support

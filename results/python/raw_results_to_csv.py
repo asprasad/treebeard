@@ -1,8 +1,8 @@
 import os
 
-filename = '/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/results/xgboost/holmes/Native/Reordering/RawResults_O0_LargeTiles.txt'
-doubleCSV = '/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/results/xgboost/holmes/Native/Reordering/DoubleResults_O0_LargeTiles.csv'
-floatCSV = '/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/results/xgboost/holmes/Native/Reordering/FloatResults_O0_LargeTiles.csv'
+filename = '/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/results/xgboost/holmes/Native/20220210/RawResults_Float_Sparse_OneTreeSched_testIP.txt'
+# doubleCSV = '/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/results/xgboost/holmes/Native/Reordering/DoubleResults_O0_LargeTiles.csv'
+floatCSV = '/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/results/xgboost/holmes/Native/20220210/FloatResults_Sparse_OneTreeSched_testIP.csv'
 
 results = dict()
 results["double"] = dict()
@@ -51,5 +51,5 @@ def WriteResultsToCSV(csv_name, results, typeStr):
         rowStr = rowStr + ", " + str(tileSizeResult[benchmark])
       csv_file.write(rowStr + "\n")
 
-WriteResultsToCSV(doubleCSV, results, "double")
+# WriteResultsToCSV(doubleCSV, results, "double")
 WriteResultsToCSV(floatCSV, results, "float")
