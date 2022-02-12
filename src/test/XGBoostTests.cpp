@@ -1046,6 +1046,34 @@ bool Test_TileSize8_Year(TestArgs_t &args) {
   return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize);
 }
 
+static bool Test_TileSizeVariable_CovType_Int8Type(TestArgs_t &args, int32_t tileSize) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/covtype_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".csv";
+  return Test_MultiClass_Int32ReturnType(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
+}
+
+bool Test_TileSize1_CovType_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_CovType_Int8Type(args, 1);
+}
+
+bool Test_TileSize2_CovType_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_CovType_Int8Type(args, 2);
+}
+
+bool Test_TileSize3_CovType_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_CovType_Int8Type(args, 3);
+}
+
+bool Test_TileSize4_CovType_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_CovType_Int8Type(args, 4);
+}
+
+bool Test_TileSize8_CovType_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_CovType_Int8Type(args, 8);
+}
+
 // ===----------------------------------------------------------------=== //
 // XGBoost Benchmark Code Gen Correctness Tests With XGBoost Schedule
 // ===----------------------------------------------------------------=== //
@@ -1716,32 +1744,13 @@ bool Test_TileSize8_Year_TestInputs(TestArgs_t &args) {
   return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
 }
 
-static bool Test_TileSizeVariable_CovType_Int8Type(TestArgs_t &args, int32_t tileSize) {
+bool Test_TileSize8_CovType_TestInputs(TestArgs_t &args) {
+  int32_t tileSize = 8;
   auto repoPath = GetTreeBeardRepoPath();
   auto testModelsDir = repoPath + "/xgb_models";
   auto modelJSONPath = testModelsDir + "/covtype_xgb_model_save.json";
-  auto csvPath = modelJSONPath + ".csv";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
   return Test_MultiClass_Int32ReturnType(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
-}
-
-bool Test_TileSize1_CovType_Int8Type(TestArgs_t &args) {
-  return Test_TileSizeVariable_CovType_Int8Type(args, 1);
-}
-
-bool Test_TileSize2_CovType_Int8Type(TestArgs_t &args) {
-  return Test_TileSizeVariable_CovType_Int8Type(args, 2);
-}
-
-bool Test_TileSize3_CovType_Int8Type(TestArgs_t &args) {
-  return Test_TileSizeVariable_CovType_Int8Type(args, 3);
-}
-
-bool Test_TileSize4_CovType_Int8Type(TestArgs_t &args) {
-  return Test_TileSizeVariable_CovType_Int8Type(args, 4);
-}
-
-bool Test_TileSize8_CovType_Int8Type(TestArgs_t &args) {
-  return Test_TileSizeVariable_CovType_Int8Type(args, 8);
 }
 
 // ===--------------------------------------------------------=== //
