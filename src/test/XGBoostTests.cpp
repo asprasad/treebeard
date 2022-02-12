@@ -759,10 +759,11 @@ bool Test_SingleTileSize_SingleModel_FloatOnly(TestArgs_t &args, const std::stri
 }
 
 bool Test_MultiClass_Int32ReturnType(TestArgs_t &args, const std::string& modelJSONPath, int32_t tileSize, 
-                                     bool skipInt8 = false, int32_t tileShapeBitWidth=32, int32_t childIndexBitWidth=1, std::string csvPath="") {
+                                     bool skipInt8 = false, int32_t tileShapeBitWidth=32, int32_t childIndexBitWidth=1, std::string csvPath="",
+                                     ScheduleManipulator_t scheduleManipulator=nullptr) {
   if (csvPath == "")
     csvPath = modelJSONPath + ".csv";
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int32_t, int8_t>(args, 8, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int32_t, int8_t>(args, 8, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
   return true;
 }
 
@@ -1356,6 +1357,24 @@ bool Test_TileSize8_Year_OneTreeAtATimeSchedule(TestArgs_t &args) {
   auto modelJSONPath = testModelsDir + "/year_prediction_msd_xgb_model_save.json";
   int32_t tileSize = 8;
   return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 1, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_Scalar_CovType_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  int32_t tileSize = 1;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/covtype_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".csv";
+  return Test_MultiClass_Int32ReturnType(args, modelJSONPath, tileSize, false, 16, 16, csvPath, OneTreeAtATimeSchedule);
+}
+
+bool Test_TileSize8_CovType_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  int32_t tileSize = 8;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/covtype_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".csv";
+  return Test_MultiClass_Int32ReturnType(args, modelJSONPath, tileSize, false, 16, 16, csvPath, OneTreeAtATimeSchedule);
 }
 
 // ===---------------------------------------------------=== //
