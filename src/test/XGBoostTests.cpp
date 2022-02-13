@@ -32,7 +32,6 @@ bool RunSingleBatchSizeForXGBoostTests = true;
 // ===---------------------------------------------------=== //
 // XGBoost Scalar Inference Tests
 // ===---------------------------------------------------=== //
-
 template<typename FloatType, typename FeatureIndexType=int32_t, typename ResultType=FloatType>
 bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, const std::string& modelJsonPath, const std::string& csvPath, 
                                            int32_t tileSize, int32_t tileShapeBitWidth, int32_t childIndexBitWidth,
@@ -42,7 +41,7 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
   using NodeIndexType = int32_t;
   int32_t floatTypeBitWidth = sizeof(FloatType)*8;
   ScheduleManipulationFunctionWrapper scheduleManipulator(scheduleManipulatorFunc);
-  TreeBeard::CompilerOptions options(floatTypeBitWidth, floatTypeBitWidth, sizeof(FeatureIndexType)*8, sizeof(NodeIndexType)*8,
+  TreeBeard::CompilerOptions options(floatTypeBitWidth, sizeof(ResultType)*8, IsFloatType(ResultType()), sizeof(FeatureIndexType)*8, sizeof(NodeIndexType)*8,
                                      floatTypeBitWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth,
                                      scheduleManipulatorFunc ? &scheduleManipulator : nullptr);
   
@@ -2042,7 +2041,6 @@ bool Test_SparseTileSize8_Year_TestInputs_TiledSchedule(TestArgs_t &args) {
   int32_t tileSize = 8;
   return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath, TiledSchedule<2, 4>);
 }
-
 
 } // test
 } // TreeBeard

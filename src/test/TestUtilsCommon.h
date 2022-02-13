@@ -87,6 +87,13 @@ inline double GetRandomReal(double min, double max) {
     return dist(dev);
 }
 
+inline bool IsFloatType(const double&) { return true; }
+inline bool IsFloatType(const float&) { return true; }
+inline bool IsFloatType(const int8_t&) { return false; }
+// inline bool IsFloatType(const int16_t&) { return false; }
+// inline bool IsFloatType(const int32_t&) { return false; }
+
+
 class TestCSVReader {
   std::vector<std::vector<double>> m_data;
   std::string m_filename;

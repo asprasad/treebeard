@@ -75,7 +75,7 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
   std::string jsonFile, llvmIRFile, modelGlobalsJSONFile;
   int32_t thresholdTypeWidth=32, returnTypeWidth=32, featureIndexTypeWidth=16, tileShapeBitWidth=16, childIndexBitWidth=16;
   int32_t nodeIndexTypeWidth=32, inputElementTypeWidth=32, batchSize=4, tileSize=1;
-  bool invertLoops = false;
+  bool invertLoops = false, isReturnTypeFloat=true;
   for (int32_t i=0 ; i<argc ; ) {
     if (ContainsString(argv[i], "-o")) {
       assert ((i+1) < argc);
@@ -109,6 +109,10 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
     else if (ContainsString(argv[i], "-returnBitWidth")) {
       ReadIntegerFromCommandLineArgument(argc, argv, i, returnTypeWidth);
     }
+    else if (ContainsString(argv[i], "-returnIntBitWidth")) {
+      ReadIntegerFromCommandLineArgument(argc, argv, i, returnTypeWidth);
+      isReturnTypeFloat = false;
+    }
     else if (ContainsString(argv[i], "-featIndexBitWidth")) {
       ReadIntegerFromCommandLineArgument(argc, argv, i, featureIndexTypeWidth);
     }
@@ -136,7 +140,7 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
   assert (jsonFile != "" && llvmIRFile != "");
   TreeBeard::test::ScheduleManipulationFunctionWrapper scheduleManipulator(TreeBeard::test::OneTreeAtATimeSchedule);
   // TreeBeard::test::ScheduleManipulationFunctionWrapper scheduleManipulator(TreeBeard::test::TileTreeDimensionSchedule<10>);
-  TreeBeard::CompilerOptions options(thresholdTypeWidth, returnTypeWidth, featureIndexTypeWidth,
+  TreeBeard::CompilerOptions options(thresholdTypeWidth, returnTypeWidth, isReturnTypeFloat, featureIndexTypeWidth,
                                      nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, 
                                      invertLoops ? &scheduleManipulator : nullptr);
   TreeBeard::ConvertXGBoostJSONToLLVMIR(jsonFile, llvmIRFile, modelGlobalsJSONFile, options);
@@ -157,6 +161,7 @@ bool RunInferenceFromSO(int argc, char *argv[]) {
   std::string jsonFile, soPath, inputCSVFile, modelGlobalsJSONFile;
   int32_t thresholdTypeWidth=32, returnTypeWidth=32, featureIndexTypeWidth=16, tileShapeBitWidth=16, childIndexBitWidth=16;
   int32_t nodeIndexTypeWidth=32, inputElementTypeWidth=32, batchSize=4, tileSize=1;
+  bool isReturnTypeFloat = true;
   for (int32_t i=0 ; i<argc ; ) {
     if (ContainsString(argv[i], "-so")) {
       assert ((i+1) < argc);
@@ -192,6 +197,10 @@ bool RunInferenceFromSO(int argc, char *argv[]) {
     else if (ContainsString(argv[i], "-returnBitWidth")) {
       ReadIntegerFromCommandLineArgument(argc, argv, i, returnTypeWidth);
     }
+    else if (ContainsString(argv[i], "-returnIntBitWidth")) {
+      ReadIntegerFromCommandLineArgument(argc, argv, i, returnTypeWidth);
+      isReturnTypeFloat = false;
+    }
     else if (ContainsString(argv[i], "-featIndexBitWidth")) {
       ReadIntegerFromCommandLineArgument(argc, argv, i, featureIndexTypeWidth);
     }
@@ -217,7 +226,7 @@ bool RunInferenceFromSO(int argc, char *argv[]) {
       ++i;
   }
   assert (jsonFile != "" && soPath != "");
-  TreeBeard::CompilerOptions options(thresholdTypeWidth, returnTypeWidth, featureIndexTypeWidth,
+  TreeBeard::CompilerOptions options(thresholdTypeWidth, returnTypeWidth, isReturnTypeFloat, featureIndexTypeWidth,
                                      nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, nullptr);
   TreeBeard::RunInferenceUsingSO(jsonFile, soPath, modelGlobalsJSONFile, inputCSVFile, options);
   return true;
