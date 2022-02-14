@@ -1,8 +1,11 @@
+from optparse import Values
+import statistics
 import sys
 import os
 import matplotlib.pyplot as plt
 import math
 import numpy
+import stat
 
 stats_file = sys.argv[1]
 print("Analyzing file ", stats_file)
@@ -21,6 +24,11 @@ with open(stats_file, 'r') as f:
     hit_counts = [int(numbers[i]) for i in range(0, len(numbers), 2)]
     depths = [int(numbers[i]) for i in range(1, len(numbers), 2)]
     tree_stats[i] = (hit_counts, depths)
+
+num_leaves = [len(v[0]) for v in tree_stats.values()]
+min_num_leaves = min(num_leaves)
+median_num_leaves = statistics.median(num_leaves)
+max_num_leaves = max(num_leaves)
 
 # For a given percentage of inputs (say p%), plot fraction of leaves on x-axis vs how many
 # trees would cover p% of inputs with x% of leaves (i.e at x=0.5, how many trees in the model
@@ -61,7 +69,8 @@ for input_fraction in input_fractions:
 
 plt.xlabel("Fraction of Leaves Used")
 plt.ylabel("Fraction of Trees")
-plt.title(os.path.basename(stats_file))
+plt.suptitle(os.path.basename(stats_file), fontsize=14)
+plt.title("#Leaves (Median:" + str(median_num_leaves) + ", Min:" + str(min_num_leaves) + ", Max:" + str(max_num_leaves) + ")", fontsize=10)
 plt.legend()
 plt.grid(linestyle="dotted")
 plt.savefig(stats_file + ".png")
