@@ -2,6 +2,7 @@ import sys
 import os
 import matplotlib.pyplot as plt
 import math
+import numpy
 
 stats_file = sys.argv[1]
 print("Analyzing file ", stats_file)
@@ -48,6 +49,11 @@ def ComputeSingleCurve(input_fraction : float) -> list[float]:
     tree_fractions.append(ComputeSinglePoint(input_fraction, leaf_fraction))
   return tree_fractions, leaf_fractions
 
+fig = plt.figure()
+ax = fig.gca()
+ax.set_xticks(numpy.arange(0, 1, 0.1), rotation='vertical')
+ax.set_yticks(numpy.arange(0, 1., 0.05))
+
 input_fractions = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 for input_fraction in input_fractions:
   tree_fractions, leaf_fractions = ComputeSingleCurve(input_fraction)
@@ -57,4 +63,5 @@ plt.xlabel("Fraction of Leaves Used")
 plt.ylabel("Fraction of Trees")
 plt.title(os.path.basename(stats_file))
 plt.legend()
+plt.grid(linestyle="dotted")
 plt.savefig(stats_file + ".png")
