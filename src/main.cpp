@@ -5,6 +5,7 @@
 #include "mlir/ExecutionHelpers.h"
 #include "TestUtilsCommon.h"
 #include "CompileUtils.h"
+#include "StatsUtils.h"
 
 namespace TreeBeard
 {
@@ -232,6 +233,47 @@ bool RunInferenceFromSO(int argc, char *argv[]) {
   return true;
 }
 
+bool ComputeInferenceStatsIfNeeded(int argc, char *argv[]) {
+  bool computeInferenceStats = false;
+  for (int32_t i=0 ; i<argc ; ++i)
+    if (std::string(argv[i]).find(std::string("--computeInferenceStats")) != std::string::npos) {
+      computeInferenceStats = true;
+      break;
+    }
+  if (!computeInferenceStats)
+    return false;
+
+  std::string modelName, csvPath;
+  int32_t numRows = -1;
+  for (int32_t i=0 ; i<argc ; ) {
+    if (ContainsString(argv[i], "-model")) {
+      assert (modelName == "");
+      assert (i+1 < argc);
+      modelName = argv[i+1];
+      i += 2;
+    }
+    else if (ContainsString(argv[i], "-csv")) {
+      assert (csvPath == "");
+      assert (i+1 < argc);
+      csvPath = argv[i+1];
+      i += 2;
+    }
+    else if (ContainsString(argv[i], "-n")) {
+      ReadIntegerFromCommandLineArgument(argc, argv, i, numRows);
+    }
+    else
+      ++i;
+
+  }
+  if (csvPath == "") {
+    TreeBeard::Profile::ComputeForestInferenceStatsOnSampledTestInput(modelName, numRows);
+  }
+  else {
+    TreeBeard::Profile::ComputeForestInferenceStatsOnModel(modelName, csvPath, numRows);
+  }
+  return true;
+}
+
 int main(int argc, char *argv[]) {
   SetInsertDebugHelpers(argc, argv);
   SetInsertPrintVectors(argc, argv);
@@ -242,6 +284,8 @@ int main(int argc, char *argv[]) {
   else if (DumpLLVMIfNeeded(argc, argv))
     return 0;
   else if (RunInferenceFromSO(argc, argv))
+    return 0;
+  else if (ComputeInferenceStatsIfNeeded(argc, argv))
     return 0;
   else {  
     std::cout << "TreeBeard: A compiler for gradient boosting tree inference.\n";

@@ -98,7 +98,7 @@ class TestCSVReader {
   std::vector<std::vector<double>> m_data;
   std::string m_filename;
 public:
-  TestCSVReader(const std::string& filename);
+  TestCSVReader(const std::string& filename, int32_t numLines=-1);
   std::vector<double>& GetRow(size_t index) { return m_data[index]; }
   
   template<typename T>

@@ -821,6 +821,8 @@ void TestTileStringGen() {
 
 #define RUN_ALL_TESTS
 
+bool Test_Airline_Stats(TestArgs_t &args);
+
 #ifdef RUN_ALL_TESTS
 TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy),
@@ -1115,8 +1117,7 @@ TestDescriptor testList[] = {
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_Scalar_CovType_OneTreeAtATimeSchedule),
-  TEST_LIST_ENTRY(Test_TileSize8_CovType_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_Airline_Stats),
   // TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs),
   // TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs),
   // TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs),
