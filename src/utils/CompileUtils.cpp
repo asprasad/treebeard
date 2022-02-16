@@ -207,9 +207,9 @@ int64_t RunXGBoostInferenceOnCSVInput(const std::string& csvPath, mlir::decision
 void RunInferenceUsingSO(const std::string&modelJsonPath, const std::string& soPath, const std::string& modelGlobalsJSONPath, 
                          const std::string& csvPath, const CompilerOptions& options) {
   mlir::decisionforest::SharedObjectInferenceRunner inferenceRunner(modelGlobalsJSONPath, soPath, options.tileSize, options.thresholdTypeWidth, options.featureIndexTypeWidth);
-  assert (options.inputElementTypeWidth == options.returnTypeWidth);
   int64_t time;
   if (options.returnTypeFloatType){ 
+    assert (options.inputElementTypeWidth == options.returnTypeWidth);
     if (options.inputElementTypeWidth == 32)
       time = RunXGBoostInferenceOnCSVInput<float>(csvPath, inferenceRunner, options.batchSize);
     else if (options.inputElementTypeWidth == 64)

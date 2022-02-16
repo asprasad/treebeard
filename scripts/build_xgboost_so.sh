@@ -18,7 +18,7 @@ TREEBEARD_BUILD_DIR=${TREEBEARD_BUILD_DIR:-'build'}
 TREEBEARD_BUILD_PATH="$TREEBEARD_DIR/$TREEBEARD_BUILD_DIR"
 echo "Using TreeBeard build at : $TREEBEARD_BUILD_PATH"
 
-while getopts "t:b:m:o:si" opt
+while getopts "t:b:m:o:sin:" opt
 do
    case "$opt" in
       t ) TILE_SIZE="$OPTARG" ;;
@@ -31,7 +31,7 @@ do
       i ) INVERT_FLAG="--invertLoops"
           BASE_NAME_INVERT_EXT="_invert"
           ;;
-
+      n ) RET_TYPE_WIDTH="-returnIntBitWidth $OPTARG"
       # ? ) helpFunction ;; # Print helpFunction in case parameter is non-existent
    esac
 done
@@ -48,7 +48,7 @@ MODEL_GLOBALS_JSON="$SO_FILE.treebeard-globals.json"
 
 # bin/tree-heavy --dumpLLVM -json ~/mlir-build/llvm-project/mlir/examples/tree-heavy/xgb_models/abalone_xgb_model_save.json 
 # -o ~/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/bin/abalone_b4_t8_f.ll -batchSize 4 -tileSize 8
-DUMP_LLVM_CMD="$TREEBEARD_EXEC --dumpLLVM $SPARSE_FLAG $INVERT_FLAG -json $MODEL_JSON -globalValuesJSON $MODEL_GLOBALS_JSON -o $LLVM_IR_FILE -batchSize $BATCH_SIZE -tileSize $TILE_SIZE"
+DUMP_LLVM_CMD="$TREEBEARD_EXEC --dumpLLVM $SPARSE_FLAG $INVERT_FLAG -json $MODEL_JSON -globalValuesJSON $MODEL_GLOBALS_JSON -o $LLVM_IR_FILE -batchSize $BATCH_SIZE -tileSize $TILE_SIZE $RET_TYPE_WIDTH"
 echo "$DUMP_LLVM_CMD"
 $DUMP_LLVM_CMD
 

@@ -47,11 +47,14 @@ XGBoost comparison
             - Persist input and return types in the JSON
         - Expose JIT through Python API
 
-Merge multiclass support
-    - Add tests on actual inputs for covtype
+[Done] Merge multiclass support
+    - [Done[ Add tests on actual inputs for covtype
     - [Done] Add code to xgboostbenchmarks to benchmark covtype
-    - Modify code in compileutils.cpp to be able to handle multi-class
-Fix generated code to work with nans
+    - [Done] Modify code in compileutils.cpp to be able to handle multi-class
+[Defer] Fix generated code to work with nans
+Profile and find reasons why random inputs are faster than test inputs
+Figure out tree data structures to reduce footprint when there is sever imbalance (due to probabilistic tiling)
+
 Finish the microbenchmarking for gather
 LightGBM support
 Tiling optimization (DP to minimize skew?)
