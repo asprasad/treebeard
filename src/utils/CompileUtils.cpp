@@ -112,14 +112,24 @@ mlir::ModuleOp SpecializeFeatureIndexType(mlir::MLIRContext& context, const std:
 template<typename ThresholdType>
 mlir::ModuleOp SpecializeReturnType(mlir::MLIRContext& context, const std::string&modelJsonPath, 
                                     const std::string& modelGlobalsJSONPath, const CompilerOptions& options) {
-  if (options.returnTypeWidth == 32) {
-    return SpecializeFeatureIndexType<ThresholdType, float>(context, modelJsonPath, modelGlobalsJSONPath, options);
+  if (options.returnTypeFloatType) {
+    if (options.returnTypeWidth == 32) {
+      return SpecializeFeatureIndexType<ThresholdType, float>(context, modelJsonPath, modelGlobalsJSONPath, options);
+    }
+    else if (options.returnTypeWidth == 64) {
+      return SpecializeFeatureIndexType<ThresholdType, double>(context, modelJsonPath, modelGlobalsJSONPath, options);
+    } 
+    else {
+      assert (false && "Unknown return type");
+    }
   }
-  else if (options.returnTypeWidth == 64) {
-    return SpecializeFeatureIndexType<ThresholdType, double>(context, modelJsonPath, modelGlobalsJSONPath, options);
-  } 
   else {
-    assert (false && "Unknown return type");
+    if (options.returnTypeWidth == 8) {
+      return SpecializeFeatureIndexType<ThresholdType, int8_t>(context, modelJsonPath, modelGlobalsJSONPath, options);
+    }
+    else {
+      assert (false && "Unknown return type");
+    }
   }
   return mlir::ModuleOp();
 }
@@ -157,7 +167,7 @@ void ConvertXGBoostJSONToLLVMIR(const std::string&modelJsonPath, const std::stri
   mlir::decisionforest::dumpLLVMIRToFile(module, llvmIRFilePath);
 }
 
-template<typename FloatType>
+template<typename FloatType, typename ReturnType=FloatType>
 int64_t RunXGBoostInferenceOnCSVInput(const std::string& csvPath, mlir::decisionforest::SharedObjectInferenceRunner& inferenceRunner, int32_t batchSize) {
   TreeBeard::test::TestCSVReader csvReader(csvPath);
   std::vector<std::vector<FloatType>> inputData;
@@ -182,8 +192,8 @@ int64_t RunXGBoostInferenceOnCSVInput(const std::string& csvPath, mlir::decision
   for (int32_t trial=0 ; trial<NUM_RUNS ; ++trial) {
     for(auto& batch : inputData) {
       assert (batch.size() % batchSize == 0);
-      std::vector<FloatType> result(batchSize, -1);
-      inferenceRunner.RunInference<FloatType, FloatType>(batch.data(), result.data(), rowSize, batchSize);
+      std::vector<ReturnType> result(batchSize, -1);
+      inferenceRunner.RunInference<FloatType, ReturnType>(batch.data(), result.data(), rowSize, batchSize);
     }
   }
   std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
@@ -197,14 +207,25 @@ int64_t RunXGBoostInferenceOnCSVInput(const std::string& csvPath, mlir::decision
 void RunInferenceUsingSO(const std::string&modelJsonPath, const std::string& soPath, const std::string& modelGlobalsJSONPath, 
                          const std::string& csvPath, const CompilerOptions& options) {
   mlir::decisionforest::SharedObjectInferenceRunner inferenceRunner(modelGlobalsJSONPath, soPath, options.tileSize, options.thresholdTypeWidth, options.featureIndexTypeWidth);
-  assert (options.inputElementTypeWidth == options.returnTypeWidth);
   int64_t time;
-  if (options.inputElementTypeWidth == 32)
-    time = RunXGBoostInferenceOnCSVInput<float>(csvPath, inferenceRunner, options.batchSize);
-  else if (options.inputElementTypeWidth == 64)
-    time = RunXGBoostInferenceOnCSVInput<double>(csvPath, inferenceRunner, options.batchSize);
-  else
-    assert(false && "Unknow floating point type");
+  if (options.returnTypeFloatType){ 
+    assert (options.inputElementTypeWidth == options.returnTypeWidth);
+    if (options.inputElementTypeWidth == 32)
+      time = RunXGBoostInferenceOnCSVInput<float>(csvPath, inferenceRunner, options.batchSize);
+    else if (options.inputElementTypeWidth == 64)
+      time = RunXGBoostInferenceOnCSVInput<double>(csvPath, inferenceRunner, options.batchSize);
+    else
+      assert(false && "Unknow floating point type");
+  }
+  else {
+    assert (options.returnTypeWidth == 8);
+    if (options.inputElementTypeWidth == 32)
+      time = RunXGBoostInferenceOnCSVInput<float, int8_t>(csvPath, inferenceRunner, options.batchSize);
+    else if (options.inputElementTypeWidth == 64)
+      time = RunXGBoostInferenceOnCSVInput<double, int8_t>(csvPath, inferenceRunner, options.batchSize);
+    else
+      assert(false && "Unknow floating point type");
+  }
   std::cout << "Execution time (us) : " << time << std::endl;
 }
 

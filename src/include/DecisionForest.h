@@ -37,7 +37,8 @@ public:
         NodeIndexType leftChild;
         NodeIndexType rightChild;
         FeatureType featureType; // TODO For now assuming everything is numerical
-
+        int32_t hitCount = 0;
+        int32_t depth = -1;
         bool operator==(const Node& that) const
         {
             return threshold==that.threshold && featureIndex==that.featureIndex && parent==that.parent &&
@@ -92,6 +93,7 @@ public:
     int32_t GetTreeDepth() {
         return GetTreeDepthHelper(0);
     }
+
     int32_t NumLeaves() {
         int numNodes = 0;
         for (auto& node : m_nodes)
@@ -301,6 +303,7 @@ ReturnType DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexTy
     // go over the features
     assert(m_nodes.size() > 0);
     const Node* node = &m_nodes[0]; // root node
+    int32_t depth = 0;
     while (!node->IsLeaf())
     {
       // std::cout << "\tf" << node->featureIndex << "(" << data[node->featureIndex] << ")" << " < " << node->threshold << std::endl;
@@ -308,7 +311,10 @@ ReturnType DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexTy
         node = &m_nodes[node->leftChild];
       else
         node = &m_nodes[node->rightChild];
-    }    
+      ++depth;
+    }
+    const_cast<Node*>(node)->hitCount++;
+    const_cast<Node*>(node)->depth = depth;
     return node->threshold;
 }
 

@@ -30,10 +30,11 @@ std::vector<double> getNextLineAndSplitIntoTokens(std::istream& str) {
     return result;
 }
 
-TestCSVReader::TestCSVReader(const std::string& filename) {
+TestCSVReader::TestCSVReader(const std::string& filename, int32_t numRows) {
   std::ifstream fin(filename);
   assert(fin);
-  while (!fin.eof()) {
+  int numRowsRead = 0;
+  while (!fin.eof() && (numRows == -1 || numRowsRead<numRows)) {
     auto row = getNextLineAndSplitIntoTokens(fin);
     m_data.push_back(row);
   }

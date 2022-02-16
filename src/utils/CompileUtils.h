@@ -15,6 +15,7 @@ struct CompilerOptions {
   // Type size parameters
   int32_t thresholdTypeWidth;
   int32_t returnTypeWidth;
+  bool returnTypeFloatType;
   int32_t featureIndexTypeWidth;
   int32_t nodeIndexTypeWidth;
   int32_t inputElementTypeWidth;
@@ -23,10 +24,10 @@ struct CompilerOptions {
 
   mlir::decisionforest::ScheduleManipulator *scheduleManipulator;
 
-  CompilerOptions(int32_t thresholdWidth, int32_t returnWidth, int32_t featureIndexWidth, 
+  CompilerOptions(int32_t thresholdWidth, int32_t returnWidth, bool isReturnTypeFloat, int32_t featureIndexWidth, 
                   int32_t nodeIndexWidth, int32_t inputElementWidth, int32_t batchSz, int32_t tileSz,
                   int32_t tileShapeWidth, int32_t childIndexWidth, mlir::decisionforest::ScheduleManipulator* scheduleManip)
-  : batchSize(batchSz), tileSize(tileSz), thresholdTypeWidth(thresholdWidth), returnTypeWidth(returnWidth),
+  : batchSize(batchSz), tileSize(tileSz), thresholdTypeWidth(thresholdWidth), returnTypeWidth(returnWidth), returnTypeFloatType(isReturnTypeFloat),
     featureIndexTypeWidth(featureIndexWidth), nodeIndexTypeWidth(nodeIndexWidth), inputElementTypeWidth(inputElementWidth),
     tileShapeBitWidth(tileShapeWidth), childIndexBitWidth(childIndexWidth), scheduleManipulator(scheduleManip)
   { }

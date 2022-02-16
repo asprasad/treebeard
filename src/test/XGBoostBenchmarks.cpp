@@ -47,7 +47,7 @@ constexpr int32_t NUM_RUNS = 1000;
 constexpr int32_t NUM_RUNS = 1000;
 #endif
 
-template<typename FloatType>
+template<typename FloatType, typename ReturnType=FloatType>
 int64_t Test_CodeGenForJSON_VariableBatchSize(int64_t batchSize, const std::string& modelJsonPath, int32_t tileSize, int32_t tileShapeBitWidth, 
                                               int32_t childIndexBitWidth, mlir::decisionforest::ScheduleManipulator *scheduleManipulator) {
   // TODO consider changing this so that you use the smallest possible type possible (need to make it a parameter)
@@ -56,15 +56,15 @@ int64_t Test_CodeGenForJSON_VariableBatchSize(int64_t batchSize, const std::stri
 
   mlir::MLIRContext context;
   int32_t floatTypeBitWidth = sizeof(FloatType)*8;
-  TreeBeard::CompilerOptions options(floatTypeBitWidth, floatTypeBitWidth, sizeof(FeatureIndexType)*8, sizeof(NodeIndexType)*8,
+  TreeBeard::CompilerOptions options(floatTypeBitWidth, sizeof(ReturnType)*8, IsFloatType(ReturnType()), sizeof(FeatureIndexType)*8, sizeof(NodeIndexType)*8,
                                      floatTypeBitWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator);
   TreeBeard::InitializeMLIRContext(context);
-  auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
-  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, FloatType, FeatureIndexType, int32_t, FloatType>(context, modelJsonPath, modelGlobalsJSONFilePath, options);
+  auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, ReturnType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ReturnType, FeatureIndexType, int32_t, FloatType>(context, modelJsonPath, modelGlobalsJSONFilePath, options);
 
   decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, floatTypeBitWidth, sizeof(FeatureIndexType)*8);
   
-  TestCSVReader csvReader(modelJsonPath + ".csv");
+  TestCSVReader csvReader(modelJsonPath + ".test.sampled.csv");
   std::vector<std::vector<FloatType>> inputData;
   for (size_t i=batchSize  ; i<csvReader.NumberOfRows()-1 ; i += batchSize) {
     std::vector<FloatType> batch, preds;
@@ -101,12 +101,12 @@ int64_t Test_CodeGenForJSON_VariableBatchSize(int64_t batchSize, const std::stri
   return std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
 }
 
-template<typename FPType, int32_t TileSize, int32_t BatchSize>
+template<typename FPType, typename ReturnType, int32_t TileSize, int32_t BatchSize>
 void RunSingleBenchmark_SingleConfig(const std::string& modelName, mlir::decisionforest::ScheduleManipulator *scheduleManipulator) {
   auto repoPath = GetTreeBeardRepoPath();
   auto testModelsDir = repoPath + "/xgb_models";
   auto modelJSONPath = testModelsDir + "/" + modelName + "_xgb_model_save.json";
-  auto time = Test_CodeGenForJSON_VariableBatchSize<FPType>(BatchSize, modelJSONPath, TileSize, 16, 16, scheduleManipulator);
+  auto time = Test_CodeGenForJSON_VariableBatchSize<FPType, ReturnType>(BatchSize, modelJSONPath, TileSize, 16, 16, scheduleManipulator);
   std::cout << "\t" + modelName << "\t" << time << std::endl;
 }
 
@@ -114,16 +114,20 @@ void RunSingleBenchmark_SingleConfig(const std::string& modelName, mlir::decisio
 template<typename FPType, int32_t TileSize, int32_t BatchSize>
 void RunBenchmark_SingleConfig(mlir::decisionforest::ScheduleManipulator *scheduleManipulator) {
   std::cout << "Type\t" << GetTypeName(FPType()) << "\tBatch\t" << BatchSize << " \tTile\t" << TileSize << std::endl;
-  RunSingleBenchmark_SingleConfig<FPType, TileSize, BatchSize>("abalone", scheduleManipulator);
-  RunSingleBenchmark_SingleConfig<FPType, TileSize, BatchSize>("airline", scheduleManipulator);
-  RunSingleBenchmark_SingleConfig<FPType, TileSize, BatchSize>("airline-ohe", scheduleManipulator);
-  RunSingleBenchmark_SingleConfig<FPType, TileSize, BatchSize>("bosch", scheduleManipulator);
-  RunSingleBenchmark_SingleConfig<FPType, TileSize, BatchSize>("epsilon", scheduleManipulator);
-  RunSingleBenchmark_SingleConfig<FPType, TileSize, BatchSize>("higgs", scheduleManipulator);
-  RunSingleBenchmark_SingleConfig<FPType, TileSize, BatchSize>("year_prediction_msd", scheduleManipulator);
+  RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("abalone", scheduleManipulator);
+  RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("airline", scheduleManipulator);
+  RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("airline-ohe", scheduleManipulator);
+  // RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("bosch", scheduleManipulator);
+  // TODO because multi-class doesn't support sparse yet
+  if (decisionforest::UseSparseTreeRepresentation == false)
+    RunSingleBenchmark_SingleConfig<FPType, int8_t, TileSize, BatchSize>("covtype", scheduleManipulator);
+  RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("epsilon", scheduleManipulator);
+  RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("higgs", scheduleManipulator);
+  RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("year_prediction_msd", scheduleManipulator);
 }
 
 void RunAllBenchmarks(mlir::decisionforest::ScheduleManipulator *scheduleManipulator) {
+  constexpr int32_t batchSize = 200;
   // {
   //   using FPType = double;
   //   RunBenchmark_SingleConfig<FPType, 1, 1>();
@@ -146,7 +150,7 @@ void RunAllBenchmarks(mlir::decisionforest::ScheduleManipulator *scheduleManipul
     using FPType = float;
     // RunBenchmark_SingleConfig<FPType, 1, 1>();
     // RunBenchmark_SingleConfig<FPType, 1, 2>();
-    RunBenchmark_SingleConfig<FPType, 1, 200>(scheduleManipulator);
+    RunBenchmark_SingleConfig<FPType, 1, batchSize>(scheduleManipulator);
 
     // RunBenchmark_SingleConfig<FPType, 2, 1>();
     // RunBenchmark_SingleConfig<FPType, 2, 2>();
@@ -158,10 +162,10 @@ void RunAllBenchmarks(mlir::decisionforest::ScheduleManipulator *scheduleManipul
 
     // RunBenchmark_SingleConfig<FPType, 4, 1>();
     // RunBenchmark_SingleConfig<FPType, 4, 2>();
-    RunBenchmark_SingleConfig<FPType, 4, 200>(scheduleManipulator);
+    RunBenchmark_SingleConfig<FPType, 4, batchSize>(scheduleManipulator);
     // RunBenchmark_SingleConfig<FPType, 5, 4>();
     // RunBenchmark_SingleConfig<FPType, 6, 4>();
-    RunBenchmark_SingleConfig<FPType, 8, 200>(scheduleManipulator);
+    RunBenchmark_SingleConfig<FPType, 8, batchSize>(scheduleManipulator);
   }
 }
 
@@ -183,13 +187,13 @@ void RunXGBoostBenchmarks() {
     RunSparseXGBoostBenchmarks(&scheduleManipulator);
   }
 
-  {
-    decisionforest::UseSparseTreeRepresentation = false;
-    std::cout << "\n\n\nMultiple Trees at a Time Schedule\n\n";
-    TreeBeard::test::ScheduleManipulationFunctionWrapper scheduleManipulator(TileTreeDimensionSchedule<20>);
-    RunAllBenchmarks(&scheduleManipulator);
-    RunSparseXGBoostBenchmarks(&scheduleManipulator);
-  }
+  // {
+  //   decisionforest::UseSparseTreeRepresentation = false;
+  //   std::cout << "\n\n\nMultiple Trees at a Time Schedule\n\n";
+  //   TreeBeard::test::ScheduleManipulationFunctionWrapper scheduleManipulator(TileTreeDimensionSchedule<20>);
+  //   RunAllBenchmarks(&scheduleManipulator);
+  //   RunSparseXGBoostBenchmarks(&scheduleManipulator);
+  // }
 }
 
 

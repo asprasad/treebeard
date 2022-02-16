@@ -263,6 +263,7 @@ bool Test_TileSize8_Bosch_TestInputs(TestArgs_t &args);
 bool Test_TileSize8_Epsilon_TestInputs(TestArgs_t &args);
 bool Test_TileSize8_Higgs_TestInputs(TestArgs_t &args);
 bool Test_TileSize8_Year_TestInputs(TestArgs_t &args);
+bool Test_TileSize8_CovType_TestInputs(TestArgs_t &args);
 
 // Tiled schedule test
 bool Test_TileSize8_Abalone_TestInputs_TiledSchedule(TestArgs_t &args);
@@ -288,6 +289,8 @@ bool Test_SparseScalar_Higgs_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_SparseTileSize8_Higgs_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_SparseScalar_Year_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_SparseTileSize8_Year_OneTreeAtATimeSchedule(TestArgs_t &args);
+bool Test_Scalar_CovType_OneTreeAtATimeSchedule(TestArgs_t &args);
+bool Test_TileSize8_CovType_OneTreeAtATimeSchedule(TestArgs_t &args);
 
 bool Test_SparseTileSize8_Abalone_TestInputs_TiledSchedule(TestArgs_t &args);
 bool Test_SparseTileSize8_AirlineOHE_TestInputs_TiledSchedule(TestArgs_t &args);
@@ -818,6 +821,8 @@ void TestTileStringGen() {
 
 #define RUN_ALL_TESTS
 
+bool Test_Airline_Stats(TestArgs_t &args);
+
 #ifdef RUN_ALL_TESTS
 TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy),
@@ -1033,6 +1038,7 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs),
   TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs),
   TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs),
+  TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs),
 
   // Non-trivial schedule array representation tests
   TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize2_XGBoostSchedule),
@@ -1058,6 +1064,8 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TileSize3_Bosch_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_TileSize4_Bosch_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_TileSize8_Bosch_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_Scalar_CovType_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_TileSize8_CovType_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_Scalar_Epsilon_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_TileSize2_Epsilon_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_TileSize3_Epsilon_OneTreeAtATimeSchedule),
@@ -1109,7 +1117,7 @@ TestDescriptor testList[] = {
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_Airline_Stats),
   // TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs),
   // TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs),
   // TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs),
