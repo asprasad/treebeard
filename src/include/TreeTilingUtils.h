@@ -61,12 +61,15 @@ class ForestJSONReader
         std::list<std::vector<int32_t>> serializedChildIndices;
         std::list<std::vector<ThresholdType>> serializedLeaves;
 
+        // #TODO Tree-Beard#19 - Fix all the usages as well.
+        std::list<int8_t> classIDs;
+
         bool operator==(const SingleTileSizeEntry& that) const {
             return tileSize==that.tileSize && thresholdBitWidth==that.thresholdBitWidth && indexBitWidth==that.indexBitWidth &&
                    treeIndices==that.treeIndices && numberOfTiles==that.numberOfTiles && 
                    serializedThresholds==that.serializedThresholds && serializedFetureIndices == that.serializedFetureIndices &&
                    serializedTileShapeIDs==that.serializedTileShapeIDs && serializedChildIndices==that.serializedChildIndices &&
-                   serializedLeaves==that.serializedLeaves;
+                   serializedLeaves==that.serializedLeaves && classIDs==that.classIDs;
         };
     };
     int32_t m_rowSize;
@@ -77,8 +80,6 @@ class ForestJSONReader
     json m_json;
     int32_t m_numberOfTrees;
     int32_t m_numberOfClasses;
-    // #TODO Tree-Beard#19 - Fix all the usages as well.
-    std::vector<int8_t> m_classIds;
 
     std::string m_jsonFilePath;
 
@@ -92,6 +93,7 @@ class ForestJSONReader
     void AddSingleTileSizeEntry(std::list<int32_t>& treeIndices, std::list<int32_t>& numTilesList, std::list<std::vector<ThresholdType>>& serializedThresholds, 
                             std::list<std::vector<FeatureIndexType>>& serializedFetureIndices, std::list<std::vector<int32_t>>& serializedTileShapeIDs,
                             std::list<std::vector<int32_t>>& serializedChildIndices, std::list<std::vector<ThresholdType>>& serializedLeaves,
+                            std::list<int8_t>& classIDs,
                             const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth);
 
     template<typename LeafType>
@@ -124,7 +126,7 @@ public:
     void InitializeOffsetBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth);
     void InitializeLengthBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth);
     void InitializeLookUpTable(void* bufPtr, int32_t tileSize, int32_t entryBitWidth);
-    void InitializeClassInformation(void *classInfoBuf);
+    void InitializeClassInformation(void *classInfoBuf, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth);
     
     void InitializeLeaves(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth);
     void InitializeLeavesOffsetBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth);

@@ -28,10 +28,10 @@ Scheduling Language
         - [Done] Reordering
         - [Done] Splitting
         - Pipelining
-        - Simdize
         - Unroll walk
         - Parallel
         - Expand
+        - Simdize
     - How do we use schedules from the command line?
 
 XGBoost comparison

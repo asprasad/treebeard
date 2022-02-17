@@ -244,7 +244,8 @@ int32_t InferenceRunnerBase::InitializeLeafArrays() {
     typedef LengthMemrefType (*GetLengthFunc_t)();
     auto getLengthPtr = reinterpret_cast<GetLengthFunc_t>(GetFunctionAddress("Get_leavesLengths"));
     LengthMemrefType lengthMemref = getLengthPtr();
-    mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLeavesLengthBuffer(lengthMemref.alignedPtr, m_tileSize, m_thresholdSize, m_featureIndexSize); 
+    mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLeavesLengthBuffer(lengthMemref.alignedPtr, m_tileSize, 
+                                                                                       m_thresholdSize, m_featureIndexSize); 
   }
   return 0;
 }
@@ -257,7 +258,8 @@ void InferenceRunnerBase::InitializeClassInformation() {
   auto getClassInfoPtr = reinterpret_cast<GetClassMemref_t>(GetFunctionAddress("Get_treeClassInfo"));
   ClassMemrefType treeClassInfo = getClassInfoPtr();
 
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeClassInformation(treeClassInfo.alignedPtr); 
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeClassInformation(treeClassInfo.alignedPtr, m_tileSize,
+                                                                                   m_thresholdSize, m_featureIndexSize); 
 }
 
 // ===------------------------------------------------------=== //
