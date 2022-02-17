@@ -52,8 +52,15 @@ XGBoost comparison
     - [Done] Add code to xgboostbenchmarks to benchmark covtype
     - [Done] Modify code in compileutils.cpp to be able to handle multi-class
 [Defer] Fix generated code to work with nans
-Profile and find reasons why random inputs are faster than test inputs
-Figure out tree data structures to reduce footprint when there is sever imbalance (due to probabilistic tiling)
+[Done] Profile and find reasons why random inputs are faster than test inputs
+    - Seems to be caching problems and some increase in branch misprediction rate
+Add sparse support for mutliclass
+    - Add serialization of classes
+    - Add new globals if multiclass
+    - Lowering for GetClassID (should be the same)
+Figure out tree data structures to reduce footprint when there is severe imbalance (due to probabilistic tiling)
+    - Move all leaves to the leaf array for sparse rep by adding one more hope for "internal" leaves
+    - Add bitmask to indicate which children are leaves 
 
 Finish the microbenchmarking for gather
 LightGBM support

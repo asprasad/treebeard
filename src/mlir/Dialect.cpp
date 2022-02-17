@@ -15,6 +15,7 @@ bool mlir::decisionforest::PrintVectors = false;
 bool mlir::decisionforest::UseBitcastForComparisonOutcome = true;
 bool mlir::decisionforest::UseSparseTreeRepresentation = false;
 bool mlir::decisionforest::VectorizeShapeAndChildIndexLoad = false;
+bool mlir::decisionforest::OptimizedSparseRepresentation = true;
 
 void TreeTypeStorage::print(mlir::DialectAsmPrinter &printer) {
     printer << "TreeType(returnType:" << m_resultType << ", tileSize:" << m_tileSize 

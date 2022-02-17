@@ -1,8 +1,8 @@
 import os
 
-filename = '/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/results/xgboost/holmes/Native/20220210/RawResults_Float_Sparse_OneTreeSched_testIP.txt'
+filename = '/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/results/xgboost/holmes/Native/20220217/RawResults_Float_Sparse_OneTreeSched_TestIP.txt'
 # doubleCSV = '/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/results/xgboost/holmes/Native/Reordering/DoubleResults_O0_LargeTiles.csv'
-floatCSV = '/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/results/xgboost/holmes/Native/20220210/FloatResults_Sparse_OneTreeSched_testIP.csv'
+floatCSV = '/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/results/xgboost/holmes/Native/20220217/FloatResults_Sparse_OneTreeSched_testIP.csv'
 
 results = dict()
 results["double"] = dict()
