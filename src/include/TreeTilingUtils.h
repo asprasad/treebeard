@@ -110,7 +110,7 @@ public:
     void AddSingleSparseTree(int32_t treeIndex, int32_t numTiles, std::vector<ThresholdType>& serializedThresholds,
                              std::vector<FeatureIndexType>& serializedFetureIndices, std::vector<int32_t>& tileShapeIDs, 
                              std::vector<int32_t>& childIndices, std::vector<ThresholdType>& leaves,
-                             const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth);
+                             const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth, const int8_t classId);
 
     //===----------------------------------------===/
     // JSON routines
