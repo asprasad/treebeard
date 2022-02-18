@@ -28,6 +28,11 @@ inline bool FPEqual(FPType a, FPType b) {
   return sqDiff < threshold;
 }
 
+template<>
+inline bool FPEqual(int8_t a, int8_t b) {
+  return a==b;
+}
+
 std::string GetTreeBeardRepoPath() {
   char exePath[PATH_MAX];
   memset(exePath, 0, sizeof(exePath)); 
@@ -129,6 +134,7 @@ TestCSVReader::TestCSVReader(const std::string& filename) {
   }
 }
 
+template <typename ReturnType>
 bool RunSingleTest(const std::string& soPath, const std::string& globalValuesJSONPath,
                    const std::string& csvPath, RuntimeWrapper& runtimeWrapper) {
   auto inferenceRunner = runtimeWrapper.Init(soPath.c_str(), globalValuesJSONPath.c_str());
@@ -156,11 +162,11 @@ bool RunSingleTest(const std::string& soPath, const std::string& globalValuesJSO
   auto currentPredictionsIter = xgBoostPredictions.begin();
   for(auto& batch : inputData) {
     assert (batch.size() % batchSize == 0);
-    std::vector<FloatType> result(batchSize, -1);
+    std::vector<ReturnType> result(batchSize, -1);
     runtimeWrapper.RunInference(inferenceRunner, batch.data(), result.data());
     for(int64_t rowIdx=0 ; rowIdx<batchSize ; ++rowIdx) {
       FloatType expectedResult = (*currentPredictionsIter)[rowIdx];
-      if (!FPEqual<FloatType>(result[rowIdx], expectedResult)) {
+      if (!FPEqual(result[rowIdx], (ReturnType)expectedResult)) {
         assert (false);
         return false;
       }
@@ -173,16 +179,18 @@ bool RunSingleTest(const std::string& soPath, const std::string& globalValuesJSO
   return true;
 }
 
-bool RunSingleModelTest(const std::string& modelName, RuntimeWrapper& runtimeWrapper) {
+template <typename ReturnType=float>
+bool RunSingleModelTest(const std::string& modelName, RuntimeWrapper& runtimeWrapper, bool invert=false) {
   std::string csvPath = GetTreeBeardRepoPath() + "/xgb_models/" + modelName + "_xgb_model_save.json.csv";
-  std::string soPath = GetTreeBeardRepoPath() + "/runtime_test_binaries/" + modelName + "_t8_b200_f_i16.so";
+  std::string soPath;
+  soPath = GetTreeBeardRepoPath() + "/runtime_test_binaries/" + modelName + (invert ? "_t8_b200_f_i16.so" : "_t8_b200_f_i16_invert.so");
   std::string globalsJSONPath = soPath + ".treebeard-globals.json";
-  if (RunSingleTest(soPath, globalsJSONPath, csvPath, runtimeWrapper)) {
-    std::cout << "Test " + modelName + " : Passed\n";
+  if (RunSingleTest<ReturnType>(soPath, globalsJSONPath, csvPath, runtimeWrapper)) {
+    std::cout << "Test " + modelName +  (invert ? " (Inverted Loop Order)" : "") + " : Passed\n";
     return true;
   }
   else {
-    std::cout << "Test " + modelName + " : Failed\n";
+    std::cout << "Test " + modelName +  (invert ? " (Inverted Loop Order)" : "")  + " : Failed\n";
     return false;
   }
 }
@@ -194,13 +202,24 @@ using namespace TreeBeard::test;
 
 int main() {
   RuntimeWrapper runtimeWrapper(GetRuntimeSOPath());
-  RunSingleModelTest("abalone", runtimeWrapper);
-  RunSingleModelTest("airline", runtimeWrapper);
-  RunSingleModelTest("airline-ohe", runtimeWrapper);
-  RunSingleModelTest("bosch", runtimeWrapper);
-  RunSingleModelTest("epsilon", runtimeWrapper);
-  RunSingleModelTest("higgs", runtimeWrapper);
-  RunSingleModelTest("year_prediction_msd", runtimeWrapper);
+ 
+  RunSingleModelTest<>("abalone", runtimeWrapper);
+  RunSingleModelTest<>("airline", runtimeWrapper);
+  RunSingleModelTest<>("airline-ohe", runtimeWrapper);
+  RunSingleModelTest<>("bosch", runtimeWrapper);
+  RunSingleModelTest<int8_t>("covtype", runtimeWrapper);
+  RunSingleModelTest<>("epsilon", runtimeWrapper);
+  RunSingleModelTest<>("higgs", runtimeWrapper);
+  RunSingleModelTest<>("year_prediction_msd", runtimeWrapper);
+
+  RunSingleModelTest<>("abalone", runtimeWrapper, true);
+  RunSingleModelTest<>("airline", runtimeWrapper, true);
+  RunSingleModelTest<>("airline-ohe", runtimeWrapper, true);
+  RunSingleModelTest<>("bosch", runtimeWrapper, true);
+  RunSingleModelTest<int8_t>("covtype", runtimeWrapper, true);
+  RunSingleModelTest<>("epsilon", runtimeWrapper, true);
+  RunSingleModelTest<>("higgs", runtimeWrapper, true);
+  RunSingleModelTest<>("year_prediction_msd", runtimeWrapper, true);
   
   return 0;
 }

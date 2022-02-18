@@ -62,14 +62,22 @@ Figure out tree data structures to reduce footprint when there is severe imbalan
     - Move all leaves to the leaf array for sparse rep by adding one more hope for "internal" leaves
     - Add bitmask to indicate which children are leaves 
 
+[Done] Add covtype to runtime tests
+Add covtype to xgboost benchmarks
 Finish the microbenchmarking for gather
 LightGBM support
 Tiling optimization (DP to minimize skew?)
+    - Dump profiling output to a file or pass profiling input CSV as an option to the compiler
+    - Compute edge probabilities from leaf counts
+    - Tile by probabilities
+    - How do we write tests?
 Unrolling Treewalk + new representation  
 Pipeline
 Parallelization
 Schedule exploration
-SIMD 
+SIMD across trees
+Reorder trees to exploit feature set commonality
+Store features in registers 
 
 Code gen for unequal tile size across trees
     - Serialization when tile sizes are unequal across trees
