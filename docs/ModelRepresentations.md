@@ -46,8 +46,8 @@ struct Tile {
 ```
 The generated code to walk each tree is the equivalent of the following C++ code.
 ```C++
-// ThresholdType and FeatureIndexType are specified as input to Treebeard (at least currently)
-Node<ThresholdType, FeatureIndexType> tree[N]; // Buffer to hold all nodes in the tree
+// ThresholdType, FeatureIndexType, TileShapeIDType, TileSize are specified as input to Treebeard (at least currently)
+Tile<ThresholdType, FeatureIndexType, TileShapeIDType, TileSize> tree[N]; // Buffer to hold all nodes in the tree
 
 // A lookup table that determines the child index of the next tile given
 // the tileShapeID and the outcome of the vector comparison on the current tile
@@ -58,7 +58,7 @@ ResultType Prediction_Function(...) {
   size_t i = 0;
   while (tree[i].featureIndices[0] != -1) { // While we've not reached a leaf
     <ThresholdType x TileSize> features = x[tree[i].featureIndices]; // **Gather** the required feature from the current row
-    <bool x TileSize> comparison = features >= tree[i].thresholds;
+    <bool x TileSize> comparison = features < tree[i].thresholds;
     
     // Pack the bits in the comparison vector into an integer, currently implemented as a bitcast
     size_t comparisonIndex = CombineBitsIntoInt(comparison); 
@@ -110,4 +110,48 @@ ResultType Prediction_Function(...) {
   // ...
 }
 ```
+### Vector (Tile Size > 1)
+
+As before, each tile is evaluated (traversed) using vector instructions. A tile is represented by an object of the following struct. One thing to note is that when a tile has its children in the leaves array, the child pointer (that is an index into the leaf array) is stored as (N + index) where N is the size of the array containing all the non-leaf tiles of the tree.
+```C++
+template <typename ThresholdType, typename FeatureIndexType, 
+          typename TileShapeIDType, typename ChildPointerType, int32_t TileSize>
+struct Tile {
+  <ThresholdType x TileSize> thresholds; // A vector of TileSize elements
+  <FeatureIndexType x TileSize> featureIndices;
+  ChildPointerType childPointer;
+  TileShapeIDType tileShapeID; // An integer that uniquely identifies the shape of the current tile
+};
+```
+The generated code to walk each tree is the equivalent of the following C++ code.
+```C++
+// ThresholdType and FeatureIndexType are specified as input to Treebeard (at least currently)
+Tile<ThresholdType, FeatureIndexType, TileShapeIDType, ChildPointerType, TileSize> tree[N]; // Buffer to hold all nodes in the tree
+ThresholdType leaves[NUM_LEAVES]; // Stores all the leaf values for the tree
+
+// A lookup table that determines the child index of the next tile given
+// the tileShapeID and the outcome of the vector comparison on the current tile
+int16_t LUT[NUM_TILE_SHAPES, pow(2, TileSize)]; 
+
+ResultType Prediction_Function(...) {
+  // ...
+  size_t i = 0;
+  while (i < N) { // While we've not reached a leaf (all tiles in the array "tree" are not leaves)
+    <ThresholdType x TileSize> features = x[tree[i].featureIndices]; // **Gather** the required feature from the current row
+    <bool x TileSize> comparison = features < tree[i].thresholds;
+    
+    // Pack the bits in the comparison vector into an integer, currently implemented as a bitcast
+    size_t comparisonIndex = CombineBitsIntoInt(comparison); 
+    
+    // Read the child index of the tile we need to move to next
+    int16_t childIndex = LUT[tree[i].tileShapeID, comparisonIndex];
+    
+    // A tile of TileSize nodes has (TileSize+1) children
+    i = tree[i].childPointer + 1 + childIndex; 
+  }
+  ThresholdType prediction = leaves[i - N];
+  // ...
+}
+```
+
 
