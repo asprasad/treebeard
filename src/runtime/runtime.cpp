@@ -29,17 +29,19 @@ extern "C" void RunInference(intptr_t inferenceRunnerInt, void *inputs, void *re
   inferenceRunner->RunInference<double, double>(reinterpret_cast<double*>(inputs), reinterpret_cast<double*>(results));
 }
 
-// TODO We're assuming float as the type of the inputs and outputs, but we should change this based on values persisted in the JSON 
 extern "C" void RunInferenceOnMultipleBatches(intptr_t inferenceRunnerInt, void *inputs, void *results, int32_t numRows) {
   auto inferenceRunner = reinterpret_cast<mlir::decisionforest::SharedObjectInferenceRunner*>(inferenceRunnerInt);
   auto batchSize = inferenceRunner->GetBatchSize();
   auto rowSize = inferenceRunner->GetRowSize();
 
   assert (numRows % batchSize == 0);
+  int32_t inputElementSize = inferenceRunner->GetInputElementBitWidth()/8;
+  int32_t returnTypeSize = inferenceRunner->GetReturnTypeBitWidth()/8;
   for (int32_t batch=0 ; batch<numRows/batchSize ; ++batch) {
-    auto batchPtr = reinterpret_cast<float*>(inputs) + batch * (rowSize*batchSize);
-    auto resultsPtr = reinterpret_cast<float*>(results) + batch * batchSize;
-    inferenceRunner->RunInference<float, float>(batchPtr, resultsPtr);
+    auto batchPtr = reinterpret_cast<char*>(inputs) + (batch * (rowSize*batchSize) * inputElementSize);
+    auto resultsPtr = reinterpret_cast<char*>(results) + (batch * batchSize * returnTypeSize);
+    // TODO The types in this template don't really matter. Maybe we should get rid of them? 
+    inferenceRunner->RunInference<double, double>(reinterpret_cast<double*>(batchPtr), reinterpret_cast<double*>(resultsPtr));
   }
 }
 

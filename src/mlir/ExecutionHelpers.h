@@ -57,6 +57,8 @@ using ClassMemrefType = Memref<int8_t, 1>;
 class InferenceRunnerBase {
 protected:
   std::string m_modelGlobalsJSONFilePath;
+  int32_t m_inputElementBitWidth;
+  int32_t m_returnTypeBitWidth;
   int32_t m_tileSize;
   int32_t m_thresholdSize;
   int32_t m_featureIndexSize;
@@ -85,6 +87,8 @@ public:
     // TODO read the thresholdSize and featureIndexSize from the JSON!
     m_batchSize = decisionforest::ForestJSONReader::GetInstance().GetBatchSize();
     m_rowSize = decisionforest::ForestJSONReader::GetInstance().GetRowSize();
+    m_inputElementBitWidth = decisionforest::ForestJSONReader::GetInstance().GetInputElementBitWidth();
+    m_returnTypeBitWidth = decisionforest::ForestJSONReader::GetInstance().GetReturnTypeBitWidth();
   }
   virtual ~InferenceRunnerBase() { }
   
@@ -98,7 +102,9 @@ public:
   int32_t GetBatchSize() { return m_batchSize; }
   int32_t GetRowSize() { return m_rowSize; }
   int32_t GetThresholdWidth() { return m_thresholdSize; }
-
+  int32_t GetInputElementBitWidth() { return m_inputElementBitWidth; }
+  int32_t GetReturnTypeBitWidth() { return m_returnTypeBitWidth; }
+  
   void PrintLengthsArray();
   void PrintOffsetsArray();
   void PrintModelArray();

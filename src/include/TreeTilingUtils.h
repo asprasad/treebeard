@@ -72,6 +72,8 @@ class ForestJSONReader
                    serializedLeaves==that.serializedLeaves && classIDs==that.classIDs;
         };
     };
+    int32_t m_inputElementBitwidth;
+    int32_t m_returnTypeBitWidth;
     int32_t m_rowSize;
     int32_t m_batchSize;
     int32_t m_tileShapeBitWidth;
@@ -146,6 +148,12 @@ public:
 
     int32_t GetChildIndexBitWidth() { return m_childIndexBitWidth; }
     void SetChildIndexBitWidth(int32_t val) { m_childIndexBitWidth=val; }
+
+    int32_t GetInputElementBitWidth() { return m_inputElementBitwidth; }
+    void SetInputElementBitWidth(int32_t val) { m_inputElementBitwidth=val; }
+
+    int32_t GetReturnTypeBitWidth() { return m_returnTypeBitWidth; }
+    void SetReturnTypeBitWidth(int32_t val) { m_returnTypeBitWidth=val; }
 
     void SetNumberOfClasses(int32_t nclasses) { m_numberOfClasses = nclasses; }
     int32_t GetNumberOfClasses() const { return m_numberOfClasses; }

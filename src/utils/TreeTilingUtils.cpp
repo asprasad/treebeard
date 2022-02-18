@@ -115,6 +115,8 @@ void ForestJSONReader::ParseJSONFile() {
     std::ifstream fin(m_jsonFilePath);
     fin >> m_json;
 
+    m_inputElementBitwidth = m_json["InputElementBitWidth"];
+    m_returnTypeBitWidth = m_json["ReturnTypeBitWidth"];
     m_rowSize = m_json["RowSize"];
     m_batchSize = m_json["BatchSize"];
     m_numberOfTrees = m_json["NumberOfTrees"];
@@ -172,6 +174,8 @@ void ForestJSONReader::WriteJSONFile() {
     assert (m_jsonFilePath != "");
     m_json.clear();
 
+    m_json["InputElementBitWidth"] = m_inputElementBitwidth;
+    m_json["ReturnTypeBitWidth"] = m_returnTypeBitWidth;
     m_json["RowSize"] = m_rowSize;
     m_json["BatchSize"] = m_batchSize;
     m_json["NumberOfTrees"] = m_numberOfTrees;

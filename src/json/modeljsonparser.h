@@ -169,6 +169,8 @@ public:
         // m_modelGlobalsJSONFilePath = ModelGlobalJSONFilePathFromJSONFilePath(jsonFilePath);
         mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_modelGlobalsJSONFilePath);
         mlir::decisionforest::ForestJSONReader::GetInstance().SetBatchSize(batchSize);
+        mlir::decisionforest::ForestJSONReader::GetInstance().SetInputElementBitWidth(sizeof(InputElementType)*8);
+        mlir::decisionforest::ForestJSONReader::GetInstance().SetReturnTypeBitWidth(sizeof(ReturnType)*8);
     }
 
     ModelJSONParser(const std::string& jsonFilePath, const std::string& modelGlobalsJSONFilePath, mlir::MLIRContext& context, int32_t batchSize)
