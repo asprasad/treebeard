@@ -76,4 +76,38 @@ ResultType Prediction_Function(...) {
 
 Even though this representation is simple, the memory required even for reasonable sized models is very large. The memory footprint ends up being close to 20X that of the scalar representation. Storing leaves as full tiles (even though leaves just have to represent one value) and the empty space introduced due to the array based representation of trees that are not complete account for most of the increase. The sparse representation described next tries to address these issues.
 
+## Sparse Representation
+
+The sparse representation tries to address the large memory footprint of the array based representation by doing the following. 
+* To eliminate wasted space in the array representation, add a child pointer to each node. This points to the first child of the node. All children of a node are stored contiguously.
+* For the vector case, leaves are stored in a separate array. We found that, across all models with uniform tiling, >95% of leaves are such that all their siblings are also leaves. Such leaves are directly moved into the leaves array while for leaves that are "internal", an additional hop is added by making the leaf tile a comparison tile and all its children are made leaves with the same value as the original leaf.
+
+### Scalar (Tile Size = 1)
+
+Each node of the tree is represented by an object of the following struct.
+```C++
+template <typename ThresholdType, typename FeatureIndexType, typename ChildPointerType>
+struct Node {
+  ThresholdType threshold;
+  FeatureIndexType featureIndex;
+  ChildPointerType childPointer;
+};
+```
+The generated code to walk each tree is the equivalent of the following C++ code.
+```C++
+// ThresholdType, FeatureIndexType and ChildPointerType are specified as input to Treebeard (at least currently)
+Node<ThresholdType, FeatureIndexType, ChildPointerType> tree[N]; // Buffer to hold all nodes in the tree
+
+ResultType Prediction_Function(...) {
+  // ...
+  size_t i = 0;
+  while (tree[i].featureIndex != -1) { // While we've not reached a leaf
+    ThresholdType feature = x[tree[i].featureIndex]; // Read the required feature from the current row
+    size_t comparison = feature >= tree[i].threshold;
+    i = tree[i].childPointer + comparison; // Move to the left child if (feature < threshold), else right child
+  }
+  ThresholdType prediction = tree[i].threshold;
+  // ...
+}
+```
 
