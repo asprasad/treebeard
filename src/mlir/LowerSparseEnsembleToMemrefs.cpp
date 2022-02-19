@@ -732,28 +732,14 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     }
 
     Value tileShapeIndex, childIndex;
-    if (decisionforest::VectorizeShapeAndChildIndexLoad) {
-      assert (tileShapeType == childIndexType);
-      auto vectorType = VectorType::get({2}, tileShapeType);
-      auto tileShapeAndChild = rewriter.create<decisionforest::LoadTileShapeAndChildIndexOp>(location, vectorType, treeMemref, static_cast<Value>(nodeIndex));
-      auto vectorIndexType = VectorType::get({2}, rewriter.getIndexType());
-      auto indexCast = rewriter.create<arith::IndexCastOp>(location, vectorIndexType, static_cast<Value>(tileShapeAndChild));
+    // Load the tile shape
+    auto loadTileShapeOp = rewriter.create<decisionforest::LoadTileShapeOp>(location, tileShapeType, treeMemref, static_cast<Value>(nodeIndex));
+    tileShapeIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadTileShapeOp));
 
-      auto zeroConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
-      tileShapeIndex = rewriter.create<vector::ExtractElementOp>(location, indexCast, zeroConst);
+    // Load the child index
+    auto loadChildIndexOp = rewriter.create<decisionforest::LoadChildIndexOp>(location, childIndexType, treeMemref, static_cast<Value>(nodeIndex));
+    childIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadChildIndexOp));
 
-      auto oneConst = rewriter.create<arith::ConstantIndexOp>(location, 1);
-      childIndex = rewriter.create<vector::ExtractElementOp>(location, indexCast, oneConst);
-    }
-    else {
-      // Load the tile shape
-      auto loadTileShapeOp = rewriter.create<decisionforest::LoadTileShapeOp>(location, tileShapeType, treeMemref, static_cast<Value>(nodeIndex));
-      tileShapeIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadTileShapeOp));
-
-      // Load the child index
-      auto loadChildIndexOp = rewriter.create<decisionforest::LoadChildIndexOp>(location, childIndexType, treeMemref, static_cast<Value>(nodeIndex));
-      childIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadChildIndexOp));
-    }
     // Load feature value
     auto rowMemref = operands[2];
     auto rowMemrefType = rowMemref.getType().cast<MemRefType>();

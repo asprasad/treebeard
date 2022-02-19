@@ -22,10 +22,10 @@ import treebeard
 import xgboost as xgb
 
 num_repeats = 100
-use_inplace_predict = True
-run_on_same_array_repeatedly = True
+use_inplace_predict = False
+run_on_same_array_repeatedly = False
 
-def RunSingleTest_Multibatch(soPath, globalsJSONPath, csvPath) -> float:
+def RunSingleTest_Multibatch(soPath, globalsJSONPath, csvPath, returnType) -> float:
   data_df = pandas.read_csv(csvPath, header=None)
   data = numpy.array(data_df, order='C') # numpy.genfromtxt(csvPath, ',')
 
@@ -38,15 +38,15 @@ def RunSingleTest_Multibatch(soPath, globalsJSONPath, csvPath) -> float:
   start = time.time()
   if run_on_same_array_repeatedly:
     for i in range(num_repeats):
-      results = inferenceRunner.RunInferenceOnMultipleBatches(inputs)
+      results = inferenceRunner.RunInferenceOnMultipleBatches(inputs, returnType)
   else:
-    results = inferenceRunner.RunInferenceOnMultipleBatches(repeated_inputs)
+    results = inferenceRunner.RunInferenceOnMultipleBatches(repeated_inputs, returnType)
   end = time.time()
 
   print("(", end - start, "s )")
   return (end - start)
 
-def RunTestOnSingleModelTestInputs_Multibatch(modelName : str, sparse, invert) -> float:
+def RunTestOnSingleModelTestInputs_Multibatch(modelName : str, sparse, invert, returnType=numpy.float32) -> float:
   print("TreeBeard ",  modelName, "...", end=" ")
   invert_str = "_invert" if invert else ""
   sparse_str = "_sparse" if sparse else ""
@@ -54,7 +54,7 @@ def RunTestOnSingleModelTestInputs_Multibatch(modelName : str, sparse, invert) -
   # print(soPath)
   globalsJSONPath = soPath + ".treebeard-globals.json"
   csvPath = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), modelName + "_xgb_model_save.json.test.sampled.csv")
-  return RunSingleTest_Multibatch(soPath, globalsJSONPath, csvPath)
+  return RunSingleTest_Multibatch(soPath, globalsJSONPath, csvPath, returnType)
 
 def RunSingleTest_XGBoost(modelJSONPath, csvPath) -> float:
   booster = xgb.Booster(model_file=modelJSONPath)
@@ -92,20 +92,19 @@ def RunTestOnSingleModelTestInputs_XGBoost(modelName : str) -> None:
   csvPath = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), modelName + "_xgb_model_save.json.test.sampled.csv")
   return RunSingleTest_XGBoost(modelJSON, csvPath)
 
-modelNames = ["abalone", "airline", "airline-ohe", "epsilon", "higgs", "year_prediction_msd"]
-# modelNames = ["epsilon"]
+modelNames = ["abalone", "airline", "airline-ohe", "covtype", "epsilon", "higgs", "year_prediction_msd"]
+sparse = [True, True, False, True, True, True, True ]
+invert = [True, True, True, True, False, True, True ]
+return_types = [numpy.float32, numpy.float32, numpy.float32, numpy.int8, numpy.float32, numpy.float32, numpy.float32 ]
 speedups = []
 
+i = 0
 for model in modelNames:
-  sparse = False
-  invert = True
-  if model == "epsilon":
-     sparse = True
-     invert = False
-  treebeardTime = RunTestOnSingleModelTestInputs_Multibatch(model, sparse, invert)
+  treebeardTime = RunTestOnSingleModelTestInputs_Multibatch(model, sparse[i], invert[i], return_types[i])
   xgBoostTime = RunTestOnSingleModelTestInputs_XGBoost(model)
   speedup = xgBoostTime/treebeardTime
   speedups.append(speedup)
+  i += 1
   print("Speedup : ", speedup)
 
 print("Geomean speedup : ", gmean(speedups))
