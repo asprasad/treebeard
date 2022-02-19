@@ -200,15 +200,7 @@ public:
         auto &entryBlock = *function.addEntryBlock();
 
         m_builder.setInsertionPointToStart(&entryBlock);
-        auto zeroIndexAttr = m_builder.getIndexAttr(0);
-        auto oneIndexAttr = m_builder.getIndexAttr(1);
-        auto rowSizeAttr = m_builder.getIndexAttr(m_forest->GetFeatures().size());
-        auto batchSizeAttr = m_builder.getIndexAttr(m_batchSize);
 
-        auto subviewOfArg = m_builder.create<mlir::memref::SubViewOp>(m_builder.getUnknownLoc(), static_cast<mlir::Value>(entryBlock.getArguments()[0]), 
-                                                                mlir::ArrayRef<mlir::OpFoldResult>({zeroIndexAttr, zeroIndexAttr}),
-                                                                mlir::ArrayRef<mlir::OpFoldResult>({batchSizeAttr, rowSizeAttr}), 
-                                                                mlir::ArrayRef<mlir::OpFoldResult>({oneIndexAttr, oneIndexAttr}));
         auto forestType = GetEnsembleType();
         auto forestAttribute = mlir::decisionforest::DecisionForestAttribute::get(forestType, *m_forest);
         
@@ -220,7 +212,7 @@ public:
             m_builder.getUnknownLoc(),
             GetFunctionResultType(),
             forestAttribute,
-            subviewOfArg,
+            static_cast<mlir::Value>(entryBlock.getArguments()[0]),
             entryBlock.getArguments()[1], scheduleAttribute);
 
         m_builder.create<mlir::ReturnOp>(m_builder.getUnknownLoc(), static_cast<mlir::Value>(predictOp));

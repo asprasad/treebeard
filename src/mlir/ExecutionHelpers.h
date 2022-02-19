@@ -121,7 +121,7 @@ public:
     int64_t rowSize = inputRowSize, offset = 0, stride = 1;
     ReturnType *resultPtr = returnValue, *resultAlignedPtr = returnValue;
     int64_t resultLen = batchSize;
-    inferenceFuncPtr(ptr, alignedPtr, offset, batchSize, rowSize, stride, stride, 
+    inferenceFuncPtr(ptr, alignedPtr, offset, batchSize, rowSize, rowSize /*stride by rowSize to move from one row to the next*/, stride, 
                      resultPtr, resultAlignedPtr, offset, resultLen, stride);
     return 0;
   }
