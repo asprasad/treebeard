@@ -30,7 +30,7 @@ extern bool InsertDebugHelpers;
 extern bool PrintVectors;
 extern bool UseBitcastForComparisonOutcome;
 extern bool UseSparseTreeRepresentation;
-extern bool VectorizeShapeAndChildIndexLoad;
+extern bool OptimizedSparseRepresentation;
 
 void populateDebugOpLoweringPatterns(RewritePatternSet& patterns, LLVMTypeConverter& typeConverter);
 

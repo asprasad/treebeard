@@ -1560,6 +1560,16 @@ bool Test_SparseTileSize8_Bosch(TestArgs_t &args) {
   return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 32);
 }
 
+bool Test_SparseScalar_CovType_Int8Type(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_TileSizeVariable_CovType_Int8Type(args, 1);
+}
+
+bool Test_SparseTileSize8_CovType_Int8Type(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_TileSizeVariable_CovType_Int8Type(args, 8);
+}
+
 bool Test_SparseScalar_Epsilon(TestArgs_t &args) {
   decisionforest::UseSparseTreeRepresentation = true;
   auto repoPath = GetTreeBeardRepoPath();
@@ -1912,6 +1922,26 @@ bool Test_SparseTileSize8_Bosch_OneTreeAtATimeSchedule(TestArgs_t &args) {
   auto modelJSONPath = testModelsDir + "/bosch_xgb_model_save.json";
   int32_t tileSize = 8;
   return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 16, 16, "", OneTreeAtATimeSchedule);
+}
+
+bool Test_SparseScalar_CovType_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  int32_t tileSize = 1;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/covtype_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".csv";
+  return Test_MultiClass_Int32ReturnType(args, modelJSONPath, tileSize, false, 16, 16, csvPath, OneTreeAtATimeSchedule);
+}
+
+bool Test_SparseTileSize8_CovType_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  int32_t tileSize = 8;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/covtype_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".csv";
+  return Test_MultiClass_Int32ReturnType(args, modelJSONPath, tileSize, false, 16, 16, csvPath, OneTreeAtATimeSchedule);
 }
 
 bool Test_SparseScalar_Epsilon_OneTreeAtATimeSchedule(TestArgs_t &args) {

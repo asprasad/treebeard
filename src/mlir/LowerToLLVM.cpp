@@ -232,36 +232,10 @@ struct InitSparseTileOpLowering : public ConversionPattern {
     GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.featureIndices().getType(), 1, getTypeConverter(), tileOpAdaptor.featureIndices());
     auto modelMemrefType = op->getOperand(0).getType().cast<MemRefType>();
     auto tileType = modelMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
-    if (decisionforest::VectorizeShapeAndChildIndexLoad) {
-      if (tileType.getTileSize() == 1)
-        GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.childIndex().getType(), 3, getTypeConverter(), tileOpAdaptor.childIndex());
-      else {
-        assert(tileType.getChildIndexType() == tileType.getTileShapeType());
-        // Construct a vector of <tile shape, child index>
-        auto vectorType = VectorType::get({ 2 }, tileType.getChildIndexType());
-        DenseElementsAttr attr;
-        if (tileType.getTileShapeType().getIntOrFloatBitWidth() == 8) 
-          attr = DenseElementsAttr::get(vectorType, (int8_t)0);
-        else if (tileType.getTileShapeType().getIntOrFloatBitWidth() == 16)
-          attr = DenseElementsAttr::get(vectorType, (int16_t)0);
-        else if (tileType.getTileShapeType().getIntOrFloatBitWidth() == 32)
-          attr = DenseElementsAttr::get(vectorType, (int32_t)0);
-        else 
-          assert (false && "Unknown tileshape ID type");
-        auto zeroVector = rewriter.create<LLVM::ConstantOp>(op->getLoc(), vectorType, attr);
-        auto zeroConst = rewriter.create<LLVM::ConstantOp>(op->getLoc(), rewriter.getI32Type(), IntegerAttr::get(rewriter.getI32Type(), 0));
-        auto tileShapeInserted = rewriter.create<LLVM::InsertElementOp>(op->getLoc(), vectorType, zeroVector, tileOpAdaptor.tileShapeID(), zeroConst);
-        auto oneConst = rewriter.create<LLVM::ConstantOp>(op->getLoc(), rewriter.getI32Type(), IntegerAttr::get(rewriter.getI32Type(), 1));
-        auto tileShapeAndChildIndexVec = rewriter.create<LLVM::InsertElementOp>(op->getLoc(), vectorType, tileShapeInserted, tileOpAdaptor.childIndex(), oneConst);
-        // Store the vector into the memref
-        GenerateStoreStructElement(op, operands, rewriter, vectorType, 2, getTypeConverter(), tileShapeAndChildIndexVec);  
-      }
-    }
-    else {
-      if (tileType.getTileSize() > 1)
-        GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.tileShapeID().getType(), 2, getTypeConverter(), tileOpAdaptor.tileShapeID());
-      GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.childIndex().getType(), 3, getTypeConverter(), tileOpAdaptor.childIndex());
-    }
+    if (tileType.getTileSize() > 1)
+      GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.tileShapeID().getType(), 2, getTypeConverter(), tileOpAdaptor.tileShapeID());
+    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.childIndex().getType(), 3, getTypeConverter(), tileOpAdaptor.childIndex());
+
     rewriter.eraseOp(op);
     return mlir::success();
   }
@@ -346,12 +320,7 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
                     return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType, childIndexType});
                   }
                   else {
-                    if (decisionforest::VectorizeShapeAndChildIndexLoad) {
-                      assert (childIndexType == tileShapeIDType);
-                      return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, mlir::VectorType::get({ 2 }, tileShapeIDType)});
-                    }
-                    else
-                      return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType, childIndexType});
+                    return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType, childIndexType});
                   }
                 });
 

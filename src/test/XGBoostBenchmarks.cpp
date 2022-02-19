@@ -118,9 +118,7 @@ void RunBenchmark_SingleConfig(mlir::decisionforest::ScheduleManipulator *schedu
   RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("airline", scheduleManipulator);
   RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("airline-ohe", scheduleManipulator);
   // RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("bosch", scheduleManipulator);
-  // TODO because multi-class doesn't support sparse yet
-  if (decisionforest::UseSparseTreeRepresentation == false)
-    RunSingleBenchmark_SingleConfig<FPType, int8_t, TileSize, BatchSize>("covtype", scheduleManipulator);
+  RunSingleBenchmark_SingleConfig<FPType, int8_t, TileSize, BatchSize>("covtype", scheduleManipulator);
   RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("epsilon", scheduleManipulator);
   RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("higgs", scheduleManipulator);
   RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("year_prediction_msd", scheduleManipulator);

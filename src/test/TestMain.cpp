@@ -239,6 +239,8 @@ bool Test_SparseTileSize2_Bosch(TestArgs_t &args);
 bool Test_SparseTileSize3_Bosch(TestArgs_t &args);
 bool Test_SparseTileSize4_Bosch(TestArgs_t &args);
 bool Test_SparseTileSize8_Bosch(TestArgs_t &args);
+bool Test_SparseScalar_CovType_Int8Type(TestArgs_t &args);
+bool Test_SparseTileSize8_CovType_Int8Type(TestArgs_t &args);
 bool Test_SparseScalar_Epsilon(TestArgs_t &args);
 bool Test_SparseTileSize2_Epsilon(TestArgs_t &args);
 bool Test_SparseTileSize3_Epsilon(TestArgs_t &args);
@@ -283,6 +285,8 @@ bool Test_SparseScalar_AirlineOHE_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_SparseTileSize8_AirlineOHE_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_SparseScalar_Bosch_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_SparseTileSize8_Bosch_OneTreeAtATimeSchedule(TestArgs_t &args);
+bool Test_SparseScalar_CovType_OneTreeAtATimeSchedule(TestArgs_t &args);
+bool Test_SparseTileSize8_CovType_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_SparseScalar_Epsilon_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_SparseTileSize8_Epsilon_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_SparseScalar_Higgs_OneTreeAtATimeSchedule(TestArgs_t &args);
@@ -821,8 +825,6 @@ void TestTileStringGen() {
 
 #define RUN_ALL_TESTS
 
-bool Test_Airline_Stats(TestArgs_t &args);
-
 #ifdef RUN_ALL_TESTS
 TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy),
@@ -1017,6 +1019,8 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_SparseTileSize3_Bosch),
   TEST_LIST_ENTRY(Test_SparseTileSize4_Bosch),
   TEST_LIST_ENTRY(Test_SparseTileSize8_Bosch),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_CovType_Int8Type),
+  TEST_LIST_ENTRY(Test_SparseScalar_CovType_Int8Type),
   TEST_LIST_ENTRY(Test_SparseScalar_Epsilon),
   TEST_LIST_ENTRY(Test_SparseTileSize2_Epsilon),
   TEST_LIST_ENTRY(Test_SparseTileSize3_Epsilon),
@@ -1098,6 +1102,8 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_SparseTileSize8_AirlineOHE_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_SparseScalar_Bosch_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_SparseTileSize8_Bosch_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_SparseScalar_CovType_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_CovType_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_SparseScalar_Epsilon_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_SparseTileSize8_Epsilon_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_SparseScalar_Higgs_OneTreeAtATimeSchedule),
@@ -1117,7 +1123,10 @@ TestDescriptor testList[] = {
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_Airline_Stats),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_CovType_Int8Type),
+  TEST_LIST_ENTRY(Test_SparseScalar_CovType_Int8Type),
+  TEST_LIST_ENTRY(Test_SparseScalar_CovType_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_CovType_OneTreeAtATimeSchedule),
   // TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs),
   // TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs),
   // TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs),

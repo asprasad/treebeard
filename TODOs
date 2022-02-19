@@ -28,10 +28,10 @@ Scheduling Language
         - [Done] Reordering
         - [Done] Splitting
         - Pipelining
-        - Simdize
         - Unroll walk
         - Parallel
         - Expand
+        - Simdize
     - How do we use schedules from the command line?
 
 XGBoost comparison
@@ -52,17 +52,32 @@ XGBoost comparison
     - [Done] Add code to xgboostbenchmarks to benchmark covtype
     - [Done] Modify code in compileutils.cpp to be able to handle multi-class
 [Defer] Fix generated code to work with nans
-Profile and find reasons why random inputs are faster than test inputs
-Figure out tree data structures to reduce footprint when there is sever imbalance (due to probabilistic tiling)
+[Done] Profile and find reasons why random inputs are faster than test inputs
+    - Seems to be caching problems and some increase in branch misprediction rate
+Add sparse support for mutliclass
+    - Add serialization of classes
+    - Add new globals if multiclass
+    - Lowering for GetClassID (should be the same)
+Figure out tree data structures to reduce footprint when there is severe imbalance (due to probabilistic tiling)
+    - Move all leaves to the leaf array for sparse rep by adding one more hope for "internal" leaves
+    - Add bitmask to indicate which children are leaves 
 
+[Done] Add covtype to runtime tests
+Add covtype to xgboost benchmarks
 Finish the microbenchmarking for gather
 LightGBM support
 Tiling optimization (DP to minimize skew?)
+    - Dump profiling output to a file or pass profiling input CSV as an option to the compiler
+    - Compute edge probabilities from leaf counts
+    - Tile by probabilities
+    - How do we write tests?
 Unrolling Treewalk + new representation  
 Pipeline
 Parallelization
 Schedule exploration
-SIMD 
+SIMD across trees
+Reorder trees to exploit feature set commonality
+Store features in registers 
 
 Code gen for unequal tile size across trees
     - Serialization when tile sizes are unequal across trees

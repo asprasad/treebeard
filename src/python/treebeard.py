@@ -1,7 +1,4 @@
-import sys
 import os
-import ctypes
-import pathlib
 import ctypes
 import numpy
 
@@ -70,17 +67,17 @@ class TreebeardInferenceRunner:
   def __del__(self):
     self.treebeardAPI.DeleteInferenceRunner(self.inferenceRunner)
   
-  def RunInference(self, inputs):
+  def RunInference(self, inputs, resultType=numpy.float32):
     assert type(inputs) is numpy.ndarray
-    inputs_np = inputs # numpy.array(inputs, numpy.float32)
-    results = numpy.zeros((self.batchSize), numpy.float32)
+    inputs_np = inputs
+    results = numpy.zeros((self.batchSize), resultType)
     self.treebeardAPI.RunInference(self.inferenceRunner, inputs_np.ctypes.data_as(ctypes.c_void_p), results.ctypes.data_as(ctypes.c_void_p))
     return results
 
-  def RunInferenceOnMultipleBatches(self, inputs):
+  def RunInferenceOnMultipleBatches(self, inputs, resultType=numpy.float32):
     assert type(inputs) is numpy.ndarray
     numRows = inputs.shape[0]
-    results = numpy.zeros((numRows), numpy.float32)
+    results = numpy.zeros((numRows), resultType)
     self.treebeardAPI.RunInferenceOnMultipleBatches(self.inferenceRunner, inputs.ctypes.data_as(ctypes.c_void_p), results.ctypes.data_as(ctypes.c_void_p), numRows)
     return results
   

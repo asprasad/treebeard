@@ -1,0 +1,24 @@
+Type    float   Batch   200     Tile    1
+        abalone 24307328
+        airline 3120407
+        airline-ohe     44206099
+        covtype 21493745
+        epsilon 3628983
+        higgs   3105206
+        year_prediction_msd     2995113
+Type    float   Batch   200     Tile    4
+        abalone 24342216
+        airline 3550514
+        airline-ohe     26601596
+        covtype 21624839
+        epsilon 4328193
+        higgs   3732697
+        year_prediction_msd     2929597
+Type    float   Batch   200     Tile    8
+        abalone 15645734
+        airline 2538177
+        airline-ohe     29402595
+        covtype 18539530
+        epsilon 3542763
+        higgs   2671297
+        year_prediction_msd     2193075
