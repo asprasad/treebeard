@@ -43,7 +43,7 @@ $LUT : (TileShape, < Boolean \times TileSize >) \rightarrow \mathbb{N} $
 
 where $< Boolean \times TileSize >$ is a vector of booleans of length $TileSize$. The value returned by the LUT is the index of the child of the current tile that should be evaluated next. For example, if we are evaluating the first tile above, and the result of the comparison is "110", then $LUT(TileShape, 110)=1$ since the tile we need to evaluate next is the tile with node $b$, which is the second child of the current tile. 
 
-In order to realize this LUT in generated code, Treebeard associates a non-negative integer ID to every unique tile shape of the given tile size. The vector of booleans is stored as a 64-bit integer. Therefore, the LUT can be implemented as a 2 dimensional array.
+In order to realize this LUT in generated code, Treebeard associates a non-negative integer ID with every unique tile shape of the given tile size. The vector of booleans is stored as a 64-bit integer. Therefore, the LUT can be implemented as a 2 dimensional array.
 
 ```C++
 // n_t is the tile size, NTS(n_t) gives the number of tile shapes 
