@@ -112,7 +112,15 @@ ResultType Prediction_Function(...) {
 ```
 ### Vector (Tile Size > 1)
 
-As before, each tile is evaluated (traversed) using vector instructions. A tile is represented by an object of the following struct. One thing to note is that when a tile has its children in the leaves array, the child pointer (that is an index into the leaf array) is stored as (N + index) where N is the size of the array containing all the non-leaf tiles of the tree.
+The following diagram shows some of the details of the vector sparse representation.
+![Sparse Vector Representation](Representations/SparseRep_TileSize3.PNG "Sparse representation with a tile size of 3")
+
+The tree on the left of the diagram is the actual decision tree with the nodes grouped into tiles $t_1$ and $t_2$. The tree on the left is the tree of tiles. The arrays depicted below show how the tree is represented in memory. The first array ($\texttt{tree}$) is an array of tiles and has 5 elements. Each element of the array represents a single tile which has the thresholds of the nodes, the feature indices and a pointer to the first child (shown explicitly in red). As a specific example, consider the tile $t_1$. The tile has four children -- $l_1$, $l_2$, $l_3$ and $t_2$ in that order (left to right). These tiles are stored contiguously in the array and a pointer to the first of these, $l_1$ is stored in the tile $t_1$ (the index 1 stored in the tile $t_1$ as shown). Since all children of the tile $t_2$ are leaves, they are all moved into the $\texttt{leaves}$ array. To store a pointer into the $\texttt{leaves}$ array, we add $\texttt{len(tree)}$ to the element index in the $\texttt{leaves}$ array. The tile $t_2$'s child is the element at index 12 of the $\texttt{leaves}$ array. Therefore, the index $12 + 5 = 17$ is stored in the tile $t_2$. 
+
+The other aspect of the representation is that an extra hop is added for the leaves $l_1$, $l_2$ and $l_3$ in order to simplify code generation. This enforces the invariant that all leaves are stored in the leaves array and so simplifies checking whether we've reached a leaf. Therefore, 4 leaves are added children for each of the original leaves $l_1$, $l_2$ and $l_3$. Each of these newly added leaves has the same value as its parent. These are the first 12 elements of the $\texttt{leaves}$ array.
+
+
+In the generated code, as before, each tile is evaluated (traversed) using vector instructions. A tile is represented by an object of the following struct. One thing to note is that when a tile has its children in the leaves array, the child pointer (that is an index into the leaf array) is stored as (N + index) where N is the size of the array containing all the non-leaf tiles of the tree.
 ```C++
 template <typename ThresholdType, typename FeatureIndexType, 
           typename TileShapeIDType, typename ChildPointerType, int32_t TileSize>
