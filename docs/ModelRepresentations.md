@@ -35,7 +35,7 @@ ResultType Prediction_Function(...) {
 ```
 ### Vector (Tile Size > 1)
 
-Connected groups of nodes of the decision tree are grouped together into a single tile. Each tile is evaluated (traversed) using vector instructions. A tile is represented by an object of the following struct.
+Connected groups of nodes of the decision tree are grouped together into a single tile. Each tile is evaluated (traversed) using vector instructions. More details about the vector evaluation of trees and the lookup table are provided [here](TileShapesAndLUT/TileShapesAndLUT.md). A tile is represented by an object of the following struct.
 ```C++
 template <typename ThresholdType, typename FeatureIndexType, typename TileShapeIDType, int32_t TileSize>
 struct Tile {
