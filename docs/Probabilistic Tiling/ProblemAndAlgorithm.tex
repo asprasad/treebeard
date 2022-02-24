@@ -106,7 +106,7 @@ Intuitively, it seems like the following greedy algorithm also gives the optimal
     \begin{algorithmic}
         \Procedure{TileTree}{$T = (V, E, r)$, $n_t$} 
             \If {$r \in L$}
-                \State \textbf{return}
+                \State \textbf{return} $\{ r \}$
             \EndIf
             \State $Tile \leftarrow \{ r \}$
             \While{$|Tile| < n_t$}
@@ -115,11 +115,12 @@ Intuitively, it seems like the following greedy algorithm also gives the optimal
                     \State \textbf{break}
                 \EndIf
                 \State $Tile = Tile \cup \{ v \}$
-            \EndWhile 
+            \EndWhile
+            \State $Tiles =  \{ Tile \}$
             \For{$(u,v) \in Out(Tile)$}
-                \State $TileTree(T_v, n_t)$
+                \State $Tiles \leftarrow Tiles \cup TileTree(T_v, n_t)$
             \EndFor
-            \State \textbf{return} $threshold(n)$
+            \State \textbf{return} $Tiles$
         \EndProcedure
     \end{algorithmic}
 \end{algorithm}
