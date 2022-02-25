@@ -4,7 +4,8 @@ TestMain.cpp
 CodeGenTests.cpp
 TestUtilsCommon.cpp
 XGBoostTests.cpp
-XGBoostBenchmarks.cpp)
+XGBoostBenchmarks.cpp
+StatsTests.cpp)
 
 target_sources(treebeard-runtime 
 PRIVATE

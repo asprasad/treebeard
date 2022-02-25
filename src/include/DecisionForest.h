@@ -125,6 +125,9 @@ public:
     void SetClassId(int32_t classId) { m_classId = classId; }
     int32_t GetClassId() const { return m_classId; }
     int32_t NumFeatures();
+
+    void InitializeInternalNodeHitCounts();
+    int32_t GetSubtreeHitCount(int32_t nodeIndex);
 private:
     std::vector<Node> m_nodes;
     size_t m_numFeatures;
@@ -367,6 +370,20 @@ int32_t DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>
             featureSet.insert(node.featureIndex);
     }
     return featureSet.size();
+}
+
+template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+void DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::InitializeInternalNodeHitCounts() {
+    GetSubtreeHitCount(0);
+}
+
+template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+int32_t DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::GetSubtreeHitCount(int32_t nodeIndex) {
+    Node& node = m_nodes.at(nodeIndex);
+    if (node.IsLeaf())
+        return node.hitCount;
+    node.hitCount = GetSubtreeHitCount(node.leftChild) + GetSubtreeHitCount(node.rightChild);
+    return node.hitCount;
 }
 
 template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
