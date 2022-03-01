@@ -7,6 +7,7 @@
 #include "DecisionForest.h"
 #include "TreeTilingUtils.h"
 #include "Dialect.h"
+#include "StatsUtils.h"
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -77,6 +78,7 @@ protected:
 
     std::string m_jsonFilePath;
     std::string m_modelGlobalsJSONFilePath;
+    std::string m_statsProfileCSV;
     DecisionForestType *m_forest;
     DecisionTreeType *m_currentTree;
     mlir::decisionforest::Schedule *m_schedule;
@@ -160,8 +162,9 @@ public:
     }
 
     ModelJSONParser(const std::string& jsonFilePath, const std::string& modelGlobalsJSONFilePath, mlir::MLIRContext& context, 
-                    int32_t batchSize, double_t initialValue)
-        : m_jsonFilePath(jsonFilePath), m_modelGlobalsJSONFilePath(modelGlobalsJSONFilePath), m_forest(new DecisionForestType(initialValue)), 
+                    int32_t batchSize, double_t initialValue, const std::string& statsProfileCSV)
+        : m_jsonFilePath(jsonFilePath), m_modelGlobalsJSONFilePath(modelGlobalsJSONFilePath),
+          m_statsProfileCSV(statsProfileCSV), m_forest(new DecisionForestType(initialValue)), 
           m_currentTree(nullptr), m_schedule(nullptr), m_context(context), m_builder(&context),
           m_batchSize(batchSize), m_childIndexBitWidth(1) 
     {
@@ -173,8 +176,14 @@ public:
         mlir::decisionforest::ForestJSONReader::GetInstance().SetReturnTypeBitWidth(sizeof(ReturnType)*8);
     }
 
+    ModelJSONParser(const std::string& jsonFilePath, const std::string& modelGlobalsJSONFilePath, mlir::MLIRContext& context, 
+                    int32_t batchSize, double_t initialValue)
+        : ModelJSONParser(jsonFilePath, modelGlobalsJSONFilePath, context, batchSize, initialValue, "")
+    { }
+
+
     ModelJSONParser(const std::string& jsonFilePath, const std::string& modelGlobalsJSONFilePath, mlir::MLIRContext& context, int32_t batchSize)
-        : ModelJSONParser(jsonFilePath, modelGlobalsJSONFilePath, context, batchSize, 0.0)
+        : ModelJSONParser(jsonFilePath, modelGlobalsJSONFilePath, context, batchSize, 0.0, "")
     {
     }
     
@@ -192,6 +201,9 @@ public:
     DecisionForestType* GetForest() { return m_forest; }
 
     mlir::ModuleOp GetEvaluationFunction() { 
+        if (m_statsProfileCSV != "")
+            TreeBeard::Profile::ReadProbabilityProfile(*m_forest, m_statsProfileCSV);
+        
         mlir::FuncOp function(GetFunctionPrototype());
         if (!function)
             return nullptr;

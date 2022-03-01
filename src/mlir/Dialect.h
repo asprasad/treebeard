@@ -43,6 +43,7 @@ int dumpLLVMIRToFile(mlir::ModuleOp module, const std::string& filename);
 
 // Optimizing passes
 void DoUniformTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth);
+void DoProbabilityBasedTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth);
 
 }
 }

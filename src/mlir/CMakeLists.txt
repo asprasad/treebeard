@@ -9,7 +9,8 @@ LowerToLLVM.cpp
 ExecutionHelpers.cpp
 LowerDebugHelpers.cpp
 UniformTilingTransformation.cpp
-WalkDecisionTreeLoweringPass.cpp)
+WalkDecisionTreeLoweringPass.cpp
+ProbabilityBasedTilingTransform.cpp)
 
 target_sources(treebeard-runtime 
 PRIVATE
@@ -22,4 +23,5 @@ LowerToLLVM.cpp
 ExecutionHelpers.cpp
 LowerDebugHelpers.cpp
 UniformTilingTransformation.cpp
-WalkDecisionTreeLoweringPass.cpp)
+WalkDecisionTreeLoweringPass.cpp
+ProbabilityBasedTilingTransform.cpp)

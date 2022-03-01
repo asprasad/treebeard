@@ -74,6 +74,14 @@ void ComputeForestProbabilityProfile(const std::string& modelJSONPath, const std
   ComputeForestInferenceStatsImpl(modelJSONPath, csvPath, numRows, fout, false);
 }
 
+void ComputeForestProbabilityProfileForXGBoostModel(const std::string& modelName, const std::string& csvPath, const std::string& statsCSVPath, int32_t numRows) {
+  std::ofstream fout(statsCSVPath);
+  auto repoPath = TreeBeard::test::GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models/";
+  auto modelJSONPath = testModelsDir + modelName + "_xgb_model_save.json";
+  ComputeForestInferenceStatsImpl(modelJSONPath, csvPath, numRows, fout, false);
+}
+
 void ReadProbabilityProfile(mlir::decisionforest::DecisionForest<>& decisionForest, const std::string& statsCSVFile) {
   TreeBeard::test::TestCSVReader csvReader(statsCSVFile);
   // std::cerr << "Done reading stats file..\n";

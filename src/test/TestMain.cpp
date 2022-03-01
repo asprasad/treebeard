@@ -313,6 +313,20 @@ bool Test_EpsilonStatGenerationAndReading(TestArgs_t &args);
 bool Test_HiggsStatGenerationAndReading(TestArgs_t &args);
 bool Test_YearStatGenerationAndReading(TestArgs_t &args);
 
+// Probability Based Tiling Tests
+bool Test_ProbabilisticTiling_TileSize8_Abalone(TestArgs_t &args);
+bool Test_SparseProbabilisticTiling_TileSize8_Abalone(TestArgs_t &args);
+bool Test_ProbabilisticTiling_TileSize8_Airline(TestArgs_t &args);
+bool Test_SparseProbabilisticTiling_TileSize8_Airline(TestArgs_t &args);
+bool Test_ProbabilisticTiling_TileSize8_AirlineOHE(TestArgs_t &args);
+bool Test_SparseProbabilisticTiling_TileSize8_AirlineOHE(TestArgs_t &args);
+bool Test_ProbabilisticTiling_TileSize8_Epsilon(TestArgs_t &args);
+bool Test_SparseProbabilisticTiling_TileSize8_Epsilon(TestArgs_t &args);
+bool Test_ProbabilisticTiling_TileSize8_Higgs(TestArgs_t &args);
+bool Test_SparseProbabilisticTiling_TileSize8_Higgs(TestArgs_t &args);
+bool Test_ProbabilisticTiling_TileSize8_Year(TestArgs_t &args);
+bool Test_SparseProbabilisticTiling_TileSize8_Year(TestArgs_t &args);
+
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
     vec[i] = (double)rand()/RAND_MAX;
@@ -1136,18 +1150,25 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_EpsilonStatGenerationAndReading),
   TEST_LIST_ENTRY(Test_HiggsStatGenerationAndReading),
   TEST_LIST_ENTRY(Test_YearStatGenerationAndReading),
+
+  // Sparse Probabilistic Tiling Tests
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Airline),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_AirlineOHE),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Epsilon),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Higgs),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Year),
 };
 
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_AbaloneStatGenerationAndReading),
-  TEST_LIST_ENTRY(Test_AirlineStatGenerationAndReading),
-  TEST_LIST_ENTRY(Test_AirlineOHEStatGenerationAndReading),
-  TEST_LIST_ENTRY(Test_CovtypeStatGenerationAndReading),
-  TEST_LIST_ENTRY(Test_EpsilonStatGenerationAndReading),
-  TEST_LIST_ENTRY(Test_HiggsStatGenerationAndReading),
-  TEST_LIST_ENTRY(Test_YearStatGenerationAndReading),
+  TEST_LIST_ENTRY(Test_ProbabilisticTiling_TileSize8_Year),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Year),
+  // TEST_LIST_ENTRY(Test_CovtypeStatGenerationAndReading),
+  // TEST_LIST_ENTRY(Test_EpsilonStatGenerationAndReading),
+  // TEST_LIST_ENTRY(Test_HiggsStatGenerationAndReading),
+  // TEST_LIST_ENTRY(Test_YearStatGenerationAndReading),
   // TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs),
   // TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs),
   // TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4),

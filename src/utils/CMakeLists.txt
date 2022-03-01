@@ -11,4 +11,5 @@ PRIVATE
 TreeTilingDescriptor.cpp
 TreeTilingUtils.cpp
 RandomTreeGenerator.cpp
-CompileUtils.cpp)
+CompileUtils.cpp
+StatsUtils.cpp)
