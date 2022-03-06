@@ -661,6 +661,19 @@ void LogTreeStats(const std::vector<TiledTreeStats>& tiledTreeStats) {
 
 }
 
+template<typename T>
+void LogTileShapeStats(std::vector<T>& numberOfTileShapes, const std::string& message) {
+    // mean, max, min and median
+    std::sort(numberOfTileShapes.begin(), numberOfTileShapes.end());
+    auto max = numberOfTileShapes.back();
+    auto min = numberOfTileShapes.front();
+    auto median = numberOfTileShapes.at(numberOfTileShapes.size()/2);
+    auto sum = std::accumulate(numberOfTileShapes.begin(), numberOfTileShapes.end(), 0);
+    auto mean = (double)sum/numberOfTileShapes.size();
+
+    std::string logString = message + " - Min:" + std::to_string(min) + ", Max:" + std::to_string(max) + ", Median:" + std::to_string(median) + ", Mean:" + std::to_string(mean);
+    TreeBeard::Logging::Log(logString);
+}
 
 template<typename PersistTreeScalarType, typename PersistTreeTiledType>
 void PersistDecisionForestImpl(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType,
@@ -673,6 +686,8 @@ void PersistDecisionForestImpl(mlir::decisionforest::DecisionForest<>& forest, m
     mlir::decisionforest::ForestJSONReader::GetInstance().SetNumberOfClasses(forest.GetNumClasses());
 
     std::vector<TiledTreeStats> treeStats;
+    std::vector<int32_t> numberOfTileShapes, numberOfOriginalTileShapes;
+    std::vector<double> expectedNumberOfHops, idealExpectedNumberOfHops;
     uint tileShapeBitWidth = 0;
     int32_t childIndexBitWidth = -1;
     for (size_t i=0; i<numTrees ; ++i) {
@@ -698,12 +713,19 @@ void PersistDecisionForestImpl(mlir::decisionforest::DecisionForest<>& forest, m
             persistTreeScalar(tree, i, treeType);
         }
         else {
-            TiledTree tiledTree(tree);
-            // tiledTree.WriteDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/xgboostTest_TiledTree.dot");
+            TiledTree& tiledTree = *tree.GetTiledTree();
+            // std::string dotFile = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/tiledTree_" + std::to_string(i) + ".dot";
+            // tiledTree.WriteDOTFile(dotFile);
             persistTreeTiled(tiledTree, i, treeType);
             if (TreeBeard::Logging::loggingOptions.logTreeStats) {
                 auto tiledTreeStats=tiledTree.GetTreeStats();
                 treeStats.push_back(tiledTreeStats);
+                numberOfTileShapes.push_back(tiledTree.GetNumberOfTileShapes());
+                numberOfOriginalTileShapes.push_back(tiledTree.GetNumberOfOriginalTileShapes());
+                auto expectedHops = tiledTree.ComputeExpectedNumberOfTileEvaluations();
+                expectedNumberOfHops.push_back(std::get<0>(expectedHops));
+                // std::cout << std::get<1>(expectedHops) << " ";
+                idealExpectedNumberOfHops.push_back(std::get<1>(expectedHops));
             }
         }
     }
@@ -716,7 +738,12 @@ void PersistDecisionForestImpl(mlir::decisionforest::DecisionForest<>& forest, m
 
     if (TreeBeard::Logging::loggingOptions.logTreeStats) {
         LogTreeStats(treeStats);
+        LogTileShapeStats(numberOfTileShapes, "Tile shapes");
+        LogTileShapeStats(numberOfOriginalTileShapes, "Original tile shapes");
+        LogTileShapeStats(expectedNumberOfHops, "Expected number of hops");
+        LogTileShapeStats(idealExpectedNumberOfHops, "Ideal expected number of hops");
     }
+
     mlir::decisionforest::ForestJSONReader::GetInstance().WriteJSONFile();
     // mlir::decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
     
@@ -912,8 +939,8 @@ void TiledTreeNode::AddExtraNodesIfNeeded() {
           auto& rightChild = GetNode(rightChildIndex);
           assert (AreNodesInSameTile(nodeIndex, leftChildIndex) || leftChild.IsLeaf());
           assert (AreNodesInSameTile(nodeIndex, rightChildIndex) || rightChild.IsLeaf());
-          if (leftChild.IsLeaf() && rightChild.IsLeaf())
-              candidateNodes.push_front(nodeIndex);
+          if (leftChild.IsLeaf() || rightChild.IsLeaf())
+              candidateNodes.push_back(nodeIndex);
       }
       assert (candidateNodes.size() > 0);
       // TODO How do we determine the shape of this tile once we add new nodes? Maybe some kind of look up based on the positions of the nodes in the 
@@ -921,12 +948,33 @@ void TiledTreeNode::AddExtraNodesIfNeeded() {
       // TODO How do we decide which of the candidate nodes to use as the parent of the new node(s)? For now, picking from the first candidate, which will 
       // be the right most node on the bottom most level. 
       auto candidateIter = candidateNodes.begin();
-      for (int32_t i=0 ; i<numberOfNodesToAdd && candidateIter!=candidateNodes.end(); i+=2) { // We can add two dummy nodes for every candidate node
+      for (int32_t i=0 ; i<numberOfNodesToAdd && candidateIter!=candidateNodes.end(); ) { // We can add two dummy nodes for every candidate node
           // TODO How do we decide where to add the new nodes? Maybe just add them somewhere and call sort again?
           assert (candidateIter != candidateNodes.end());
           auto candidateIndex = *candidateIter;
-          {
-            auto& candidateNode = GetNode(candidateIndex);
+          auto candidateNode = GetNode(candidateIndex);
+          if (GetNode(candidateNode.leftChild).IsLeaf()){
+            auto leafIndex = candidateNode.leftChild;
+            auto &leafNode = GetNode(leafIndex);
+            assert(leafNode.IsLeaf());
+            // Add the dummy node as the left child of the candidate
+            auto dummyNode = m_tiledTree.m_modifiedTree.NewNode(candidateNode.threshold, candidateNode.featureIndex, m_tileID);
+            m_tiledTree.m_modifiedTree.SetNodeLeftChild(dummyNode, leafIndex);
+            m_tiledTree.m_modifiedTree.SetNodeRightChild(dummyNode, leafIndex);
+            m_tiledTree.m_modifiedTree.SetNodeParent(leafIndex, dummyNode);
+
+            m_tiledTree.m_modifiedTree.SetNodeParent(dummyNode, candidateIndex);
+            m_tiledTree.m_modifiedTree.SetNodeLeftChild(candidateIndex, dummyNode);
+            
+            m_tiledTree.AddNodeToTile(m_tileIndex, dummyNode);
+            const_cast<mlir::decisionforest::DecisionTree<>::Node&>(GetNode(dummyNode)).hitCount = -1;
+            ++i;
+          }
+
+          if (i == numberOfNodesToAdd)
+              break;
+
+          if (GetNode(candidateNode.rightChild).IsLeaf()) {
             auto leafIndex = candidateNode.rightChild;
             auto &leafNode = GetNode(leafIndex);
             assert(leafNode.IsLeaf());
@@ -941,24 +989,8 @@ void TiledTreeNode::AddExtraNodesIfNeeded() {
             m_tiledTree.m_modifiedTree.SetNodeRightChild(candidateIndex, dummyNode);
 
             m_tiledTree.AddNodeToTile(m_tileIndex, dummyNode);
-          }
-          if (i+1 == numberOfNodesToAdd)
-              break;
-          {
-            auto& candidateNode = GetNode(candidateIndex);
-            auto leafIndex = candidateNode.leftChild;
-            auto &leafNode = GetNode(leafIndex);
-            assert(leafNode.IsLeaf());
-            // Add the dummy node as the left child of the candidate
-            auto dummyNode = m_tiledTree.m_modifiedTree.NewNode(candidateNode.threshold, candidateNode.featureIndex, m_tileID);
-            m_tiledTree.m_modifiedTree.SetNodeLeftChild(dummyNode, leafIndex);
-            m_tiledTree.m_modifiedTree.SetNodeRightChild(dummyNode, leafIndex);
-            m_tiledTree.m_modifiedTree.SetNodeParent(leafIndex, dummyNode);
-
-            m_tiledTree.m_modifiedTree.SetNodeParent(dummyNode, candidateIndex);
-            m_tiledTree.m_modifiedTree.SetNodeLeftChild(candidateIndex, dummyNode);
-            
-            m_tiledTree.AddNodeToTile(m_tileIndex, dummyNode);
+            const_cast<mlir::decisionforest::DecisionTree<>::Node&>(GetNode(dummyNode)).hitCount = -1;
+            ++i;
           }
           ++candidateIter;
       }
@@ -1118,9 +1150,15 @@ void TiledTree::ConstructTiledTree() {
         tile.AddExtraNodesIfNeeded();
     
     // Set the shape ID of all the tiles in the tree
-    for (auto& tile : m_tiles)
+    std::set<int32_t> tileShapeIDs, originalTileShapeIDs;
+    for (auto& tile : m_tiles) {
         tile.m_tileShapeID = m_tileShapeToTileIDMap.GetTileID(tile);
-    
+        tileShapeIDs.insert(tile.m_tileShapeID);
+        if (!tile.m_hasExtraNodes)
+            originalTileShapeIDs.insert(tile.m_tileShapeID);
+    }
+    m_numberOfTileShapes = tileShapeIDs.size();
+    m_originalNumberOfTileShapes = originalTileShapeIDs.size();
     assert(Validate());
 }
 
@@ -1158,6 +1196,7 @@ bool TiledTree::Validate() {
                 }
             }
         }
+        assert (tile.m_children.size() == 0 || (int32_t)(tile.m_children.size()) == (maxTileSize+1));
     }
     for (auto nodeCount : nodeCounts) {
         if (nodeCount!=1) {
@@ -1178,7 +1217,10 @@ void TiledTree::EmitNodeDOT(std::ofstream& fout, int32_t nodeIndex) {
     int64_t parentIndex = node.parent;
     fout << "\t\"node" << nodeIndex << "\" [ label = \"Id:" << nodeIndex
         << ", Thres:" << node.threshold
-        << ", FeatIdx:" << node.featureIndex << "\", style=bold, color=" << color << "];\n";
+        << ", FeatIdx:" << node.featureIndex 
+        << ", Hits:" << node.hitCount
+        << ", TileID:" << tileID
+        << "\", style=bold, color=" << color << "];\n";
     if (parentIndex != decisionforest::DecisionTree<>::INVALID_NODE_INDEX) {
         auto& parentNode = m_modifiedTree.GetNodes().at(parentIndex);
         std::string edgeColor = parentNode.leftChild == nodeIndex ? "green" : "red";
@@ -1362,6 +1404,32 @@ TiledTreeStats TiledTree::GetTreeStats() {
     treeStats.numberOfFeatures = m_owningTree.NumFeatures();
     treeStats.leafDepths = GetLeafDepths();
     return treeStats;
+}
+
+// TODO this is not valid for the following reasons
+// 1. The parent index of leaves is not valid because of the way we're adding dummy nodes to tiles and so AreAllSiblingsLeaves is not correct
+//      - Since the parent index of the tile containing the leaf is correct, it shouldn't matter
+// 2. If we get to a duplicated leaf, the duplicates should have a zero hit count so that we don't count its contribution multiple times
+void TiledTree::ExpectedNumberOfTileEvaluations(double& actualVal, double& idealVal, int32_t currentTile, int32_t depth, std::set<int32_t>& visitedLeaves) {
+    auto& tile = m_tiles.at(currentTile);
+    if (tile.IsLeafTile() && visitedLeaves.find(currentTile)==visitedLeaves.end()) {
+        int32_t programmaticDepth = AreAllSiblingsLeaves(tile, m_tiles) ? depth+1 : depth+2;
+        auto totalCount = tile.m_owningTree.GetNodes().at(0).hitCount;
+        actualVal += (double)tile.GetNode(tile.m_nodeIndices.front()).hitCount/(double)totalCount * programmaticDepth;
+        idealVal += (double)tile.GetNode(tile.m_nodeIndices.front()).hitCount/(double)totalCount * (depth+1);
+        visitedLeaves.insert(currentTile);
+        return;
+    }
+    for (auto child : tile.m_children) {
+        ExpectedNumberOfTileEvaluations(actualVal, idealVal, child, depth+1, visitedLeaves);
+    }
+}
+
+std::tuple<double, double> TiledTree::ComputeExpectedNumberOfTileEvaluations() {
+    double actualValue = 0.0, idealValue=0.0;
+    std::set<int32_t> visitedLeaves;
+    ExpectedNumberOfTileEvaluations(actualValue, idealValue, 0, 0, visitedLeaves);
+    return std::make_tuple(actualValue, idealValue);
 }
 
 void TiledTree::GetSparseSerialization(std::vector<double>& thresholds, std::vector<int32_t>& featureIndices, 

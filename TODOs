@@ -63,16 +63,27 @@ Figure out tree data structures to reduce footprint when there is severe imbalan
     - Add bitmask to indicate which children are leaves 
 
 [Done] Add covtype to runtime tests
-Add covtype to xgboost benchmarks
+[Done] Add covtype to xgboost benchmarks
 Finish the microbenchmarking for gather
 LightGBM support
+
 Tiling optimization (DP to minimize skew?)
-    - Dump profiling output to a file or pass profiling input CSV as an option to the compiler
-    - Compute edge probabilities from leaf counts
-    - Tile by probabilities
+    - [Done] Dump profiling output to a file or pass profiling input CSV as an option to the compiler
+    - [Done] Compute edge probabilities from leaf counts
+    - [Done] Tile by probabilities
     - How do we write tests?
+    - Add covtype to tests and benchmarks
+    - Change heuristic to only aggressively tile skewed subtrees
+    - Profiling/Analysis
+        - Does instruction count reduce?
+        - How many trees are being aggressively tiled?
+        - Tile shape stats (max, min, median, mean for number of tile shapes)
+        - How many tile shapes are being added by the tile padding?
+        - Profile generated SOs with vtune
+
 Unrolling Treewalk + new representation  
 Pipeline
+    - Reuse tiles in registers if possible (root tile)
 Parallelization
 Schedule exploration
 SIMD across trees

@@ -721,8 +721,13 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     // Load threshold
     auto loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, thresholdType, treeMemref, static_cast<Value>(nodeIndex));
     if (decisionforest::InsertDebugHelpers) {
-      InsertPrintVectorOp(rewriter, location, 0 /*fp kind*/, thresholdVectorType.getElementType().getIntOrFloatBitWidth(), 
-                          tileSize, static_cast<Value>(loadThresholdOp));
+      Value vectorVal = loadThresholdOp;
+      if (!thresholdVectorType.getElementType().isF64()) {
+        auto doubleVectorType = mlir::VectorType::get({ tileSize }, rewriter.getF64Type());
+        vectorVal = rewriter.create<arith::ExtFOp>(location, doubleVectorType, loadThresholdOp);
+      }
+      InsertPrintVectorOp(rewriter, location, 0 /*fp kind*/, 64 /*thresholdVectorType.getElementType().getIntOrFloatBitWidth()*/, 
+                          tileSize, static_cast<Value>(vectorVal));
     }
     // Load feature index
     auto loadFeatureIndexOp = rewriter.create<decisionforest::LoadTileFeatureIndicesOp>(location, featureIndexType, treeMemref, static_cast<Value>(nodeIndex));
@@ -767,7 +772,12 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
                                                       rowIndex, mask, zeroPassThruVector);
 
     if (decisionforest::InsertDebugHelpers) {
-      InsertPrintVectorOp(rewriter, location, 0 /*fp kind*/, featuresVectorType.getElementType().getIntOrFloatBitWidth(), 
+      Value vectorVal = features;
+      if (!featuresVectorType.getElementType().isF64()) {
+        auto doubleVectorType = mlir::VectorType::get({ tileSize }, rewriter.getF64Type());
+        vectorVal = rewriter.create<arith::ExtFOp>(location, doubleVectorType, loadThresholdOp);
+      }
+      InsertPrintVectorOp(rewriter, location, 0 /*fp kind*/, 64 /*featuresVectorType.getElementType().getIntOrFloatBitWidth()*/, 
                           tileSize, static_cast<Value>(features));
     }
 

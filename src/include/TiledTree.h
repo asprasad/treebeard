@@ -122,6 +122,8 @@ class TiledTree {
     friend class TiledTreeNode;
 
     std::vector<TiledTreeNode> m_tiles;
+    int32_t m_numberOfTileShapes;
+    int32_t m_originalNumberOfTileShapes;
     DecisionTree<>& m_owningTree;
     // We may need to add nodes to the original tree to make the tiles full sized. This 
     // tree is the modified tree with nodes added if required.
@@ -158,6 +160,7 @@ class TiledTree {
     int32_t NumberOfTiles();
     bool AreAllSiblingsLeaves(TiledTreeNode& tile, const std::vector<TiledTreeNode>& tiles);
     std::vector<int32_t> GetLeafDepths();
+    void ExpectedNumberOfTileEvaluations(double& val, double& idealVal, int32_t currentTile, int32_t depth, std::set<int32_t>& visitedLeaves);
 public:
     TiledTree(DecisionTree<>& owningTree);
     
@@ -193,7 +196,11 @@ public:
     }
     int32_t NumberOfLeafTiles();
     TiledTreeStats GetTreeStats();
+    int32_t GetNumberOfTileShapes() { return m_numberOfTileShapes; }
+    int32_t GetNumberOfOriginalTileShapes() { return m_originalNumberOfTileShapes; }
     int32_t GetClassId() { return m_owningTree.GetClassId(); } 
+    std::tuple<double, double> ComputeExpectedNumberOfTileEvaluations();
+    
     using LevelOrderSorterNodeType = TiledTreeNode;
 
     class LevelOrderTraversal {
@@ -287,6 +294,18 @@ public:
 
 };
 
+// TODO This is a hack to get around the circular dependency between TiledTree.h and DecisionForest.h
+template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+TiledTree* DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::GetTiledTree() {
+  if (m_tiledTree.get() == nullptr)
+    m_tiledTree = std::make_shared<TiledTree>(*this);
+  return m_tiledTree.get();
+}
+
+template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
+DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::~DecisionTree() {
+  // delete m_tiledTree;
+}
 
 } // decisionforest
 } // mlir

@@ -2104,6 +2104,7 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
 
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   mlir::decisionforest::DoProbabilityBasedTiling(args.context, module, options.tileSize, options.tileShapeBitWidth);
+  // mlir::decisionforest::DoHybridTiling(args.context, module, options.tileSize, options.tileShapeBitWidth);
   mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module);
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
@@ -2174,6 +2175,29 @@ bool Test_SingleTileSize_SingleModel_FloatOnly(TestArgs_t &args, const std::stri
   return true;
 }
 
+bool Test_SingleTileSize_SingleModel_FloatOnly_Int8ReturnType(TestArgs_t &args, const std::string& modelJSONPath, const std::string& statsProfileCSV, int32_t tileSize, 
+                                     bool skipInt8 = false, int32_t tileShapeBitWidth=32, int32_t childIndexBitWidth=1, std::string csvPath="",
+                                     ScheduleManipulator_t scheduleManipulator=nullptr) {
+  if (csvPath == "")
+    csvPath = modelJSONPath + ".csv";
+  {
+    using FPType = float;
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, int32_t, int8_t>(args, 4, modelJSONPath, csvPath, statsProfileCSV, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
+  }
+  {
+    using FPType = float;
+    using IntType = int16_t;
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType, int8_t>(args, 4, modelJSONPath, csvPath, statsProfileCSV, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
+  }
+  if (!skipInt8)
+  {
+    using FPType = float;
+    using IntType = int8_t;
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType, int8_t>(args, 4, modelJSONPath, csvPath, statsProfileCSV, tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator)));
+  }
+  return true;
+}
+
 bool Test_ProbabilisticTiling_TileSize8_Abalone(TestArgs_t &args) {
   auto repoPath = GetTreeBeardRepoPath();
   auto testModelsDir = repoPath + "/xgb_models";
@@ -2229,6 +2253,25 @@ bool Test_SparseProbabilisticTiling_TileSize8_AirlineOHE(TestArgs_t &args) {
   auto statsProfileCSV = testModelsDir + "/profiles/airline-ohe.test.csv";
   int32_t tileSize = 8;
   return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, statsProfileCSV, tileSize, true, 16, 16);
+}
+
+bool Test_ProbabilisticTiling_TileSize8_Covtype(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/covtype_xgb_model_save.json";
+  auto statsProfileCSV = testModelsDir + "/profiles/covtype.test.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly_Int8ReturnType(args, modelJSONPath, statsProfileCSV, tileSize, false, 16, 16);
+}
+
+bool Test_SparseProbabilisticTiling_TileSize8_Covtype(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation=true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/covtype_xgb_model_save.json";
+  auto statsProfileCSV = testModelsDir + "/profiles/covtype.test.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly_Int8ReturnType(args, modelJSONPath, statsProfileCSV, tileSize, false, 16, 16);
 }
 
 bool Test_ProbabilisticTiling_TileSize8_Epsilon(TestArgs_t &args) {

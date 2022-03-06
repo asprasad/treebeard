@@ -113,6 +113,15 @@ extern "C" int64_t PrintInputRow(double *treeBuf, int64_t length, int64_t rowInd
   return 42;
 }
 
+extern "C" int64_t PrintInputRow_Float(float *treeBuf, int64_t length, int64_t rowIndex) {
+  std::cout << "Fetching input row " << rowIndex << " : { ";
+  for (int64_t i=0 ; i<length ; ++i) {
+    std::cout << treeBuf[i] << " ";
+  }
+  std::cout << "}\n";
+  return 42;
+}
+
 extern "C" int64_t PrintComparison(double data, double threshold, int64_t nodeIndex) {
   std::cout << "Comparison ( data:" << data << " threshold:" << threshold << " NodeIndex:" << nodeIndex << " )" << std::endl;
   return 42;

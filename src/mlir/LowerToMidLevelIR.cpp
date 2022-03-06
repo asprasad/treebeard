@@ -361,7 +361,10 @@ struct PredictForestOpLowering: public ConversionPattern {
             auto accumulatedValue = rewriter.create<arith::AddFOp>(location, resultElementType, treeLoop.getBody()->getArguments()[1], walkOp);
 
             if (mlir::decisionforest::InsertDebugHelpers) {
-              rewriter.create<decisionforest::PrintTreePredictionOp>(location, walkOp, j);
+              Value treePred = walkOp;
+              if (!walkOp.getResult().getType().isF64())
+                treePred = rewriter.create<arith::ExtFOp>(location, rewriter.getF64Type(), walkOp);
+              rewriter.create<decisionforest::PrintTreePredictionOp>(location, treePred, j);
             }
             // auto updatedResultTensor = rewriter.create<tensor::InsertOp>(location, resultMemrefType, accumulatedValue, treeLoop.getBody()->getArguments()[1], i);
             rewriter.create<scf::YieldOp>(location, static_cast<Value>(accumulatedValue));
@@ -524,7 +527,10 @@ struct PredictForestOpLowering: public ConversionPattern {
     auto accumulatedValue = rewriter.create<arith::AddFOp>(location, state.resultMemrefType.getElementType(), prevAccumulatorValue, walkOp);
 
     if (mlir::decisionforest::InsertDebugHelpers) {
-      rewriter.create<decisionforest::PrintTreePredictionOp>(location, walkOp, treeIndex);
+      Value treePred = walkOp;
+      if (!walkOp.getResult().getType().isF64())
+        treePred = rewriter.create<arith::ExtFOp>(location, rewriter.getF64Type(), walkOp);
+      rewriter.create<decisionforest::PrintTreePredictionOp>(location, treePred, treeIndex);
     }
     // auto updatedResultTensor = rewriter.create<tensor::InsertOp>(location, resultMemrefType, accumulatedValue, treeLoop.getBody()->getArguments()[1], i);
     return accumulatedValue;
@@ -606,7 +612,10 @@ struct PredictForestOpLowering: public ConversionPattern {
     rewriter.create<memref::StoreOp>(location, accumulatedValue, state.resultMemref, ValueRange{rowIndex});
 
     if (mlir::decisionforest::InsertDebugHelpers) {
-      rewriter.create<decisionforest::PrintTreePredictionOp>(location, walkOp, treeIndex);
+      Value treePred = walkOp;
+      if (!walkOp.getResult().getType().isF64())
+        treePred = rewriter.create<arith::ExtFOp>(location, rewriter.getF64Type(), walkOp);
+      rewriter.create<decisionforest::PrintTreePredictionOp>(location, treePred, treeIndex);
     }
   }
 
@@ -674,6 +683,14 @@ struct PredictForestOpLowering: public ConversionPattern {
       for (auto nestedIndexVar : indexVar.GetContainedLoops()) {
         GenerateLoop(rewriter, location, *nestedIndexVar, batchIndices, treeIndices, state);
       }
+
+      if (indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kBatch)
+        batchIndices.pop_back();
+      else if (indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kTree)
+        treeIndices.pop_back();
+      else
+        assert (false && "Unknown index variable type!");
+
     }
   }
 

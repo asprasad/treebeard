@@ -14,11 +14,14 @@
 #include "TreeTilingDescriptor.h"
 #include <numeric>
 #include <algorithm>
+#include <memory>
 
 namespace mlir
 {
 namespace decisionforest
 {
+
+class TiledTree;
 
 enum class PredictionTransformation { kIdentity, kSigmoid, kSoftMax, kUnknown };
 enum class ReductionType { kAdd, kVoting };
@@ -50,6 +53,7 @@ public:
             return leftChild == INVALID_NODE_INDEX && rightChild == INVALID_NODE_INDEX;
         }
     };
+    ~DecisionTree();
     void SetNumberOfFeatures(size_t numFeatures) { m_numFeatures = numFeatures; }
     void SetTreeScalingFactor(ThresholdType scale) { m_scale = scale; }
 
@@ -128,12 +132,17 @@ public:
 
     void InitializeInternalNodeHitCounts();
     int32_t GetSubtreeHitCount(int32_t nodeIndex);
+    TiledTree* GetTiledTree();
 private:
     std::vector<Node> m_nodes;
-    size_t m_numFeatures;
+    size_t m_numFeatures = 0;
     ThresholdType m_scale;
     TreeTilingDescriptor m_tilingDescriptor;
-    int32_t m_classId;
+    // TODO It looks like some tests aren't setting this property at all! 
+    // Adding an initialization to make sure we aren't accessing unitialized memory
+    int32_t m_classId = 0;
+    
+    std::shared_ptr<TiledTree> m_tiledTree = nullptr;
 
     int32_t GetTreeDepthHelper(size_t node) const;
     
@@ -446,11 +455,11 @@ ReturnType DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndex
         auto rawPrediction = std::accumulate(predictions[0].begin(), predictions[0].end(), m_initialValue);
         // std::cout << "Raw prediction : " << rawPrediction << std::endl;
         if (m_predictionTransform == PredictionTransformation::kIdentity)
-        return rawPrediction;
+            return rawPrediction;
         else if (m_predictionTransform == PredictionTransformation::kSigmoid)
-        return sigmoid(rawPrediction);
+            return sigmoid(rawPrediction);
         else
-        assert(false);
+            assert(false);
         return -1;
     }
     else {

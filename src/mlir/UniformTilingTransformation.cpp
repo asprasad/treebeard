@@ -54,6 +54,7 @@ struct TileEnsembleConstants : public RewritePattern {
     assert (tilingDescriptor.MaxTileSize() == 1 && "Forest shouldn't already be tiled!");
     std::vector<Type> treeTypes;
     for (int64_t i=0 ; i<(int64_t)forest.NumTrees() ; ++i) {
+      forest.GetTree(i).InitializeInternalNodeHitCounts();
       TileSingleDecisionTree(forest.GetTree(i));
       auto treeType = forestType.getTreeType(i).cast<decisionforest::TreeType>();
       auto newTreeType = decisionforest::TreeType::get(treeType.getResultType(), forest.GetTree(i).TilingDescriptor().MaxTileSize(), 

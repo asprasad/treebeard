@@ -320,6 +320,8 @@ bool Test_ProbabilisticTiling_TileSize8_Airline(TestArgs_t &args);
 bool Test_SparseProbabilisticTiling_TileSize8_Airline(TestArgs_t &args);
 bool Test_ProbabilisticTiling_TileSize8_AirlineOHE(TestArgs_t &args);
 bool Test_SparseProbabilisticTiling_TileSize8_AirlineOHE(TestArgs_t &args);
+bool Test_ProbabilisticTiling_TileSize8_Covtype(TestArgs_t &args);
+bool Test_SparseProbabilisticTiling_TileSize8_Covtype(TestArgs_t &args);
 bool Test_ProbabilisticTiling_TileSize8_Epsilon(TestArgs_t &args);
 bool Test_SparseProbabilisticTiling_TileSize8_Epsilon(TestArgs_t &args);
 bool Test_ProbabilisticTiling_TileSize8_Higgs(TestArgs_t &args);
@@ -518,6 +520,13 @@ void OneTreeAtATimeSchedule(decisionforest::Schedule* schedule) {
   auto& batchIndexVar = schedule->GetBatchIndex();
   auto& treeIndexVar = schedule->GetTreeIndex();
   schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &treeIndexVar, &batchIndexVar });
+}
+
+void OneTreeAtATimeUnrolledSchedule(decisionforest::Schedule* schedule) {
+  auto& batchIndexVar = schedule->GetBatchIndex();
+  auto& treeIndexVar = schedule->GetTreeIndex();
+  schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &treeIndexVar, &batchIndexVar });
+  schedule->Unroll(treeIndexVar);
 }
 
 void UnrollTreeLoop(decisionforest::Schedule* schedule) {
@@ -1155,6 +1164,7 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
   TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Airline),
   TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_AirlineOHE),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Covtype),
   TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Epsilon),
   TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Higgs),
   TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Year),
@@ -1163,8 +1173,14 @@ TestDescriptor testList[] = {
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_ProbabilisticTiling_TileSize8_Year),
-  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Year),
+  TEST_LIST_ENTRY(Test_ProbabilisticTiling_TileSize8_Covtype),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Covtype),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Airline),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_AirlineOHE),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Epsilon),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Higgs),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Year),
   // TEST_LIST_ENTRY(Test_CovtypeStatGenerationAndReading),
   // TEST_LIST_ENTRY(Test_EpsilonStatGenerationAndReading),
   // TEST_LIST_ENTRY(Test_HiggsStatGenerationAndReading),
