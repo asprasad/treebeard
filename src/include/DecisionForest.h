@@ -105,12 +105,7 @@ public:
                 ++numNodes;
         return numNodes;
     }
-    // The number of entries that would be needed if this tree is serialized 
-    // into a dense array reprsentation
-    int32_t GetDenseSerializationVectorLength() {
-        assert (m_tilingDescriptor.MaxTileSize() == 1 && "Larger tile sizes unimplemented");
-        return std::pow(2, GetTreeDepth()) - 1;
-    }
+
     std::vector<ThresholdType> GetThresholdArray();
     std::vector<FeatureIndexType> GetFeatureIndexArray();
     
@@ -156,6 +151,7 @@ class DecisionForest
 public:
     DecisionForest(ReturnType initialValue) : m_initialValue(initialValue), m_predictionTransform(PredictionTransformation::kUnknown), m_numClasses(0) {}
     DecisionForest() : DecisionForest(0.0) {}
+    // DecisionForest(const DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>&) = delete;
 
     struct Feature
     {
@@ -172,12 +168,12 @@ public:
     }
     DecisionTreeType& NewTree()
     { 
-        m_trees.push_back(DecisionTreeType());
-        return m_trees.back();
+        m_trees.push_back(std::make_shared<DecisionTreeType>());
+        return *(m_trees.back());
     }
     void EndTree() { }
     size_t NumTrees() { return m_trees.size(); }
-    DecisionTreeType& GetTree(int64_t index) { return m_trees[index]; }
+    DecisionTreeType& GetTree(int64_t index) { return *(m_trees.at(index)); }
     const std::vector<Feature>& GetFeatures() const { return m_features; }
     ReturnType GetInitialOffset() const { return m_initialValue; }
     void SetInitialOffset(ReturnType val) { m_initialValue = val; }
@@ -185,39 +181,29 @@ public:
     std::string PrintToString() const;
     ReturnType Predict(std::vector<ThresholdType>& data) const;
     float Predict_Float(std::vector<ThresholdType>& data) const;
+    
     bool operator==(const DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>& that) const {
-        return m_reductionType==that.m_reductionType && m_trees==that.m_trees;
+        if (m_reductionType!=that.m_reductionType)
+            return false;
+        if (m_trees.size()!=that.m_trees.size())
+            return false;
+        for (size_t i=0 ; i<m_trees.size() ; ++i)
+            if (!(*m_trees[i] == *(that.m_trees[i])))
+                return false;
+        return true;
     }
     
     void SetPredictionTransformation(PredictionTransformation val) { m_predictionTransform = val; }
     PredictionTransformation GetPredictionTransformation() const { return m_predictionTransform; }
 
-    int32_t GetDenseSerializationVectorLength() const {
-        int32_t size = 0;
-        for (auto& tree : m_trees)
-            size += tree.GetDenseSerializationVectorLength();
-        return size; 
-    }
-
-    std::set<int32_t> GetTileSizes() const {
-        std::set<int32_t> tileSizes;
-        for (auto& tree : m_trees) {
-            tileSizes.insert(m_trees.TilingDescriptor().MaxTileSize());
-        }
-        return tileSizes;
-    }
-
-    // Get the serialized representation of the forest. Used to lower ensemble constants into memrefs.
-    // TODO Currently assumes that all nodes are numerical
-    void GetDenseSerialization(std::vector<ThresholdType>& thresholds, std::vector<FeatureIndexType>& featureIndices,
-                               std::vector<int32_t>& offsets);
-
     void SetNumClasses(int32_t numClasses) { m_numClasses = numClasses; }
     int32_t GetNumClasses() { return m_numClasses; }
     bool IsMultiClassClassifier() { return m_numClasses > 0; }
+
+    std::vector<std::shared_ptr<DecisionTreeType>>& GetTrees() { return m_trees; }
 private:
     std::vector<Feature> m_features;
-    std::vector<DecisionTreeType> m_trees;
+    std::vector<std::shared_ptr<DecisionTreeType>> m_trees;
     ReductionType m_reductionType = ReductionType::kAdd;
     ReturnType m_initialValue;
     PredictionTransformation m_predictionTransform;
@@ -401,7 +387,7 @@ std::string DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeInde
     std::stringstream strStream;
     strStream << (int32_t)m_reductionType << m_trees.size() << m_initialValue;
     for (auto& tree : m_trees)
-        strStream << tree.Serialize();
+        strStream << tree->Serialize();
     return strStream.str();
 }
 
@@ -444,9 +430,9 @@ ReturnType DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndex
 {
     std::map<int32_t, std::vector<ThresholdType>> predictions;
     for (auto& tree: m_trees) {
-        auto prediction = tree.PredictTree(data);
+        auto prediction = tree->PredictTree(data);
         // std::cout << "Tree " << predictions.size() << " prediction : " << prediction << std::endl;
-        predictions[tree.GetClassId()].push_back(prediction);
+        predictions[tree->GetClassId()].push_back(prediction);
     }
     
     assert(m_reductionType == ReductionType::kAdd);
@@ -480,9 +466,9 @@ float DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>
 {
     std::map<int32_t, std::vector<float>> predictions;
     for (auto& tree: m_trees) {
-        auto prediction = tree.PredictTree(data);
+        auto prediction = tree->PredictTree(data);
         // std::cout << "Tree " << predictions.size() << " prediction : " << prediction << std::endl;
-        predictions[tree.GetClassId()].push_back(prediction);
+        predictions[tree->GetClassId()].push_back(prediction);
     }
     
     assert(m_reductionType == ReductionType::kAdd);
@@ -508,27 +494,6 @@ float DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>
             });
         
         return argmax<float, ReturnType>(classProbabilities);
-    }
-}
-
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-void DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::GetDenseSerialization(
-                    std::vector<ThresholdType>& thresholds, std::vector<FeatureIndexType>& featureIndices,
-                    std::vector<int32_t>& offsets)
-{
-    int32_t currentOffset = 0;
-    for (auto& tree : m_trees) {
-        assert(currentOffset == static_cast<int32_t>(thresholds.size()));
-        offsets.push_back(currentOffset);
-        
-        auto treeThresholds = tree.GetThresholdArray();
-        auto treeFeatureIndices = tree.GetFeatureIndexArray();
-        
-        thresholds.insert(thresholds.end(), treeThresholds.begin(), treeThresholds.end());
-        featureIndices.insert(featureIndices.end(), treeFeatureIndices.begin(), treeFeatureIndices.end());
-
-        assert (treeThresholds.size() == treeFeatureIndices.size());
-        currentOffset += treeThresholds.size();
     }
 }
 

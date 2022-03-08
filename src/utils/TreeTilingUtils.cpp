@@ -668,7 +668,7 @@ void LogTileShapeStats(std::vector<T>& numberOfTileShapes, const std::string& me
     auto max = numberOfTileShapes.back();
     auto min = numberOfTileShapes.front();
     auto median = numberOfTileShapes.at(numberOfTileShapes.size()/2);
-    auto sum = std::accumulate(numberOfTileShapes.begin(), numberOfTileShapes.end(), 0);
+    auto sum = std::accumulate(numberOfTileShapes.begin(), numberOfTileShapes.end(), (T)0);
     auto mean = (double)sum/numberOfTileShapes.size();
 
     std::string logString = message + " - Min:" + std::to_string(min) + ", Max:" + std::to_string(max) + ", Median:" + std::to_string(median) + ", Mean:" + std::to_string(mean);
@@ -686,7 +686,7 @@ void PersistDecisionForestImpl(mlir::decisionforest::DecisionForest<>& forest, m
     mlir::decisionforest::ForestJSONReader::GetInstance().SetNumberOfClasses(forest.GetNumClasses());
 
     std::vector<TiledTreeStats> treeStats;
-    std::vector<int32_t> numberOfTileShapes, numberOfOriginalTileShapes;
+    std::vector<int32_t> numberOfTileShapes, numberOfOriginalTileShapes, numberOfNonSubsetTiles;
     std::vector<double> expectedNumberOfHops, idealExpectedNumberOfHops;
     uint tileShapeBitWidth = 0;
     int32_t childIndexBitWidth = -1;
@@ -726,6 +726,7 @@ void PersistDecisionForestImpl(mlir::decisionforest::DecisionForest<>& forest, m
                 expectedNumberOfHops.push_back(std::get<0>(expectedHops));
                 // std::cout << std::get<1>(expectedHops) << " ";
                 idealExpectedNumberOfHops.push_back(std::get<1>(expectedHops));
+                numberOfNonSubsetTiles.push_back(tiledTree.GetNumberOfTilesThatAreNotSubsets());
             }
         }
     }
@@ -742,6 +743,7 @@ void PersistDecisionForestImpl(mlir::decisionforest::DecisionForest<>& forest, m
         LogTileShapeStats(numberOfOriginalTileShapes, "Original tile shapes");
         LogTileShapeStats(expectedNumberOfHops, "Expected number of hops");
         LogTileShapeStats(idealExpectedNumberOfHops, "Ideal expected number of hops");
+        LogTileShapeStats(numberOfNonSubsetTiles, "Non subset tiles");
     }
 
     mlir::decisionforest::ForestJSONReader::GetInstance().WriteJSONFile();
@@ -1113,6 +1115,17 @@ void TiledTree::SetChildrenForTile(TiledTreeNode& tile) {
     SetChildrenHelper(tile, tile.GetEntryNode(), tile.m_children);
 }
 
+bool IsTileASubset(const std::string& subtile, const std::string& tile) {
+    assert (subtile.size() == tile.size());
+    for (size_t i=0 ; i<subtile.size() ; ++i) {
+        if (subtile.at(i) == '1') {
+            if (tile.at(i) == '0')
+                return false;
+        }
+    }
+    return true;
+}
+
 void TiledTree::ConstructTiledTree() {
     const TreeTilingDescriptor& tilingDescriptor = m_modifiedTree.TilingDescriptor();
     auto& tileIDs = tilingDescriptor.TileIDs();
@@ -1145,9 +1158,35 @@ void TiledTree::ConstructTiledTree() {
 
         SetChildrenForTile(tile);
     }
+    
+    std::set<std::string> tileShapeStrings;
+    for (auto& tile : m_tiles) {
+        if (tile.IsLeafTile() || (int32_t)tile.m_nodeIndices.size() != m_modifiedTree.TilingDescriptor().MaxTileSize())
+            continue;
+        std::string tileString = tile.GetTileShapeString();
+        tileShapeStrings.insert(tileString);
+    }
+
+    m_numTilesThatAreNotSubsets=0;
+    for (auto& tile : m_tiles) {
+        // Only iterate through incomplete tiles
+        if (tile.IsLeafTile() || (int32_t)tile.m_nodeIndices.size() == m_modifiedTree.TilingDescriptor().MaxTileSize())
+            continue;
+        std::string tileString = tile.GetTileShapeString();
+        bool isSubset = false;
+        for (auto& fullTileString : tileShapeStrings) {
+            if (IsTileASubset(tileString, fullTileString)) {
+                isSubset = true;
+                break;
+            }
+        }
+        m_numTilesThatAreNotSubsets += isSubset ? 0 : 1;
+    }
+
     // Expand the tiles that aren't full with dummy nodes
-    for (auto& tile : m_tiles)
+    for (auto& tile : m_tiles) {
         tile.AddExtraNodesIfNeeded();
+    }
     
     // Set the shape ID of all the tiles in the tree
     std::set<int32_t> tileShapeIDs, originalTileShapeIDs;

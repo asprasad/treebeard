@@ -124,6 +124,7 @@ class TiledTree {
     std::vector<TiledTreeNode> m_tiles;
     int32_t m_numberOfTileShapes;
     int32_t m_originalNumberOfTileShapes;
+    int32_t m_numTilesThatAreNotSubsets;
     DecisionTree<>& m_owningTree;
     // We may need to add nodes to the original tree to make the tiles full sized. This 
     // tree is the modified tree with nodes added if required.
@@ -198,6 +199,7 @@ public:
     TiledTreeStats GetTreeStats();
     int32_t GetNumberOfTileShapes() { return m_numberOfTileShapes; }
     int32_t GetNumberOfOriginalTileShapes() { return m_originalNumberOfTileShapes; }
+    int32_t GetNumberOfTilesThatAreNotSubsets() { return m_numTilesThatAreNotSubsets; }
     int32_t GetClassId() { return m_owningTree.GetClassId(); } 
     std::tuple<double, double> ComputeExpectedNumberOfTileEvaluations();
     

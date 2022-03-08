@@ -72,18 +72,29 @@ Tiling optimization (DP to minimize skew?)
     - [Done] Compute edge probabilities from leaf counts
     - [Done] Tile by probabilities
     - How do we write tests?
-    - Add covtype to tests and benchmarks
+    - [Done] Add covtype to tests and benchmarks
     - Change heuristic to only aggressively tile skewed subtrees
     - Profiling/Analysis
-        - Does instruction count reduce?
-        - How many trees are being aggressively tiled?
-        - Tile shape stats (max, min, median, mean for number of tile shapes)
-        - How many tile shapes are being added by the tile padding?
-        - Profile generated SOs with vtune
+        - [Done] Does instruction count reduce?
+        - [Done] How many trees are being aggressively tiled?
+        - [Done] Tile shape stats (max, min, median, mean for number of tile shapes)
+        - [Done] How many tile shapes are being added by the tile padding?
+        - [Done] Profile generated SOs with vtune
+        - How many tile shapes do we really need to add?
+            - Are partial tiles subsets of any of the full tiles in the tree?
 
-Unrolling Treewalk + new representation  
+- Pad tiled trees so all leaves are at the same depth
+    - Should we implement a DP to minimize max depth?
+
+- Remove the extra hop (new representation)
+    - Is it worth it? Seems like it is
+    - Store all child indices
+        - 
+
+Unrolling Treewalk 
 Pipeline
     - Reuse tiles in registers if possible (root tile)
+
 Parallelization
 Schedule exploration
 SIMD across trees
