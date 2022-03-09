@@ -84,7 +84,8 @@ public:
 
     bool operator==(const DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>& that) const
     {
-        return m_nodes==that.m_nodes && m_numFeatures==that.m_numFeatures && m_scale==that.m_scale;
+        return m_nodes==that.m_nodes && m_numFeatures==that.m_numFeatures 
+               && m_scale==that.m_scale && m_tilingDescriptor==that.m_tilingDescriptor;
     }
 
     ReturnType PredictTree(std::vector<ThresholdType>& data) const;
