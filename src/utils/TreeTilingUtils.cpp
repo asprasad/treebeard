@@ -1092,7 +1092,8 @@ void TiledTreeNode::WriteDOTSubGraph(std::ofstream& fout) {
 // -----------------------------------------------
 
 TiledTree::TiledTree(DecisionTree<>& owningTree)
- : m_owningTree(owningTree), m_modifiedTree(owningTree), m_tileShapeToTileIDMap(m_owningTree.TilingDescriptor().MaxTileSize())
+ : m_numberOfDummyTiles(0), m_owningTree(owningTree), m_modifiedTree(owningTree), 
+   m_tileShapeToTileIDMap(m_owningTree.TilingDescriptor().MaxTileSize())
 {
     ConstructTiledTree();
 }
@@ -1565,6 +1566,117 @@ void TiledTree::GetSparseSerialization(std::vector<double>& thresholds, std::vec
             auto leafArrayVal = leaves.at(childIndex - childIndices.size());
             assert (threshold == leafArrayVal);
         }
+}
+
+void TiledTree::IncreaseTileDepth(int32_t leafIndex, int32_t leafDepth, int32_t maxDepth) {
+    assert (m_tiles.at(leafIndex).IsLeafTile());
+    int32_t leafNodeId = m_tiles.at(leafIndex).GetNodeIndices().front();
+    auto treeLeafNode = m_modifiedTree.GetNodes().at(leafNodeId);
+    ++m_numberOfDummyTiles;
+    // Create a new tile with dummy nodes
+    std::vector<int32_t> tileNodeIds(TileSize(), -1);
+    int32_t newTileIndex = NewTiledTreeNode(-m_numberOfDummyTiles);
+    for (int32_t i=0 ; i<TileSize() ; ++i) {
+        tileNodeIds.at(i) = m_modifiedTree.NewNode(0.0, 0, -m_numberOfDummyTiles);
+    }
+
+    std::vector<int32_t> newLeafNodeIds(TileSize()+1, -1);
+    newLeafNodeIds.at(0) = leafNodeId;
+    for (int32_t i=1 ; i<TileSize() + 1; ++i) {
+        ++m_numberOfDummyTiles;
+        newLeafNodeIds.at(i) = m_modifiedTree.NewNode(treeLeafNode.threshold, treeLeafNode.featureIndex, -m_numberOfDummyTiles);
+    }
+
+    // TODO maybe duplicate the leaf as well here? We need to change the 
+    // parent of the new leaf to point to the correct node in the tree.
+    // Otherwise, setting the parent of the root of the new tile will not 
+    // work correctly!
+    int32_t treeLeafNodesVectorIndex = 0;
+    for (int32_t i=0 ; i<TileSize() ; ++i) {
+        // If we are at the root of the tile, then set its parent to be 
+        // the parent of the leaf we are pushing down.
+        // If the node's parent is something we are adding in the dummy tile
+        // set it to that node
+        if (i!=0)
+            m_modifiedTree.SetNodeParent(tileNodeIds.at(i), tileNodeIds.at(i/2));
+        else {
+            auto& parentNode = m_modifiedTree.GetNodes().at(treeLeafNode.parent);
+            m_modifiedTree.SetNodeParent(tileNodeIds.at(i), treeLeafNode.parent);
+            if (parentNode.leftChild == leafNodeId)
+                m_modifiedTree.SetNodeLeftChild(treeLeafNode.parent, tileNodeIds.at(i));
+            else
+                m_modifiedTree.SetNodeRightChild(treeLeafNode.parent, tileNodeIds.at(i));
+        }
+
+        if (2*i+1 < TileSize()) {
+            m_modifiedTree.SetNodeLeftChild(tileNodeIds.at(i), tileNodeIds.at(2*i + 1));
+        }
+        else {
+            auto newTreeLeafId = newLeafNodeIds.at(treeLeafNodesVectorIndex);
+            ++treeLeafNodesVectorIndex;
+            m_modifiedTree.SetNodeLeftChild(tileNodeIds.at(i), newTreeLeafId);
+            m_modifiedTree.SetNodeParent(newTreeLeafId, tileNodeIds.at(i));
+        }
+        if (2*i+2 < TileSize()) {
+            m_modifiedTree.SetNodeRightChild(tileNodeIds.at(i), tileNodeIds.at(2*i + 2));
+        }
+        else {
+            auto newTreeLeafId = newLeafNodeIds.at(treeLeafNodesVectorIndex);
+            ++treeLeafNodesVectorIndex;
+            m_modifiedTree.SetNodeRightChild(tileNodeIds.at(i), newTreeLeafId);
+            m_modifiedTree.SetNodeParent(newTreeLeafId, tileNodeIds.at(i));
+        }
+    }
+    // TODO the leaf tile needs to be replicated. It cannot be reused
+    // TODO the parent node of the leaf is going to be invalid because several 
+    // newly added tiles are going to point to the same leaf tile as a child
+    auto& newTile = m_tiles.at(newTileIndex);
+    for (auto dummyTreeNodeId : tileNodeIds)
+        AddNodeToTile(newTileIndex, dummyTreeNodeId);
+    newTile.m_parent = m_tiles.at(leafIndex).m_parent;
+    m_tiles.at(leafIndex).m_parent = newTileIndex;
+    newTile.m_children = std::vector<int32_t>(1, leafIndex);
+    for (int32_t i=1; i<TileSize()+1 ; ++i) {
+        auto newTreeLeafNodeTileId = m_modifiedTree.TilingDescriptor().TileIDs().at(newLeafNodeIds.at(i));
+        auto newLeafTile = NewTiledTreeNode(newTreeLeafNodeTileId);
+        AddNodeToTile(newLeafTile, newLeafNodeIds.at(i));
+        m_tiles.at(newLeafTile).m_parent = newTileIndex;
+        assert (m_tiles.at(newLeafTile).IsLeafTile());
+        newTile.m_children.push_back(newLeafTile);
+    }
+
+    if (leafDepth + 1 == maxDepth)
+        return;
+
+    // Making a copy here because the m_tiles vector can be modified by the recursive calls!
+    auto children = m_tiles.at(leafIndex).m_children;
+    for (auto childLeaf : children)
+        IncreaseTileDepth(childLeaf, leafDepth+1, maxDepth);
+}
+
+void TiledTree::MakeAllLeavesSameDepth() {
+    auto depth = this->GetTreeDepth();
+    std::list<std::tuple<int32_t, int32_t>> leavesToPad;
+    for (int32_t i=0 ; i<(int32_t)m_tiles.size() ; ++i) {
+        auto& tile = m_tiles.at(i);
+        if (!tile.IsLeafTile())
+            continue;
+        auto tilePtr = &tile;
+        int32_t leafDepth = 1;
+        while (tilePtr->GetParent() != decisionforest::DecisionTree<>::INVALID_NODE_INDEX) {
+            tilePtr = &(m_tiles.at(tilePtr->GetParent()));
+            ++leafDepth;
+        }
+        if (leafDepth != depth) {
+            leavesToPad.push_back(std::make_tuple(i, leafDepth));
+        }
+    }
+    if (TreeBeard::Logging::loggingOptions.logTreeStats) {
+        TreeBeard::Logging::Log("Number of leaves that were padded : " + std::to_string(leavesToPad.size()));
+    }
+    for (auto leafEntry : leavesToPad) {
+        IncreaseTileDepth(std::get<0>(leafEntry), std::get<1>(leafEntry), depth);
+    }
 }
 
 // -----------------------------------------------

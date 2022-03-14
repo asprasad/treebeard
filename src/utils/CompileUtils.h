@@ -21,15 +21,18 @@ struct CompilerOptions {
   int32_t inputElementTypeWidth;
   int32_t tileShapeBitWidth;
   int32_t childIndexBitWidth;
+  bool makeAllLeavesSameDepth;
 
   mlir::decisionforest::ScheduleManipulator *scheduleManipulator;
 
   CompilerOptions(int32_t thresholdWidth, int32_t returnWidth, bool isReturnTypeFloat, int32_t featureIndexWidth, 
                   int32_t nodeIndexWidth, int32_t inputElementWidth, int32_t batchSz, int32_t tileSz,
-                  int32_t tileShapeWidth, int32_t childIndexWidth, mlir::decisionforest::ScheduleManipulator* scheduleManip)
+                  int32_t tileShapeWidth, int32_t childIndexWidth, bool makeLeavesSameDepth,
+                  mlir::decisionforest::ScheduleManipulator* scheduleManip)
   : batchSize(batchSz), tileSize(tileSz), thresholdTypeWidth(thresholdWidth), returnTypeWidth(returnWidth), returnTypeFloatType(isReturnTypeFloat),
     featureIndexTypeWidth(featureIndexWidth), nodeIndexTypeWidth(nodeIndexWidth), inputElementTypeWidth(inputElementWidth),
-    tileShapeBitWidth(tileShapeWidth), childIndexBitWidth(childIndexWidth), scheduleManipulator(scheduleManip)
+    tileShapeBitWidth(tileShapeWidth), childIndexBitWidth(childIndexWidth), makeAllLeavesSameDepth(makeLeavesSameDepth),
+    scheduleManipulator(scheduleManip)
   { }
 };
 
@@ -48,7 +51,7 @@ mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& cont
   }
 
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
-  mlir::decisionforest::DoUniformTiling(context, module, options.tileSize, options.tileShapeBitWidth);
+  mlir::decisionforest::DoUniformTiling(context, module, options.tileSize, options.tileShapeBitWidth, options.makeAllLeavesSameDepth);
   mlir::decisionforest::LowerEnsembleToMemrefs(context, module);
   mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();

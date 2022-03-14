@@ -42,7 +42,7 @@ int dumpLLVMIR(mlir::ModuleOp module, bool dumpAsm = false);
 int dumpLLVMIRToFile(mlir::ModuleOp module, const std::string& filename);
 
 // Optimizing passes
-void DoUniformTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth);
+void DoUniformTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth, bool makeAllLeavesSameDepth);
 void DoProbabilityBasedTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth);
 void DoHybridTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth);
 

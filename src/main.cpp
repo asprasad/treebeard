@@ -143,7 +143,7 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
   // TreeBeard::test::ScheduleManipulationFunctionWrapper scheduleManipulator(TreeBeard::test::TileTreeDimensionSchedule<10>);
   TreeBeard::CompilerOptions options(thresholdTypeWidth, returnTypeWidth, isReturnTypeFloat, featureIndexTypeWidth,
                                      nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, 
-                                     invertLoops ? &scheduleManipulator : nullptr);
+                                     false, invertLoops ? &scheduleManipulator : nullptr);
   TreeBeard::ConvertXGBoostJSONToLLVMIR(jsonFile, llvmIRFile, modelGlobalsJSONFile, options);
   return true;
 }
@@ -228,7 +228,8 @@ bool RunInferenceFromSO(int argc, char *argv[]) {
   }
   assert (jsonFile != "" && soPath != "");
   TreeBeard::CompilerOptions options(thresholdTypeWidth, returnTypeWidth, isReturnTypeFloat, featureIndexTypeWidth,
-                                     nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, nullptr);
+                                     nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, 
+                                     childIndexBitWidth, false, nullptr);
   TreeBeard::RunInferenceUsingSO(jsonFile, soPath, modelGlobalsJSONFile, inputCSVFile, options);
   return true;
 }

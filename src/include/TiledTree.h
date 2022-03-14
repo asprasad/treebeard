@@ -28,7 +28,6 @@ private:
     int32_t m_tileIndex;
     // Index of the parent TiledTreeNode in the tiled tree
     int32_t m_parent;
-    // TODO What order do the children need to be in?
     // Indices of the children of this TiledTreeNode in the tiled tree
     std::vector<int32_t> m_children;
     
@@ -125,6 +124,7 @@ class TiledTree {
     int32_t m_numberOfTileShapes;
     int32_t m_originalNumberOfTileShapes;
     int32_t m_numTilesThatAreNotSubsets;
+    int32_t m_numberOfDummyTiles;
     DecisionTree<>& m_owningTree;
     // We may need to add nodes to the original tree to make the tiles full sized. This 
     // tree is the modified tree with nodes added if required.
@@ -162,6 +162,7 @@ class TiledTree {
     bool AreAllSiblingsLeaves(TiledTreeNode& tile, const std::vector<TiledTreeNode>& tiles);
     std::vector<int32_t> GetLeafDepths();
     void ExpectedNumberOfTileEvaluations(double& val, double& idealVal, int32_t currentTile, int32_t depth, std::set<int32_t>& visitedLeaves);
+    void IncreaseTileDepth(int32_t leafIndex, int32_t leafDepth, int32_t maxDepth);
 public:
     TiledTree(DecisionTree<>& owningTree);
     
@@ -202,6 +203,7 @@ public:
     int32_t GetNumberOfTilesThatAreNotSubsets() { return m_numTilesThatAreNotSubsets; }
     int32_t GetClassId() { return m_owningTree.GetClassId(); } 
     std::tuple<double, double> ComputeExpectedNumberOfTileEvaluations();
+    void MakeAllLeavesSameDepth();
     
     using LevelOrderSorterNodeType = TiledTreeNode;
 

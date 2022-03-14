@@ -1118,12 +1118,12 @@ bool Test_ModelInit_RightAndLeftHeavy_Int16TileShape(TestArgs_t& args) {
 // --------------------------------------------------------------------------
 template<typename ThresholdType=double, typename ReturnType=double, 
          typename FeatureIndexType=int32_t, typename NodeIndexType=int32_t, typename InputElementType=double>
-bool Test_UniformTiling_BatchSize1(TestArgs_t& args, ForestConstructor_t forestConstructor, int32_t tileSize, int32_t tileShapeBitWidth) {
+bool Test_UniformTiling_BatchSize1(TestArgs_t& args, ForestConstructor_t forestConstructor, int32_t tileSize, int32_t tileShapeBitWidth, bool makeAllLeavesSameDepth) {
   FixedTreeIRConstructor<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType> irGenerator(args.context, 1, forestConstructor);
   irGenerator.Parse();
   auto module = irGenerator.GetEvaluationFunction();
   decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
-  decisionforest::DoUniformTiling(args.context, module, tileSize, tileShapeBitWidth);
+  decisionforest::DoUniformTiling(args.context, module, tileSize, tileShapeBitWidth, makeAllLeavesSameDepth);
   // module->dump();
   decisionforest::LowerEnsembleToMemrefs(args.context, module);
   decisionforest::ConvertNodeTypeToIndexType(args.context, module);
@@ -1144,48 +1144,48 @@ bool Test_UniformTiling_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   return true;
 }
 
-bool Test_UniformTiling_BatchSize1_AllTypes(TestArgs_t& args, ForestConstructor_t forestConstructor, int32_t tileShapeBitWidth) {
+bool Test_UniformTiling_BatchSize1_AllTypes(TestArgs_t& args, ForestConstructor_t forestConstructor, int32_t tileShapeBitWidth, bool makeAllLeavesSameDepth=false) {
   {
     using FPType = double;
     using IntType = int32_t;
-    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 2, tileShapeBitWidth)));
-    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 3, tileShapeBitWidth)));
-    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 4, tileShapeBitWidth)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 2, tileShapeBitWidth, makeAllLeavesSameDepth)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 3, tileShapeBitWidth, makeAllLeavesSameDepth)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 4, tileShapeBitWidth, makeAllLeavesSameDepth)));
   }  
   {
     using FPType = double;
     using IntType = int16_t;
-    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 2, tileShapeBitWidth)));
-    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 3, tileShapeBitWidth)));
-    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 4, tileShapeBitWidth)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 2, tileShapeBitWidth, makeAllLeavesSameDepth)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 3, tileShapeBitWidth, makeAllLeavesSameDepth)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 4, tileShapeBitWidth, makeAllLeavesSameDepth)));
   }  
   {
     using FPType = double;
     using IntType = int8_t;
-    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 2, tileShapeBitWidth)));
-    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 3, tileShapeBitWidth)));
-    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 4, tileShapeBitWidth)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 2, tileShapeBitWidth, makeAllLeavesSameDepth)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 3, tileShapeBitWidth, makeAllLeavesSameDepth)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 4, tileShapeBitWidth, makeAllLeavesSameDepth)));
   }
   {
     using FPType = float;
     using IntType = int32_t;
-    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 2, tileShapeBitWidth)));
-    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 3, tileShapeBitWidth)));
-    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 4, tileShapeBitWidth)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 2, tileShapeBitWidth, makeAllLeavesSameDepth)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 3, tileShapeBitWidth, makeAllLeavesSameDepth)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 4, tileShapeBitWidth, makeAllLeavesSameDepth)));
   }  
   {
     using FPType = float;
     using IntType = int16_t;
-    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 2, tileShapeBitWidth)));
-    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 3, tileShapeBitWidth)));
-    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 4, tileShapeBitWidth)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 2, tileShapeBitWidth, makeAllLeavesSameDepth)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 3, tileShapeBitWidth, makeAllLeavesSameDepth)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 4, tileShapeBitWidth, makeAllLeavesSameDepth)));
   }  
   {
     using FPType = float;
     using IntType = int8_t;
-    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 2, tileShapeBitWidth)));
-    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 3, tileShapeBitWidth)));
-    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 4, tileShapeBitWidth)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 2, tileShapeBitWidth, makeAllLeavesSameDepth)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 3, tileShapeBitWidth, makeAllLeavesSameDepth)));
+    Test_ASSERT((Test_UniformTiling_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 4, tileShapeBitWidth, makeAllLeavesSameDepth)));
   }
   return true;
 }
@@ -1236,6 +1236,10 @@ bool Test_UniformTiling_Balanced_BatchSize1_Int16TileShape(TestArgs_t &args) {
 
 bool Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1_Int16TileShape(TestArgs_t &args) {
   return Test_UniformTiling_BatchSize1_AllTypes(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 16);
+}
+
+bool Test_UniformTiling_Balanced_BatchSize1_EqualDepth(TestArgs_t &args) {
+  return Test_UniformTiling_BatchSize1_AllTypes(args, AddBalancedTree<DoubleInt32Tile>, 32, true);
 }
 
 } // test

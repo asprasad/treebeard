@@ -329,6 +329,12 @@ bool Test_SparseProbabilisticTiling_TileSize8_Higgs(TestArgs_t &args);
 bool Test_ProbabilisticTiling_TileSize8_Year(TestArgs_t &args);
 bool Test_SparseProbabilisticTiling_TileSize8_Year(TestArgs_t &args);
 
+// Make all leaves equal depth tests
+bool Test_UniformTiling_Balanced_BatchSize1_EqualDepth(TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize4_EqualDepth_TileSize8(TestArgs_t& args);
+bool Test_RandomXGBoostJSONs_2Trees_BatchSize4_EqualDepth_TileSize8(TestArgs_t& args);
+bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_EqualDepth_TileSize8(TestArgs_t& args);
+
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
     vec[i] = (double)rand()/RAND_MAX;
@@ -802,57 +808,69 @@ bool Test_BufferInitializationWithOneTree_Balanced_Tiled(TestArgs_t& args) {
   return Test_BufferInit_SingleTree_Tiled<double, int32_t>(args, AddBalancedTree<TileType>, tileIDs);
 }
 
-bool Test_TiledTreeConstruction_LeftHeavy_Simple(TestArgs_t& args) {
-  decisionforest::DecisionForest<> forest;
-  AddLeftHeavyTree<DoubleInt32Tile>(forest);
-  auto& tree = forest.GetTree(0);
-  
-  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 3 };
-  decisionforest::TreeTilingDescriptor tilingDescriptor(3, 4, tileIDs, decisionforest::TilingType::kRegular);
-  tree.SetTilingDescriptor(tilingDescriptor);
-
-  decisionforest::TiledTree tiledTree(tree);
-  // tiledTree.WriteDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/tiledTree.dot");
-  auto thresholds = tiledTree.SerializeThresholds();
-  auto featureIndices = tiledTree.SerializeFeatureIndices();
-  return true;
+// ===-------------------------------------------------------------=== //
+// Tiled Tree Tests
+// ===-------------------------------------------------------------=== //
+bool CheckAllLeavesAreAtSameDepth(mlir::decisionforest::TiledTree* tiledTree) {
+  auto depth = tiledTree->GetTreeDepth();
+  for (int32_t i=0 ; i<(int32_t)tiledTree->NumTiles() ; ++i) {
+    auto& tile = tiledTree->GetTile(i);
+    if (!tile.IsLeafTile())
+      continue;
+    auto tilePtr = &tile;
+    int32_t leafDepth = 1;
+    while (tilePtr->GetParent() != decisionforest::DecisionTree<>::INVALID_NODE_INDEX) {
+      tilePtr = &(tiledTree->GetTile(tilePtr->GetParent()));
+      ++leafDepth;
+    }
+    Test_ASSERT(leafDepth == depth);
+  }
+  return true;  
 }
 
-bool Test_TiledTreeConstruction_RightHeavy_Simple(TestArgs_t& args) {
-  decisionforest::DecisionForest<> forest;
-  AddRightHeavyTree<DoubleInt32Tile>(forest);
-  auto& tree = forest.GetTree(0);
+bool Test_PadTiledTree_BalancedTree_TileSize2(TestArgs_t& args) {
+  decisionforest::DecisionTree<> decisionTree;
+  InitializeBalancedTree(decisionTree);
+  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 5, 3, 4 };
   
-  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 3 };
-  decisionforest::TreeTilingDescriptor tilingDescriptor(3, 4, tileIDs, decisionforest::TilingType::kRegular);
-  tree.SetTilingDescriptor(tilingDescriptor);
+  decisionforest::TreeTilingDescriptor tilingDescriptor(2, 6, tileIDs, decisionforest::TilingType::kRegular);
+  decisionTree.SetTilingDescriptor(tilingDescriptor);
 
-  decisionforest::TiledTree tiledTree(tree);
-  // tiledTree.WriteDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/tiledTree.dot");
-  auto thresholds = tiledTree.SerializeThresholds();
-  auto featureIndices = tiledTree.SerializeFeatureIndices();
-  return true;
+  auto tiledTree = decisionTree.GetTiledTree();
+  tiledTree->MakeAllLeavesSameDepth();
+  // std::string dotFile = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/tiledTree.dot";
+  // tiledTree->WriteDOTFile(dotFile);
+  return CheckAllLeavesAreAtSameDepth(tiledTree);
 }
 
-bool Test_TiledTreeConstruction_Balanced_Simple(TestArgs_t& args) {
-  decisionforest::DecisionForest<> forest;
-  AddBalancedTree<DoubleInt32Tile>(forest);
-  auto& tree = forest.GetTree(0);
+bool Test_PadTiledTree_BalancedTree_TileSize2_2(TestArgs_t& args) {
+  decisionforest::DecisionTree<> decisionTree;
+  InitializeBalancedTree(decisionTree);
+  std::vector<int32_t> tileIDs = { 0, 5, 1, 2, 0, 3, 4 };
   
+  decisionforest::TreeTilingDescriptor tilingDescriptor(2, 6, tileIDs, decisionforest::TilingType::kRegular);
+  decisionTree.SetTilingDescriptor(tilingDescriptor);
+
+  auto tiledTree = decisionTree.GetTiledTree();
+  tiledTree->MakeAllLeavesSameDepth();
+  // std::string dotFile = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/tiledTree.dot";
+  // tiledTree->WriteDOTFile(dotFile);
+  return CheckAllLeavesAreAtSameDepth(tiledTree);
+}
+
+bool Test_PadTiledTree_BalancedTree_TileSize3(TestArgs_t& args) {
+  decisionforest::DecisionTree<> decisionTree;
+  InitializeBalancedTree(decisionTree);
   std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 0, 3, 4 };
+  
   decisionforest::TreeTilingDescriptor tilingDescriptor(3, 5, tileIDs, decisionforest::TilingType::kRegular);
-  tree.SetTilingDescriptor(tilingDescriptor);
+  decisionTree.SetTilingDescriptor(tilingDescriptor);
 
-  decisionforest::TiledTree tiledTree(tree);
-  // tiledTree.WriteDOTFile("/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/tiledTree.dot");
-  auto thresholds = tiledTree.SerializeThresholds();
-  auto featureIndices = tiledTree.SerializeFeatureIndices();
-  return true;
-}
-
-void TestTileStringGen() {
-    mlir::decisionforest::TileShapeToTileIDMap tileMap(3);
-    tileMap.ComputeTileLookUpTable();
+  auto tiledTree = decisionTree.GetTiledTree();
+  tiledTree->MakeAllLeavesSameDepth();
+  // std::string dotFile = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/tiledTree.dot";
+  // tiledTree->WriteDOTFile(dotFile);
+  return CheckAllLeavesAreAtSameDepth(tiledTree);
 }
 
 #define RUN_ALL_TESTS
@@ -1168,13 +1186,25 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Epsilon),
   TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Higgs),
   TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Year),
+
+  // Tiled tree padding tests
+  TEST_LIST_ENTRY(Test_PadTiledTree_BalancedTree_TileSize2),
+  TEST_LIST_ENTRY(Test_PadTiledTree_BalancedTree_TileSize2_2),
+  TEST_LIST_ENTRY(Test_PadTiledTree_BalancedTree_TileSize3),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_EqualDepth_TileSize8),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_EqualDepth_TileSize8),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_EqualDepth_TileSize8),
 };
 
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_ProbabilisticTiling_TileSize8_Covtype),
-  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Covtype),
+  // TEST_LIST_ENTRY(Test_ProbabilisticTiling_TileSize8_Covtype),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Airline),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_AirlineOHE),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Epsilon),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Higgs),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Year),
   // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
   // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Airline),
   // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_AirlineOHE),
