@@ -75,6 +75,7 @@ const int32_t kThresholdElementNumberInTile = 0;
 const int32_t kFeatureIndexElementNumberInTile = 1;
 const int32_t kTileShapeElementNumberInTile = 2;
 const int32_t kChildIndexElementNumberInTile = 3;
+const int32_t kLeafBitMaskElementNumberInTile = 4;
 
 Type GenerateGetElementPtr(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter, Type elementMLIRType,
                            int64_t elementNumber, TypeConverter* typeConverter, Value& elementPtr) {
@@ -189,14 +190,26 @@ struct LoadChildIndexOpLowering : public ConversionPattern {
   }
 };
 
-struct LoadTileShapeAndChildIndexOpLowering : public ConversionPattern {
-  LoadTileShapeAndChildIndexOpLowering(LLVMTypeConverter& typeConverter) 
-  : ConversionPattern(typeConverter, mlir::decisionforest::LoadTileShapeAndChildIndexOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
+struct LoadLeafBitMaskOpLowering : public ConversionPattern {
+  LoadLeafBitMaskOpLowering(LLVMTypeConverter& typeConverter) 
+  : ConversionPattern(typeConverter, mlir::decisionforest::LoadLeafBitMaskOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     assert(operands.size() == 2);
-    GenerateLoadStructElement(op, operands, rewriter, kTileShapeElementNumberInTile, getTypeConverter());
+    GenerateLoadStructElement(op, operands, rewriter, kLeafBitMaskElementNumberInTile, getTypeConverter());
+    return mlir::success();
+  }
+};
+
+struct LoadChildIndexAndLeafIndexOpLowering : public ConversionPattern {
+  LoadChildIndexAndLeafIndexOpLowering(LLVMTypeConverter& typeConverter) 
+  : ConversionPattern(typeConverter, mlir::decisionforest::LoadChildAndLeafIndexOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    assert(operands.size() == 2);
+    GenerateLoadStructElement(op, operands, rewriter, kChildIndexElementNumberInTile, getTypeConverter());
     return mlir::success();
   }
 };
@@ -236,6 +249,28 @@ struct InitSparseTileOpLowering : public ConversionPattern {
       GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.tileShapeID().getType(), 2, getTypeConverter(), tileOpAdaptor.tileShapeID());
     GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.childIndex().getType(), 3, getTypeConverter(), tileOpAdaptor.childIndex());
 
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
+
+struct InitSparseTileWithLeafIndexOpLowering : public ConversionPattern {
+  InitSparseTileWithLeafIndexOpLowering(LLVMTypeConverter& typeConverter) 
+  : ConversionPattern(typeConverter, mlir::decisionforest::InitSparseTileWithLeafIndexOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    assert(operands.size() == 7);
+    decisionforest::InitSparseTileWithLeafIndexOpAdaptor tileOpAdaptor(operands);
+    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.thresholds().getType(), 0, getTypeConverter(), tileOpAdaptor.thresholds());
+    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.featureIndices().getType(), 1, getTypeConverter(), tileOpAdaptor.featureIndices());
+    auto modelMemrefType = op->getOperand(0).getType().cast<MemRefType>();
+    auto tileType = modelMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
+    assert (tileType.getTileSize() > 1);
+    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.tileShapeID().getType(), 2, getTypeConverter(), tileOpAdaptor.tileShapeID());
+    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.childAndLeafIndices().getType(), 3, getTypeConverter(), tileOpAdaptor.childAndLeafIndices());
+    // GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.leafIndex().getType(), 4, getTypeConverter(), tileOpAdaptor.leafIndex());
+    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.leafBitMask().getType(), 4, getTypeConverter(), tileOpAdaptor.leafBitMask());
     rewriter.eraseOp(op);
     return mlir::success();
   }
@@ -320,7 +355,12 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
                     return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType, childIndexType});
                   }
                   else {
-                    return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType, childIndexType});
+                    if (decisionforest::RemoveExtraHopInSparseRepresentation) {
+                      auto leafAndChildIndexType = VectorType::get({2}, type.getChildIndexType());
+                      return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType, leafAndChildIndexType, type.getLeafBitMaskType()});
+                    }
+                    else
+                      return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType, childIndexType});
                   }
                 });
 
@@ -331,6 +371,7 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
   populateStdToLLVMFuncOpConversionPattern(typeConverter, patterns);
   populateStdToLLVMConversionPatterns(typeConverter, patterns);
   populateVectorToLLVMConversionPatterns(typeConverter, patterns, false);
+  vector::populateVectorBroadcastLoweringPatterns(patterns);
   populateMathToLLVMConversionPatterns(typeConverter, patterns);
   arith::populateArithmeticToLLVMConversionPatterns(typeConverter, patterns);
 
@@ -338,9 +379,11 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
                LoadTileThresholdOpLowering,
                LoadTileShapeOpLowering,
                LoadChildIndexOpLowering,
-               LoadTileShapeAndChildIndexOpLowering,
+               LoadLeafBitMaskOpLowering,
+               LoadChildIndexAndLeafIndexOpLowering,
                InitTileOpLowering,
                InitSparseTileOpLowering,
+               InitSparseTileWithLeafIndexOpLowering,
                GetModelMemrefSizeOpLowering>(typeConverter);
   decisionforest::populateDebugOpLoweringPatterns(patterns, typeConverter);
 

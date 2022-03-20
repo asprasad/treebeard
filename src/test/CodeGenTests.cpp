@@ -1242,5 +1242,31 @@ bool Test_UniformTiling_Balanced_BatchSize1_EqualDepth(TestArgs_t &args) {
   return Test_UniformTiling_BatchSize1_AllTypes(args, AddBalancedTree<DoubleInt32Tile>, 32, true);
 }
 
+// 
+
+struct SetAndResetRemoveExtraHop {
+  SetAndResetRemoveExtraHop() {
+    decisionforest::UseSparseTreeRepresentation = true;
+    decisionforest::RemoveExtraHopInSparseRepresentation = true;
+  }
+  ~SetAndResetRemoveExtraHop() {
+    decisionforest::UseSparseTreeRepresentation = false;
+    decisionforest::RemoveExtraHopInSparseRepresentation = false;
+  }
+};
+
+bool Test_RemoveExtraHop_BalancedTree_TileSize2(TestArgs_t& args) {
+  SetAndResetRemoveExtraHop setAndResetRemoveExtraHop;
+  auto forestConstructor = AddBalancedTree<DoubleInt32Tile>;
+  std::vector<int32_t> tileIDs_TileSize2 = { 0, 0, 1, 2, 5, 3, 4 };
+  int32_t childIndexBitWidth = 16;
+
+  using FPType = float;
+  using IntType = int32_t;
+  Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 2, 
+                                                                                                              {tileIDs_TileSize2}, childIndexBitWidth)));
+  return true;
+}
+
 } // test
 } // TreeBeard

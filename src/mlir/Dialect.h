@@ -31,6 +31,7 @@ extern bool PrintVectors;
 extern bool UseBitcastForComparisonOutcome;
 extern bool UseSparseTreeRepresentation;
 extern bool OptimizedSparseRepresentation;
+extern bool RemoveExtraHopInSparseRepresentation;
 
 void populateDebugOpLoweringPatterns(RewritePatternSet& patterns, LLVMTypeConverter& typeConverter);
 

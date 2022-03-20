@@ -163,6 +163,10 @@ class TiledTree {
     std::vector<int32_t> GetLeafDepths();
     void ExpectedNumberOfTileEvaluations(double& val, double& idealVal, int32_t currentTile, int32_t depth, std::set<int32_t>& visitedLeaves);
     void IncreaseTileDepth(int32_t leafIndex, int32_t leafDepth, int32_t maxDepth);
+    
+    // Functions for the sparse representation that avoids the extra hop
+    bool HasLeafSiblings(TiledTreeNode& tile, std::vector<TiledTreeNode>& sortedTiles);
+    int32_t GetChildrenBitMask(TiledTreeNode& tile, std::vector<TiledTreeNode>& sortedTiles);
 public:
     TiledTree(DecisionTree<>& owningTree);
     
@@ -191,6 +195,9 @@ public:
 
     void GetSparseSerialization(std::vector<double>& thresholds, std::vector<int32_t>& featureIndices, 
                                 std::vector<int32_t>& tileShapeIDs, std::vector<int32_t>& childIndices, std::vector<double>& leaves);
+    void GetSparseSerialization(std::vector<double>& thresholds, std::vector<int32_t>& featureIndices, std::vector<int32_t>& leafBitMasks,
+                                std::vector<int32_t>& tileShapeIDs, std::vector<int32_t>& childIndices, std::vector<int32_t>& leafIndices,
+                                std::vector<double>& leaves);
     int32_t GetTreeDepth() { 
         // The root of the tiled tree should be the first node
         assert (m_tiles[0].GetParent() == DecisionTree<>::INVALID_NODE_INDEX);

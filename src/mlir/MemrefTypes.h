@@ -18,6 +18,10 @@ namespace mlir
 namespace decisionforest
 {
 
+inline Type getDefaultLeafBitMakType(mlir::MLIRContext* context) {
+    return IntegerType::get(context, 16);
+}
+
 struct TiledNumericalNodeTypeKey {
     Type thresholdType;
     Type indexType;
@@ -25,53 +29,60 @@ struct TiledNumericalNodeTypeKey {
     int32_t tileSize;
     bool sparseRepresentation;
     Type childIndexType;
+    Type leafBitMaskType;
     bool operator==(const TiledNumericalNodeTypeKey& that) const {
         return this->thresholdType == that.thresholdType && this->indexType == that.indexType &&
                this->tileShapeType == that.tileShapeType && this->tileSize == that.tileSize && 
                this->sparseRepresentation == that.sparseRepresentation && 
-                // If the representation is not sparse, don't compare child index type
-               (this->sparseRepresentation ? this->childIndexType==that.childIndexType : true);
+                // If the representation is not sparse, don't compare child index type and the leaf bit mask type
+               (this->sparseRepresentation ? this->childIndexType==that.childIndexType && this->leafBitMaskType==that.leafBitMaskType : true);
     }
 };
 
 struct TiledNumericalNodeTypeStorage : public TypeStorage {
     TiledNumericalNodeTypeStorage(Type thresholdType, Type indexType, Type tileShapeType, 
-                                  int32_t tileSize, bool sparseRepresentation, Type childIndexType)
+                                  int32_t tileSize, bool sparseRepresentation, Type childIndexType,
+                                  Type leafBitMaskType)
         : m_thresholdType(thresholdType), m_indexType(indexType), m_tileShapeType(tileShapeType), 
-          m_tileSize(tileSize), m_sparseRepresentation(sparseRepresentation), m_childIndexType(childIndexType) {}
+          m_tileSize(tileSize), m_sparseRepresentation(sparseRepresentation), m_childIndexType(childIndexType),
+          m_leafBitMaskType(leafBitMaskType)
+    {}
 
     /// The hash key for this storage is a pair of the integer and type params.
     using KeyTy = TiledNumericalNodeTypeKey;
 
     /// Define the comparison function for the key type.
     bool operator==(const KeyTy &key) const {
-        KeyTy myKey{m_thresholdType, m_indexType, m_tileShapeType, m_tileSize, m_sparseRepresentation, m_childIndexType};
+        KeyTy myKey{m_thresholdType, m_indexType, m_tileShapeType, m_tileSize, m_sparseRepresentation, m_childIndexType, m_leafBitMaskType};
         return key == myKey;
     }
 
     static llvm::hash_code hashKey(const KeyTy &key) {
-        return llvm::hash_combine(key.thresholdType, key.indexType, key.tileShapeType, key.tileSize, key.sparseRepresentation, key.childIndexType);
+        return llvm::hash_combine(key.thresholdType, key.indexType, key.tileShapeType, key.tileSize, 
+                                  key.sparseRepresentation, key.childIndexType, key.leafBitMaskType);
     }
 
     static KeyTy getKey(Type thresholdType, Type indexType, int32_t tileSize) {
         auto i32Type = IntegerType::get(thresholdType.getContext(), 32);
-        return KeyTy{thresholdType, indexType, i32Type, tileSize, false, i32Type};
+        return KeyTy{thresholdType, indexType, i32Type, tileSize, false, i32Type, getDefaultLeafBitMakType(thresholdType.getContext())};
     }
 
     static KeyTy getKey(Type thresholdType, Type indexType, Type tileShapeType, int32_t tileSize) {
         auto i32Type = IntegerType::get(thresholdType.getContext(), 32);
-        return KeyTy{thresholdType, indexType, tileShapeType, tileSize, false, i32Type};
+        return KeyTy{thresholdType, indexType, tileShapeType, tileSize, false, i32Type, getDefaultLeafBitMakType(thresholdType.getContext())};
     }
 
-    static KeyTy getKey(Type thresholdType, Type indexType, Type tileShapeType, int32_t tileSize, bool sparseRep, Type childIndexType) {
-        return KeyTy{thresholdType, indexType, tileShapeType, tileSize, sparseRep, childIndexType};
+    static KeyTy getKey(Type thresholdType, Type indexType, Type tileShapeType, int32_t tileSize, 
+                        bool sparseRep, Type childIndexType, Type leafBitMaskType) {
+        return KeyTy{thresholdType, indexType, tileShapeType, tileSize, sparseRep, childIndexType, leafBitMaskType};
     }
 
     /// Define a construction method for creating a new instance of this storage.
     static TiledNumericalNodeTypeStorage *construct(TypeStorageAllocator &allocator,
                                                     const KeyTy &key) {
     return new (allocator.allocate<TiledNumericalNodeTypeStorage>())
-        TiledNumericalNodeTypeStorage(key.thresholdType, key.indexType, key.tileShapeType, key.tileSize, key.sparseRepresentation, key.childIndexType);
+        TiledNumericalNodeTypeStorage(key.thresholdType, key.indexType, key.tileShapeType, key.tileSize, 
+                                      key.sparseRepresentation, key.childIndexType, key.leafBitMaskType);
     }
 
     /// The parametric data held by the storage class.
@@ -81,11 +92,12 @@ struct TiledNumericalNodeTypeStorage : public TypeStorage {
     int32_t m_tileSize;
     bool m_sparseRepresentation;
     Type m_childIndexType;
+    Type m_leafBitMaskType;
 public:
     void print(mlir::DialectAsmPrinter &printer) { 
         printer << "TiledNumericalNode(" << m_thresholdType << ", " << m_indexType << ", " 
                 << m_tileShapeType << ", " << m_tileSize << ", " << m_sparseRepresentation 
-                << ", " << m_childIndexType << ")";
+                << ", " << m_childIndexType << ", " << m_leafBitMaskType << ")";
     }
 };
 
@@ -115,10 +127,10 @@ public:
     }
 
     static TiledNumericalNodeType get(mlir::Type thresholdType, mlir::Type indexType, mlir::Type tileShapeType, 
-                                      int32_t tileSize, bool sparseRep, mlir::Type childIndexType) {
+                                      int32_t tileSize, mlir::Type childIndexType, mlir::Type leafBitMaskType) {
         mlir::MLIRContext *ctx = thresholdType.getContext();
         assert (ctx == indexType.getContext());
-        return Base::get(ctx, thresholdType, indexType, tileShapeType, tileSize, sparseRep, childIndexType);
+        return Base::get(ctx, thresholdType, indexType, tileShapeType, tileSize, true, childIndexType, leafBitMaskType);
     }
 
     mlir::Type getThresholdElementType() const { return getImpl()->m_thresholdType; }
@@ -127,7 +139,7 @@ public:
     int32_t getTileSize() const { return getImpl()->m_tileSize; }
     bool isSparseRepresentation() const { return getImpl()->m_sparseRepresentation; }
     mlir::Type getChildIndexType() const { return getImpl()->m_childIndexType; }
-    
+    mlir::Type getLeafBitMaskType() const { return getImpl()->m_leafBitMaskType; }
     mlir::Type getThresholdFieldType() const { 
         if (getTileSize() == 1)
             return getThresholdElementType();
