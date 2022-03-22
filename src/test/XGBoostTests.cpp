@@ -2457,5 +2457,85 @@ bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_RemoveExtraHop_TileSize8(TestArgs
   return Test_RandomXGBoostJSONs_4Trees_VariableBatchSize(args, 4, 8, 16, 16, false);
 }
 
+bool Test_TileSize8_Abalone_TestInputs_RemoveExtraHop(TestArgs_t &args) {
+  SetAndResetRemoveExtraHop setAndReset;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
+}
+
+bool Test_TileSize8_AirlineOHE_TestInputs_RemoveExtraHop(TestArgs_t &args) {
+  SetAndResetRemoveExtraHop setAndReset;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, true, 16, 16, csvPath);
+}
+
+bool Test_TileSize8_Airline_TestInputs_RemoveExtraHop(TestArgs_t &args) {
+  SetAndResetRemoveExtraHop setAndReset;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
+}
+
+bool Test_TileSize8_Bosch_TestInputs_RemoveExtraHop(TestArgs_t &args) {
+  SetAndResetRemoveExtraHop setAndReset;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/bosch_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, true, 16, 16, csvPath);
+}
+
+bool Test_TileSize8_Epsilon_TestInputs_RemoveExtraHop(TestArgs_t &args) {
+  SetAndResetRemoveExtraHop setAndReset;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, true, 16, 16, csvPath);
+}
+
+bool Test_TileSize8_Higgs_TestInputs_RemoveExtraHop(TestArgs_t &args) {
+  SetAndResetRemoveExtraHop setAndReset;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
+}
+
+bool Test_TileSize8_Year_TestInputs_RemoveExtraHop(TestArgs_t &args) {
+  SetAndResetRemoveExtraHop setAndReset;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/year_prediction_msd_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
+}
+
+bool Test_TileSize8_CovType_TestInputs_RemoveExtraHop(TestArgs_t &args) {
+  SetAndResetRemoveExtraHop setAndReset;
+  int32_t tileSize = 8;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/covtype_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  return Test_MultiClass_Int32ReturnType(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
+}
+
 } // test
 } // TreeBeard

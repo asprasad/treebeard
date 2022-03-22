@@ -348,6 +348,14 @@ bool Test_RemoveExtraHop_BalancedTree_TileSize2(TestArgs_t& args);
 bool Test_RandomXGBoostJSONs_1Tree_BatchSize4_RemoveExtraHop_TileSize8(TestArgs_t& args);
 bool Test_RandomXGBoostJSONs_2Trees_BatchSize4_RemoveExtraHop_TileSize8(TestArgs_t& args);
 bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_RemoveExtraHop_TileSize8(TestArgs_t& args);
+bool Test_TileSize8_Abalone_TestInputs_RemoveExtraHop(TestArgs_t &args);
+bool Test_TileSize8_AirlineOHE_TestInputs_RemoveExtraHop(TestArgs_t &args);
+bool Test_TileSize8_Airline_TestInputs_RemoveExtraHop(TestArgs_t &args);
+bool Test_TileSize8_Bosch_TestInputs_RemoveExtraHop(TestArgs_t &args);
+bool Test_TileSize8_Epsilon_TestInputs_RemoveExtraHop(TestArgs_t &args);
+bool Test_TileSize8_Higgs_TestInputs_RemoveExtraHop(TestArgs_t &args);
+bool Test_TileSize8_Year_TestInputs_RemoveExtraHop(TestArgs_t &args);
+bool Test_TileSize8_CovType_TestInputs_RemoveExtraHop(TestArgs_t &args);
 
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
@@ -1241,18 +1249,33 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_RemoveExtraHop_TileSize8),
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_RemoveExtraHop_TileSize8),
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_RemoveExtraHop_TileSize8),
+  TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_RemoveExtraHop),
+  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_RemoveExtraHop),
+  TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_RemoveExtraHop),
+  TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_RemoveExtraHop),
+  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_RemoveExtraHop),
+  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_RemoveExtraHop),
+  TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_RemoveExtraHop),
 };
 
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth),
-  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_MakeLeavesSameDepth),
-  TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_MakeLeavesSameDepth),
-  TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_MakeLeavesSameDepth),
-  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_MakeLeavesSameDepth),
-  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_MakeLeavesSameDepth),
-  TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth),
+  TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_RemoveExtraHop),
+  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_RemoveExtraHop),
+  TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_RemoveExtraHop),
+  TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_RemoveExtraHop),
+  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_RemoveExtraHop),
+  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_RemoveExtraHop),
+  TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_RemoveExtraHop),
+  
+  // TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth),
+  // TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_MakeLeavesSameDepth),
+  // TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_MakeLeavesSameDepth),
+  // TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_MakeLeavesSameDepth),
+  // TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_MakeLeavesSameDepth),
+  // TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_MakeLeavesSameDepth),
+  // TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth),
   
   // TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_EqualDepth_TileSize8),
   // TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_EqualDepth_TileSize8),
