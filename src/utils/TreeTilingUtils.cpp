@@ -1227,8 +1227,11 @@ void TiledTree::ConstructTiledTree() {
     }
 
     // Expand the tiles that aren't full with dummy nodes
-    for (auto& tile : m_tiles) {
-        tile.AddExtraNodesIfNeeded();
+    // for (auto& tile : m_tiles) {
+    //     tile.AddExtraNodesIfNeeded();
+    // }
+    for (int32_t i=0 ; i<(int32_t)m_tiles.size() ; ++i) {
+        this->AddExtraNodesIfNeeded(i);
     }
     
     // Set the shape ID of all the tiles in the tree
@@ -1703,9 +1706,11 @@ void TiledTree::GetSparseSerialization(std::vector<double>& thresholds, std::vec
             featureIndices.insert(featureIndices.end(), tileFeatureIndices.begin(), tileFeatureIndices.end());
             tileShapeIDs.push_back(tile.GetTileShapeID());
             childIndices.push_back(tile.GetChildren().front());
-            leafIndices.push_back(tile.GetChildren().front());
             // Get the bit mask that indicates which of the children are leaves
-            leafBitMasks.push_back(GetChildrenBitMask(tile, sortedTiles));
+            auto leafBitMask = GetChildrenBitMask(tile, sortedTiles);
+            leafBitMasks.push_back(leafBitMask);
+            // Only push back the children indices if one of the children is a leaf
+            leafIndices.push_back(leafBitMask ? tile.GetChildren().front() : -1);
             tileIndexMap[currentTileIndex] = numberOfTilesInTilesArray;
             numberOfTilesInTilesArray += 1;
 
@@ -1777,7 +1782,7 @@ void TiledTree::IncreaseTileDepth(int32_t leafIndex, int32_t leafDepth, int32_t 
         // If the node's parent is something we are adding in the dummy tile
         // set it to that node
         if (i!=0)
-            m_modifiedTree.SetNodeParent(tileNodeIds.at(i), tileNodeIds.at(i/2));
+            m_modifiedTree.SetNodeParent(tileNodeIds.at(i), tileNodeIds.at((i-1)/2));
         else {
             auto& parentNode = m_modifiedTree.GetNodes().at(treeLeafNode.parent);
             m_modifiedTree.SetNodeParent(tileNodeIds.at(i), treeLeafNode.parent);
@@ -1813,6 +1818,17 @@ void TiledTree::IncreaseTileDepth(int32_t leafIndex, int32_t leafDepth, int32_t 
     for (auto dummyTreeNodeId : tileNodeIds)
         AddNodeToTile(newTileIndex, dummyTreeNodeId);
     newTile.m_parent = m_tiles.at(leafIndex).m_parent;
+    
+    // Replace the leaf tile index with the new tile's index in the parent
+    // tiles children vector
+    assert (newTile.m_parent != DecisionTree<>::INVALID_NODE_INDEX);
+    auto &parentTile = m_tiles.at(newTile.m_parent);
+    auto leafTileChildIter = std::find(parentTile.m_children.begin(), parentTile.m_children.end(), leafIndex);
+    assert (leafTileChildIter != parentTile.m_children.end());
+    *leafTileChildIter = newTileIndex;
+    // Make sure the child's index is not repeated
+    assert (std::find(parentTile.m_children.begin(), parentTile.m_children.end(), leafIndex) == parentTile.m_children.end());
+
     m_tiles.at(leafIndex).m_parent = newTileIndex;
     newTile.m_children = std::vector<int32_t>(1, leafIndex);
     for (int32_t i=1; i<TileSize()+1 ; ++i) {
@@ -1821,19 +1837,39 @@ void TiledTree::IncreaseTileDepth(int32_t leafIndex, int32_t leafDepth, int32_t 
         AddNodeToTile(newLeafTile, newLeafNodeIds.at(i));
         m_tiles.at(newLeafTile).m_parent = newTileIndex;
         assert (m_tiles.at(newLeafTile).IsLeafTile());
-        newTile.m_children.push_back(newLeafTile);
+        m_tiles.at(newTileIndex).m_children.push_back(newLeafTile);
+    }
+
+    int32_t tileIndex = 0;
+    for (auto& tile : m_tiles) {
+        if (tile.m_parent != DecisionTree<>::INVALID_NODE_INDEX) {
+            auto& parent = m_tiles.at(tile.m_parent);
+            auto childIter = std::find(parent.m_children.begin(), parent.m_children.end(), tileIndex);
+            assert (childIter != parent.m_children.end());
+        }
+        tileIndex++;
     }
 
     if (leafDepth + 1 == maxDepth)
         return;
 
     // Making a copy here because the m_tiles vector can be modified by the recursive calls!
-    auto children = m_tiles.at(leafIndex).m_children;
+    auto children = m_tiles.at(newTileIndex).m_children;
     for (auto childLeaf : children)
         IncreaseTileDepth(childLeaf, leafDepth+1, maxDepth);
 }
 
 void TiledTree::MakeAllLeavesSameDepth() {
+    int32_t tileIndex = 0;
+    for (auto& tile : m_tiles) {
+        if (tile.m_parent != DecisionTree<>::INVALID_NODE_INDEX) {
+            auto& parent = m_tiles.at(tile.m_parent);
+            auto childIter = std::find(parent.m_children.begin(), parent.m_children.end(), tileIndex);
+            assert (childIter != parent.m_children.end());
+        }
+        tileIndex++;
+    }
+
     auto depth = this->GetTreeDepth();
     std::list<std::tuple<int32_t, int32_t>> leavesToPad;
     for (int32_t i=0 ; i<(int32_t)m_tiles.size() ; ++i) {
@@ -1856,6 +1892,117 @@ void TiledTree::MakeAllLeavesSameDepth() {
     for (auto leafEntry : leavesToPad) {
         IncreaseTileDepth(std::get<0>(leafEntry), std::get<1>(leafEntry), depth);
     }
+
+    for (auto& tile : m_tiles)
+        tile.m_tileShapeID = m_tileShapeToTileIDMap.GetTileID(tile);
+}
+
+void TiledTree::AddExtraNodesIfNeeded(int32_t tileIndex) {
+    // How do we add the extra nodes in the right places in the vector? We need
+    // to maintain level order!
+    if (static_cast<int32_t>(m_tiles.at(tileIndex).m_nodeIndices.size()) == m_modifiedTree.TilingDescriptor().MaxTileSize())
+        return;
+    // If the only node in the tile is a leaf, then just return
+    if (static_cast<int32_t>(m_tiles.at(tileIndex).m_nodeIndices.size()) == 1 && 
+        m_tiles.at(tileIndex).GetNode(m_tiles.at(tileIndex).m_nodeIndices.at(0)).IsLeaf()) {
+        return;
+    }
+    m_tiles.at(tileIndex).m_hasExtraNodes = true;
+    assert (static_cast<int32_t>(m_tiles.at(tileIndex).m_nodeIndices.size()) < m_modifiedTree.TilingDescriptor().MaxTileSize());
+    do {
+      int32_t numberOfNodesToAdd = m_modifiedTree.TilingDescriptor().MaxTileSize() - static_cast<int32_t>(m_tiles.at(tileIndex).m_nodeIndices.size());
+      // TODO Must there be at least one node where both children are leaves?
+      // This must be true
+      // 1. The child of any node must either be in the same tile or must be a leaf (if it were not, the tile could have been larger)
+      // 2. Since the tile can't grow indefinitely, #1 => there is at least one node with both children being leaves
+      std::list<int32_t> candidateNodes;
+      for (auto nodeIndex : m_tiles.at(tileIndex).m_nodeIndices) {
+          auto& node = m_tiles.at(tileIndex).GetNode(nodeIndex);
+          auto leftChildIndex = node.leftChild;
+          auto rightChildIndex = node.rightChild;
+          auto& leftChild = m_tiles.at(tileIndex).GetNode(leftChildIndex);
+          auto& rightChild = m_tiles.at(tileIndex).GetNode(rightChildIndex);
+          assert (m_tiles.at(tileIndex).AreNodesInSameTile(nodeIndex, leftChildIndex) || leftChild.IsLeaf());
+          assert (m_tiles.at(tileIndex).AreNodesInSameTile(nodeIndex, rightChildIndex) || rightChild.IsLeaf());
+          if (leftChild.IsLeaf() || rightChild.IsLeaf())
+              candidateNodes.push_back(nodeIndex);
+      }
+      assert (candidateNodes.size() > 0);
+      // TODO How do we determine the shape of this tile once we add new nodes? Maybe some kind of look up based on the positions of the nodes in the 
+      // full dense serialization?
+      // TODO How do we decide which of the candidate nodes to use as the parent of the new node(s)? For now, picking from the first candidate, which will 
+      // be the right most node on the bottom most level. 
+      auto candidateIter = candidateNodes.begin();
+      for (int32_t i=0 ; i<numberOfNodesToAdd && candidateIter!=candidateNodes.end(); ) { // We can add two dummy nodes for every candidate node
+          // TODO How do we decide where to add the new nodes? Maybe just add them somewhere and call sort again?
+          assert (candidateIter != candidateNodes.end());
+          auto candidateIndex = *candidateIter;
+          auto candidateNode = m_tiles.at(tileIndex).GetNode(candidateIndex);
+          if (m_tiles.at(tileIndex).GetNode(candidateNode.leftChild).IsLeaf()){
+            auto leafIndex = candidateNode.leftChild;
+            // auto &leafNode = m_tiles.at(tileIndex).GetNode(leafIndex);
+            assert(m_tiles.at(tileIndex).GetNode(leafIndex).IsLeaf());
+            // Add the dummy node as the left child of the candidate
+            auto dummyNode = m_modifiedTree.NewNode(candidateNode.threshold, candidateNode.featureIndex, m_tiles.at(tileIndex).m_tileID);
+            m_modifiedTree.SetNodeLeftChild(dummyNode, leafIndex);
+            m_modifiedTree.SetNodeParent(leafIndex, dummyNode);
+
+            // Create a new node for the right child
+            ++m_numberOfDummyTiles;
+            auto dummyLeafNode = m_modifiedTree.NewNode(m_tiles.at(tileIndex).GetNode(leafIndex).threshold, 
+                                                        m_tiles.at(tileIndex).GetNode(leafIndex).featureIndex, -m_numberOfDummyTiles);
+            int32_t dummyTileIndex = NewTiledTreeNode(-m_numberOfDummyTiles);
+            AddNodeToTile(dummyTileIndex, dummyLeafNode);
+            m_tiles.at(dummyTileIndex).SetParent(tileIndex);
+
+            m_modifiedTree.SetNodeRightChild(dummyNode, dummyLeafNode);
+            m_modifiedTree.SetNodeParent(dummyLeafNode, dummyNode);
+
+            m_modifiedTree.SetNodeParent(dummyNode, candidateIndex);
+            m_modifiedTree.SetNodeLeftChild(candidateIndex, dummyNode);
+            
+            AddNodeToTile(m_tiles.at(tileIndex).m_tileIndex, dummyNode);
+            const_cast<mlir::decisionforest::DecisionTree<>::Node&>(m_tiles.at(tileIndex).GetNode(dummyNode)).hitCount = -1;
+            ++i;
+          }
+
+          if (i == numberOfNodesToAdd)
+              break;
+
+          if (m_tiles.at(tileIndex).GetNode(candidateNode.rightChild).IsLeaf()) {
+            auto leafIndex = candidateNode.rightChild;
+            // auto &leafNode = m_tiles.at(tileIndex).GetNode(leafIndex);
+            assert(m_tiles.at(tileIndex).GetNode(leafIndex).IsLeaf());
+            // Add the dummy node as the right child of the candidate
+            auto dummyNode = m_modifiedTree.NewNode(candidateNode.threshold, candidateNode.featureIndex, m_tiles.at(tileIndex).m_tileID);
+            
+            m_modifiedTree.SetNodeLeftChild(dummyNode, leafIndex);
+            m_modifiedTree.SetNodeParent(leafIndex, dummyNode);
+
+            // Create a new node for the right child
+            ++m_numberOfDummyTiles;
+            auto dummyLeafNode = m_modifiedTree.NewNode(m_tiles.at(tileIndex).GetNode(leafIndex).threshold, 
+                                                        m_tiles.at(tileIndex).GetNode(leafIndex).featureIndex, -m_numberOfDummyTiles);
+            int32_t dummyTileIndex = NewTiledTreeNode(-m_numberOfDummyTiles);
+            AddNodeToTile(dummyTileIndex, dummyLeafNode);
+            m_tiles.at(dummyTileIndex).SetParent(tileIndex);
+            
+            m_modifiedTree.SetNodeRightChild(dummyNode, dummyLeafNode);
+            m_modifiedTree.SetNodeParent(dummyLeafNode, dummyNode);
+            
+            m_modifiedTree.SetNodeParent(dummyNode, candidateIndex);
+            m_modifiedTree.SetNodeRightChild(candidateIndex, dummyNode);
+
+            AddNodeToTile(m_tiles.at(tileIndex).m_tileIndex, dummyNode);
+            const_cast<mlir::decisionforest::DecisionTree<>::Node&>(m_tiles.at(tileIndex).GetNode(dummyNode)).hitCount = -1;
+            ++i;
+          }
+          ++candidateIter;
+      }
+    } while (static_cast<int32_t>(m_tiles.at(tileIndex).m_nodeIndices.size()) < m_modifiedTree.TilingDescriptor().MaxTileSize());
+    assert (static_cast<int32_t>(m_tiles.at(tileIndex).m_nodeIndices.size()) == m_modifiedTree.TilingDescriptor().MaxTileSize());
+    m_tiles.at(tileIndex).SortTileNodes();
+    SetChildrenForTile(m_tiles.at(tileIndex));
 }
 
 // -----------------------------------------------

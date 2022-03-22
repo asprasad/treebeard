@@ -167,6 +167,8 @@ class TiledTree {
     // Functions for the sparse representation that avoids the extra hop
     bool HasLeafSiblings(TiledTreeNode& tile, std::vector<TiledTreeNode>& sortedTiles);
     int32_t GetChildrenBitMask(TiledTreeNode& tile, std::vector<TiledTreeNode>& sortedTiles);
+
+    void AddExtraNodesIfNeeded(int32_t tileIndex);
 public:
     TiledTree(DecisionTree<>& owningTree);
     
@@ -277,6 +279,8 @@ public:
       }
 
       void RewriteIndices() {
+        // std::cout << "Start RewriteIndices()\n";
+
         int32_t currNodeIndex=0;
         for (auto& node : m_levelOrder) {
           // MapKey parentMapKey{node.GetParent(), }
@@ -288,12 +292,18 @@ public:
             assert(node.m_children.at(i) > 0);
             MapKey childMapKey{originalIndex, node.m_children.at(i), static_cast<int32_t>(i)};
             node.m_children.at(i) = GetNewIndex(childMapKey);
+            
+            // std::cout << "Setting parent for node (newIndex=" << node.m_children.at(i) << ", originalIndex=" << childMapKey.childNodeIndex 
+            //           << ") to " << currNodeIndex << " Original Parent = " << m_levelOrder.at(node.m_children.at(i)).GetParent() 
+            //           << " Current node's original index=" << originalIndex << std::endl;
             assert(m_levelOrder.at(node.m_children.at(i)).GetParent() == originalIndex);
+
             m_levelOrder.at(node.m_children.at(i)).SetParent(currNodeIndex);
             assert (i == 0 || ( node.m_children.at(i) = (node.m_children.at(i-1)+1) ));
           }
           ++currNodeIndex;
         }
+        // std::cout << "End RewriteIndices()\n";
       }
     public:
       LevelOrderTraversal(const std::vector<LevelOrderSorterNodeType>& nodes) {

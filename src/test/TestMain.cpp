@@ -335,6 +335,12 @@ bool Test_RandomXGBoostJSONs_1Tree_BatchSize4_EqualDepth_TileSize8(TestArgs_t& a
 bool Test_RandomXGBoostJSONs_2Trees_BatchSize4_EqualDepth_TileSize8(TestArgs_t& args);
 bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_EqualDepth_TileSize8(TestArgs_t& args);
 
+// Remove extra hop tests
+bool Test_RemoveExtraHop_BalancedTree_TileSize2(TestArgs_t& args);
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize4_RemoveExtraHop_TileSize8(TestArgs_t& args);
+bool Test_RandomXGBoostJSONs_2Trees_BatchSize4_RemoveExtraHop_TileSize8(TestArgs_t& args);
+bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_RemoveExtraHop_TileSize8(TestArgs_t& args);
+
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
     vec[i] = (double)rand()/RAND_MAX;
@@ -623,7 +629,8 @@ bool Test_ForestCodeGen_VariableBatchSize(TestArgs_t& args, ForestConstructor_t 
 std::vector<std::vector<double>> GetBatchSize1Data() {
   std::vector<double> inputData1 = {0.1, 0.2, 0.5, 0.3, 0.25};
   std::vector<double> inputData2 = {0.1, 0.2, 0.6, 0.3, 0.25};
-  std::vector<std::vector<double>> data = {inputData1, inputData2};
+  std::vector<double> inputData3 = {0.1, 0.2, 0.4, 0.3, 0.25};
+  std::vector<std::vector<double>> data = {inputData1, inputData2, inputData3};
   return data;
 }
 
@@ -871,6 +878,25 @@ bool Test_PadTiledTree_BalancedTree_TileSize3(TestArgs_t& args) {
   // std::string dotFile = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/tiledTree.dot";
   // tiledTree->WriteDOTFile(dotFile);
   return CheckAllLeavesAreAtSameDepth(tiledTree);
+}
+
+bool Test_SparseSerialization_BalancedTree_TileSize2(TestArgs_t& args) {
+  decisionforest::DecisionTree<> decisionTree;
+  InitializeBalancedTree(decisionTree);
+  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 5, 3, 4 };
+  
+  decisionforest::TreeTilingDescriptor tilingDescriptor(2, 5, tileIDs, decisionforest::TilingType::kRegular);
+  decisionTree.SetTilingDescriptor(tilingDescriptor);
+
+  auto tiledTree = decisionTree.GetTiledTree();
+  std::string dotFile = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/tiledTree.dot";
+  tiledTree->WriteDOTFile(dotFile);
+  
+  std::vector<double> thresholds, leaves;
+  std::vector<int32_t> featureIndices, leafBitMasks, tileShapeIDs, childIndices, leafIndices;
+
+  tiledTree->GetSparseSerialization(thresholds, featureIndices, leafBitMasks, tileShapeIDs, childIndices, leafIndices, leaves);
+  return true;
 }
 
 #define RUN_ALL_TESTS
@@ -1194,12 +1220,28 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_EqualDepth_TileSize8),
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_EqualDepth_TileSize8),
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_EqualDepth_TileSize8),
+
+  // Remove extra hop tests
+  TEST_LIST_ENTRY(Test_RemoveExtraHop_BalancedTree_TileSize2),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_RemoveExtraHop_TileSize8),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_RemoveExtraHop_TileSize8),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_RemoveExtraHop_TileSize8),
 };
 
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  // TEST_LIST_ENTRY(Test_ProbabilisticTiling_TileSize8_Covtype),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_EqualDepth_TileSize8),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_EqualDepth_TileSize8),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_EqualDepth_TileSize8),
+
+  // Remove extra hop tests
+  TEST_LIST_ENTRY(Test_RemoveExtraHop_BalancedTree_TileSize2),
+  TEST_LIST_ENTRY(Test_SparseSerialization_BalancedTree_TileSize2),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_RemoveExtraHop_TileSize8),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_RemoveExtraHop_TileSize8),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_RemoveExtraHop_TileSize8),
+  // TEST_LIST_ENTRY(Test_SparseSerialization_BalancedTree_TileSize2),
   // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Airline),
   // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_AirlineOHE),
   // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Epsilon),

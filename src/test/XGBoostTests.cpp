@@ -2355,5 +2355,35 @@ bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_EqualDepth_TileSize8(TestArgs_t& 
   return Test_RandomXGBoostJSONs_4Trees_VariableBatchSize(args, 4, 8, 16, 1, true);
 }
 
+// ===-------------------------------------------------------------=== //
+// Random XGBoost Remove Extra Hop Tests
+// ===-------------------------------------------------------------=== //
+
+struct SetAndResetRemoveExtraHop {
+  SetAndResetRemoveExtraHop() {
+    mlir::decisionforest::UseSparseTreeRepresentation = true;
+    mlir::decisionforest::RemoveExtraHopInSparseRepresentation = true;
+  }
+  ~SetAndResetRemoveExtraHop() {
+    mlir::decisionforest::UseSparseTreeRepresentation = false;
+    mlir::decisionforest::RemoveExtraHopInSparseRepresentation = false;
+  }
+};
+
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize4_RemoveExtraHop_TileSize8(TestArgs_t& args) {
+  SetAndResetRemoveExtraHop setAndReset;
+  return Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(args, 4, 8, 16, 16, false);
+}
+
+bool Test_RandomXGBoostJSONs_2Trees_BatchSize4_RemoveExtraHop_TileSize8(TestArgs_t& args) {
+  SetAndResetRemoveExtraHop setAndReset;
+  return Test_RandomXGBoostJSONs_2Trees_VariableBatchSize(args, 4, 8, 16, 16, false);
+}
+
+bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_RemoveExtraHop_TileSize8(TestArgs_t& args) {
+  SetAndResetRemoveExtraHop setAndReset;
+  return Test_RandomXGBoostJSONs_4Trees_VariableBatchSize(args, 4, 8, 16, 16, false);
+}
+
 } // test
 } // TreeBeard

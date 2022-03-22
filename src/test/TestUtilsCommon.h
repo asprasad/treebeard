@@ -61,6 +61,15 @@ inline bool FPEqual(FPType a, FPType b) {
 }
 
 template <>
+inline bool FPEqual<float>(float a, float b) {
+  using FPType = float;
+  const FPType scaledThreshold = std::max(std::fabs(a), std::fabs(b))/1e8;
+  const FPType threshold = std::max(FPType(1e-6), scaledThreshold);
+  auto sqDiff = (a-b) * (a-b);
+  return sqDiff < threshold;
+}
+
+template <>
 inline bool FPEqual<int32_t>(int32_t a, int32_t b) {
   return a == b;
 }
@@ -92,7 +101,6 @@ inline bool IsFloatType(const float&) { return true; }
 inline bool IsFloatType(const int8_t&) { return false; }
 // inline bool IsFloatType(const int16_t&) { return false; }
 // inline bool IsFloatType(const int32_t&) { return false; }
-
 
 class TestCSVReader {
   std::vector<std::vector<double>> m_data;
