@@ -110,6 +110,10 @@ Tiling optimization (DP to minimize skew?)
 Unrolling Treewalk 
 Pipeline
     - Reuse tiles in registers if possible (root tile)
+    - How do we manage probabilistic tiling?
+Expand tree walk
+LightGBM support
+Comparison with TreeLite
 
 Parallelization
 Schedule exploration
