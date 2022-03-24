@@ -140,6 +140,18 @@ bool Test_TileSize3_Year(TestArgs_t &args);
 bool Test_TileSize4_Year(TestArgs_t &args);
 bool Test_TileSize8_Year(TestArgs_t &args);
 
+bool Test_TileSize1_CovType_Int8Type(TestArgs_t &args);
+bool Test_TileSize2_CovType_Int8Type(TestArgs_t &args);
+bool Test_TileSize3_CovType_Int8Type(TestArgs_t &args);
+bool Test_TileSize4_CovType_Int8Type(TestArgs_t &args);
+bool Test_TileSize8_CovType_Int8Type(TestArgs_t &args);
+
+bool Test_TileSize1_Letters_Int8Type(TestArgs_t &args);
+bool Test_TileSize2_Letters_Int8Type(TestArgs_t &args);
+bool Test_TileSize3_Letters_Int8Type(TestArgs_t &args);
+bool Test_TileSize4_Letters_Int8Type(TestArgs_t &args);
+bool Test_TileSize8_Letters_Int8Type(TestArgs_t &args);
+
 // XGBoost benchmark models tests with one tree at a time schedule
 bool Test_Scalar_Abalone_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_TileSize2_Abalone_OneTreeAtATimeSchedule(TestArgs_t &args);
@@ -176,11 +188,6 @@ bool Test_TileSize2_Year_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_TileSize3_Year_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_TileSize4_Year_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_TileSize8_Year_OneTreeAtATimeSchedule(TestArgs_t &args);
-bool Test_TileSize1_CovType_Int8Type(TestArgs_t &args);
-bool Test_TileSize2_CovType_Int8Type(TestArgs_t &args);
-bool Test_TileSize3_CovType_Int8Type(TestArgs_t &args);
-bool Test_TileSize4_CovType_Int8Type(TestArgs_t &args);
-bool Test_TileSize8_CovType_Int8Type(TestArgs_t &args);
 
 // Sparse XGBoost Scalar Tests
 bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args);
@@ -251,6 +258,8 @@ bool Test_SparseTileSize2_Higgs(TestArgs_t &args);
 bool Test_SparseTileSize3_Higgs(TestArgs_t &args);
 bool Test_SparseTileSize4_Higgs(TestArgs_t &args);
 bool Test_SparseTileSize8_Higgs(TestArgs_t &args);
+bool Test_SparseScalar_Letters_Int8Type(TestArgs_t &args);
+bool Test_SparseTileSize8_Letters_Int8Type(TestArgs_t &args);
 bool Test_SparseScalar_Year(TestArgs_t &args);
 bool Test_SparseTileSize2_Year(TestArgs_t &args);
 bool Test_SparseTileSize3_Year(TestArgs_t &args);
@@ -275,6 +284,7 @@ bool Test_TileSize8_Bosch_TestInputs_TiledSchedule(TestArgs_t &args);
 bool Test_TileSize8_Epsilon_TestInputs_TiledSchedule(TestArgs_t &args);
 bool Test_TileSize8_Higgs_TestInputs_TiledSchedule(TestArgs_t &args);
 bool Test_TileSize8_Year_TestInputs_TiledSchedule(TestArgs_t &args);
+bool Test_SparseTileSize8_Letters_TiledSchedule(TestArgs_t &args);
 
 // Sparse tests with flipped loops
 bool Test_SparseScalar_Abalone_OneTreeAtATimeSchedule(TestArgs_t &args);
@@ -295,6 +305,8 @@ bool Test_SparseScalar_Year_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_SparseTileSize8_Year_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_Scalar_CovType_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_TileSize8_CovType_OneTreeAtATimeSchedule(TestArgs_t &args);
+bool Test_SparseScalar_Letters_OneTreeAtATimeSchedule(TestArgs_t &args);
+bool Test_SparseTileSize8_Letters_OneTreeAtATimeSchedule(TestArgs_t &args);
 
 bool Test_SparseTileSize8_Abalone_TestInputs_TiledSchedule(TestArgs_t &args);
 bool Test_SparseTileSize8_AirlineOHE_TestInputs_TiledSchedule(TestArgs_t &args);
@@ -915,7 +927,7 @@ bool Test_SparseSerialization_BalancedTree_TileSize2(TestArgs_t& args) {
   return true;
 }
 
-#define RUN_ALL_TESTS
+// #define RUN_ALL_TESTS
 
 #ifdef RUN_ALL_TESTS
 TestDescriptor testList[] = {
@@ -1043,6 +1055,11 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TileSize3_Higgs),
   TEST_LIST_ENTRY(Test_TileSize4_Higgs),
   TEST_LIST_ENTRY(Test_TileSize8_Higgs),
+  TEST_LIST_ENTRY(Test_TileSize1_Letters_Int8Type),
+  TEST_LIST_ENTRY(Test_TileSize2_Letters_Int8Type),
+  TEST_LIST_ENTRY(Test_TileSize3_Letters_Int8Type),
+  TEST_LIST_ENTRY(Test_TileSize4_Letters_Int8Type),
+  TEST_LIST_ENTRY(Test_TileSize8_Letters_Int8Type),
   TEST_LIST_ENTRY(Test_Scalar_Year),
   TEST_LIST_ENTRY(Test_TileSize2_Year),
   TEST_LIST_ENTRY(Test_TileSize3_Year),
@@ -1113,6 +1130,8 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_SparseTileSize8_Bosch),
   TEST_LIST_ENTRY(Test_SparseTileSize8_CovType_Int8Type),
   TEST_LIST_ENTRY(Test_SparseScalar_CovType_Int8Type),
+  TEST_LIST_ENTRY(Test_SparseScalar_Letters_Int8Type),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Letters_Int8Type),
   TEST_LIST_ENTRY(Test_SparseScalar_Epsilon),
   TEST_LIST_ENTRY(Test_SparseTileSize2_Epsilon),
   TEST_LIST_ENTRY(Test_SparseTileSize3_Epsilon),
@@ -1196,6 +1215,8 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_SparseTileSize8_Bosch_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_SparseScalar_CovType_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_SparseTileSize8_CovType_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_SparseScalar_Letters_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Letters_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_SparseScalar_Epsilon_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_SparseTileSize8_Epsilon_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_SparseScalar_Higgs_OneTreeAtATimeSchedule),
@@ -1261,13 +1282,14 @@ TestDescriptor testList[] = {
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_RemoveExtraHop),
-  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_RemoveExtraHop),
-  TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_RemoveExtraHop),
-  TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_RemoveExtraHop),
-  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_RemoveExtraHop),
-  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_RemoveExtraHop),
-  TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_RemoveExtraHop),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Letters_TiledSchedule),
+  // TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_RemoveExtraHop),
+  // TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_RemoveExtraHop),
+  // TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_RemoveExtraHop),
+  // TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_RemoveExtraHop),
+  // TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_RemoveExtraHop),
+  // TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_RemoveExtraHop),
+  // TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_RemoveExtraHop),
   
   // TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth),
   // TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_MakeLeavesSameDepth),

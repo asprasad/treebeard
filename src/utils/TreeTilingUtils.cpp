@@ -747,8 +747,8 @@ void PersistDecisionForestImpl(mlir::decisionforest::DecisionForest<>& forest, m
         }
         else {
             TiledTree& tiledTree = *tree.GetTiledTree();
-            std::string dotFile = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/tiledTree_" + std::to_string(i) + ".dot";
-            tiledTree.WriteDOTFile(dotFile);
+            // std::string dotFile = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/tiledTree_" + std::to_string(i) + ".dot";
+            // tiledTree.WriteDOTFile(dotFile);
             persistTreeTiled(tiledTree, i, treeType);
             if (TreeBeard::Logging::loggingOptions.logTreeStats) {
                 auto tiledTreeStats=tiledTree.GetTreeStats();

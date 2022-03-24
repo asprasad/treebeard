@@ -1082,6 +1082,34 @@ bool Test_TileSize8_CovType_Int8Type(TestArgs_t &args) {
   return Test_TileSizeVariable_CovType_Int8Type(args, 8);
 }
 
+static bool Test_TileSizeVariable_Letters_Int8Type(TestArgs_t &args, int32_t tileSize) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/letters_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  return Test_MultiClass_Int32ReturnType(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
+}
+
+bool Test_TileSize1_Letters_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_Letters_Int8Type(args, 1);
+}
+
+bool Test_TileSize2_Letters_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_Letters_Int8Type(args, 2);
+}
+
+bool Test_TileSize3_Letters_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_Letters_Int8Type(args, 3);
+}
+
+bool Test_TileSize4_Letters_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_Letters_Int8Type(args, 4);
+}
+
+bool Test_TileSize8_Letters_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_Letters_Int8Type(args, 8);
+}
+
 // ===----------------------------------------------------------------=== //
 // XGBoost Benchmark Code Gen Correctness Tests With XGBoost Schedule
 // ===----------------------------------------------------------------=== //
@@ -1668,6 +1696,16 @@ bool Test_SparseTileSize8_Higgs(TestArgs_t &args) {
   return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, false, 32, 32);
 }
 
+bool Test_SparseScalar_Letters_Int8Type(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_TileSizeVariable_Letters_Int8Type(args, 1);
+}
+
+bool Test_SparseTileSize8_Letters_Int8Type(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_TileSizeVariable_Letters_Int8Type(args, 8);
+}
+
 bool Test_SparseScalar_Year(TestArgs_t &args) {
   decisionforest::UseSparseTreeRepresentation = true;
   auto repoPath = GetTreeBeardRepoPath();
@@ -1952,6 +1990,26 @@ bool Test_SparseTileSize8_CovType_OneTreeAtATimeSchedule(TestArgs_t &args) {
   return Test_MultiClass_Int32ReturnType(args, modelJSONPath, tileSize, false, 16, 16, csvPath, OneTreeAtATimeSchedule);
 }
 
+bool Test_SparseScalar_Letters_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  int32_t tileSize = 1;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/letters_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  return Test_MultiClass_Int32ReturnType(args, modelJSONPath, tileSize, false, 16, 16, csvPath, OneTreeAtATimeSchedule);
+}
+
+bool Test_SparseTileSize8_Letters_OneTreeAtATimeSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  int32_t tileSize = 8;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/letters_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  return Test_MultiClass_Int32ReturnType(args, modelJSONPath, tileSize, false, 16, 16, csvPath, OneTreeAtATimeSchedule);
+}
+
 bool Test_SparseScalar_Epsilon_OneTreeAtATimeSchedule(TestArgs_t &args) {
   decisionforest::UseSparseTreeRepresentation = true;
   auto repoPath = GetTreeBeardRepoPath();
@@ -2068,6 +2126,16 @@ bool Test_SparseTileSize8_Higgs_TestInputs_TiledSchedule(TestArgs_t &args) {
   auto csvPath = modelJSONPath + ".test.sampled.csv";
   int32_t tileSize = 8;
   return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath, TiledSchedule<2, 4>);
+}
+
+bool Test_SparseTileSize8_Letters_TiledSchedule(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  int32_t tileSize = 8;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/letters_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  return Test_MultiClass_Int32ReturnType(args, modelJSONPath, tileSize, false, 16, 16, csvPath, TiledSchedule<2, 4>);
 }
 
 bool Test_SparseTileSize8_Year_TestInputs_TiledSchedule(TestArgs_t &args) {
