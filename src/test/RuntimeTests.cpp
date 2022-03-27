@@ -181,7 +181,8 @@ bool RunSingleTest(const std::string& soPath, const std::string& globalValuesJSO
 
 template <typename ReturnType=float>
 bool RunSingleModelTest(const std::string& modelName, RuntimeWrapper& runtimeWrapper, bool invert=false) {
-  std::string csvPath = GetTreeBeardRepoPath() + "/xgb_models/" + modelName + "_xgb_model_save.json.csv";
+  std::string csvPath = GetTreeBeardRepoPath() + "/xgb_models/" + modelName 
+                        + ((modelName == "bosch") ? "_xgb_model_save.json.csv" : "_xgb_model_save.json.test.sampled.csv");
   std::string soPath;
   soPath = GetTreeBeardRepoPath() + "/runtime_test_binaries/" + modelName + (invert ? "_t8_b200_f_i16.so" : "_t8_b200_f_i16_invert.so");
   std::string globalsJSONPath = soPath + ".treebeard-globals.json";
@@ -210,6 +211,7 @@ int main() {
   RunSingleModelTest<int8_t>("covtype", runtimeWrapper);
   RunSingleModelTest<>("epsilon", runtimeWrapper);
   RunSingleModelTest<>("higgs", runtimeWrapper);
+  RunSingleModelTest<int8_t>("letters", runtimeWrapper);
   RunSingleModelTest<>("year_prediction_msd", runtimeWrapper);
 
   RunSingleModelTest<>("abalone", runtimeWrapper, true);
@@ -219,6 +221,7 @@ int main() {
   RunSingleModelTest<int8_t>("covtype", runtimeWrapper, true);
   RunSingleModelTest<>("epsilon", runtimeWrapper, true);
   RunSingleModelTest<>("higgs", runtimeWrapper, true);
+  RunSingleModelTest<int8_t>("letters", runtimeWrapper, true);
   RunSingleModelTest<>("year_prediction_msd", runtimeWrapper, true);
   
   return 0;
