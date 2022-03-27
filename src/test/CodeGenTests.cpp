@@ -457,7 +457,7 @@ bool Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(TestArgs_t& args, Fore
   decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   decisionforest::LowerEnsembleToMemrefs(args.context, module);
   decisionforest::ConvertNodeTypeToIndexType(args.context, module);
-  module->dump();
+  // module->dump();
   decisionforest::LowerToLLVM(args.context, module);
   // module->dump();
   // decisionforest::dumpLLVMIR(module);

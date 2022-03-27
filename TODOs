@@ -1,3 +1,10 @@
+MAJOR HOLES
+1. LightGBM support, random forest support
+2. Categorical features
+3. Parallelization 
+4. Exploring non-trivial schedules
+5. Not interleaving anything other than across inputs
+
 QUESTIONS
 1. Why aren't we getting performance with smaller tile sizes? Will a tile size of 16 help?
 2. Pipelining with prob tiling
