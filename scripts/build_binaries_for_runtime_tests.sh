@@ -37,7 +37,7 @@ do
    $BUILD_CMD
 done
 
-declare -a multiclassModelsArr=("covtype")
+declare -a multiclassModelsArr=("covtype" "letters")
 for i in "${multiclassModelsArr[@]}"
 do
    BUILD_CMD="./build_xgboost_so.sh -t $TILE_SIZE -b $BATCH_SIZE -m $i -o $BINARIES_DIR $SPARSE_FLAG $INVERT_FLAG -n 8"
