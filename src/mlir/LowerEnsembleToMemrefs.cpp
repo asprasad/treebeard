@@ -157,6 +157,13 @@ Value CreateZeroVectorIntConst(ConversionPatternRewriter &rewriter, Location loc
   return vectorValue;
 }
 
+Value CreateZeroVectorIndexConst(ConversionPatternRewriter &rewriter, Location location, int32_t tileSize) {
+  Value zeroConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
+  auto vectorType = VectorType::get(tileSize, rewriter.getIndexType());
+  auto vectorValue = rewriter.create<vector::BroadcastOp>(location, vectorType, zeroConst);
+  return vectorValue;
+}
+
 struct EnsembleConstantOpLowering: public ConversionPattern {
   EnsembleConstantOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::EnsembleConstantOp::getOperationName(), 1 /*benefit*/, ctx) {}
 
@@ -765,10 +772,24 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
 
     // Load the child index from the LUT
     auto lutValue = GetLUTFromTreeOperand(operands[0]);
+
+    if (decisionforest::InsertDebugHelpers) {
+      auto zeroVector = CreateZeroVectorIndexConst(rewriter, location, 2);
+      auto zeroConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
+      auto elem0Set = rewriter.create<vector::InsertElementOp>(location, tileShapeIndex, zeroVector, zeroConst);
+      auto oneConst = rewriter.create<arith::ConstantIndexOp>(location, 1);
+      auto elem1Set = rewriter.create<vector::InsertElementOp>(location, comparisonIndex, elem0Set, oneConst);
+      InsertPrintVectorOp(rewriter, location, 1, 64, 2, elem1Set);
+    }
+
     auto childIndexInt = rewriter.create<memref::LoadOp>(location, lutValue, ValueRange{tileShapeIndex, comparisonIndex});
     auto childIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(childIndexInt));
-
+    
     auto newIndex = rewriter.create<arith::AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(tileSizeTimesIndexPlus1), static_cast<Value>(childIndex));
+
+    if (decisionforest::InsertDebugHelpers) {
+      rewriter.create<decisionforest::PrintTreeNodeOp>(location, newIndex);
+    }
     
     // node = indexToNode(index)
     auto newNode = rewriter.create<decisionforest::IndexToNodeOp>(location, traverseTileOp.getResult().getType(), treeMemref, static_cast<Value>(newIndex));

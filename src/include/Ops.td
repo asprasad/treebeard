@@ -159,6 +159,7 @@ def ThresholdValueType : AnyTypeOf<[F16, F32, F64]>;
 def FeatureIndexType : AnyTypeOf<[I8, I16, I32, I64]>;
 def TileShapeType : AnyTypeOf<[I8, I16, I32, I64]>;
 def ChildIndexType : AnyTypeOf<[I8, I16, I32, I64]>;
+def LeafBitMaskType : AnyTypeOf<[I8, I16, I32, I64]>;
 
 def TreeConstantOp : DecisionForest_Op<"tree", [NoSideEffect]> {
   let summary = "Tree constant operation";
@@ -270,12 +271,20 @@ def LoadChildIndexOp : DecisionForest_Op<"loadChildIndex", [NoSideEffect]> {
   let results = (outs ChildIndexType);
 }
 
-def LoadTileShapeAndChildIndexOp : DecisionForest_Op<"loadTileShapeAndChildIndex", [NoSideEffect]> {
-  let summary = "Load the shape of a tree tile and the child index of a tree tile.";
-  let description = "Load the shape ID and child index from a tile in a tree memref. Takes a memref and an index into the memref and returns a vector of integers.";
+def LoadLeafBitMaskOp : DecisionForest_Op<"loadLeafBitMask", [NoSideEffect]> {
+  let summary = "Load the leaf bit mask of a tree tile.";
+  let description = "Load the leaf bit mask from a tile in a tree memref. Takes a memref and an index into the memref and returns an integer.";
   let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex);
 
-  let results = (outs VectorOf<[TileShapeType]>);
+  let results = (outs LeafBitMaskType);
+}
+
+def LoadChildAndLeafIndexOp : DecisionForest_Op<"loadChildAndLeafIndex", [NoSideEffect]> {
+  let summary = "Load the child index and leaf index of a tree tile.";
+  let description = "Load the child index and leaf index from a tile in a tree memref. Takes a memref and an index into the memref and returns a vector of integers.";
+  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex);
+
+  let results = (outs VectorOf<[ChildIndexType]>);
 }
 
 def InitTileOp : DecisionForest_Op<"initTile"> {
@@ -296,8 +305,19 @@ def InitSparseTileOp : DecisionForest_Op<"initSparseTile"> {
                        TileOfThresholdTypes:$thresholds,
                        TileOfFeatureIndices:$featureIndices,
                        TileShapeType:$tileShapeID,
-                       ChildIndexType:$childIndex
-                       );
+                       ChildIndexType:$childIndex);
+}
+
+def InitSparseTileWithLeafIndexOp : DecisionForest_Op<"initSparseTileWithLeafIndex"> {
+  let summary = "Initialize a sparse tree tile.";
+  let description = "Initialize a single tile in a tree memref. Takes a memref and an index along with the values to write into the tile.";
+  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, 
+                       Index:$tileIndex,
+                       TileOfThresholdTypes:$thresholds,
+                       TileOfFeatureIndices:$featureIndices,
+                       TileShapeType:$tileShapeID,
+                       VectorOf<[ChildIndexType]>:$childAndLeafIndices,
+                       LeafBitMaskType:$leafBitMask);
 }
 
 def IndexToNodeOp : DecisionForest_Op<"indexToNode", [NoSideEffect]> {

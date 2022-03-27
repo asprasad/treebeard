@@ -58,7 +58,9 @@ class ForestJSONReader
         std::list<std::vector<ThresholdType>> serializedThresholds;
         std::list<std::vector<FeatureIndexType>> serializedFetureIndices;
         std::list<std::vector<int32_t>> serializedTileShapeIDs;
+        std::list<std::vector<int32_t>> serializedLeafBitMasks;
         std::list<std::vector<int32_t>> serializedChildIndices;
+        std::list<std::vector<int32_t>> serializedLeafIndices;
         std::list<std::vector<ThresholdType>> serializedLeaves;
 
         // #TODO Tree-Beard#19 - Fix all the usages as well.
@@ -68,7 +70,8 @@ class ForestJSONReader
             return tileSize==that.tileSize && thresholdBitWidth==that.thresholdBitWidth && indexBitWidth==that.indexBitWidth &&
                    treeIndices==that.treeIndices && numberOfTiles==that.numberOfTiles && 
                    serializedThresholds==that.serializedThresholds && serializedFetureIndices == that.serializedFetureIndices &&
-                   serializedTileShapeIDs==that.serializedTileShapeIDs && serializedChildIndices==that.serializedChildIndices &&
+                   serializedTileShapeIDs==that.serializedTileShapeIDs && serializedLeafBitMasks == that.serializedLeafBitMasks &&
+                   serializedChildIndices==that.serializedChildIndices && serializedLeafIndices == that.serializedLeafIndices &&
                    serializedLeaves==that.serializedLeaves && classIDs==that.classIDs;
         };
     };
@@ -94,7 +97,10 @@ class ForestJSONReader
 
     void AddSingleTileSizeEntry(std::list<int32_t>& treeIndices, std::list<int32_t>& numTilesList, std::list<std::vector<ThresholdType>>& serializedThresholds, 
                             std::list<std::vector<FeatureIndexType>>& serializedFetureIndices, std::list<std::vector<int32_t>>& serializedTileShapeIDs,
-                            std::list<std::vector<int32_t>>& serializedChildIndices, std::list<std::vector<ThresholdType>>& serializedLeaves,
+                            std::list<std::vector<int32_t>> serializedLeafBitMasks, 
+                            std::list<std::vector<int32_t>>& serializedChildIndices,
+                            std::list<std::vector<int32_t>> serializedLeafIndices,
+                            std::list<std::vector<ThresholdType>>& serializedLeaves,
                             std::list<int8_t>& classIDs,
                             const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth);
 
@@ -112,6 +118,10 @@ public:
     void AddSingleSparseTree(int32_t treeIndex, int32_t numTiles, std::vector<ThresholdType>& serializedThresholds,
                              std::vector<FeatureIndexType>& serializedFetureIndices, std::vector<int32_t>& tileShapeIDs, 
                              std::vector<int32_t>& childIndices, std::vector<ThresholdType>& leaves,
+                             const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth, const int8_t classId);
+    void AddSingleSparseTree(int32_t treeIndex, int32_t numTiles, std::vector<ThresholdType>& serializedThresholds,
+                             std::vector<FeatureIndexType>& serializedFetureIndices, std::vector<int32_t>& tileShapeIDs, std::vector<int32_t>& leafBitMasks, 
+                             std::vector<int32_t>& childIndices, std::vector<int32_t>& leafIndices, std::vector<ThresholdType>& leaves,
                              const int32_t tileSize, const int32_t thresholdBitWidth, const int32_t indexBitWidth, const int8_t classId);
 
     //===----------------------------------------===/
@@ -178,6 +188,11 @@ public:
                         std::vector<ThresholdType>& thresholds, std::vector<FeatureIndexType>& featureIndices, std::vector<TileShapeType>& tileShapeIDs,
                         std::vector<ChildIndexType>& childIndices);
 
+    template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType, typename ChildIndexType, typename LeafBitMaskType>
+    void GetModelValues(int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize, 
+                        std::vector<ThresholdType>& thresholds, std::vector<FeatureIndexType>& featureIndices, 
+                        std::vector<TileShapeType>& tileShapeIDs, std::vector<LeafBitMaskType>& leafBitMask,
+                        std::vector<ChildIndexType>& childIndices, std::vector<ChildIndexType>& leafIndices);
 };
 
 template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType>
@@ -211,8 +226,33 @@ void ForestJSONReader::GetModelValues(int32_t tileSize, int32_t thresholdSize, i
         assert ((int32_t)tileShapeIDs.size() == GetTotalNumberOfTiles());
         assert (tileShapeIDs.size() == childIndices.size());
     }
-
 }
+
+template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType, typename ChildIndexType, typename LeafBitMaskType>
+void ForestJSONReader::GetModelValues(int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize, 
+                                      std::vector<ThresholdType>& thresholds, std::vector<FeatureIndexType>& featureIndices, 
+                                      std::vector<TileShapeType>& tileShapeIDs, std::vector<LeafBitMaskType>& leafBitMask,
+                                      std::vector<ChildIndexType>& childIndices, std::vector<ChildIndexType>& leafIndices) {
+    auto iter = FindEntry(tileSize, thresholdSize, featureIndexSize);
+    for (auto& thresholdVec : iter->serializedThresholds)
+        thresholds.insert(thresholds.end(), thresholdVec.begin(), thresholdVec.end());
+    for (auto& indexVec : iter->serializedFetureIndices)
+        featureIndices.insert(featureIndices.end(), indexVec.begin(), indexVec.end());
+    for (auto& tileShapeIDVec : iter->serializedTileShapeIDs)
+        tileShapeIDs.insert(tileShapeIDs.end(), tileShapeIDVec.begin(), tileShapeIDVec.end());
+    for (auto& leafBitMaskVec : iter->serializedLeafBitMasks)
+        leafBitMask.insert(leafBitMask.end(), leafBitMaskVec.begin(), leafBitMaskVec.end());
+    for (auto& childIndicesVec : iter->serializedChildIndices)
+        childIndices.insert(childIndices.end(), childIndicesVec.begin(), childIndicesVec.end());
+    for (auto& leafIndicesVec : iter->serializedLeafIndices)
+        leafIndices.insert(leafIndices.end(), leafIndicesVec.begin(), leafIndicesVec.end());
+
+    if (tileSize > 1) {
+        assert ((int32_t)tileShapeIDs.size() == GetTotalNumberOfTiles());
+        assert (tileShapeIDs.size() == childIndices.size());
+    }
+}
+
 void PersistDecisionForest(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType);
 void ClearPersistedForest();
 int32_t GetTotalNumberOfTiles();

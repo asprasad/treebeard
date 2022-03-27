@@ -74,10 +74,7 @@ std::vector<TileType> AddLeftHeavyTree(mlir::decisionforest::DecisionForest<>& f
   return expectedArray;
 }
 
-template<typename TileType>
-std::vector<TileType> AddRightHeavyTree(mlir::decisionforest::DecisionForest<>& forest) {
-  // Add tree one
-  auto& firstTree = forest.NewTree();
+inline void InitializeRightHeavyTree(decisionforest::DecisionTree<>& firstTree) {
   auto rootNode = firstTree.NewNode(0.5, 2);
   // Add right child
   {
@@ -103,15 +100,19 @@ std::vector<TileType> AddRightHeavyTree(mlir::decisionforest::DecisionForest<>& 
     firstTree.SetNodeParent(node, rootNode);
     firstTree.SetNodeLeftChild(rootNode, node);
   }
+}
+
+template<typename TileType>
+std::vector<TileType> AddRightHeavyTree(mlir::decisionforest::DecisionForest<>& forest) {
+  // Add tree one
+  auto& firstTree = forest.NewTree();
+  InitializeRightHeavyTree(firstTree);
   assert (firstTree.GetTreeDepth() == 3);
   std::vector<TileType> expectedArray{ {0.5, 2}, {0.85, -1}, {0.3, 4}, {0, -1}, {0, -1}, {0.15, -1}, {0.25, -1} };
   return expectedArray;
 }
 
-template<typename TileType>
-std::vector<TileType> AddBalancedTree(mlir::decisionforest::DecisionForest<>& forest) {
-  // Add tree one
-  auto& firstTree = forest.NewTree();
+inline void InitializeBalancedTree(decisionforest::DecisionTree<>& firstTree) {
   auto rootNode = firstTree.NewNode(0.5, 2);
   // Add right child
   {
@@ -149,6 +150,13 @@ std::vector<TileType> AddBalancedTree(mlir::decisionforest::DecisionForest<>& fo
       firstTree.SetNodeRightChild(subTreeRoot, rightChild);
     }
   }
+}
+
+template<typename TileType>
+std::vector<TileType> AddBalancedTree(mlir::decisionforest::DecisionForest<>& forest) {
+  // Add tree one
+  auto& firstTree = forest.NewTree();
+  InitializeBalancedTree(firstTree);
   assert (firstTree.GetTreeDepth() == 3);
   std::vector<TileType> expectedArray{ {0.5, 2}, {0.1, 1}, {0.3, 4}, {0.75, -1}, {0.85, -1}, {0.15, -1}, {0.25, -1} };
   return expectedArray;

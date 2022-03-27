@@ -23,8 +23,35 @@ Schedule::Schedule(int32_t batchSize, int32_t forestSize)
   m_treeIndex.m_containingLoop = &m_batchIndex;
 }
 
+void Schedule::WriteIndexToDOTFile(IndexVariable* index, std::ofstream& fout) {
+  auto parentIndex = index->m_containingLoop;
+  fout << "\t\"node" << reinterpret_cast<int64_t>(index) 
+       << "\" [ label = \"Id:" << index->m_name << ", Start:" << index->m_range.m_start 
+       << ", Stop:" << index->m_range.m_stop 
+       << ", Step:" << index->m_range.m_step << "\"];\n";
+  if (parentIndex != nullptr) {
+    fout << "\t\"node" << reinterpret_cast<int64_t>(parentIndex) << "\" -> \"node" << reinterpret_cast<int64_t>(index) << "\"\n";
+  }
+  for (auto child : index->m_containedLoops) {
+    WriteIndexToDOTFile(child, fout);
+  }
+}
+
+void Schedule::WriteToDOTFile(const std::string& dotFile) {
+  std::ofstream fout(dotFile);
+  fout << "digraph {\n";
+  WriteIndexToDOTFile(&m_rootIndex, fout);
+  fout << "}\n";
+}
+
 IndexVariable& Schedule::NewIndexVariable(const std::string& name) {
   auto indexVarPtr = new IndexVariable(name);
+  m_indexVars.push_back(indexVarPtr);
+  return *indexVarPtr;
+}
+
+IndexVariable& Schedule::NewIndexVariable(const IndexVariable& indexVar) {
+  auto indexVarPtr = new IndexVariable(indexVar);
   m_indexVars.push_back(indexVarPtr);
   return *indexVarPtr;
 }
@@ -72,13 +99,92 @@ Schedule& Schedule::Tile(IndexVariable& index, IndexVariable& outer, IndexVariab
   return *this;
 }
 
-Schedule& Schedule::Split(IndexVariable& index, IndexVariable& first, IndexVariable& second, int32_t splitIteration) {
+void Schedule::DuplicateIndexVariables(IndexVariable& index, std::map<IndexVariable*, std::pair<IndexVariable*, IndexVariable*>>& indexMap) {
+  assert (indexMap.find(&index) == indexMap.end());
+  assert (index.m_modifier == nullptr);
+
+  auto& indexCopy1 = NewIndexVariable(index); // TODO does this need to be unique?
+  auto& indexCopy2 = NewIndexVariable(index); // TODO does this need to be unique?
+  auto duplicateNode = new DuplicateIndexModifier(index, indexCopy1, indexCopy2);
+  index.m_modifier = duplicateNode;
+  indexCopy1.m_parentModifier = indexCopy2.m_parentModifier = duplicateNode;
+
+  indexCopy1.m_containingLoop = indexCopy2.m_containingLoop = nullptr;
+  indexCopy1.m_containedLoops.clear(); indexCopy2.m_containedLoops.clear();
+  
+  auto iter = indexMap.find(index.m_containingLoop);
+  // For the top level index being duplicated, we won't find
+  // an entry in the map for the containing loop. 
+  if (iter != indexMap.end()) {
+    // Here we are sure the containing loop was created by the Duplicate
+    // So we can just add the new index vars to the containedLoops list.
+    // TODO Does this maintain the order?
+    indexCopy1.m_containingLoop = iter->second.first;
+    indexCopy1.m_containingLoop->m_containedLoops.push_back(&indexCopy1);
+
+    indexCopy2.m_containingLoop = iter->second.second;
+    indexCopy2.m_containingLoop->m_containedLoops.push_back(&indexCopy2);
+  }
+  indexMap[&index] = std::make_pair(&indexCopy1, &indexCopy2);
+  
+  // Now recursively duplicate all the contained index variables
+  for (auto containedIndex : index.m_containedLoops) {
+    DuplicateIndexVariables(*containedIndex, indexMap);
+  }
+}
+
+Schedule& Schedule::Split(IndexVariable& index, IndexVariable& first, IndexVariable& second, 
+                          int32_t splitIteration, std::map<IndexVariable*, std::pair<IndexVariable*, IndexVariable*>>& indexMap) {
   // For simplicity, we enforce that index must currently be an inner most loop. We will need to replicate all the nested
   // loops when there are some. However, the problem is, how do we communicate these newly generated copies to the caller? Maybe a map?
-  assert (index.m_containedLoops.size() == 0 && "Specified loop must be the inner most loop");
-  first.m_containingLoop = index.m_containingLoop;
-  second.m_containingLoop = index.m_containingLoop;
+  
+  // Duplicate the source index variable into first and second
+  auto duplicateNode = new DuplicateIndexModifier(index, first, second);
+  assert (index.m_modifier==nullptr);
+  index.m_modifier = duplicateNode;
+  first.m_parentModifier = second.m_parentModifier = duplicateNode;
+  first.m_modifier = second.m_modifier = nullptr;
 
+  // Setup the limits
+  first.m_range = {index.m_range.m_start, splitIteration, index.m_range.m_step};
+  second.m_range = {splitIteration, index.m_range.m_stop, index.m_range.m_step};
+  
+  // Copy all fields from index into first and second
+  first.m_type = second.m_type = index.m_type;
+  first.m_pipelined = second.m_pipelined = index.m_pipelined;
+  first.m_simdized = second.m_simdized = index.m_simdized;
+  first.m_parallel = second.m_parallel = index.m_parallel;
+  first.m_unrolled = second.m_unrolled = index.m_unrolled;
+
+  // indexMap[&index] = std::make_pair(&first, &second);
+
+  // Change the containment of index's containing loop
+  if (index.m_containingLoop) {
+    auto &containedLoops = index.m_containingLoop->m_containedLoops;
+    auto iter = std::find(containedLoops.begin(), containedLoops.end(), &index);
+    assert (iter != containedLoops.end());
+    size_t indexPos = iter - containedLoops.begin();
+
+    containedLoops.at(indexPos) = &first;
+    containedLoops.insert(iter + 1, &second);
+
+    first.m_containingLoop = second.m_containingLoop = index.m_containingLoop;
+
+    index.m_containingLoop = nullptr;
+  }
+
+  // Duplicate all contained loops and add them to first and second's contained loops
+  for (auto containedLoop : index.m_containedLoops) {
+    DuplicateIndexVariables(*containedLoop, indexMap);
+    
+    assert (indexMap.find(containedLoop) != indexMap.end());
+    auto duplicateLoopPair = indexMap.find(containedLoop);
+    first.m_containedLoops.push_back(duplicateLoopPair->second.first);
+    duplicateLoopPair->second.first->m_containingLoop = &first;
+
+    second.m_containedLoops.push_back(duplicateLoopPair->second.second);
+    duplicateLoopPair->second.second->m_containingLoop = &second;
+  }
   return *this;
 }
 
@@ -171,6 +277,24 @@ void TileIndexModifier::Validate() {
 
   m_outerIndex->Validate();
   m_innerIndex->Validate();
+}
+
+void SplitIndexModifier::Validate() {
+  m_firstIndex->Validate();
+  m_secondIndex->Validate();
+}
+
+void SplitIndexModifier::Visit(IndexDerivationTreeVisitor& visitor) {
+  visitor.VisitSplitIndexModifier(*this);
+}
+
+void DuplicateIndexModifier::Validate() {
+  m_firstIndex->Validate();
+  m_secondIndex->Validate();
+}
+
+void DuplicateIndexModifier::Visit(IndexDerivationTreeVisitor& visitor) {
+  visitor.VisitDuplicateIndexModifier(*this);
 }
 
 } // decisionforest

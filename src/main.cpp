@@ -143,7 +143,7 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
   // TreeBeard::test::ScheduleManipulationFunctionWrapper scheduleManipulator(TreeBeard::test::TileTreeDimensionSchedule<10>);
   TreeBeard::CompilerOptions options(thresholdTypeWidth, returnTypeWidth, isReturnTypeFloat, featureIndexTypeWidth,
                                      nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, 
-                                     invertLoops ? &scheduleManipulator : nullptr);
+                                     false, invertLoops ? &scheduleManipulator : nullptr);
   TreeBeard::ConvertXGBoostJSONToLLVMIR(jsonFile, llvmIRFile, modelGlobalsJSONFile, options);
   return true;
 }
@@ -228,7 +228,8 @@ bool RunInferenceFromSO(int argc, char *argv[]) {
   }
   assert (jsonFile != "" && soPath != "");
   TreeBeard::CompilerOptions options(thresholdTypeWidth, returnTypeWidth, isReturnTypeFloat, featureIndexTypeWidth,
-                                     nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, nullptr);
+                                     nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, 
+                                     childIndexBitWidth, false, nullptr);
   TreeBeard::RunInferenceUsingSO(jsonFile, soPath, modelGlobalsJSONFile, inputCSVFile, options);
   return true;
 }
@@ -274,6 +275,48 @@ bool ComputeInferenceStatsIfNeeded(int argc, char *argv[]) {
   return true;
 }
 
+bool ComputeProbabilityProfileIfNeeded(int argc, char *argv[]) {
+  bool computeProbabilityProfile = false;
+  for (int32_t i=0 ; i<argc ; ++i)
+    if (std::string(argv[i]).find(std::string("--probabilityProfile")) != std::string::npos) {
+      computeProbabilityProfile = true;
+      break;
+    }
+  if (!computeProbabilityProfile)
+    return false;
+
+  std::string modelName, csvPath, outputCSVPath;
+  int32_t numRows = -1;
+  for (int32_t i=0 ; i<argc ; ) {
+    if (ContainsString(argv[i], "-model")) {
+      assert (modelName == "");
+      assert (i+1 < argc);
+      modelName = argv[i+1];
+      i += 2;
+    }
+    else if (ContainsString(argv[i], "-csv")) {
+      assert (csvPath == "");
+      assert (i+1 < argc);
+      csvPath = argv[i+1];
+      i += 2;
+    }
+    else if (ContainsString(argv[i], "-o")) {
+      assert (outputCSVPath == "");
+      assert (i+1 < argc);
+      outputCSVPath = argv[i+1];
+      i += 2;
+    }
+    else if (ContainsString(argv[i], "-n")) {
+      ReadIntegerFromCommandLineArgument(argc, argv, i, numRows);
+    }
+    else
+      ++i;
+  }
+  assert(modelName != "" && csvPath != "" && outputCSVPath != "");
+  TreeBeard::Profile::ComputeForestProbabilityProfileForXGBoostModel(modelName, csvPath, outputCSVPath, numRows);
+  return true;
+}
+
 int main(int argc, char *argv[]) {
   SetInsertDebugHelpers(argc, argv);
   SetInsertPrintVectors(argc, argv);
@@ -286,6 +329,8 @@ int main(int argc, char *argv[]) {
   else if (RunInferenceFromSO(argc, argv))
     return 0;
   else if (ComputeInferenceStatsIfNeeded(argc, argv))
+    return 0;
+  else if (ComputeProbabilityProfileIfNeeded(argc, argv))
     return 0;
   else {  
     std::cout << "TreeBeard: A compiler for gradient boosting tree inference.\n";

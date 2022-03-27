@@ -24,6 +24,16 @@ public:
         assert (fin);
         fin >> m_json;
     }
+    
+    XGBoostJSONParser(mlir::MLIRContext& context, const std::string& filename, 
+                     const std::string& modelGlobalsJSONFilePath, const std::string& statsProfileCSV, int32_t batchSize)
+        :ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(filename, modelGlobalsJSONFilePath, context, batchSize, INITIAL_VALUE, statsProfileCSV)
+    {
+        std::ifstream fin(filename);
+        assert (fin);
+        fin >> m_json;
+    }
+
     void Parse() override;
 };
 /*

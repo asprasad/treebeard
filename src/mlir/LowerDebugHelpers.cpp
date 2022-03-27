@@ -229,6 +229,20 @@ struct PrintInputRowOpLowering: public ConversionPattern {
     return getOrInsertFunction(functionName, llvmFnType, rewriter, module);
   }
 
+  static FlatSymbolRefAttr getOrInsertPrintRowFloat(PatternRewriter &rewriter,
+                                                    ModuleOp module) {
+    auto *context = module.getContext();
+    std::string functionName = "PrintInputRow_Float";
+
+    // Create a function declaration for PrintInputRow, the signature is:
+    //   * `i64 (TileType*, i64, i64)`
+    auto llvmI64Ty = IntegerType::get(context, 64);
+    auto llvmF64PtrTy = LLVM::LLVMPointerType::get(FloatType::getF32(context));
+    auto llvmFnType = LLVM::LLVMFunctionType::get(llvmI64Ty, {llvmF64PtrTy, llvmI64Ty, llvmI64Ty});
+
+    return getOrInsertFunction(functionName, llvmFnType, rewriter, module);
+  }
+
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     assert (operands.size() == 2);
@@ -261,10 +275,19 @@ struct PrintInputRowOpLowering: public ConversionPattern {
     auto extractMemrefLength = rewriter.create<LLVM::ExtractValueOp>(location, indexType, operands[kRowMemrefOperandNum],
                                                                      rewriter.getI64ArrayAttr({ kLengthIndexInMemrefStruct, 1 }));
 
-    auto printFunctionRef = getOrInsertPrintRow(rewriter, parentModule);
-
-    // int64_t PrintInputRow(double *treeBuf, int64_t length, int64_t rowIndex)
-    rewriter.create<CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>({ elementPtr, extractMemrefLength, indexVal }));
+    if (alignedPtrType.getElementType().isF64()) {
+      auto printFunctionRef = getOrInsertPrintRow(rewriter, parentModule);
+      // int64_t PrintInputRow(double *treeBuf, int64_t length, int64_t rowIndex)
+      rewriter.create<CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>({ elementPtr, extractMemrefLength, indexVal }));
+    }
+    else if (alignedPtrType.getElementType().isF32()) {
+      auto printFunctionRef = getOrInsertPrintRowFloat(rewriter, parentModule);
+      // int64_t PrintInputRow_Float(float *treeBuf, int64_t length, int64_t rowIndex)
+      rewriter.create<CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>({ elementPtr, extractMemrefLength, indexVal }));
+    }
+    else {
+      assert (false && "Unsupported type");
+    }
     rewriter.eraseOp(op);
     return mlir::success();
   }

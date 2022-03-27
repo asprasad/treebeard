@@ -17,6 +17,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include <queue>
 #include <cassert>
+#include "TiledTree.h"
 
 using namespace mlir;
 namespace {
@@ -31,9 +32,11 @@ T AssertOpIsOfType(Operation* operation) {
 struct TileEnsembleConstants : public RewritePattern {
   int32_t m_tileSize;
   Type m_tileShapeType;
-  TileEnsembleConstants(MLIRContext *ctx, int32_t tileSize, Type tileShapeType) 
+  bool m_makeAllLeavesSameDepth;
+
+  TileEnsembleConstants(MLIRContext *ctx, int32_t tileSize, Type tileShapeType, bool makeAllLeavesSameDepth) 
     : RewritePattern(mlir::decisionforest::EnsembleConstantOp::getOperationName(), 1 /*benefit*/, ctx),
-      m_tileSize(tileSize), m_tileShapeType(tileShapeType)
+      m_tileSize(tileSize), m_tileShapeType(tileShapeType), m_makeAllLeavesSameDepth(makeAllLeavesSameDepth)
   {}
 
   LogicalResult matchAndRewrite(Operation *op, PatternRewriter &rewriter) const final {
@@ -54,12 +57,18 @@ struct TileEnsembleConstants : public RewritePattern {
     assert (tilingDescriptor.MaxTileSize() == 1 && "Forest shouldn't already be tiled!");
     std::vector<Type> treeTypes;
     for (int64_t i=0 ; i<(int64_t)forest.NumTrees() ; ++i) {
+      forest.GetTree(i).InitializeInternalNodeHitCounts();
       TileSingleDecisionTree(forest.GetTree(i));
       auto treeType = forestType.getTreeType(i).cast<decisionforest::TreeType>();
       auto newTreeType = decisionforest::TreeType::get(treeType.getResultType(), forest.GetTree(i).TilingDescriptor().MaxTileSize(), 
                                                        treeType.getThresholdType(), treeType.getFeatureIndexType(), m_tileShapeType, 
                                                        treeType.isSparseRepresentation(), treeType.getChildIndexType());
       treeTypes.push_back(newTreeType);
+
+      if (m_makeAllLeavesSameDepth) {
+        forest.GetTree(i).GetTiledTree()->MakeAllLeavesSameDepth();
+      }
+
     }
     // Tile this forest uniformly
     auto newForestType = decisionforest::TreeEnsembleType::get(forestType.getResultType(), forestType.getNumberOfTrees(),
@@ -130,7 +139,9 @@ struct TileEnsembleConstants : public RewritePattern {
 struct UniformTilingPass : public PassWrapper<UniformTilingPass, FunctionPass> {
   int32_t m_tileSize;
   int32_t m_tileShapeBitWidth;
-  UniformTilingPass(int32_t tileSize, int32_t tileShapeBitWidth) : m_tileSize(tileSize), m_tileShapeBitWidth(tileShapeBitWidth)
+  bool m_makeAllLeavesSameDepth;
+  UniformTilingPass(int32_t tileSize, int32_t tileShapeBitWidth, bool makeAllLeavesSameDepth) 
+    : m_tileSize(tileSize), m_tileShapeBitWidth(tileShapeBitWidth), m_makeAllLeavesSameDepth(makeAllLeavesSameDepth)
   { }
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect, math::MathDialect>();
@@ -138,7 +149,7 @@ struct UniformTilingPass : public PassWrapper<UniformTilingPass, FunctionPass> {
   void runOnFunction() final {
     RewritePatternSet patterns(&getContext());
     auto tileShapeType = IntegerType::get(&getContext(), m_tileShapeBitWidth);
-    patterns.add<TileEnsembleConstants>(&getContext(), m_tileSize, tileShapeType);
+    patterns.add<TileEnsembleConstants>(&getContext(), m_tileSize, tileShapeType, m_makeAllLeavesSameDepth);
 
     if (failed(applyPatternsAndFoldGreedily(getFunction(), std::move(patterns))))
         signalPassFailure();
@@ -150,10 +161,10 @@ namespace mlir
 {
 namespace decisionforest
 {
-void DoUniformTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth) {
+void DoUniformTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth, bool makeAllLeavesSameDepth) {
   mlir::PassManager pm(&context);
   mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
-  optPM.addPass(std::make_unique<UniformTilingPass>(tileSize, tileShapeBitWidth));
+  optPM.addPass(std::make_unique<UniformTilingPass>(tileSize, tileShapeBitWidth, makeAllLeavesSameDepth));
 
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to mid level IR failed.\n";

@@ -5,3 +5,4 @@ runtime_test_binaries/
 *.so
 *.treebeard-globals.json
 *.pyc
+*.stats.csv
