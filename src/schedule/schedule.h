@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 #include <list>
+#include <map>
+#include <fstream>
 
 namespace mlir
 {
@@ -57,6 +59,22 @@ public:
   IndexVariable& FirstIndex() { return *m_firstIndex; }
   IndexVariable& SecondIndex() { return *m_secondIndex; }
   int32_t SplitIteration() { return m_splitIteration; }
+  void Validate() override;
+  void Visit(IndexDerivationTreeVisitor& visitor) override;
+};
+
+class DuplicateIndexModifier : public IndexModifier {
+  IndexVariable* m_sourceIndex;
+  IndexVariable* m_firstIndex;
+  IndexVariable* m_secondIndex;
+public:
+  DuplicateIndexModifier(IndexVariable& source, IndexVariable& first, IndexVariable& second)
+    : m_sourceIndex(&source), m_firstIndex(&first), m_secondIndex(&second) { }
+  IndexVariable& SourceIndex() { return *m_sourceIndex; }
+  IndexVariable& FirstIndex() { return *m_firstIndex; }
+  IndexVariable& SecondIndex() { return *m_secondIndex; }
+  void Validate() override;
+  void Visit(IndexDerivationTreeVisitor& visitor) override;
 };
 
 class IndexVariable : public IndexDerivationTreeNode {
@@ -87,10 +105,10 @@ protected:
   // Index variables can only be constructed through the Schedule object
   IndexVariable(const std::string& name)
     :m_name(name), m_containingLoop(nullptr), m_parentModifier(nullptr), m_modifier(nullptr)
-  { }
+  { }  
 
   // Index variables can't be copied
-  IndexVariable(const IndexVariable& other) = delete;
+  IndexVariable(const IndexVariable& other) = default;
 public:
   IndexVariable* GetContainingLoop() const { return m_containingLoop; }
   const std::vector<IndexVariable*>& GetContainedLoops() const { return m_containedLoops; }
@@ -122,13 +140,21 @@ class Schedule {
   int32_t m_forestSize;
 
   Schedule(const Schedule&) = delete;
+  void DuplicateIndexVariables(IndexVariable& index, std::map<IndexVariable*, std::pair<IndexVariable*, IndexVariable*>>& indexMap);
+  void WriteIndexToDOTFile(IndexVariable* index, std::ofstream& fout);
+
 public:
+  typedef std::map<IndexVariable*, std::pair<IndexVariable*, IndexVariable*>> IndexVariableMapType;
   Schedule(int32_t batchSize, int32_t forestSize); 
+  
   IndexVariable& NewIndexVariable(const std::string& name);
+  IndexVariable& NewIndexVariable(const IndexVariable& indexVar);
+
   // Loop Modifiers
   Schedule& Tile(IndexVariable& index, IndexVariable& outer, IndexVariable& inner, int32_t tileSize);
   Schedule& Reorder(const std::vector<IndexVariable*>& indices);
-  Schedule& Split(IndexVariable& index, IndexVariable& first, IndexVariable& second, int32_t splitIteration);
+  Schedule& Split(IndexVariable& index, IndexVariable& first, IndexVariable& second, 
+                  int32_t splitIteration, std::map<IndexVariable*, std::pair<IndexVariable*, IndexVariable*>>& indexMap);
   
   // Optimizations
   Schedule& Pipeline(IndexVariable& index);
@@ -140,6 +166,10 @@ public:
   IndexVariable& GetBatchIndex() { return m_batchIndex; }
   IndexVariable& GetTreeIndex() { return m_treeIndex; }
   std::string PrintToString();
+  int32_t GetBatchSize() const { return m_batchSize; }
+  int32_t GetForestSize() const { return m_forestSize; }
+
+  void WriteToDOTFile(const std::string& dotFile);
 
   void Finalize();
 };
@@ -148,6 +178,8 @@ class IndexDerivationTreeVisitor {
 public:
   virtual void VisitTileIndexModifier(TileIndexModifier& tileIndexModifier) = 0;
   virtual void VisitIndexVariable(IndexVariable& indexVar) = 0;
+  virtual void VisitSplitIndexModifier(SplitIndexModifier& indexModifier) = 0;
+  virtual void VisitDuplicateIndexModifier(DuplicateIndexModifier& indexModifier) = 0;
 };
 
 class ScheduleManipulator {

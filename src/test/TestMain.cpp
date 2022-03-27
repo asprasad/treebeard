@@ -369,6 +369,24 @@ bool Test_TileSize8_Higgs_TestInputs_RemoveExtraHop(TestArgs_t &args);
 bool Test_TileSize8_Year_TestInputs_RemoveExtraHop(TestArgs_t &args);
 bool Test_TileSize8_CovType_TestInputs_RemoveExtraHop(TestArgs_t &args);
 
+// Split schedule tests
+bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_SplitTreeLoop(TestArgs_t& args);
+bool Test_TileSize8_Abalone_TestInputs_SplitTreeLoopSchedule(TestArgs_t &args);
+bool Test_TileSize8_Abalone_TestInputs_SplitTreeLoopSchedule(TestArgs_t &args);
+bool Test_TileSize8_AirlineOHE_TestInputs_SplitTreeLoopSchedule(TestArgs_t &args);
+bool Test_TileSize8_Airline_TestInputs_SplitTreeLoopSchedule(TestArgs_t &args);
+bool Test_TileSize8_Bosch_TestInputs_SplitTreeLoopSchedule(TestArgs_t &args);
+bool Test_TileSize8_Epsilon_TestInputs_SplitTreeLoopSchedule(TestArgs_t &args);
+bool Test_TileSize8_Higgs_TestInputs_SplitTreeLoopSchedule(TestArgs_t &args);
+bool Test_TileSize8_Year_TestInputs_SplitTreeLoopSchedule(TestArgs_t &args);
+bool Test_TileSize8_Abalone_TestInputs_SwapAndSplitTreeIndex(TestArgs_t &args);
+bool Test_TileSize8_AirlineOHE_TestInputs_SwapAndSplitTreeIndex(TestArgs_t &args);
+bool Test_TileSize8_Airline_TestInputs_SwapAndSplitTreeIndex(TestArgs_t &args);
+bool Test_TileSize8_Bosch_TestInputs_SwapAndSplitTreeIndex(TestArgs_t &args);
+bool Test_TileSize8_Epsilon_TestInputs_SwapAndSplitTreeIndex(TestArgs_t &args);
+bool Test_TileSize8_Higgs_TestInputs_SwapAndSplitTreeIndex(TestArgs_t &args);
+bool Test_TileSize8_Year_TestInputs_SwapAndSplitTreeIndex(TestArgs_t &args);
+
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
     vec[i] = (double)rand()/RAND_MAX;
@@ -927,7 +945,27 @@ bool Test_SparseSerialization_BalancedTree_TileSize2(TestArgs_t& args) {
   return true;
 }
 
-// #define RUN_ALL_TESTS
+bool Test_SplitSchedule(TestArgs_t& args) {
+  mlir::decisionforest::Schedule schedule(64, 1000);
+  auto& t1 = schedule.NewIndexVariable("t1");
+  auto& t2 = schedule.NewIndexVariable("t2");
+  auto& t21 = schedule.NewIndexVariable("t21");
+  auto& t22 = schedule.NewIndexVariable("t22");
+  schedule.Tile(schedule.GetTreeIndex(), t1, t2, 4);
+  decisionforest::Schedule::IndexVariableMapType indexMap, indexMap1;
+  schedule.Split(t2, t21, t22, 2, indexMap1);
+  auto& b1 = schedule.NewIndexVariable("b1");
+  auto& b2 = schedule.NewIndexVariable("b2");
+  auto& b21 = schedule.NewIndexVariable("b21");
+  auto& b22 = schedule.NewIndexVariable("b22");
+  schedule.Split(schedule.GetBatchIndex(), b1, b2, 32, indexMap);
+  schedule.Split(b2, b21, b22, 48, indexMap);
+  std::string dotFile = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/split_schedule.dot";
+  schedule.WriteToDOTFile(dotFile);
+  return true;
+}
+
+#define RUN_ALL_TESTS
 
 #ifdef RUN_ALL_TESTS
 TestDescriptor testList[] = {
@@ -1231,6 +1269,7 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_SparseTileSize8_Epsilon_TestInputs_TiledSchedule),
   TEST_LIST_ENTRY(Test_SparseTileSize8_Higgs_TestInputs_TiledSchedule),
   TEST_LIST_ENTRY(Test_SparseTileSize8_Year_TestInputs_TiledSchedule),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Letters_TiledSchedule),
 
   // Stats tests
   TEST_LIST_ENTRY(Test_AbaloneStatGenerationAndReading),
@@ -1277,12 +1316,25 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_RemoveExtraHop),
   TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_RemoveExtraHop),
   TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_RemoveExtraHop),
+
+  // Split Schedule
+  TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_SwapAndSplitTreeIndex),
+  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_SwapAndSplitTreeIndex),
+  TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_SwapAndSplitTreeIndex),
+  TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_SwapAndSplitTreeIndex),
+  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_SwapAndSplitTreeIndex),
+  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_SwapAndSplitTreeIndex),
+  TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_SplitTreeLoopSchedule),
+  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_SplitTreeLoopSchedule),
+  TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_SplitTreeLoopSchedule),
+  TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_SplitTreeLoopSchedule),
+  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_SplitTreeLoopSchedule),
+  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_SplitTreeLoopSchedule),
 };
 
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_SparseTileSize8_Letters_TiledSchedule),
   // TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_RemoveExtraHop),
   // TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_RemoveExtraHop),
   // TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_RemoveExtraHop),

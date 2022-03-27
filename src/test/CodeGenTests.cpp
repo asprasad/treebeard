@@ -438,7 +438,8 @@ std::vector<std::vector<double>> GetBatchSize1Data();
 template<typename ThresholdType=double, typename ReturnType=double, typename FeatureIndexType=int32_t,
          typename NodeIndexType=int32_t, typename InputElementType=double, typename TileShapeType=int32_t>
 bool Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(TestArgs_t& args, ForestConstructor_t forestConstructor, 
-                                                          int32_t tileSize, const std::vector<std::vector<int32_t>>& tileIDsVec, int32_t childIndexBitWidth) {
+                                                          int32_t tileSize, const std::vector<std::vector<int32_t>>& tileIDsVec, int32_t childIndexBitWidth,
+                                                          ScheduleManipulator_t scheduleManipulator=nullptr) {
   std::vector<decisionforest::TreeTilingDescriptor> tilingDescriptors;
   for (auto& tileIDs : tileIDsVec) {
     decisionforest::TreeTilingDescriptor tilingDescriptor(tileSize, 5, tileIDs, decisionforest::TilingType::kRegular);
@@ -451,10 +452,12 @@ bool Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(TestArgs_t& args, Fore
   irGenerator.Parse();
   irGenerator.SetChildIndexBitWidth(childIndexBitWidth);
   auto module = irGenerator.GetEvaluationFunction();
+  if (scheduleManipulator)
+    scheduleManipulator(irGenerator.GetSchedule());
   decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   decisionforest::LowerEnsembleToMemrefs(args.context, module);
   decisionforest::ConvertNodeTypeToIndexType(args.context, module);
-  // module->dump();
+  module->dump();
   decisionforest::LowerToLLVM(args.context, module);
   // module->dump();
   // decisionforest::dumpLLVMIR(module);
@@ -522,48 +525,50 @@ bool Test_TiledCodeGeneration_BalancedTree_BatchSize1(TestArgs_t& args) {
 }
 
 template<typename TileShapeType>
-bool Test_TiledCodeGeneration_ForestConstructor_BatchSize1(TestArgs_t& args, ForestConstructor_t forestConstructor, const std::vector<std::vector<int32_t>>& tileIDs, int32_t childIndexBitWidth=1) {
+bool Test_TiledCodeGeneration_ForestConstructor_BatchSize1(TestArgs_t& args, ForestConstructor_t forestConstructor, 
+                                                           const std::vector<std::vector<int32_t>>& tileIDs, int32_t childIndexBitWidth=1,
+                                                           ScheduleManipulator_t scheduleManipulator=nullptr) {
   {
     using FPType = double;
     using IntType = int32_t;
-    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 2, tileIDs, childIndexBitWidth)));
-    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 3, tileIDs, childIndexBitWidth)));
-    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 4, tileIDs, childIndexBitWidth)));
+    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 2, tileIDs, childIndexBitWidth, scheduleManipulator)));
+    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 3, tileIDs, childIndexBitWidth, scheduleManipulator)));
+    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 4, tileIDs, childIndexBitWidth, scheduleManipulator)));
   }  
   {
     using FPType = double;
     using IntType = int16_t;
-    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 2, tileIDs, childIndexBitWidth)));
-    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 3, tileIDs, childIndexBitWidth)));
-    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 4, tileIDs, childIndexBitWidth)));
+    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 2, tileIDs, childIndexBitWidth, scheduleManipulator)));
+    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 3, tileIDs, childIndexBitWidth, scheduleManipulator)));
+    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 4, tileIDs, childIndexBitWidth, scheduleManipulator)));
   }  
   {
     using FPType = double;
     using IntType = int8_t;
-    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 2, tileIDs, childIndexBitWidth)));
-    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 3, tileIDs, childIndexBitWidth)));
-    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 4, tileIDs, childIndexBitWidth)));
+    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 2, tileIDs, childIndexBitWidth, scheduleManipulator)));
+    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 3, tileIDs, childIndexBitWidth, scheduleManipulator)));
+    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 4, tileIDs, childIndexBitWidth, scheduleManipulator)));
   }
   {
     using FPType = float;
     using IntType = int32_t;
-    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 2, tileIDs, childIndexBitWidth)));
-    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 3, tileIDs, childIndexBitWidth)));
-    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 4, tileIDs, childIndexBitWidth)));
+    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 2, tileIDs, childIndexBitWidth, scheduleManipulator)));
+    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 3, tileIDs, childIndexBitWidth, scheduleManipulator)));
+    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 4, tileIDs, childIndexBitWidth, scheduleManipulator)));
   }  
   {
     using FPType = float;
     using IntType = int16_t;
-    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 2, tileIDs, childIndexBitWidth)));
-    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 3, tileIDs, childIndexBitWidth)));
-    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 4, tileIDs, childIndexBitWidth)));
+    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 2, tileIDs, childIndexBitWidth, scheduleManipulator)));
+    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 3, tileIDs, childIndexBitWidth, scheduleManipulator)));
+    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 4, tileIDs, childIndexBitWidth, scheduleManipulator)));
   }  
   {
     using FPType = float;
     using IntType = int8_t;
-    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 2, tileIDs, childIndexBitWidth)));
-    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 3, tileIDs, childIndexBitWidth)));
-    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 4, tileIDs, childIndexBitWidth)));
+    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 2, tileIDs, childIndexBitWidth, scheduleManipulator)));
+    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 3, tileIDs, childIndexBitWidth, scheduleManipulator)));
+    Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType, TileShapeType>(args, forestConstructor, 4, tileIDs, childIndexBitWidth, scheduleManipulator)));
   }
   return true;
 }
@@ -572,6 +577,13 @@ bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1(TestArgs_t& args) {
   std::vector<std::vector<int32_t>> tileIDs = { { 0, 0, 1, 2, 3 }, { 0, 0, 1, 2, 3 } };
   auto forestConstructor = AddRightAndLeftHeavyTrees<DoubleInt32Tile>;
   Test_ASSERT((Test_TiledCodeGeneration_ForestConstructor_BatchSize1<int32_t>(args, forestConstructor, tileIDs)));
+  return true;
+}
+
+bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_SplitTreeLoop(TestArgs_t& args) {
+  std::vector<std::vector<int32_t>> tileIDs = { { 0, 0, 1, 2, 3 }, { 0, 0, 1, 2, 3 } };
+  auto forestConstructor = AddRightAndLeftHeavyTrees<DoubleInt32Tile>;
+  Test_ASSERT((Test_TiledCodeGeneration_ForestConstructor_BatchSize1<int32_t>(args, forestConstructor, tileIDs, 1, SplitTreeDimensionSchedule<1>)));
   return true;
 }
 
