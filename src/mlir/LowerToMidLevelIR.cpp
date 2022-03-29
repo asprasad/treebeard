@@ -701,10 +701,20 @@ struct PredictForestOpLowering: public ConversionPattern {
     auto startConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_start);
     auto stepConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_step);
 
-    auto loop = rewriter.create<scf::ForOp>(location, startConst, stopConst, stepConst);
-  
-    rewriter.setInsertionPointToStart(loop.getBody());
-    auto i = loop.getInductionVar();
+    Value i;
+    mlir::Operation* loopOp = nullptr;
+    if (indexVar.Parallel()) {
+      auto loop = rewriter.create<scf::ParallelOp>(location, ValueRange{startConst}, ValueRange{stopConst}, ValueRange{stepConst});
+      rewriter.setInsertionPointToStart(loop.getBody());
+      loopOp = loop;
+      i = loop.getInductionVars()[0];
+    }
+    else {
+      auto loop = rewriter.create<scf::ForOp>(location, startConst, stopConst, stepConst);
+      rewriter.setInsertionPointToStart(loop.getBody());
+      loopOp = loop;
+      i = loop.getInductionVar();
+    }
 
     if (indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kBatch)
       batchIndices.push_back(i);
@@ -716,7 +726,7 @@ struct PredictForestOpLowering: public ConversionPattern {
     for (auto nestedIndexVar : indexVar.GetContainedLoops()) {
       GenerateLoop(rewriter, location, *nestedIndexVar, batchIndices, treeIndices, state);
     }
-    rewriter.setInsertionPointAfter(loop);
+    rewriter.setInsertionPointAfter(loopOp);
   }    
   
   void GenerateLoop(
