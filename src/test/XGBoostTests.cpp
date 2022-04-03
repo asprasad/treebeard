@@ -2179,8 +2179,8 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
   }
 
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
-  mlir::decisionforest::DoProbabilityBasedTiling(args.context, module, options.tileSize, options.tileShapeBitWidth);
-  // mlir::decisionforest::DoHybridTiling(args.context, module, options.tileSize, options.tileShapeBitWidth);
+  // mlir::decisionforest::DoProbabilityBasedTiling(args.context, module, options.tileSize, options.tileShapeBitWidth);
+  mlir::decisionforest::DoHybridTiling(args.context, module, options.tileSize, options.tileShapeBitWidth);
   mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module);
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
