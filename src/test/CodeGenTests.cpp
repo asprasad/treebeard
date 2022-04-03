@@ -18,6 +18,7 @@
 #include "TreeTilingDescriptor.h"
 #include "TreeTilingUtils.h"
 #include "ForestTestUtils.h"
+#include "TiledTree.h"
 
 using namespace mlir;
 
@@ -321,6 +322,8 @@ class FixedTiledTreeIRConstructor : public TreeBeard::ModelJSONParser<ThresholdT
   ForestConstructor_t m_constructForest;
   std::vector<decisionforest::TreeTilingDescriptor>& m_tilingDescriptors;
   int32_t m_tileShapeBitWidth;
+  bool m_probabilisticTiled;
+  int32_t m_levelsToUnroll;
 
   decisionforest::TreeEnsembleType GetEnsembleType() override {
     assert (this->m_forest->NumTrees() == m_tilingDescriptors.size());
@@ -342,11 +345,13 @@ class FixedTiledTreeIRConstructor : public TreeBeard::ModelJSONParser<ThresholdT
   }
 public:
   FixedTiledTreeIRConstructor(mlir::MLIRContext& context, int32_t batchSize, ForestConstructor_t constructForest,
-                              std::vector<decisionforest::TreeTilingDescriptor>& tilingDescriptors, int32_t tileShapeBitWidth)
+                              std::vector<decisionforest::TreeTilingDescriptor>& tilingDescriptors, int32_t tileShapeBitWidth,
+                              bool probTiling=false, int32_t levelsToUnroll=-1)
     : TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(GetGlobalJSONNameForTests(),
                                 TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>::ModelGlobalJSONFilePathFromJSONFilePath(GetGlobalJSONNameForTests()),
                                 context, batchSize),
-      m_constructForest(constructForest), m_tilingDescriptors(tilingDescriptors), m_tileShapeBitWidth(tileShapeBitWidth)
+      m_constructForest(constructForest), m_tilingDescriptors(tilingDescriptors), m_tileShapeBitWidth(tileShapeBitWidth),
+      m_probabilisticTiled(probTiling), m_levelsToUnroll(levelsToUnroll)
   {
     // Only for tiled scenarios
     assert (m_tilingDescriptors.at(0).MaxTileSize() > 1);
@@ -357,6 +362,10 @@ public:
     assert (m_tilingDescriptors.size() == this->m_forest->NumTrees());
     for (size_t i=0 ; i<this->m_forest->NumTrees() ; ++i) {
       this->m_forest->GetTree(i).SetTilingDescriptor(m_tilingDescriptors[i]);
+      if (m_probabilisticTiled) {
+        this->m_forest->GetTree(i).GetTiledTree()->SetProbabilisticallyTiled(m_probabilisticTiled);
+        this->m_forest->GetTree(i).GetTiledTree()->SetLevelsToUnroll(m_levelsToUnroll);
+      }
     }
     this->m_forest->SetPredictionTransformation(decisionforest::PredictionTransformation::kIdentity);
   }
@@ -439,7 +448,7 @@ template<typename ThresholdType=double, typename ReturnType=double, typename Fea
          typename NodeIndexType=int32_t, typename InputElementType=double, typename TileShapeType=int32_t>
 bool Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(TestArgs_t& args, ForestConstructor_t forestConstructor, 
                                                           int32_t tileSize, const std::vector<std::vector<int32_t>>& tileIDsVec, int32_t childIndexBitWidth,
-                                                          ScheduleManipulator_t scheduleManipulator=nullptr) {
+                                                          ScheduleManipulator_t scheduleManipulator=nullptr, bool probabilisticTiling=false, int32_t levelsToUnroll=-1) {
   std::vector<decisionforest::TreeTilingDescriptor> tilingDescriptors;
   for (auto& tileIDs : tileIDsVec) {
     decisionforest::TreeTilingDescriptor tilingDescriptor(tileSize, 5, tileIDs, decisionforest::TilingType::kRegular);
@@ -455,10 +464,12 @@ bool Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(TestArgs_t& args, Fore
   if (scheduleManipulator)
     scheduleManipulator(irGenerator.GetSchedule());
   decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  // module->dump();
   decisionforest::LowerEnsembleToMemrefs(args.context, module);
   decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
   decisionforest::LowerToLLVM(args.context, module);
+  
   // module->dump();
   // decisionforest::dumpLLVMIR(module);
   decisionforest::InferenceRunner inferenceRunner(irGenerator.GetModelGlobalsJSONFilePath(), module, tileSize, sizeof(ThresholdType)*8, sizeof(FeatureIndexType)*8);
@@ -1277,6 +1288,24 @@ bool Test_RemoveExtraHop_BalancedTree_TileSize2(TestArgs_t& args) {
   using IntType = int32_t;
   Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 2, 
                                                                                                               {tileIDs_TileSize2}, childIndexBitWidth)));
+  return true;
+}
+
+bool Test_WalkPeeling_BalancedTree_TileSize2(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto forestConstructor = AddBalancedTree<DoubleInt32Tile>;
+  std::vector<int32_t> tileIDs_TileSize2 = { 0, 0, 1, 2, 5, 3, 4 };
+  int32_t childIndexBitWidth = 16;
+
+  using FPType = float;
+  using IntType = int32_t;
+  Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 2, 
+                                                                                                              {tileIDs_TileSize2}, childIndexBitWidth, [](decisionforest::Schedule *schedule){
+                                                                                                               auto& batchIndex = schedule->GetBatchIndex();
+                                                                                                               auto& treeIndex = schedule->GetTreeIndex();
+                                                                                                               schedule->Reorder({&treeIndex, &batchIndex });
+                                                                                                               schedule->PeelWalk(batchIndex, 2); 
+                                                                                                              }, true, 2)));
   return true;
 }
 

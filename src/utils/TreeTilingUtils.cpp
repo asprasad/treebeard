@@ -899,6 +899,16 @@ DecisionTree<>& TiledTreeNode::GetTree() {
     return m_tiledTree.m_modifiedTree;
 }
 
+int32_t TiledTreeNode::GetTileDepth() const {
+    auto tilePtr = this;
+    int32_t tileDepth = 1;
+    while (tilePtr->GetParent() != decisionforest::DecisionTree<>::INVALID_NODE_INDEX) {
+        tilePtr = &(m_tiledTree.m_tiles.at(tilePtr->GetParent()));
+        ++tileDepth;
+    }
+    return tileDepth;
+}
+
 const DecisionTree<>::Node& TiledTreeNode::GetNode(int32_t index) const { 
     return m_tiledTree.m_modifiedTree.GetNodes().at(index);
 }
@@ -1137,7 +1147,8 @@ void TiledTreeNode::WriteDOTSubGraph(std::ofstream& fout) {
 
 TiledTree::TiledTree(DecisionTree<>& owningTree)
  : m_numberOfDummyTiles(0), m_owningTree(owningTree), m_modifiedTree(owningTree), 
-   m_tileShapeToTileIDMap(m_owningTree.TilingDescriptor().MaxTileSize())
+   m_tileShapeToTileIDMap(m_owningTree.TilingDescriptor().MaxTileSize()), m_probabilisticallyTiled(false),
+   m_levelsToUnroll(-1)
 {
     ConstructTiledTree();
 }
@@ -1519,9 +1530,32 @@ std::tuple<double, double> TiledTree::ComputeExpectedNumberOfTileEvaluations() {
     return std::make_tuple(actualValue, idealValue);
 }
 
+void TiledTree::ExploreTreeSplits() {
+    for(int32_t depth=1 ; depth<=GetTreeDepth() ; ++depth) {
+        int32_t hitCount = 0;
+        for (auto& tile : m_tiles) {
+            if (!tile.IsLeafTile())
+                continue;
+            auto tileDepth = tile.GetTileDepth();
+            if (depth != tileDepth)
+                continue;
+            assert (tile.m_nodeIndices.size() == 1);
+            hitCount += m_modifiedTree.GetNodes().at(tile.m_nodeIndices[0]).hitCount;
+        }
+        auto totalCount = m_owningTree.GetNodes().at(0).hitCount;
+        double fraction = (double)hitCount/totalCount;
+        std::cout << "\t" << fraction;
+    }
+    std::cout << std::endl;
+}
+
 void TiledTree::GetSparseSerialization(std::vector<double>& thresholds, std::vector<int32_t>& featureIndices, 
                                        std::vector<int32_t>& tileShapeIDs, std::vector<int32_t>& childIndices,
                                        std::vector<double>& leaves) {
+    if (m_probabilisticallyTiled) {
+        GetSparseSerializationPeeled(thresholds, featureIndices, tileShapeIDs, childIndices, leaves);
+        return;
+    }
     thresholds.clear(); featureIndices.clear(); tileShapeIDs.clear(); childIndices.clear(); leaves.clear();
 
     TiledTree::LevelOrderTraversal levelOrder(m_tiles);
@@ -1754,6 +1788,112 @@ void TiledTree::GetSparseSerialization(std::vector<double>& thresholds, std::vec
     }
 }
 
+void TiledTree::GetSparseSerializationPeeled(std::vector<double>& thresholds, std::vector<int32_t>& featureIndices,
+                                             std::vector<int32_t>& tileShapeIDs, std::vector<int32_t>& childIndices,
+                                             std::vector<double>& leaves) {
+    assert (this->IsProbabilisticallyTiled() && this->GetLevelsToUnroll()!=-1);
+    
+    thresholds.clear(); featureIndices.clear(); tileShapeIDs.clear(); childIndices.clear(); 
+    leaves.clear();
+
+    TiledTree::LevelOrderTraversal levelOrder(m_tiles);
+    auto& sortedTiles = levelOrder.LevelOrderNodes();
+    
+    // leafIndexMap maps the original tile ID to an index in the 
+    // leaves array for any node that has a representation in the 
+    // leaves array
+    std::map<int32_t, int32_t> tileIndexMap, leafIndexMap;
+
+    int32_t numberOfTilesInLeafArray=0, numberOfTilesInTilesArray=0, currentTileIndex=0;
+    std::vector<double> tileThresholds(TileSize());
+    std::vector<int32_t> tileFeatureIndices(TileSize());
+    for (auto& tile : sortedTiles) {
+        assert (numberOfTilesInTilesArray == (currentTileIndex - numberOfTilesInLeafArray));
+        assert (numberOfTilesInTilesArray == (int32_t)childIndices.size());
+        assert (childIndices.size() == tileShapeIDs.size());
+        assert (thresholds.size() == featureIndices.size());
+        // assert (numberOfTilesInLeafArray == (int32_t)leaves.size());
+
+        if (tile.IsLeafTile()) {
+            // if tile is a leaf and its depth is less than the unroll depth, then it only goes into the tiles array
+            // if all siblings are leaves, put it into the leaf array
+            // if not all siblings are leaves, add an extra hop and insert into both arrays
+            
+            int32_t tileDepth = tile.GetTileDepth();
+            if (tileDepth <= m_levelsToUnroll) {
+                tile.GetThresholds(tileThresholds.begin());
+                thresholds.insert(thresholds.end(), tileThresholds.begin(), tileThresholds.end());
+                tile.GetFeatureIndices(tileFeatureIndices.begin());
+                featureIndices.insert(featureIndices.end(), tileFeatureIndices.begin(), tileFeatureIndices.end());
+                tileShapeIDs.push_back(tile.GetTileShapeID());
+                childIndices.push_back(-1);
+                // This is not the index to which other tiles should point, they should
+                // point into the leaves array
+                tileIndexMap[currentTileIndex] = numberOfTilesInTilesArray;
+                ++numberOfTilesInTilesArray;
+            }
+            else if (AreAllSiblingsLeaves(tile, sortedTiles)) {
+                // Put leaf in to the leaves array
+                int32_t leafArrayIndex = static_cast<int32_t>(leaves.size());
+                leaves.push_back(tile.GetNode(tile.GetNodeIndices().front()).threshold);
+                leafIndexMap[currentTileIndex] = leafArrayIndex;
+                numberOfTilesInLeafArray += 1;
+            }
+            else { // (!AreAllSiblingsLeaves(tile, sortedTiles))
+                // Make this tile a dummy tile with all child leaves having the same value
+                tile.GetThresholds(tileThresholds.begin());
+                thresholds.insert(thresholds.end(), tileThresholds.begin(), tileThresholds.end());
+                std::vector<int32_t> leafFeatureIndices(TileSize(), 0);
+                featureIndices.insert(featureIndices.end(), leafFeatureIndices.begin(), leafFeatureIndices.end());
+                tileShapeIDs.push_back(sortedTiles.at(0).GetTileShapeID()); // Reuse some tile shape that is already part of the tree
+                
+                auto childIndex = -static_cast<int32_t>(leaves.size())-2;
+                assert (leafIndexMap.find(childIndex) == leafIndexMap.end());
+                childIndices.push_back(childIndex);
+
+                int32_t leafArrayIndex = static_cast<int32_t>(leaves.size());
+                leafIndexMap[childIndex] = leafArrayIndex; 
+                std::vector<double> leafValVec(TileSize()+1, tileThresholds.front());
+                leaves.insert(leaves.end(), leafValVec.begin(), leafValVec.end());
+
+                // We also need to insert a look up for this leaf
+                tileIndexMap[currentTileIndex] = numberOfTilesInTilesArray;
+                // Increment because we just added this leaf to the tiles array
+                ++numberOfTilesInTilesArray;
+            }
+        }
+        else {
+            assert (!tile.IsLeafTile());
+            // Push non-leaf tiles only into the tiles array
+            tile.GetThresholds(tileThresholds.begin());
+            thresholds.insert(thresholds.end(), tileThresholds.begin(), tileThresholds.end());
+            tile.GetFeatureIndices(tileFeatureIndices.begin());
+            featureIndices.insert(featureIndices.end(), tileFeatureIndices.begin(), tileFeatureIndices.end());
+            tileShapeIDs.push_back(tile.GetTileShapeID());
+            childIndices.push_back(tile.GetChildren().front());
+            tileIndexMap[currentTileIndex] = numberOfTilesInTilesArray;
+            numberOfTilesInTilesArray += 1;
+        }
+        ++currentTileIndex;
+    }
+
+    for (size_t i=0 ; i<childIndices.size() ; ++i) {
+        if (childIndices.at(i) == -1)
+            continue;
+        auto mapIter = tileIndexMap.find(childIndices.at(i));
+        if (mapIter != tileIndexMap.end()) {
+            auto newChildIndex = mapIter->second;
+            assert (newChildIndex >= 0);
+            childIndices.at(i) = newChildIndex;
+        }
+        else {
+            auto leavesMapIter = leafIndexMap.find(childIndices.at(i));
+            assert (leavesMapIter != leafIndexMap.end());
+            childIndices.at(i) = leavesMapIter->second + numberOfTilesInTilesArray;
+        }
+    }
+}
+
 void TiledTree::IncreaseTileDepth(int32_t leafIndex, int32_t leafDepth, int32_t maxDepth) {
     assert (m_tiles.at(leafIndex).IsLeafTile());
     int32_t leafNodeId = m_tiles.at(leafIndex).GetNodeIndices().front();
@@ -1878,12 +2018,7 @@ void TiledTree::MakeAllLeavesSameDepth() {
         auto& tile = m_tiles.at(i);
         if (!tile.IsLeafTile())
             continue;
-        auto tilePtr = &tile;
-        int32_t leafDepth = 1;
-        while (tilePtr->GetParent() != decisionforest::DecisionTree<>::INVALID_NODE_INDEX) {
-            tilePtr = &(m_tiles.at(tilePtr->GetParent()));
-            ++leafDepth;
-        }
+        int32_t leafDepth = tile.GetTileDepth();
         if (leafDepth != depth) {
             leavesToPad.push_back(std::make_tuple(i, leafDepth));
         }

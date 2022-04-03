@@ -517,7 +517,14 @@ struct PredictForestOpLowering: public ConversionPattern {
     auto tree = rewriter.create<decisionforest::GetTreeFromEnsembleOp>(location, treeType, state.forestConst, treeIndex);
 
     // Walk the tree
-    auto walkOp = rewriter.create<decisionforest::WalkDecisionTreeOp>(location, treeType.getThresholdType(), tree, row);
+    Value walkOp;
+    if (indexVar.PeelWalk()) {
+      auto peelItersAttrib = rewriter.getI32IntegerAttr(indexVar.IterationsToPeel());
+      walkOp = rewriter.create<decisionforest::WalkDecisionTreePeeledOp>(location, treeType.getThresholdType(), tree, row, peelItersAttrib);
+    }
+    else {
+      walkOp = rewriter.create<decisionforest::WalkDecisionTreeOp>(location, treeType.getThresholdType(), tree, row);
+    }
     GenerateMultiClassAccumulate(rewriter, location, static_cast<Value>(walkOp), rowIndex, treeIndex, state);
 
     if (state.isMultiClass) return prevAccumulatorValue;
@@ -528,7 +535,7 @@ struct PredictForestOpLowering: public ConversionPattern {
 
     if (mlir::decisionforest::InsertDebugHelpers) {
       Value treePred = walkOp;
-      if (!walkOp.getResult().getType().isF64())
+      if (!treePred.getType().isF64())
         treePred = rewriter.create<arith::ExtFOp>(location, rewriter.getF64Type(), walkOp);
       rewriter.create<decisionforest::PrintTreePredictionOp>(location, treePred, treeIndex);
     }
@@ -600,7 +607,15 @@ struct PredictForestOpLowering: public ConversionPattern {
     Value row = GetRow(rewriter, location, state.data, rowIndex, state.dataMemrefType);
 
     // Walk the tree
-    auto walkOp = rewriter.create<decisionforest::WalkDecisionTreeOp>(location, treeType.getThresholdType(), tree, row);
+    Value walkOp;
+    if (indexVar.PeelWalk()) {
+      auto peelItersAttrib = rewriter.getI32IntegerAttr(indexVar.IterationsToPeel());
+      walkOp = rewriter.create<decisionforest::WalkDecisionTreePeeledOp>(location, treeType.getThresholdType(), tree, row, peelItersAttrib);
+    }
+    else {
+      walkOp = rewriter.create<decisionforest::WalkDecisionTreeOp>(location, treeType.getThresholdType(), tree, row);
+    }
+    
     GenerateMultiClassAccumulate(rewriter, location, static_cast<Value>(walkOp), rowIndex, treeIndex, state);
 
     // Don't accumulate into memref in case of multiclass.
@@ -613,7 +628,7 @@ struct PredictForestOpLowering: public ConversionPattern {
 
     if (mlir::decisionforest::InsertDebugHelpers) {
       Value treePred = walkOp;
-      if (!walkOp.getResult().getType().isF64())
+      if (!treePred.getType().isF64())
         treePred = rewriter.create<arith::ExtFOp>(location, rewriter.getF64Type(), walkOp);
       rewriter.create<decisionforest::PrintTreePredictionOp>(location, treePred, treeIndex);
     }

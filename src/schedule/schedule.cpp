@@ -155,6 +155,8 @@ Schedule& Schedule::Split(IndexVariable& index, IndexVariable& first, IndexVaria
   first.m_simdized = second.m_simdized = index.m_simdized;
   first.m_parallel = second.m_parallel = index.m_parallel;
   first.m_unrolled = second.m_unrolled = index.m_unrolled;
+  first.m_peelWalk = second.m_peelWalk = index.m_peelWalk;
+  first.m_iterationsToPeel = second.m_iterationsToPeel = index.m_iterationsToPeel;
 
   // indexMap[&index] = std::make_pair(&first, &second);
 
@@ -254,6 +256,12 @@ void Schedule::Finalize() {
   // TODO Go over all the nodes in the loop nest and check to see if any of them need to be peeled to handle partial tiles
   m_batchIndex.Validate();
   m_treeIndex.Validate();
+}
+
+Schedule& Schedule::PeelWalk(IndexVariable& index, int32_t numberOfIterations) {
+  index.m_peelWalk = true;
+  index.m_iterationsToPeel = numberOfIterations;
+  return *this;
 }
 
 void IndexVariable::Visit(IndexDerivationTreeVisitor& visitor) {

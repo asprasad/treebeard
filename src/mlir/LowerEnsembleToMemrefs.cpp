@@ -862,8 +862,10 @@ struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLowe
                         decisionforest::GetTreeFromEnsembleOp,
                         decisionforest::GetRootOp,
                         decisionforest::IsLeafOp,
+                        decisionforest::IsLeafTileOp,
                         decisionforest::TraverseTreeTileOp,
                         decisionforest::GetLeafValueOp,
+                        decisionforest::GetLeafTileValueOp,
                         decisionforest::GetTreeClassIdOp>();
 
     RewritePatternSet patterns(&getContext());

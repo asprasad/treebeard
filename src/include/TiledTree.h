@@ -68,6 +68,7 @@ public:
     std::string GetTileShapeString();
     int32_t GetTileShapeID() const { return m_tileShapeID; }
     bool IsLeafTile() const { return m_nodeIndices.size()==1 && GetNode(m_nodeIndices.at(0)).IsLeaf(); }
+    int32_t GetTileDepth() const;
 };
 
 class TiledTreeNode;
@@ -131,6 +132,8 @@ class TiledTree {
     DecisionTree<> m_modifiedTree;
     std::map<int32_t, int32_t> m_nodeToTileMap;
     TileShapeToTileIDMap m_tileShapeToTileIDMap;
+    bool m_probabilisticallyTiled;
+    int32_t m_levelsToUnroll;
 
     void ConstructTiledTree();
     void SetChildrenForTile(TiledTreeNode& tile);
@@ -200,6 +203,9 @@ public:
     void GetSparseSerialization(std::vector<double>& thresholds, std::vector<int32_t>& featureIndices, std::vector<int32_t>& leafBitMasks,
                                 std::vector<int32_t>& tileShapeIDs, std::vector<int32_t>& childIndices, std::vector<int32_t>& leafIndices,
                                 std::vector<double>& leaves);
+    void GetSparseSerializationPeeled(std::vector<double>& thresholds, std::vector<int32_t>& featureIndices, 
+                                      std::vector<int32_t>& tileShapeIDs, std::vector<int32_t>& childIndices,
+                                      std::vector<double>& leaves);
     int32_t GetTreeDepth() { 
         // The root of the tiled tree should be the first node
         assert (m_tiles[0].GetParent() == DecisionTree<>::INVALID_NODE_INDEX);
@@ -213,6 +219,13 @@ public:
     int32_t GetClassId() { return m_owningTree.GetClassId(); } 
     std::tuple<double, double> ComputeExpectedNumberOfTileEvaluations();
     void MakeAllLeavesSameDepth();
+    void ExploreTreeSplits();
+
+    bool IsProbabilisticallyTiled() const { return m_probabilisticallyTiled; }
+    void SetProbabilisticallyTiled(bool val) { m_probabilisticallyTiled = val; }
+
+    int32_t GetLevelsToUnroll() const { return m_levelsToUnroll; }
+    void SetLevelsToUnroll(int32_t val) { m_levelsToUnroll = val; } 
     
     using LevelOrderSorterNodeType = TiledTreeNode;
 

@@ -1,3 +1,15 @@
+Remove Extra Hop - Attempt 2
+1. Serialization changes 
+    - All leaves upto a certain level into the tiles array
+    - Add extra hops if needed for any leaves after that
+2. Tiling changes
+    - Add whether tiled tree was probabilistically tiled
+2. Code gen changes
+    - New op "Peeled tree walk"
+    - Add to schedule
+    - Set unroll factor on the walk tree op
+
+
 MAJOR HOLES
 1. LightGBM support, random forest support
 2. Categorical features

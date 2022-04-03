@@ -145,13 +145,16 @@ def WalkDecisionTreeOp : DecisionForest_Op<"walk_decision_tree"> {
   let results = (outs LeafNodeValueType);
 } 
 
-// NOTE We will use the std.return op. We don't need our own. 
-// def ReturnOp : DecisionForest_Op<"return", [NoSideEffect, HasParent<"FuncOp">,Terminator]> {
-//   let summary = "return operation";
-//   let description = "Represents function return operation. Takes optional tensor operand and produces no results.";
-//   let arguments = (ins ReturnType:$input); 
-//   // let verifier = [{return ::verify(*this); }];
-// }
+def WalkDecisionTreePeeledOp : DecisionForest_Op<"walkDecisionTreePeeled"> {
+  let summary = "Walk the decision tree.";
+  let description = "Operation to walk the decision tree and generate a prediction. Generates"
+                    "code with the first few iterations peeled."
+                    "Takes input data and tree as input and produces prediction as output.";
+
+  let arguments = (ins TreeType:$tree, InputDataType:$data, I32Attr:$iterationsToPeel);
+
+  let results = (outs LeafNodeValueType);
+} 
 
 // ----- Mid-level IR Ops ------
 
@@ -211,7 +214,23 @@ def IsLeafOp : DecisionForest_Op<"isLeaf", [NoSideEffect]> {
   let results = (outs I1);
 }
 
+def IsLeafTileOp : DecisionForest_Op<"isLeafTile", [NoSideEffect]> {
+  let summary = "Check if the node passed as argument is a leaf tile.";
+  let description = "Check if the node passed as argument is a leaf tile.";
+  let arguments = (ins TreeType:$tree, NodeType:$node);
+
+  let results = (outs I1);
+}
+
 def GetLeafValueOp : DecisionForest_Op<"getLeafValue", [NoSideEffect]> {
+  let summary = "Get value of passed leaf node.";
+  let description = "Get value of passed leaf node.";
+  let arguments = (ins TreeType:$tree, NodeType:$node);
+
+  let results = (outs LeafNodeValueType);
+}
+
+def GetLeafTileValueOp : DecisionForest_Op<"getLeafTileValue", [NoSideEffect]> {
   let summary = "Get value of passed leaf node.";
   let description = "Get value of passed leaf node.";
   let arguments = (ins TreeType:$tree, NodeType:$node);
