@@ -101,6 +101,8 @@ protected:
   bool m_simdized = false;
   bool m_parallel = false;
   bool m_unrolled = false;
+  int32_t m_iterationsToPeel = -1;
+  bool m_peelWalk = false;
 
   // Index variables can only be constructed through the Schedule object
   IndexVariable(const std::string& name)
@@ -119,7 +121,9 @@ public:
   bool Simdized() const { return m_simdized; }
   bool Parallel() const { return m_parallel; }
   bool Unroll() const { return m_unrolled; }
-
+  bool PeelWalk() const { return m_peelWalk; }
+  int32_t IterationsToPeel() const { return m_iterationsToPeel; }
+  
   void Visit(IndexDerivationTreeVisitor& visitor) override;
   void Validate() override;
 
@@ -161,6 +165,7 @@ public:
   Schedule& Simdize(IndexVariable& index);
   Schedule& Parallel(IndexVariable& index);
   Schedule& Unroll(IndexVariable& index);
+  Schedule& PeelWalk(IndexVariable& index, int32_t numberOfIterations);
 
   const IndexVariable* GetRootIndex() const { return &m_rootIndex; }
   IndexVariable& GetBatchIndex() { return m_batchIndex; }

@@ -322,7 +322,8 @@ llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> InferenceRunner::CreateEx
   llvm::InitializeNativeTargetAsmPrinter();
 
   mlir::registerLLVMDialectTranslation(*module->getContext());
-
+  mlir::registerOpenMPDialectTranslation(*module->getContext());
+  
   // An optimization pipeline to use within the execution engine.
   auto optPipeline = mlir::makeOptimizingTransformer(/*optLevel=*/ 0, /*sizeLevel=*/0, /*targetMachine=*/nullptr);
 
@@ -335,7 +336,9 @@ llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> InferenceRunner::CreateEx
     // std::cout << "Calculated debug SO path : " << debugSOPath << std::endl;
     executionEngineLibs.push_back(debugSOPath.data());
   }
-
+#ifdef OMP_SUPPORT
+  executionEngineLibs.push_back("/home/ashwin/mlir-build/llvm-project/build.omp/lib/libomp.so");
+#endif
   // Create an MLIR execution engine. The execution engine eagerly JIT-compiles
   // the module.
   auto maybeEngine = mlir::ExecutionEngine::create(module, /*llvmModuleBuilder=*/nullptr, optPipeline, llvm::None, executionEngineLibs);

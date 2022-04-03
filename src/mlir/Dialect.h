@@ -18,6 +18,8 @@
 #define GET_OP_CLASSES
 #include "Ops.h.inc"
 
+// #define OMP_SUPPORT
+
 namespace mlir
 {
 

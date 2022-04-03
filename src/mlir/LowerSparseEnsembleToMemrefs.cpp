@@ -494,6 +494,48 @@ struct GetRootOpLowering: public ConversionPattern {
   }
 };
 
+struct IsLeafTileOpLowering: public ConversionPattern {
+  IsLeafTileOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::IsLeafTileOp::getOperationName(), 1 /*benefit*/, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    
+    // Create a subview of the model memref corresponding to this ensemble with the index equal to offsetMemref[treeIndex]
+    mlir::decisionforest::IsLeafTileOp isLeafOp = AssertOpIsOfType<mlir::decisionforest::IsLeafTileOp>(op);
+    assert(operands.size() == 2);
+    if (!isLeafOp)
+        return mlir::failure();
+    
+    auto location = op->getLoc();
+
+    auto treeMemref = GetTreeMemrefFromTreeOperand(operands[0]);
+    auto treeMemrefType = treeMemref.getType().cast<MemRefType>();
+    assert (treeMemrefType);
+
+    auto nodeIndex = rewriter.create<decisionforest::NodeToIndexOp>(location, rewriter.getIndexType(), treeMemref, operands[1]); // Convert the node to an index
+    // auto nodeIndexType = nodeIndex.getType().cast<IndexType>();
+    // assert(nodeIndexType);
+
+    auto treeTileType = treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
+    auto childIndexType = treeTileType.getChildIndexType();
+    auto loadChildIndexOp = rewriter.create<decisionforest::LoadChildIndexOp>(location, childIndexType, treeMemref, static_cast<Value>(nodeIndex));    
+    
+    Value childIndexValue = static_cast<Value>(loadChildIndexOp);
+    assert (treeTileType.getTileSize() != 1);
+    
+    auto minusOneConstant = rewriter.create<arith::ConstantIntOp>(location, int64_t(-1), childIndexType);
+    auto comparison = rewriter.create<arith::CmpIOp>(location, mlir::arith::CmpIPredicate::eq, childIndexValue, static_cast<Value>(minusOneConstant));
+    
+    if (decisionforest::InsertDebugHelpers) {
+      Value outcome = rewriter.create<mlir::arith::ExtUIOp>(location, rewriter.getI32Type(), static_cast<Value>(comparison));
+      rewriter.create<decisionforest::PrintIsLeafOp>(location, nodeIndex, childIndexValue, outcome);
+    }
+    rewriter.replaceOp(op, static_cast<Value>(comparison));
+
+    return mlir::success();
+  }
+};
+
 struct IsLeafOpLowering: public ConversionPattern {
   IsLeafOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::IsLeafOp::getOperationName(), 1 /*benefit*/, ctx) {}
 
@@ -973,6 +1015,50 @@ struct GetLeafValueOpLowering : public ConversionPattern {
   }
 };
 
+struct GetLeafTileValueOpLowering : public ConversionPattern {
+  GetLeafTileValueOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::GetLeafTileValueOp::getOperationName(), 1 /*benefit*/, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    auto getLeafVal = AssertOpIsOfType<mlir::decisionforest::GetLeafTileValueOp>(op);
+    assert(operands.size() == 2);
+    if (!getLeafVal)
+        return mlir::failure();
+    auto location = op->getLoc();
+
+    auto treeMemref = GetTreeMemrefFromTreeOperand(operands[0]);
+    auto treeMemrefType = treeMemref.getType().cast<MemRefType>();
+    assert (treeMemrefType);
+
+    auto treeTileType = treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
+    auto thresholdType = treeTileType.getThresholdFieldType();
+    auto node = operands[1];
+    auto nodeIndex = rewriter.create<decisionforest::NodeToIndexOp>(location, rewriter.getIndexType(), treeMemref, node);
+    if (decisionforest::InsertDebugHelpers) {
+      rewriter.create<decisionforest::PrintTreeNodeOp>(location, nodeIndex);
+    }
+
+    // Load threshold
+    // TODO Ideally, this should be a different op for when we deal with tile sizes != 1. We will then need to load 
+    // a single threshold value and cast it the trees return type
+    auto loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, thresholdType, treeMemref, static_cast<Value>(nodeIndex));
+    Value leafValue = loadThresholdOp;
+    
+    if (treeTileType.getTileSize() != 1) {
+      if (decisionforest::InsertDebugHelpers) {
+        InsertPrintVectorOp(rewriter, location, 0, treeTileType.getThresholdElementType().getIntOrFloatBitWidth(), treeTileType.getTileSize(), loadThresholdOp);
+      }
+      auto zeroConst = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI32Type());
+      auto extractElement = rewriter.create<vector::ExtractElementOp>(location, static_cast<Value>(loadThresholdOp), zeroConst);
+      leafValue = extractElement;
+    }
+    
+    // TODO cast the loaded value to the correct result type of the tree. 
+    rewriter.replaceOp(op, static_cast<Value>(leafValue));
+    return mlir::success();
+  }
+};
+
 } // anonymous
 
 namespace mlir
@@ -990,9 +1076,11 @@ void PopulateLowerToSparseRepresentationPatterns(RewritePatternSet& patterns) {
                 GetTreeOpLowering,
                 GetRootOpLowering,
                 IsLeafOpLowering,
+                IsLeafTileOpLowering,
                 GetTreeClassIdOpLowering,
                 TraverseTreeTileOpLowering,
-                GetLeafValueOpLowering>(patterns.getContext());
+                GetLeafValueOpLowering,
+                GetLeafTileValueOpLowering>(patterns.getContext());
 }
 
 } // decisionforest

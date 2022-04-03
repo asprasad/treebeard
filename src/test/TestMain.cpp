@@ -6,6 +6,7 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "xgboostparser.h"
 #include "TiledTree.h"
 
@@ -386,6 +387,15 @@ bool Test_TileSize8_Bosch_TestInputs_SwapAndSplitTreeIndex(TestArgs_t &args);
 bool Test_TileSize8_Epsilon_TestInputs_SwapAndSplitTreeIndex(TestArgs_t &args);
 bool Test_TileSize8_Higgs_TestInputs_SwapAndSplitTreeIndex(TestArgs_t &args);
 bool Test_TileSize8_Year_TestInputs_SwapAndSplitTreeIndex(TestArgs_t &args);
+
+bool Test_TileSize8_Abalone_TestInputs_ParallelBatch(TestArgs_t &args);
+bool Test_TileSize8_Airline_TestInputs_ParallelBatch(TestArgs_t &args);
+bool Test_TileSize8_AirlineOHE_TestInputs_ParallelBatch(TestArgs_t &args);
+bool Test_TileSize8_Covtype_TestInputs_ParallelBatch(TestArgs_t &args);
+bool Test_TileSize8_Letters_TestInputs_ParallelBatch(TestArgs_t &args);
+bool Test_TileSize8_Epsilon_TestInputs_ParallelBatch(TestArgs_t &args);
+bool Test_TileSize8_Higgs_TestInputs_ParallelBatch(TestArgs_t &args);
+bool Test_TileSize8_Year_TestInputs_ParallelBatch(TestArgs_t &args);
 
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
@@ -988,10 +998,12 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize2),
   TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize2),
   TEST_LIST_ENTRY(Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2),
+#ifndef OMP_SUPPORT
   TEST_LIST_ENTRY(Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1),
   TEST_LIST_ENTRY(Test_LoadTileThresholdOp_DoubleInt32_TileSize1),
   TEST_LIST_ENTRY(Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1),
   TEST_LIST_ENTRY(Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1),
+#endif // OMP_SUPPORT
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4),
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize2),
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize1),
@@ -1023,6 +1035,7 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape),
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize),
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize),
+#ifndef OMP_SUPPORT
   TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy),
   TEST_LIST_ENTRY(Test_ModelInit_RightHeavy),
   TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy),
@@ -1035,6 +1048,7 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_ModelInit_Balanced_Int16TileShape),
   TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy_Int8TileShape),
   TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy_Int16TileShape),
+#endif
   TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1),
@@ -1330,12 +1344,30 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_SplitTreeLoopSchedule),
   TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_SplitTreeLoopSchedule),
   TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_SplitTreeLoopSchedule),
+
+#ifdef OMP_SUPPORT
+  TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Covtype_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Letters_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_ParallelBatch),
+#endif // OMP_SUPPORT
 };
 
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  // TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_RemoveExtraHop),
+  TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Covtype_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Letters_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_ParallelBatch),
   // TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_RemoveExtraHop),
   // TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_RemoveExtraHop),
   // TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_RemoveExtraHop),
@@ -1466,6 +1498,7 @@ void RunTests() {
     context.getOrLoadDialect<mlir::memref::MemRefDialect>();
     context.getOrLoadDialect<mlir::vector::VectorDialect>();
     context.getOrLoadDialect<mlir::math::MathDialect>();
+    context.getOrLoadDialect<mlir::omp::OpenMPDialect>();
     TestArgs_t args = { context };
     
     // Disable sparse code generation by default

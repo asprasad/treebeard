@@ -11,6 +11,7 @@
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -157,6 +158,7 @@ void InitializeMLIRContext(mlir::MLIRContext& context) {
   context.getOrLoadDialect<mlir::vector::VectorDialect>();
   context.getOrLoadDialect<mlir::math::MathDialect>();
   context.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
+  context.getOrLoadDialect<mlir::omp::OpenMPDialect>();
 }
 
 void ConvertXGBoostJSONToLLVMIR(const std::string&modelJsonPath, const std::string& llvmIRFilePath, const std::string& modelGlobalsJSONPath,
