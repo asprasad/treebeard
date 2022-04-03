@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include <unordered_map>
 
 using namespace mlir;
 
@@ -68,6 +69,120 @@ struct WalkDecisionTreeOpLowering: public ConversionPattern {
     auto treePrediction = rewriter.create<decisionforest::GetLeafValueOp>(location, treeType.getThresholdType(), tree, whileLoop.results()[0]);
     rewriter.replaceOp(op, static_cast<Value>(treePrediction));
 
+    return mlir::success();
+  }
+};
+
+struct PipelinedWalkDecisionTreeOpLowering: public ConversionPattern {
+  PipelinedWalkDecisionTreeOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::PipelinedWalkDecisionTreeOp::getOperationName(), 1 /*benefit*/, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    mlir::decisionforest::PipelinedWalkDecisionTreeOp walkTreeOp = llvm::dyn_cast<mlir::decisionforest::PipelinedWalkDecisionTreeOp>(op);
+    
+    assert(walkTreeOp);
+    if (!walkTreeOp)
+        return mlir::failure();
+
+    auto trees = walkTreeOp.trees();
+    auto dataRows = walkTreeOp.dataRows();
+    auto unrollLoopAttr = walkTreeOp.UnrollLoopAttr();
+    assert(trees.size() == dataRows.size());
+
+    auto location = op->getLoc();
+    auto context = op->getContext();
+
+    std::vector<Value> nodes;
+    std::vector<Type> nodeTypes;
+    std::unordered_map<void*, decisionforest::GetRootOp> treeRootMap;
+    auto nodeType = mlir::decisionforest::NodeType::get(context);
+    for (size_t i = 0; i < trees.size(); i++) {
+      if (treeRootMap.find(trees[i].getAsOpaquePointer()) == treeRootMap.end())
+        treeRootMap[trees[i].getAsOpaquePointer()] = rewriter.create<decisionforest::GetRootOp>(location, nodeType, trees[i]);
+      
+      nodes.push_back(treeRootMap[trees[i].getAsOpaquePointer()]);
+      nodeTypes.push_back(nodeType);
+    }
+
+    std::vector<Value> predictions;
+
+    // Unroll the loop.
+    if (unrollLoopAttr.GetUnrollFactor() > 1) {
+      int32_t unrollFactor = unrollLoopAttr.GetUnrollFactor();
+      ValueRange nodeArgs = nodes;
+
+      for (int32_t i = 0; i < unrollFactor - 1; i++) {
+        auto traverseTile = rewriter.create<decisionforest::InterleavedTraverseTreeTileOp>(
+          location,
+          nodeTypes,
+          trees,
+          nodeArgs,
+          dataRows);
+        
+        nodeArgs = ValueRange(traverseTile.getResults());
+      }
+
+      for (size_t i = 0; i < trees.size(); i++) {
+        auto treeType = trees[i].getType().cast<mlir::decisionforest::TreeType>();
+        auto treePrediction = rewriter.create<decisionforest::GetLeafValueOp>(location, treeType.getThresholdType(), trees[i], nodeArgs[i]);
+        predictions.push_back(treePrediction);
+      }
+    }
+    else { 
+      scf::WhileOp whileLoop = rewriter.create<scf::WhileOp>(location, nodeTypes, nodes);
+      Block *before = rewriter.createBlock(&whileLoop.before(), {}, nodeTypes);
+      Block *after = rewriter.createBlock(&whileLoop.after(), {}, nodeTypes);
+
+      // Create the 'do' part for the condition.
+      {
+          rewriter.setInsertionPointToStart(&whileLoop.before().front());
+          auto nodeArgs = before->getArguments();
+
+          assert(trees.size() == nodeArgs.size() && "Number of arguments should be the same as number of trees.");
+
+          std::vector<Value> isLeafResults;
+          for (size_t i = 0; i < trees.size(); i++) {
+            auto isLeaf = rewriter.create<decisionforest::IsLeafOp>(location, rewriter.getI1Type(), trees[i], nodeArgs[i]);
+            isLeafResults.push_back(isLeaf);
+          }
+          
+          auto falseConstant = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI1Type());
+          auto trueConstant = rewriter.create<arith::ConstantIntOp>(location, int64_t(1), rewriter.getI1Type());
+
+          // TODO - This will not work when trees have different depths. We're yet to handle that case here.
+          // TODO - This does a bitwise and. That works in this case but I would preffered to use a logical AND to make semantics clearer. Yet to find on op for that.
+          Value allLeaf = trueConstant;
+          for (size_t i = 0; i < trees.size(); i++) {
+            allLeaf = rewriter.create<arith::AndIOp>(location, isLeafResults[i], allLeaf);
+          }
+
+          auto equalTo = rewriter.create<arith::CmpIOp>(location, arith::CmpIPredicate::eq, static_cast<Value>(allLeaf), static_cast<Value>(falseConstant));
+          rewriter.create<scf::ConditionOp>(location, equalTo, nodeArgs); // this is the terminator
+      }
+      // Create the loop body
+      {
+          rewriter.setInsertionPointToStart(&whileLoop.after().front());
+          auto nodeArgs = after->getArguments();
+          
+          auto traverseTile = rewriter.create<decisionforest::InterleavedTraverseTreeTileOp>(
+            location,
+            nodeTypes,
+            trees,
+            nodeArgs,
+            dataRows);
+
+          rewriter.create<scf::YieldOp>(location, ValueRange(traverseTile.getResults()));
+      }
+      rewriter.setInsertionPointAfter(whileLoop);
+
+      for (size_t i = 0; i < trees.size(); i++) {
+        auto treeType = trees[i].getType().cast<mlir::decisionforest::TreeType>();
+        auto treePrediction = rewriter.create<decisionforest::GetLeafValueOp>(location, treeType.getThresholdType(), trees[i], whileLoop.results()[i]);
+        predictions.push_back(treePrediction);
+      }
+    }
+
+    rewriter.replaceOp(op, predictions);
     return mlir::success();
   }
 };
@@ -177,6 +292,27 @@ struct WalkDecisionTreeOpLoweringPass: public PassWrapper<WalkDecisionTreeOpLowe
   }
 };
 
+struct PipelinedWalkDecisionTreeOpLoweringPass: public PassWrapper<PipelinedWalkDecisionTreeOpLoweringPass, FunctionPass> {
+  
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<StandardOpsDialect, scf::SCFDialect>();
+  }
+
+  void runOnFunction() final {
+    ConversionTarget target(getContext());
+
+    target.addLegalDialect<memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect, 
+                           decisionforest::DecisionForestDialect, math::MathDialect, arith::ArithmeticDialect>();
+    target.addIllegalOp<decisionforest::PipelinedWalkDecisionTreeOp>();
+
+    RewritePatternSet patterns(&getContext());
+    patterns.add<PipelinedWalkDecisionTreeOpLowering>(&getContext());
+
+    if (failed(applyPartialConversion(getFunction(), target, std::move(patterns))))
+        signalPassFailure();
+  }
+};
+
 }
 
 namespace mlir
@@ -186,6 +322,7 @@ namespace decisionforest
 
 void AddWalkDecisionTreeOpLoweringPass(mlir::OpPassManager &optPM) {
   optPM.addPass(std::make_unique<WalkDecisionTreeOpLoweringPass>());
+  optPM.addPass(std::make_unique<PipelinedWalkDecisionTreeOpLoweringPass>());
 }
 
 }

@@ -101,12 +101,13 @@ protected:
   bool m_simdized = false;
   bool m_parallel = false;
   bool m_unrolled = false;
+  int32_t m_unrollFactor = -1;
   int32_t m_iterationsToPeel = -1;
   bool m_peelWalk = false;
 
   // Index variables can only be constructed through the Schedule object
   IndexVariable(const std::string& name)
-    :m_name(name), m_containingLoop(nullptr), m_parentModifier(nullptr), m_modifier(nullptr)
+    :m_name(name), m_containingLoop(nullptr), m_parentModifier(nullptr), m_modifier(nullptr), m_unrollFactor(-1)
   { }  
 
   // Index variables can't be copied
@@ -121,6 +122,10 @@ public:
   bool Simdized() const { return m_simdized; }
   bool Parallel() const { return m_parallel; }
   bool Unroll() const { return m_unrolled; }
+  bool UnrollTreeWalk() const { return m_unrollFactor > 0; }
+  int32_t GetUnrollFactor() const { return m_unrollFactor; }
+  void SetUnrollFactor (int32_t unrollFactor) { m_unrollFactor = unrollFactor; }
+
   bool PeelWalk() const { return m_peelWalk; }
   int32_t IterationsToPeel() const { return m_iterationsToPeel; }
   
@@ -161,7 +166,7 @@ public:
                   int32_t splitIteration, std::map<IndexVariable*, std::pair<IndexVariable*, IndexVariable*>>& indexMap);
   
   // Optimizations
-  Schedule& Pipeline(IndexVariable& index);
+  Schedule& Pipeline(IndexVariable& index, int32_t stepSize);
   Schedule& Simdize(IndexVariable& index);
   Schedule& Parallel(IndexVariable& index);
   Schedule& Unroll(IndexVariable& index);
@@ -171,11 +176,12 @@ public:
   IndexVariable& GetBatchIndex() { return m_batchIndex; }
   IndexVariable& GetTreeIndex() { return m_treeIndex; }
   std::string PrintToString();
+  
   int32_t GetBatchSize() const { return m_batchSize; }
   int32_t GetForestSize() const { return m_forestSize; }
 
   void WriteToDOTFile(const std::string& dotFile);
-
+  bool IsDefaultSchedule();
   void Finalize();
 };
 

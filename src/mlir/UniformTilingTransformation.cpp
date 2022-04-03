@@ -29,26 +29,25 @@ T AssertOpIsOfType(Operation* operation) {
   return typedOp;
 }
 
-struct TileEnsembleConstants : public RewritePattern {
+struct TileEnsembleAttribute : public RewritePattern {
   int32_t m_tileSize;
   Type m_tileShapeType;
   bool m_makeAllLeavesSameDepth;
 
-  TileEnsembleConstants(MLIRContext *ctx, int32_t tileSize, Type tileShapeType, bool makeAllLeavesSameDepth) 
-    : RewritePattern(mlir::decisionforest::EnsembleConstantOp::getOperationName(), 1 /*benefit*/, ctx),
+  TileEnsembleAttribute(MLIRContext *ctx, int32_t tileSize, Type tileShapeType, bool makeAllLeavesSameDepth) 
+    : RewritePattern(mlir::decisionforest::PredictForestOp::getOperationName(), 1 /*benefit*/, ctx),
       m_tileSize(tileSize), m_tileShapeType(tileShapeType), m_makeAllLeavesSameDepth(makeAllLeavesSameDepth)
   {}
 
   LogicalResult matchAndRewrite(Operation *op, PatternRewriter &rewriter) const final {
-    Location location = op->getLoc();
-    mlir::decisionforest::EnsembleConstantOp constantOp = llvm::dyn_cast<mlir::decisionforest::EnsembleConstantOp>(op);
-    assert(constantOp);
-    if (!constantOp)
+    auto predictForestOp = llvm::dyn_cast<mlir::decisionforest::PredictForestOp>(op);
+    assert(predictForestOp);
+    if (!predictForestOp)
          return mlir::failure();
 
-    auto forestAttribute = constantOp.forest();
+    auto forestAttribute = predictForestOp.ensemble();
     auto forest = forestAttribute.GetDecisionForest();
-    auto forestType = constantOp.getType().cast<decisionforest::TreeEnsembleType>();
+    auto forestType = forestAttribute.getType().cast<decisionforest::TreeEnsembleType>();
     auto tilingDescriptor = forest.GetTree(0).TilingDescriptor();
     // If we've already tiled this forest, then don't tile it again!
     if (tilingDescriptor.MaxTileSize() == m_tileSize)
@@ -75,23 +74,11 @@ struct TileEnsembleConstants : public RewritePattern {
                                                                forestType.getRowType(), forestType.getReductionType(), treeTypes);
 
     auto newForestAttribute = decisionforest::DecisionForestAttribute::get(newForestType, forest);
-    auto newConstant = rewriter.create<decisionforest::EnsembleConstantOp>(op->getLoc(), newForestType, newForestAttribute);
+    auto tiledPredictForestOp = rewriter.create<decisionforest::PredictForestOp>(op->getLoc(), predictForestOp.getResult().getType(), 
+                                                                                 newForestAttribute, predictForestOp.data(), 
+                                                                                 predictForestOp.result(), predictForestOp.schedule());
 
-    // Go over all the uses of the constant. These must be "GetTree". Change the result type
-    auto uses = op->getResult(0).getUses();
-    for (auto& use : uses) {
-      Operation *useOp = use.getOwner();
-      if (auto getTreeOp = llvm::dyn_cast<decisionforest::GetTreeFromEnsembleOp>(useOp)) {
-        auto oldTreeType = getTreeOp.getResult().getType().cast<decisionforest::TreeType>();
-        auto newTreeType = decisionforest::TreeType::get(oldTreeType.getResultType(), m_tileSize, oldTreeType.getThresholdType(), oldTreeType.getFeatureIndexType());
-
-        mlir::OpBuilder::InsertionGuard insertionGuard(rewriter);
-        rewriter.setInsertionPointAfter(useOp);
-        auto newGetTreeOp = rewriter.create<decisionforest::GetTreeFromEnsembleOp>(location, newTreeType, static_cast<Value>(newConstant), getTreeOp.treeIndex());
-        rewriter.replaceOp(useOp, static_cast<Value>(newGetTreeOp));
-      }
-    }
-    rewriter.replaceOp(op, static_cast<Value>(newConstant));
+    rewriter.replaceOp(op, static_cast<Value>(tiledPredictForestOp));
     return mlir::success();
   }
 
@@ -149,7 +136,7 @@ struct UniformTilingPass : public PassWrapper<UniformTilingPass, FunctionPass> {
   void runOnFunction() final {
     RewritePatternSet patterns(&getContext());
     auto tileShapeType = IntegerType::get(&getContext(), m_tileShapeBitWidth);
-    patterns.add<TileEnsembleConstants>(&getContext(), m_tileSize, tileShapeType, m_makeAllLeavesSameDepth);
+    patterns.add<TileEnsembleAttribute>(&getContext(), m_tileSize, tileShapeType, m_makeAllLeavesSameDepth);
 
     if (failed(applyPatternsAndFoldGreedily(getFunction(), std::move(patterns))))
         signalPassFailure();

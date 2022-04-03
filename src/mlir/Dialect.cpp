@@ -43,7 +43,7 @@ void DecisionForestDialect::initialize() {
 #include "Ops.cpp.inc"
       >();
   addTypes<TreeEnsembleType, TreeType, NodeType, LeafNodeType, NumericalNodeType, TiledNumericalNodeType, ScheduleType>();
-  addAttributes<DecisionTreeAttribute, DecisionForestAttribute, ScheduleAttribute>();
+  addAttributes<DecisionTreeAttribute, DecisionForestAttribute, ScheduleAttribute, UnrollLoopAttribute>();
 }
 
 /// Parse a type registered to this dialect.

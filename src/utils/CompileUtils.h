@@ -7,32 +7,37 @@
 namespace TreeBeard
 {
 
+enum class TilingType { kUniform, kProbabilistic, kHybrid };
+
 struct CompilerOptions {
   // optimization parameters
   int32_t batchSize;
   int32_t tileSize;
 
   // Type size parameters
-  int32_t thresholdTypeWidth;
-  int32_t returnTypeWidth;
-  bool returnTypeFloatType;
-  int32_t featureIndexTypeWidth;
-  int32_t nodeIndexTypeWidth;
-  int32_t inputElementTypeWidth;
-  int32_t tileShapeBitWidth;
-  int32_t childIndexBitWidth;
-  bool makeAllLeavesSameDepth;
+  int32_t thresholdTypeWidth=32;
+  int32_t returnTypeWidth=32;
+  bool returnTypeFloatType=true;
+  int32_t featureIndexTypeWidth=16;
+  int32_t nodeIndexTypeWidth=16;
+  int32_t inputElementTypeWidth=32;
+  int32_t tileShapeBitWidth=16;
+  int32_t childIndexBitWidth=16;
+  TilingType tilingType=TilingType::kUniform;
+  bool makeAllLeavesSameDepth=false;
+  bool reorderTreesByDepth=false;
 
-  mlir::decisionforest::ScheduleManipulator *scheduleManipulator;
+  mlir::decisionforest::ScheduleManipulator *scheduleManipulator=nullptr;
 
+  CompilerOptions() { }
   CompilerOptions(int32_t thresholdWidth, int32_t returnWidth, bool isReturnTypeFloat, int32_t featureIndexWidth, 
                   int32_t nodeIndexWidth, int32_t inputElementWidth, int32_t batchSz, int32_t tileSz,
-                  int32_t tileShapeWidth, int32_t childIndexWidth, bool makeLeavesSameDepth,
+                  int32_t tileShapeWidth, int32_t childIndexWidth, TilingType tileType, bool makeLeavesSameDepth, bool reorderTrees,
                   mlir::decisionforest::ScheduleManipulator* scheduleManip)
   : batchSize(batchSz), tileSize(tileSz), thresholdTypeWidth(thresholdWidth), returnTypeWidth(returnWidth), returnTypeFloatType(isReturnTypeFloat),
     featureIndexTypeWidth(featureIndexWidth), nodeIndexTypeWidth(nodeIndexWidth), inputElementTypeWidth(inputElementWidth),
-    tileShapeBitWidth(tileShapeWidth), childIndexBitWidth(childIndexWidth), makeAllLeavesSameDepth(makeLeavesSameDepth),
-    scheduleManipulator(scheduleManip)
+    tileShapeBitWidth(tileShapeWidth), childIndexBitWidth(childIndexWidth), tilingType(tileType), makeAllLeavesSameDepth(makeLeavesSameDepth),
+    reorderTreesByDepth(reorderTrees), scheduleManipulator(scheduleManip)
   { }
 };
 
@@ -45,13 +50,28 @@ mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& cont
   xgBoostParser.SetChildIndexBitWidth(options.childIndexBitWidth);
   auto module = xgBoostParser.GetEvaluationFunction();
 
+  // TODO maybe all the manipulation before the lowering to mid-level IR can be a single custom function?
+  if (options.tilingType==TilingType::kUniform)
+    mlir::decisionforest::DoUniformTiling(context, module, options.tileSize, options.tileShapeBitWidth, options.makeAllLeavesSameDepth);
+  else if (options.tilingType==TilingType::kHybrid)
+    mlir::decisionforest::DoProbabilityBasedTiling(context, module, options.tileSize, options.tileShapeBitWidth);
+  else if (options.tilingType==TilingType::kHybrid)
+    mlir::decisionforest::DoHybridTiling(context, module, options.tileSize, options.tileShapeBitWidth);
+  else
+    assert (false && "Unknown tiling type");
+  
   if (options.scheduleManipulator) {
     auto schedule = xgBoostParser.GetSchedule();
     options.scheduleManipulator->Run(schedule);
+    assert (!options.reorderTreesByDepth && "Cannot have a custom schedule manipulator and the inbuilt one together");
   }
 
+  // TODO this needs to change to something that knows how to do all schedule manipulation
+  if (options.reorderTreesByDepth) {
+    mlir::decisionforest::DoReorderTreesByDepth(context, module, 4);
+    assert (!options.scheduleManipulator && "Cannot have a custom schedule manipulator and the inbuilt one together");
+  }
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
-  mlir::decisionforest::DoUniformTiling(context, module, options.tileSize, options.tileShapeBitWidth, options.makeAllLeavesSameDepth);
   mlir::decisionforest::LowerEnsembleToMemrefs(context, module);
   mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();

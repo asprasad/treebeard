@@ -24,6 +24,10 @@ bool Test_LoadTileThresholdOp_DoubleInt32_TileSize1(TestArgs_t& args);
 bool Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args);
 bool Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args);
 bool Test_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args);
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize1_Pipelined(TestArgs_t& args);
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize1_Pipelined_Vector(TestArgs_t& args);
+bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_Pipelined_Vector(TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize1_NotPipelined_Vector(TestArgs_t& args);
 bool Test_RandomXGBoostJSONs_1Tree_BatchSize2(TestArgs_t& args);
 bool Test_RandomXGBoostJSONs_1Tree_BatchSize4(TestArgs_t& args);
 bool Test_RandomXGBoostJSONs_2Trees_BatchSize1(TestArgs_t& args);
@@ -370,6 +374,8 @@ bool Test_TileSize8_Higgs_TestInputs_RemoveExtraHop(TestArgs_t &args);
 bool Test_TileSize8_Year_TestInputs_RemoveExtraHop(TestArgs_t &args);
 bool Test_TileSize8_CovType_TestInputs_RemoveExtraHop(TestArgs_t &args);
 
+bool Test_TileSize8_Abalone_TestInputs_ReorderTrees(TestArgs_t &args);
+
 // Split schedule tests
 bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_SplitTreeLoop(TestArgs_t& args);
 bool Test_TileSize8_Abalone_TestInputs_SplitTreeLoopSchedule(TestArgs_t &args);
@@ -588,6 +594,14 @@ void OneTreeAtATimeSchedule(decisionforest::Schedule* schedule) {
   auto& batchIndexVar = schedule->GetBatchIndex();
   auto& treeIndexVar = schedule->GetTreeIndex();
   schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &treeIndexVar, &batchIndexVar });
+}
+
+void OneTreeAtATimePipelinedSchedule(decisionforest::Schedule* schedule) {
+  auto& batchIndexVar = schedule->GetBatchIndex();
+  auto& treeIndexVar = schedule->GetTreeIndex();
+
+  schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &treeIndexVar, &batchIndexVar });
+  schedule->Pipeline(batchIndexVar, 4);
 }
 
 void OneTreeAtATimeUnrolledSchedule(decisionforest::Schedule* schedule) {
@@ -1123,7 +1137,7 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TileSize4_CovType_Int8Type),
   TEST_LIST_ENTRY(Test_TileSize8_CovType_Int8Type),
 
-  // Sparse tests
+  // // Sparse tests
   TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize1_I32ChildIdx),
   TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize1_I32ChildIdx),
   TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize1_I32ChildIdx),
@@ -1255,6 +1269,7 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_TiledSchedule),
   TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_TiledSchedule),
   TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_TiledSchedule),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Letters_TiledSchedule),
 
   // Sparse code gen tests with loops interchanged
   TEST_LIST_ENTRY(Test_SparseScalar_Abalone_OneTreeAtATimeSchedule),
@@ -1269,6 +1284,7 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_SparseTileSize8_CovType_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_SparseScalar_Letters_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_SparseTileSize8_Letters_OneTreeAtATimeSchedule),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Letters_TiledSchedule),
   TEST_LIST_ENTRY(Test_SparseScalar_Epsilon_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_SparseTileSize8_Epsilon_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_SparseScalar_Higgs_OneTreeAtATimeSchedule),
@@ -1283,7 +1299,6 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_SparseTileSize8_Epsilon_TestInputs_TiledSchedule),
   TEST_LIST_ENTRY(Test_SparseTileSize8_Higgs_TestInputs_TiledSchedule),
   TEST_LIST_ENTRY(Test_SparseTileSize8_Year_TestInputs_TiledSchedule),
-  TEST_LIST_ENTRY(Test_SparseTileSize8_Letters_TiledSchedule),
 
   // Stats tests
   TEST_LIST_ENTRY(Test_AbaloneStatGenerationAndReading),
@@ -1330,6 +1345,8 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_RemoveExtraHop),
   TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_RemoveExtraHop),
   TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_RemoveExtraHop),
+    
+  TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_ReorderTrees),
 
   // Split Schedule
   TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_SwapAndSplitTreeIndex),
@@ -1360,20 +1377,7 @@ TestDescriptor testList[] = {
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Covtype_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Letters_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_ParallelBatch),
-  // TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_RemoveExtraHop),
-  // TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_RemoveExtraHop),
-  // TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_RemoveExtraHop),
-  // TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_RemoveExtraHop),
-  // TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_RemoveExtraHop),
-  // TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_RemoveExtraHop),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
   
   // TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth),
   // TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_MakeLeavesSameDepth),

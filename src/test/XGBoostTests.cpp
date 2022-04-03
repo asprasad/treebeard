@@ -35,7 +35,7 @@ bool RunSingleBatchSizeForXGBoostTests = true;
 template<typename FloatType, typename FeatureIndexType=int32_t, typename ResultType=FloatType>
 bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, const std::string& modelJsonPath, const std::string& csvPath, 
                                            int32_t tileSize, int32_t tileShapeBitWidth, int32_t childIndexBitWidth,
-                                           bool makeAllLeavesSameDepth, ScheduleManipulator_t scheduleManipulatorFunc=nullptr) {
+                                           bool makeAllLeavesSameDepth, bool reorderTrees, ScheduleManipulator_t scheduleManipulatorFunc=nullptr) {
   TestCSVReader csvReader(csvPath);
 
   using NodeIndexType = int32_t;
@@ -43,7 +43,8 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
   ScheduleManipulationFunctionWrapper scheduleManipulator(scheduleManipulatorFunc);
   TreeBeard::CompilerOptions options(floatTypeBitWidth, sizeof(ResultType)*8, IsFloatType(ResultType()), sizeof(FeatureIndexType)*8, sizeof(NodeIndexType)*8,
                                      floatTypeBitWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth,
-                                     makeAllLeavesSameDepth, scheduleManipulatorFunc ? &scheduleManipulator : nullptr);
+                                     TreeBeard::TilingType::kUniform, makeAllLeavesSameDepth, reorderTrees, 
+                                     scheduleManipulatorFunc ? &scheduleManipulator : nullptr);
   
   auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
   auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType>(args.context, modelJsonPath, modelGlobalsJSONFilePath, options);
@@ -93,7 +94,8 @@ template<typename FloatType>
 bool Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize(TestArgs_t& args, int32_t batchSize, 
                                                              const std::string& modelDirRelativePath, 
                                                              int32_t tileSize, int32_t tileShapeBitWidth, int32_t childIndexBitWidth,
-                                                             bool makeAllTreesSameDepth) {
+                                                             bool makeAllTreesSameDepth, bool reorderTrees,
+                                                             ScheduleManipulator_t scheduleManipulatorFunc = nullptr) {
   auto repoPath = GetTreeBeardRepoPath();
   auto testModelsDir = repoPath + "/" + modelDirRelativePath;
   auto modelListFile = testModelsDir + "/ModelList.txt";
@@ -106,36 +108,59 @@ bool Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize(TestArgs_t& args, i
     auto modelJSONPath = testModelsDir + "/" + modelJSONName;
     // std::cout << "Model file : " << modelJSONPath << std::endl;
     Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FloatType>(args, batchSize, modelJSONPath, modelJSONPath+".csv",
-                                                                 tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllTreesSameDepth));
+                                                                 tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllTreesSameDepth,
+                                                                 reorderTrees, scheduleManipulatorFunc));
   }
   return true;
 }
 
 template<typename FloatType=double>
 bool Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(TestArgs_t& args, int32_t batchSize, int32_t tileSize=1, int32_t tileShapeBitWidth=32,
-                                                     int32_t childIndexBitWidth=1, bool makeAllTreesSameDepth=false) {
+                                                     int32_t childIndexBitWidth=1,
+                                                     bool makeAllTreesSameDepth=false, bool reorderTrees=false,
+                                                     ScheduleManipulator_t scheduleManipulatorFunc = nullptr) {
   return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize<FloatType>(args, batchSize, "xgb_models/test/Random_1Tree", 
-                                                                            tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllTreesSameDepth);
+                                                                            tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllTreesSameDepth,
+                                                                            reorderTrees, scheduleManipulatorFunc);
 }
 
 template<typename FloatType=double>
 bool Test_RandomXGBoostJSONs_2Trees_VariableBatchSize(TestArgs_t& args, int32_t batchSize, int32_t tileSize=1, int32_t tileShapeBitWidth=32,
-                                                      int32_t childIndexBitWidth=1, bool makeAllTreesSameDepth=false) {
+                                                      int32_t childIndexBitWidth=1, bool makeAllTreesSameDepth=false, bool reorderTrees=false) {
   return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize<FloatType>(args, batchSize, "xgb_models/test/Random_2Tree",
-                                                                            tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllTreesSameDepth);
+                                                                            tileSize, tileShapeBitWidth, childIndexBitWidth, 
+                                                                            makeAllTreesSameDepth, reorderTrees);
 }
 
 template<typename FloatType=double>
 bool Test_RandomXGBoostJSONs_4Trees_VariableBatchSize(TestArgs_t& args, int32_t batchSize, int32_t tileSize=1, int32_t tileShapeBitWidth=32,
-                                                      int32_t childIndexBitWidth=1, bool makeAllTreesSameDepth=false) {
+                                                      int32_t childIndexBitWidth=1, bool makeAllTreesSameDepth=false, bool reorderTrees=false,
+                                                      ScheduleManipulator_t scheduleManipulatorFunc = nullptr) {
   return Test_RandomXGBoostJSONs_VariableTrees_VariableBatchSize<FloatType>(args, batchSize, "xgb_models/test/Random_4Tree",
-                                                                            tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllTreesSameDepth);
+                                                                            tileSize, tileShapeBitWidth, childIndexBitWidth, 
+                                                                            makeAllTreesSameDepth, reorderTrees);
 }
 
 bool Test_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args) {
   if (RunSingleBatchSizeForXGBoostTests)
     return true;
   return Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(args, 1);
+}
+
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize1_Pipelined(TestArgs_t& args) {
+  return Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(args, 8, 2, 32, 2, true, true);
+}
+
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize1_Pipelined_Vector(TestArgs_t& args) {
+  return Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(args, 8, 4, 32, 3, true, true);
+}
+
+bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_Pipelined_Vector(TestArgs_t& args) {
+  return Test_RandomXGBoostJSONs_4Trees_VariableBatchSize(args, 8, 4, 32, 3, true, true);
+}
+
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize1_NotPipelined_Vector(TestArgs_t& args) {
+  return Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(args, 8, 4, 32, 3);
 }
 
 bool Test_RandomXGBoostJSONs_1Tree_BatchSize2(TestArgs_t& args) {
@@ -669,108 +694,108 @@ bool Test_SparseUniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4(TestArgs_t& a
 
 bool Test_SingleTileSize_SingleModel(TestArgs_t &args, const std::string& modelJSONPath, int32_t tileSize, 
                                      bool skipInt8 = false, int32_t tileShapeBitWidth=32, int32_t childIndexBitWidth=1, std::string csvPath="",
-                                     ScheduleManipulator_t scheduleManipulator=nullptr, bool makeAllLeavesSameDepth=false) {
+                                     ScheduleManipulator_t scheduleManipulator=nullptr, bool makeAllLeavesSameDepth=false, bool reorderTrees=false) {
   if (csvPath == "")
     csvPath = modelJSONPath + ".csv";
   {
     using FPType = double;
     if (!RunSingleBatchSizeForXGBoostTests) {
-      Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator));
-      Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator));
+      Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator));
+      Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator));
     }
-    Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator));
+    Test_ASSERT(Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator));
   }
   {
     using FPType = double;
     using IntType = int16_t;
     if (!RunSingleBatchSizeForXGBoostTests) {
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
     }
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
   }
   if (!skipInt8)
   {
     using FPType = double;
     using IntType = int8_t;
     if (!RunSingleBatchSizeForXGBoostTests) {
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
     }
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
   }
 
   {
     using FPType = float;
     if (!RunSingleBatchSizeForXGBoostTests) {
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
     }
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
   }
   {
     using FPType = float;
     using IntType = int16_t;
     if (!RunSingleBatchSizeForXGBoostTests) {
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
     }
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
   }
   if (!skipInt8)
   {
     using FPType = float;
     using IntType = int8_t;
     if (!RunSingleBatchSizeForXGBoostTests) {
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
     }
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
   }
   return true;
 }
 
 bool Test_SingleTileSize_SingleModel_FloatOnly(TestArgs_t &args, const std::string& modelJSONPath, int32_t tileSize, 
                                      bool skipInt8 = false, int32_t tileShapeBitWidth=32, int32_t childIndexBitWidth=1, std::string csvPath="",
-                                     ScheduleManipulator_t scheduleManipulator=nullptr, bool makeAllLeavesSameDepth=false) {
+                                     ScheduleManipulator_t scheduleManipulator=nullptr, bool makeAllLeavesSameDepth=false, bool reorderTrees=false) {
   if (csvPath == "")
     csvPath = modelJSONPath + ".csv";
   {
     using FPType = float;
     if (!RunSingleBatchSizeForXGBoostTests) {
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
     }
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
   }
   {
     using FPType = float;
     using IntType = int16_t;
     if (!RunSingleBatchSizeForXGBoostTests) {
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
     }
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
   }
   if (!skipInt8)
   {
     using FPType = float;
     using IntType = int8_t;
     if (!RunSingleBatchSizeForXGBoostTests) {
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
-      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 1, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
+      Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 2, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
     }
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<FPType, IntType>(args, 4, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
   }
   return true;
 }
 
 bool Test_MultiClass_Int32ReturnType(TestArgs_t &args, const std::string& modelJSONPath, int32_t tileSize, 
                                      bool skipInt8 = false, int32_t tileShapeBitWidth=32, int32_t childIndexBitWidth=1, std::string csvPath="",
-                                     ScheduleManipulator_t scheduleManipulator=nullptr, bool makeAllLeavesSameDepth=false) {
+                                     ScheduleManipulator_t scheduleManipulator=nullptr, bool makeAllLeavesSameDepth=false, bool reorderTrees=false) {
   if (csvPath == "")
     csvPath = modelJSONPath + ".csv";
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int32_t, int8_t>(args, 8, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, scheduleManipulator)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int32_t, int8_t>(args, 8, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
   return true;
 }
 
@@ -2164,28 +2189,11 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
   ScheduleManipulationFunctionWrapper scheduleManipulator(scheduleManipulatorFunc);
   TreeBeard::CompilerOptions options(floatTypeBitWidth, sizeof(ResultType)*8, IsFloatType(ResultType()), sizeof(FeatureIndexType)*8, sizeof(NodeIndexType)*8,
                                      floatTypeBitWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth,
-                                     false, scheduleManipulatorFunc ? &scheduleManipulator : nullptr);
+                                     TreeBeard::TilingType::kHybrid, false, false, scheduleManipulatorFunc ? &scheduleManipulator : nullptr);
 
   auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
-  TreeBeard::XGBoostJSONParser<FloatType, ResultType, FeatureIndexType, NodeIndexType, FloatType> xgBoostParser(args.context, modelJsonPath, 
-                                                                                                                modelGlobalsJSONFilePath, statsProfileCSV, options.batchSize );
-  xgBoostParser.Parse();
-  xgBoostParser.SetChildIndexBitWidth(options.childIndexBitWidth);
-  auto module = xgBoostParser.GetEvaluationFunction();
-
-  if (options.scheduleManipulator) {
-    auto schedule = xgBoostParser.GetSchedule();
-    options.scheduleManipulator->Run(schedule);
-  }
-
-  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
-  // mlir::decisionforest::DoProbabilityBasedTiling(args.context, module, options.tileSize, options.tileShapeBitWidth);
-  mlir::decisionforest::DoHybridTiling(args.context, module, options.tileSize, options.tileShapeBitWidth);
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module);
-  mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
-  // module->dump();
-  mlir::decisionforest::LowerToLLVM(args.context, module);
-  // mlir::decisionforest::dumpLLVMIR(module, false);
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType, int32_t, FloatType>(
+                                                                     args.context, modelJsonPath, modelGlobalsJSONFilePath, options);
 
   decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
   
@@ -2603,6 +2611,15 @@ bool Test_TileSize8_CovType_TestInputs_RemoveExtraHop(TestArgs_t &args) {
   auto modelJSONPath = testModelsDir + "/covtype_xgb_model_save.json";
   auto csvPath = modelJSONPath + ".test.sampled.csv";
   return Test_MultiClass_Int32ReturnType(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
+}
+
+bool Test_TileSize8_Abalone_TestInputs_ReorderTrees(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath, nullptr, true, true);
 }
 
 // ===--------------------------------------------------------=== //

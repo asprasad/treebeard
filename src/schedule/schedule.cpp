@@ -236,16 +236,28 @@ Schedule& Schedule::Parallel(IndexVariable& index) {
   return *this;
 }
 
-Schedule& Schedule::Pipeline(IndexVariable& index) {
+Schedule& Schedule::Pipeline(IndexVariable& index, int32_t stepSize) {
   assert (index.m_containedLoops.size() == 0 && "Pipeline must be called on an innermost loop");
+  assert ((index.m_range.m_stop - index.m_range.m_start) >= stepSize && "Step size must be smaller than the range");
   index.m_pipelined = true;
+  index.m_range.m_step = stepSize;
   return *this;
 }
 
 Schedule& Schedule::Simdize(IndexVariable& index) {
-  assert (index.m_containedLoops.size() == 0 && "Pipeline must be called on an innermost loop");
-  index.m_pipelined = true;
+  assert (index.m_containedLoops.size() == 0 && "Simdize must be called on an innermost loop");
+  index.m_simdized = true;
   return *this;
+}
+
+bool Schedule::IsDefaultSchedule() {
+  if(!(GetRootIndex()->GetContainedLoops().size() == 1 && 
+       GetRootIndex()->GetContainedLoops().front() == &GetBatchIndex()))
+       return false;
+  if(!(GetBatchIndex().GetContainedLoops().size() == 1 && 
+       GetBatchIndex().GetContainedLoops().front() == &GetTreeIndex()))
+       return false;
+  return true;
 }
 
 std::string Schedule::PrintToString() {

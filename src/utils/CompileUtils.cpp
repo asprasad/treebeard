@@ -217,7 +217,7 @@ void RunInferenceUsingSO(const std::string&modelJsonPath, const std::string& soP
     else if (options.inputElementTypeWidth == 64)
       time = RunXGBoostInferenceOnCSVInput<double>(csvPath, inferenceRunner, options.batchSize);
     else
-      assert(false && "Unknow floating point type");
+      assert(false && "Unknown floating point type");
   }
   else {
     assert (options.returnTypeWidth == 8);
@@ -226,9 +226,9 @@ void RunInferenceUsingSO(const std::string&modelJsonPath, const std::string& soP
     else if (options.inputElementTypeWidth == 64)
       time = RunXGBoostInferenceOnCSVInput<double, int8_t>(csvPath, inferenceRunner, options.batchSize);
     else
-      assert(false && "Unknow floating point type");
+      assert(false && "Unknown integer type");
   }
-  std::cout << "Execution time (us) : " << time << std::endl;
+  TreeBeard::Logging::Log("Execution time (us) : "  +  std::to_string(time));
 }
 
 

@@ -57,7 +57,8 @@ int64_t Test_CodeGenForJSON_VariableBatchSize(int64_t batchSize, const std::stri
   mlir::MLIRContext context;
   int32_t floatTypeBitWidth = sizeof(FloatType)*8;
   TreeBeard::CompilerOptions options(floatTypeBitWidth, sizeof(ReturnType)*8, IsFloatType(ReturnType()), sizeof(FeatureIndexType)*8, sizeof(NodeIndexType)*8,
-                                     floatTypeBitWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, false, scheduleManipulator);
+                                     floatTypeBitWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, 
+                                     TreeBeard::TilingType::kUniform, false, false, scheduleManipulator);
   TreeBeard::InitializeMLIRContext(context);
   auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, ReturnType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
   auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ReturnType, FeatureIndexType, int32_t, FloatType>(context, modelJsonPath, modelGlobalsJSONFilePath, options);
@@ -113,33 +114,13 @@ int64_t Test_CodeGenForJSON_ProbabilityBasedTiling(int64_t batchSize, const std:
   mlir::MLIRContext context;
   int32_t floatTypeBitWidth = sizeof(FloatType)*8;
   TreeBeard::CompilerOptions options(floatTypeBitWidth, sizeof(ReturnType)*8, IsFloatType(ReturnType()), sizeof(FeatureIndexType)*8, sizeof(NodeIndexType)*8,
-                                     floatTypeBitWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, false, scheduleManipulator);
+                                     floatTypeBitWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth,
+                                     (probTiling ? TreeBeard::TilingType::kHybrid : TreeBeard::TilingType::kUniform), 
+                                     false, false, scheduleManipulator);
   TreeBeard::InitializeMLIRContext(context);
   auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, ReturnType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
-  // auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ReturnType, FeatureIndexType, int32_t, FloatType>(context, modelJsonPath, modelGlobalsJSONFilePath, options);
-
-  TreeBeard::XGBoostJSONParser<FloatType, ReturnType, FeatureIndexType, NodeIndexType, FloatType> xgBoostParser(context, modelJsonPath, 
-                                                                                                                modelGlobalsJSONFilePath, statsProfileCSV, options.batchSize );
-  xgBoostParser.Parse();
-  xgBoostParser.SetChildIndexBitWidth(options.childIndexBitWidth);
-  auto module = xgBoostParser.GetEvaluationFunction();
-
-  if (options.scheduleManipulator) {
-    auto schedule = xgBoostParser.GetSchedule();
-    options.scheduleManipulator->Run(schedule);
-  }
-
-  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
-  // mlir::decisionforest::DoProbabilityBasedTiling(context, module, options.tileSize, options.tileShapeBitWidth);
-  if (probTiling)
-    mlir::decisionforest::DoHybridTiling(context, module, options.tileSize, options.tileShapeBitWidth);
-  else
-    mlir::decisionforest::DoUniformTiling(context, module, options.tileSize, options.tileShapeBitWidth, false);
-  mlir::decisionforest::LowerEnsembleToMemrefs(context, module);
-  mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
-  // module->dump();
-  mlir::decisionforest::LowerToLLVM(context, module);
-  // mlir::decisionforest::dumpLLVMIR(module, false);
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ReturnType, FeatureIndexType, int32_t, FloatType>(
+                                                                     context, modelJsonPath, modelGlobalsJSONFilePath, options);
 
   decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, floatTypeBitWidth, sizeof(FeatureIndexType)*8);
   

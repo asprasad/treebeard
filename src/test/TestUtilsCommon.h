@@ -135,6 +135,7 @@ void RunXGBoostBenchmarks();
 
 typedef void (*ScheduleManipulator_t)(mlir::decisionforest::Schedule* schedule);
 void OneTreeAtATimeSchedule(mlir::decisionforest::Schedule* schedule);
+void OneTreeAtATimePipelinedSchedule(mlir::decisionforest::Schedule* schedule);
 void OneTreeAtATimeUnrolledSchedule(mlir::decisionforest::Schedule* schedule);
 
 template<int32_t BatchTileSize, int32_t TreeTileSize>

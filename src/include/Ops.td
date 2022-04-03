@@ -93,6 +93,17 @@ def ScheduleAttr : Attr<
   let convertFromStorage = "$_self";
 }
 
+def UnrollLoopAttr : Attr<
+  CPred<"$_self.isa<::mlir::decisionforest::UnrollLoopAttribute>()">,
+  "Unroll loop attribute"> {
+
+  let storageType = [{ ::mlir::decisionforest::UnrollLoopAttribute }];
+  let returnType = [{ ::mlir::decisionforest::UnrollLoopAttribute }];
+  
+  let constBuilderCall = "::mlir::decisionforest::UnrollLoopAttribute::get()";
+  let convertFromStorage = "$_self";
+}
+
 //-------   Operations   ----------------------
 
 class DecisionForest_Op<string mnemonic, list<OpTrait> traits = []> : 
@@ -104,7 +115,7 @@ class DecisionForest_Op<string mnemonic, list<OpTrait> traits = []> :
 // * The number of return values (may have multiple return probablities, class ID etc)
 
 def InputDataType : AnyTypeOf<[F16MemRef, F32MemRef, F64MemRef]>;
-def ReturnType : AnyTypeOf<[I8, I16, I32, F16, F32, F64, F16Tensor, F32Tensor, F64Tensor, I8MemRef, I16MemRef, I32MemRef, F16MemRef, F32MemRef, F64MemRef]>;
+def ReturnType : AnyTypeOf<[I8, I16, I32, F16, F32, F64, I8MemRef, I16MemRef, I32MemRef, F16MemRef, F32MemRef, F64MemRef]>;
 def LeafNodeValueType : AnyTypeOf<[F16, F32, F64]>;
 def ClassIdValueType : AnyTypeOf<[I8, I16, I32]>;
 def TreeClassInfoMemref : AnyTypeOf<[I8MemRef, I16MemRef, I32MemRef]>;
@@ -114,10 +125,10 @@ def PredictForestOp : DecisionForest_Op<"predict_ensemble"> {
     let description = "Represents the actual inference computation on the forest. Takes a tensor operand and produces a result."
                       "Contains the actual forest as an attribute.";
 
-    let arguments = (ins DecisionForestAttr:$ensemble, InputDataType:$data, InputDataType:$result, ScheduleAttr:$schedule);
+    let arguments = (ins DecisionForestAttr:$ensemble, InputDataType:$data, ReturnType:$result, ScheduleAttr:$schedule);
 
     // Just returns its result argument after filling in the results
-    let results = (outs InputDataType);
+    let results = (outs ReturnType);
 
     let extraClassDeclaration = [{
       int32_t getBatchSize() { 
@@ -143,7 +154,17 @@ def WalkDecisionTreeOp : DecisionForest_Op<"walk_decision_tree"> {
   let arguments = (ins TreeType:$tree, InputDataType:$data);
 
   let results = (outs LeafNodeValueType);
-} 
+}
+
+def PipelinedWalkDecisionTreeOp : DecisionForest_Op<"pipelined_walk_decision_tree", [SameVariadicOperandSize]> {
+  let summary = "Takes in equal number of data rows and trees and walks them as a element wise pair.";
+  let description = "Operation to walk multiple decision trees and data rows as element wise pairs."
+                    "Pass in trees <t1,t2, ... tn> and <d1, d2, ... dn>. The op walks <(t1, d1), (t2, d2) .... (tn, dn)>";
+
+  let arguments = (ins UnrollLoopAttr:$UnrollLoopAttr, Variadic<TreeType>:$trees, Variadic<InputDataType>:$dataRows);
+
+  let results = (outs Variadic<LeafNodeValueType>);
+}
 
 def WalkDecisionTreePeeledOp : DecisionForest_Op<"walkDecisionTreePeeled"> {
   let summary = "Walk the decision tree.";
@@ -244,6 +265,14 @@ def TraverseTreeTileOp : DecisionForest_Op<"traverseTreeTile", [NoSideEffect]> {
   let arguments = (ins TreeType:$tree, NodeType:$node, InputDataType:$data);
 
   let results = (outs NodeType);
+}
+
+def InterleavedTraverseTreeTileOp : DecisionForest_Op<"interleavedTraverseTileOp", [NoSideEffect, SameVariadicOperandSize]> {
+  let summary = "Traverse each <node, data> pair for the list of pairs that are passed in.";
+  let description = "Traverse each element wise <node, data> from individual input arguments that are passed in.";
+  let arguments = (ins Variadic<TreeType>:$trees, Variadic<NodeType>:$nodes, Variadic<InputDataType>:$data);
+
+  let results = (outs Variadic<NodeType>);
 }
 
 def TraverseTileOfConstTreeOp : DecisionForest_Op<"traverseTileOfConstTree", [NoSideEffect]> {

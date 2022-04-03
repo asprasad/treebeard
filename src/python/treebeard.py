@@ -1,5 +1,6 @@
 import os
 import ctypes
+from statistics import mode
 import numpy
 
 filepath = os.path.abspath(__file__)
@@ -32,6 +33,55 @@ class TreebeardAPI:
 
       self.runtime_lib.DeleteInferenceRunner.argtypes = [ctypes.c_int64]
       self.runtime_lib.DeleteInferenceRunner.restype = None
+
+      self.runtime_lib.CreateCompilerOptions.argtypes = None
+      self.runtime_lib.CreateCompilerOptions.restype = ctypes.c_int64
+
+      self.runtime_lib.DeleteCompilerOptions.argtypes = [ctypes.c_int64]
+      self.runtime_lib.DeleteCompilerOptions.restype = None
+
+      self.runtime_lib.Set_batchSize.argtypes = [ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Set_batchSize.restype = None
+
+      self.runtime_lib.Set_tileSize.argtypes = [ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Set_tileSize.restype = None
+
+      self.runtime_lib.Set_thresholdTypeWidth.argtypes = [ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Set_thresholdTypeWidth.restype = None
+
+      self.runtime_lib.Set_returnTypeWidth.argtypes = [ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Set_returnTypeWidth.restype = None
+
+      self.runtime_lib.Set_returnTypeFloatType.argtypes = [ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Set_returnTypeFloatType.restype = None
+
+      self.runtime_lib.Set_featureIndexTypeWidth.argtypes = [ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Set_featureIndexTypeWidth.restype = None
+
+      self.runtime_lib.Set_nodeIndexTypeWidth.argtypes = [ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Set_nodeIndexTypeWidth.restype = None
+      
+      self.runtime_lib.Set_inputElementTypeWidth.argtypes = [ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Set_inputElementTypeWidth.restype = None
+
+      self.runtime_lib.Set_tileShapeBitWidth.argtypes = [ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Set_tileShapeBitWidth.restype = None
+
+      self.runtime_lib.Set_childIndexBitWidth.argtypes = [ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Set_childIndexBitWidth.restype = None
+
+      self.runtime_lib.Set_makeAllLeavesSameDepth.argtypes = [ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Set_makeAllLeavesSameDepth.restype = None
+
+      self.runtime_lib.Set_reorderTreesByDepth.argtypes = [ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Set_reorderTreesByDepth.restype = None
+
+      self.runtime_lib.Set_tilingType.argtypes = [ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Set_tilingType.restype = None
+
+      self.runtime_lib.GenerateLLVMIRForXGBoostModel.argtypes = (ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int64)
+      self.runtime_lib.GenerateLLVMIRForXGBoostModel.restype = None
+ 
     except Exception as e:
       print("Loading the TreeBeard runtime failed with exception :", e)
   
@@ -55,7 +105,18 @@ class TreebeardAPI:
   def DeleteInferenceRunner(self, inferenceRunner : int) -> None:
     self.runtime_lib.DeleteInferenceRunner(inferenceRunner)
 
+
 treebeardAPI = TreebeardAPI()
+
+class CompilerOptions:
+  def __init__(self, batchSize, tileSize) -> None:
+    self.optionsPtr = treebeardAPI.runtime_lib.CreateCompilerOptions()
+    treebeardAPI.runtime_lib.Set_batchSize(self.optionsPtr, batchSize)
+    treebeardAPI.runtime_lib.Set_tileSize(self.optionsPtr, tileSize)
+
+  def __del__(self):
+    treebeardAPI.runtime_lib.DeleteCompilerOptions(self.optionsPtr)
+
 
 class TreebeardInferenceRunner:
   def __init__(self, modelSOPath : str, modelGlobalsJSONPath : str) -> None:
@@ -81,3 +142,8 @@ class TreebeardInferenceRunner:
     self.treebeardAPI.RunInferenceOnMultipleBatches(self.inferenceRunner, inputs.ctypes.data_as(ctypes.c_void_p), results.ctypes.data_as(ctypes.c_void_p), numRows)
     return results
   
+def GenerateLLVMIRForXGBoostModel(modelJSONPathStr, llvmIRPathStr, modelGlobalsJSONPathStr, options):
+  modelJSONPath = modelJSONPathStr.encode('ascii')
+  llvmIRPath = llvmIRPathStr.encode('ascii')
+  modelGlobalsJSONPath = modelGlobalsJSONPathStr.encode('ascii')
+  treebeardAPI.runtime_lib.GenerateLLVMIRForXGBoostModel(ctypes.c_char_p(modelJSONPath), ctypes.c_char_p(llvmIRPath), ctypes.c_char_p(modelGlobalsJSONPath), options.optionsPtr)

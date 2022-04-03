@@ -363,7 +363,7 @@ struct PredictForestOpLowering: public ConversionPattern {
             if (mlir::decisionforest::InsertDebugHelpers) {
               Value treePred = walkOp;
               if (!walkOp.getResult().getType().isF64())
-                treePred = rewriter.create<arith::ExtFOp>(location, rewriter.getF64Type(), walkOp);
+                treePred = rewriter.create<arith::ExtFOp>(location, rewriter.getF64Type(), walkOp.getResult());
               rewriter.create<decisionforest::PrintTreePredictionOp>(location, treePred, j);
             }
             // auto updatedResultTensor = rewriter.create<tensor::InsertOp>(location, resultMemrefType, accumulatedValue, treeLoop.getBody()->getArguments()[1], i);
@@ -541,6 +541,61 @@ struct PredictForestOpLowering: public ConversionPattern {
     }
     // auto updatedResultTensor = rewriter.create<tensor::InsertOp>(location, resultMemrefType, accumulatedValue, treeLoop.getBody()->getArguments()[1], i);
     return accumulatedValue;
+  }
+
+  Value GeneratePipelinedTreeIndexLeafLoopBody(
+    ConversionPatternRewriter &rewriter,
+    Location location,
+    const decisionforest::IndexVariable& indexVar,
+    std::list<Value> treeIndices,
+    PredictOpLoweringState& state,
+    Value row,
+    Value rowIndex,
+    Value prevAccumulatorValue) const {
+    
+    // Get the current tree
+    auto forestType = state.forestConst.getType().cast<decisionforest::TreeEnsembleType>();
+    assert (forestType.doAllTreesHaveSameTileSize()); // TODO how do we check which type of tree we'll get here?
+    auto treeType = forestType.getTreeType(0).cast<mlir::decisionforest::TreeType>();
+
+    std::vector <Value> finalTreeIndices;
+    std::vector <Value> rows;
+    std::vector <Value> trees;
+    std::vector <Type> treeResultTypes;
+    for (int32_t i = 0; i < indexVar.GetRange().m_step; i++) {
+      treeIndices.push_back(rewriter.create<arith::ConstantIndexOp>(location, i));
+      
+      Value treeIndex = SumOfValues(rewriter, location, treeIndices);
+      auto tree = rewriter.create<decisionforest::GetTreeFromEnsembleOp>(location, treeType, state.forestConst, treeIndex);
+      finalTreeIndices.push_back(treeIndex);
+      trees.push_back(tree);
+      treeResultTypes.push_back(treeType.getThresholdType());
+      rows.push_back(row);
+
+      treeIndices.pop_back();
+    }
+
+    // Walk the tree.
+    auto unrollLoopAttr = decisionforest::UnrollLoopAttribute::get(treeType, -1);
+    auto walkOp = rewriter.create<decisionforest::PipelinedWalkDecisionTreeOp>(location, treeResultTypes, unrollLoopAttr, trees, rows);
+    
+    for (size_t i = 0; i < trees.size(); i++) {
+      if (state.isMultiClass) {
+        GenerateMultiClassAccumulate(rewriter, location, walkOp.getResult(i), rowIndex, finalTreeIndices[i], state);
+      }
+      else {
+          // Accumulate the tree prediction
+        assert(forestType.getReductionType() == decisionforest::ReductionType::kAdd);
+        prevAccumulatorValue = rewriter.create<arith::AddFOp>(location, state.resultMemrefType.getElementType(), prevAccumulatorValue, walkOp.getResult(i));
+      }
+
+      if (mlir::decisionforest::InsertDebugHelpers) {
+        rewriter.create<decisionforest::PrintTreePredictionOp>(location, walkOp.getResult(i), finalTreeIndices[i]);
+      }
+      // auto updatedResultTensor = rewriter.create<tensor::InsertOp>(location, resultMemrefType, accumulatedValue, treeLoop.getBody()->getArguments()[1], i);
+    }
+    
+    return prevAccumulatorValue;
   }                          
 
 
@@ -572,6 +627,30 @@ struct PredictForestOpLowering: public ConversionPattern {
       auto newMemrefElem = rewriter.create<arith::AddFOp>(location, state.resultMemrefType.getElementType(), accumulatedValue, currentMemrefElem);
       rewriter.create<memref::StoreOp>(location, newMemrefElem, state.resultMemref, ValueRange{rowIndex});
     }
+    else if (indexVar.Pipelined()) {
+      auto range = indexVar.GetRange();
+      auto stopConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_stop); 
+      auto startConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_start);
+      auto stepConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_step);
+
+      auto zeroConst = CreateFPConstant(rewriter, location, state.dataMemrefType.getElementType(), 0.0);      
+
+      // TODO - Currently assumes (stop - start) % step == 0. We need to handle the case where that's not true.
+      scf::ForOp loop = rewriter.create<scf::ForOp>(location, startConst, stopConst, stepConst, ValueRange{ zeroConst });
+      rewriter.setInsertionPointToStart(loop.getBody());
+      treeIndices.push_back(loop.getInductionVar());
+      auto accumulatedValue = GeneratePipelinedTreeIndexLeafLoopBody(rewriter, location, indexVar, treeIndices, state, row, rowIndex, loop.getBody()->getArguments()[1]);
+      rewriter.create<scf::YieldOp>(location, static_cast<Value>(accumulatedValue));
+      rewriter.setInsertionPointAfter(loop);
+      
+      // Don't accumulate into memref in case of multiclass.
+      if (state.isMultiClass) return;
+      
+      // Generate the store back in to the result memref
+      auto currentMemrefElem = rewriter.create<memref::LoadOp>(location, state.resultMemref, ValueRange{rowIndex});
+      auto newMemrefElem = rewriter.create<arith::AddFOp>(location, state.resultMemrefType.getElementType(), loop.getResults()[0], currentMemrefElem);
+      rewriter.create<memref::StoreOp>(location, newMemrefElem, state.resultMemref, ValueRange{rowIndex});
+    }
     else {
       // Generate leaf loop for tree index var
       auto range = indexVar.GetRange();
@@ -595,6 +674,54 @@ struct PredictForestOpLowering: public ConversionPattern {
       auto currentMemrefElem = rewriter.create<memref::LoadOp>(location, state.resultMemref, ValueRange{rowIndex});
       auto newMemrefElem = rewriter.create<arith::AddFOp>(location, state.resultMemrefType.getElementType(), loop.getResults()[0], currentMemrefElem);
       rewriter.create<memref::StoreOp>(location, newMemrefElem, state.resultMemref, ValueRange{rowIndex});
+    }
+  }
+
+  void GeneratePipelinedBatchIndexLeafLoopBody(
+    ConversionPatternRewriter &rewriter,
+    Location location,
+    const decisionforest::IndexVariable& indexVar,
+    std::list<Value> batchIndices,
+    decisionforest::TreeType treeType,
+    Value tree,
+    Value treeIndex,
+    PredictOpLoweringState& state) const {
+
+    std::vector <Value> rowIndices;
+    std::vector <Value> rows;
+    std::vector <Value> trees;
+    std::vector <Type> treeResultTypes;
+    for (int32_t i = 0; i < indexVar.GetRange().m_step; i++) {
+      batchIndices.push_back(rewriter.create<arith::ConstantIndexOp>(location, i));
+      auto rowIndex = SumOfValues(rewriter, location, batchIndices);
+      
+      rows.push_back(GetRow(rewriter, location, state.data, rowIndex, state.dataMemrefType));
+      rowIndices.push_back(rowIndex);
+      trees.push_back(tree);
+      treeResultTypes.push_back(treeType.getThresholdType());
+      
+      batchIndices.pop_back();
+    }
+
+    // Walk the tree
+    auto unrollLoopAttr = decisionforest::UnrollLoopAttribute::get(treeType, indexVar.GetContainingLoop()->GetUnrollFactor());
+    auto walkOp = rewriter.create<decisionforest::PipelinedWalkDecisionTreeOp>(location, treeResultTypes, unrollLoopAttr, trees, rows);
+    for (size_t i = 0; i < rowIndices.size(); i++) {
+      // Don't accumulate into memref in case of multiclass.
+      if (state.isMultiClass) {
+        GenerateMultiClassAccumulate(rewriter, location, walkOp.getResult(i), rowIndices[i], treeIndex, state);
+      }
+      else {
+        // Accumulate the tree prediction and generate the store back in to the result memref
+        // TODO - Check of load and store value range can just store all row indices at once
+        auto currentMemrefElem = rewriter.create<memref::LoadOp>(location, state.resultMemref, ValueRange{rowIndices[i]});
+        auto accumulatedValue = rewriter.create<arith::AddFOp>(location, state.resultMemrefType.getElementType(), walkOp.getResult(i), currentMemrefElem);
+        rewriter.create<memref::StoreOp>(location, accumulatedValue, state.resultMemref, ValueRange{rowIndices[i]});
+
+        if (mlir::decisionforest::InsertDebugHelpers) {
+          rewriter.create<decisionforest::PrintTreePredictionOp>(location, walkOp.getResult(i), treeIndex);
+        }
+      }
     }
   }
 
@@ -623,7 +750,7 @@ struct PredictForestOpLowering: public ConversionPattern {
 
     // Accumulate the tree prediction and generate the store back in to the result memref
     auto currentMemrefElem = rewriter.create<memref::LoadOp>(location, state.resultMemref, ValueRange{rowIndex});
-    auto accumulatedValue = rewriter.create<arith::AddFOp>(location, state.resultMemrefType.getElementType(), static_cast<Value>(walkOp), currentMemrefElem);
+    auto accumulatedValue = rewriter.create<arith::AddFOp>(location, state.resultMemrefType.getElementType(), walkOp, currentMemrefElem);
     rewriter.create<memref::StoreOp>(location, accumulatedValue, state.resultMemref, ValueRange{rowIndex});
 
     if (mlir::decisionforest::InsertDebugHelpers) {
@@ -655,6 +782,20 @@ struct PredictForestOpLowering: public ConversionPattern {
         batchIndices.push_back(batchIndex);
         GenerateBatchIndexLeafLoopBody(rewriter, location, indexVar, batchIndices, treeType, tree, treeIndex, state);
       }
+    }
+    else if (indexVar.Pipelined()) {
+      // Currently supports only single variable.
+      auto range = indexVar.GetRange();
+      if (range.m_start == range.m_stop) return;
+      
+      auto stopConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_stop); 
+      auto startConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_start);
+      auto stepConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_step);
+      scf::ForOp loop = rewriter.create<scf::ForOp>(location, startConst, stopConst, stepConst);
+      rewriter.setInsertionPointToStart(loop.getBody());
+      batchIndices.push_back(loop.getInductionVar());
+      GeneratePipelinedBatchIndexLeafLoopBody(rewriter, location, indexVar, batchIndices, treeType, tree, treeIndex, state);
+      rewriter.setInsertionPointAfter(loop);
     }
     else {
       // Generate leaf loop for tree index var

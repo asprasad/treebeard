@@ -18,6 +18,7 @@
 #include "TreeTilingUtils.h"
 #include "TiledTree.h"
 #include "Logger.h"
+#include "CodeGenStateMachine.h"
 
 using namespace mlir;
 
@@ -673,11 +674,33 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     assert (treeMemrefType);
 
     auto treeTileType = treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
+    decisionforest::InterleavedCodeGenStateMachine codeGenStateMachine;
     if (treeTileType.getTileSize() == 1)
-      LowerOpTileSize1(op, operands, rewriter);
+      codeGenStateMachine.AddStateMachine(
+        std::make_unique<decisionforest::ScalarTraverseTileCodeGenerator>(
+          treeMemref,
+          operands[2],
+          operands[1],
+          traverseTileOp.getResult().getType(),
+          decisionforest::kSparse));
+      // LowerOpTileSize1(op, operands, rewriter);
     else
-      LowerOpForVectorTile(op, operands, rewriter);
-
+      codeGenStateMachine.AddStateMachine(
+        std::make_unique<decisionforest::VectorTraverseTileCodeGenerator>(
+          operands[0],
+          treeMemref,
+          operands[2],
+          operands[1],
+          traverseTileOp.getResult().getType(),
+          decisionforest::kSparse,
+          GetLUTFromTreeOperand));
+      // LowerOpForVectorTile(op, operands, rewriter);
+    
+    auto location = op->getLoc();
+    while (codeGenStateMachine.EmitNext(rewriter, location));
+    
+    rewriter.replaceOp(op, static_cast<Value>(codeGenStateMachine.GetResult()[0]));
+    
     return mlir::success();
   }
 

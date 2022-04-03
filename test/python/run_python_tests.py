@@ -1,3 +1,4 @@
+from glob import glob
 import sys
 import os
 from xmlrpc.client import Boolean
@@ -94,6 +95,16 @@ def RunTestOnSingleModelTestInputs_Multibatch(modelName : str, returnType=numpy.
   csvPath = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), modelName + "_xgb_model_save.json.test.sampled.csv")
   return RunSingleTest_Multibatch(soPath, globalsJSONPath, csvPath, returnType)
 
+def CompilerOptionsTest() -> Boolean:
+  model_name = "abalone"
+  compilerOptions = treebeard.CompilerOptions(20, 8)
+  jsonPath = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), model_name + "_xgb_model_save.json")
+  tempPath = os.path.join(os.path.join(treebeard_repo_dir, "debug"), "temp")
+  globalsJSONPath = os.path.join(tempPath, "abalone_python_test.treebeard-globals.json")
+  llvmIRFile = os.path.join(tempPath, "abalone_python_test.ll")
+  treebeard.GenerateLLVMIRForXGBoostModel(jsonPath, llvmIRFile, globalsJSONPath, compilerOptions)
+  return True
+
 assert RunTestOnSingleModelRandomInputs_Multibatch("abalone")
 assert RunTestOnSingleModelRandomInputs_Multibatch("airline")
 assert RunTestOnSingleModelRandomInputs_Multibatch("airline-ohe")
@@ -129,3 +140,5 @@ assert RunTestOnSingleModelTestInputs("epsilon")
 assert RunTestOnSingleModelTestInputs("higgs")
 assert RunTestOnSingleModelTestInputs("letters", numpy.int8)
 assert RunTestOnSingleModelTestInputs("year_prediction_msd")
+
+assert CompilerOptionsTest()

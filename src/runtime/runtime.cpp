@@ -2,6 +2,11 @@
 #include <fstream>
 #include <json.hpp>
 #include "ExecutionHelpers.h"
+#include "CompileUtils.h"
+
+// ===-------------------------------------------------------------=== //
+// Execution API
+// ===-------------------------------------------------------------=== //
 
 // Create a shared object inference runner and return an ID (Init)
 //    -- SO name, globals JSON path 
@@ -60,4 +65,57 @@ extern "C" int32_t GetRowSize(intptr_t inferenceRunnerInt) {
 extern "C" void DeleteInferenceRunner(intptr_t inferenceRunnerInt) {
   auto inferenceRunner = reinterpret_cast<mlir::decisionforest::SharedObjectInferenceRunner*>(inferenceRunnerInt);
   delete inferenceRunner;
+}
+
+// ===-------------------------------------------------------------=== //
+// Compilation API
+// ===-------------------------------------------------------------=== //
+
+extern "C" intptr_t CreateCompilerOptions() {
+  return reinterpret_cast<intptr_t>(new TreeBeard::CompilerOptions);
+}
+
+extern "C" void DeleteCompilerOptions(intptr_t options) {
+  TreeBeard::CompilerOptions *optionsPtr = reinterpret_cast<TreeBeard::CompilerOptions*>(options);
+  delete optionsPtr;
+}
+
+#define COMPILER_OPTION_SETTER(propName, propType) \
+extern "C" void Set_##propName(intptr_t options, propType val) { \
+  TreeBeard::CompilerOptions *optionsPtr = reinterpret_cast<TreeBeard::CompilerOptions*>(options);  \
+  optionsPtr->propName = reinterpret_cast<propType>(val); \
+} 
+
+COMPILER_OPTION_SETTER(batchSize, int32_t)
+COMPILER_OPTION_SETTER(tileSize, int32_t)
+
+COMPILER_OPTION_SETTER(thresholdTypeWidth, int32_t)
+COMPILER_OPTION_SETTER(returnTypeWidth, int32_t)
+COMPILER_OPTION_SETTER(returnTypeFloatType, int32_t)
+COMPILER_OPTION_SETTER(featureIndexTypeWidth, int32_t)
+COMPILER_OPTION_SETTER(nodeIndexTypeWidth, int32_t)
+COMPILER_OPTION_SETTER(inputElementTypeWidth, int32_t)
+COMPILER_OPTION_SETTER(tileShapeBitWidth, int32_t)
+COMPILER_OPTION_SETTER(childIndexBitWidth, int32_t)
+COMPILER_OPTION_SETTER(makeAllLeavesSameDepth, int32_t)
+COMPILER_OPTION_SETTER(reorderTreesByDepth, int32_t)
+
+extern "C" void Set_tilingType(intptr_t options, int32_t val) {
+  TreeBeard::CompilerOptions *optionsPtr = reinterpret_cast<TreeBeard::CompilerOptions*>(options);
+  TreeBeard::TilingType tilingType;
+  if (val == 0)
+    tilingType = TreeBeard::TilingType::kUniform;
+  else if (val == 1)
+    tilingType = TreeBeard::TilingType::kProbabilistic;
+  else if (val == 2)
+    tilingType = TreeBeard::TilingType::kHybrid;
+  else
+    assert (false && "Invalid tiling type value");
+  optionsPtr->tilingType = tilingType;
+}
+
+extern "C" void GenerateLLVMIRForXGBoostModel(const char* modelJSONPath, const char* llvmIRFilePath,
+                                              const char* modelGlobalsJSONPath, intptr_t options) {
+  TreeBeard::CompilerOptions *optionsPtr = reinterpret_cast<TreeBeard::CompilerOptions*>(options);
+  TreeBeard::ConvertXGBoostJSONToLLVMIR(modelJSONPath, llvmIRFilePath, modelGlobalsJSONPath, *optionsPtr);
 }

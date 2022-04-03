@@ -1,4 +1,5 @@
 #include <iostream>
+#include <memory>
 #include "Dialect.h"
 // #include "Passes.h"
 
@@ -17,6 +18,8 @@
 #include "Dialect.h"
 #include "TreeTilingUtils.h"
 #include "TiledTree.h"
+#include "schedule.h"
+#include "CodeGenStateMachine.h"
 
 /*
 Plan and issues
@@ -96,16 +99,16 @@ std::map<Operation*, EnsembleConstantLoweringInfo> ensembleConstantToMemrefsMap;
 // Maps a GetTree operation to a memref that represents the tree once the ensemble constant has been replaced
 std::map<Operation*, Value> getTreeOperationMap;
 
-void ClearGlobalMaps() {
-  ensembleConstantToMemrefsMap.clear();
-  getTreeOperationMap.clear();
-}
-
 template<typename T>
 T AssertOpIsOfType(Operation* operation) {
   T typedOp = llvm::dyn_cast<T>(operation);
   assert(typedOp);
   return typedOp;
+}
+
+void ClearGlobalMaps() {
+  ensembleConstantToMemrefsMap.clear();
+  getTreeOperationMap.clear();
 }
 
 class SaveAndRestoreInsertionPoint {
@@ -571,6 +574,95 @@ struct IsLeafOpLowering: public ConversionPattern {
   }
 };
 
+Value ReduceComparisonResultVectorToInt(Value comparisonResult, int32_t tileSize, ConversionPatternRewriter &rewriter, Location location) {
+  auto i32VectorType = VectorType::get(tileSize, rewriter.getI32Type());
+  auto comparisonExtended = rewriter.create<arith::ExtUIOp>(location, i32VectorType, comparisonResult);
+
+  auto zeroI32Const = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI32Type());
+  auto shiftVector = static_cast<Value>(rewriter.create<vector::BroadcastOp>(location, i32VectorType, zeroI32Const));
+  for (int32_t shift=0, pos=tileSize-1 ; shift<tileSize; ++shift, --pos) {
+    auto shiftValConst = rewriter.create<arith::ConstantIntOp>(location, int64_t(shift), rewriter.getI32Type());
+    shiftVector = rewriter.create<vector::InsertOp>(location, static_cast<Value>(shiftValConst), 
+                                                    static_cast<Value>(shiftVector), ArrayRef<int64_t>({ pos }));
+  }
+
+  auto leftShift = rewriter.create<arith::ShLIOp>(location, i32VectorType, comparisonExtended, shiftVector);
+  auto kind = rewriter.getStringAttr("add");
+  auto sum = rewriter.create<vector::ReductionOp>(location, rewriter.getI32Type(), kind, static_cast<Value>(leftShift), ValueRange{ });
+  auto index = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(sum));
+  return index;
+}
+
+Value ReduceComparisonResultVectorToInt_Bitcast(Value comparisonResult, int32_t tileSize, ConversionPatternRewriter &rewriter, Location location) {
+  auto bitcastVectorType = VectorType::get(1, rewriter.getIntegerType(tileSize));
+  auto bitcastOp = rewriter.create<vector::BitCastOp>(location, bitcastVectorType, comparisonResult);
+  auto zeroConst = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI32Type());
+  auto integerResult = rewriter.create<vector::ExtractElementOp>(location, static_cast<Value>(bitcastOp), static_cast<Value>(zeroConst));
+  auto zeroExtend = rewriter.create<arith::ExtUIOp>(location, integerResult, rewriter.getI64Type()); 
+  auto index = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(zeroExtend));
+  return index;
+}
+
+struct InterleavedTraverseTreeTileOpLowering : public ConversionPattern {
+  InterleavedTraverseTreeTileOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::InterleavedTraverseTreeTileOp::getOperationName(), 1 /*benefit*/, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,ConversionPatternRewriter &rewriter) const final {
+    auto traverseTileOp = AssertOpIsOfType<mlir::decisionforest::InterleavedTraverseTreeTileOp>(op);
+    if (!traverseTileOp)
+        return mlir::failure();
+    
+    auto trees = traverseTileOp.trees();
+    auto nodes = traverseTileOp.nodes();
+    auto dataRows = traverseTileOp.data();
+
+    assert(nodes.size() == trees.size());
+    assert(trees.size() == dataRows.size());
+
+    decisionforest::InterleavedCodeGenStateMachine codeGenStateMachine;
+    for (size_t i = 0; i < trees.size(); i++) {
+      auto tree = trees[i];
+      auto node = nodes[i];
+      auto data = dataRows[i];
+
+      auto treeMemref = GetTreeMemrefFromTreeOperand(tree);
+      auto treeMemrefType = treeMemref.getType().cast<MemRefType>();
+      assert (treeMemrefType);
+
+      auto treeTileType = treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
+
+      // TODO - tile size should be same for all iterations. Need to assert this somehow.
+      if (treeTileType.getTileSize() == 1) {
+        codeGenStateMachine.AddStateMachine(
+          std::make_unique<decisionforest::ScalarTraverseTileCodeGenerator>(
+            treeMemref,
+            data,
+            node,
+            traverseTileOp.getResult(i).getType(),
+            decisionforest::Representation::kArray));
+      }
+      else {
+        codeGenStateMachine.AddStateMachine(
+          std::make_unique<decisionforest::VectorTraverseTileCodeGenerator>(
+            tree,
+            treeMemref,
+            data,
+            node,
+            traverseTileOp.getResult(i).getType(),
+            decisionforest::Representation::kArray,
+            GetLUTFromTreeOperand));
+      }
+    }
+
+    auto location = op->getLoc();
+    while (codeGenStateMachine.EmitNext(rewriter, location));
+
+    rewriter.replaceOp(op, codeGenStateMachine.GetResult());
+    return mlir::success();
+  }
+};
+
+
 struct TraverseTreeTileOpLowering : public ConversionPattern {
   TraverseTreeTileOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::TraverseTreeTileOp::getOperationName(), 1 /*benefit*/, ctx) {}
 
@@ -586,11 +678,33 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     assert (treeMemrefType);
 
     auto treeTileType = treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
+    decisionforest::InterleavedCodeGenStateMachine codeGenStateMachine;
     if (treeTileType.getTileSize() == 1)
-      LowerOpTileSize1(op, operands, rewriter);
+      codeGenStateMachine.AddStateMachine(
+        std::make_unique<decisionforest::ScalarTraverseTileCodeGenerator>(
+          treeMemref,
+          operands[2],
+          operands[1],
+          traverseTileOp.getResult().getType(),
+          decisionforest::kArray));
+      // LowerOpTileSize1(op, operands, rewriter);
     else
-      LowerOpForVectorTile(op, operands, rewriter);
-
+      codeGenStateMachine.AddStateMachine(
+        std::make_unique<decisionforest::VectorTraverseTileCodeGenerator>(
+          operands[0],
+          treeMemref,
+          operands[2],
+          operands[1],
+          traverseTileOp.getResult().getType(),
+          decisionforest::kArray,
+          GetLUTFromTreeOperand));
+      // LowerOpForVectorTile(op, operands, rewriter);
+    
+    // Emit code.
+    auto location = op->getLoc();
+    while (codeGenStateMachine.EmitNext(rewriter, location));
+    
+    rewriter.replaceOp(op, static_cast<Value>(codeGenStateMachine.GetResult()[0]));
     return mlir::success();
   }
 
@@ -646,35 +760,6 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     auto newNode = rewriter.create<decisionforest::IndexToNodeOp>(location, traverseTileOp.getResult().getType(), treeMemref, static_cast<Value>(newIndex));
 
     rewriter.replaceOp(op, static_cast<Value>(newNode));
-  }
-
-  Value ReduceComparisonResultVectorToInt(Value comparisonResult, int32_t tileSize, ConversionPatternRewriter &rewriter, Location location) const {
-    auto i32VectorType = VectorType::get(tileSize, rewriter.getI32Type());
-    auto comparisonExtended = rewriter.create<arith::ExtUIOp>(location, i32VectorType, comparisonResult);
-
-    auto zeroI32Const = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI32Type());
-    auto shiftVector = static_cast<Value>(rewriter.create<vector::BroadcastOp>(location, i32VectorType, zeroI32Const));
-    for (int32_t shift=0, pos=tileSize-1 ; shift<tileSize; ++shift, --pos) {
-      auto shiftValConst = rewriter.create<arith::ConstantIntOp>(location, int64_t(shift), rewriter.getI32Type());
-      shiftVector = rewriter.create<vector::InsertOp>(location, static_cast<Value>(shiftValConst), 
-                                                      static_cast<Value>(shiftVector), ArrayRef<int64_t>({ pos }));
-    }
-
-    auto leftShift = rewriter.create<arith::ShLIOp>(location, i32VectorType, comparisonExtended, shiftVector);
-    auto kind = rewriter.getStringAttr("add");
-    auto sum = rewriter.create<vector::ReductionOp>(location, rewriter.getI32Type(), kind, static_cast<Value>(leftShift), ValueRange{ });
-    auto index = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(sum));
-    return index;
-  }
-
-  Value ReduceComparisonResultVectorToInt_Bitcast(Value comparisonResult, int32_t tileSize, ConversionPatternRewriter &rewriter, Location location) const {
-    auto bitcastVectorType = VectorType::get(1, rewriter.getIntegerType(tileSize));
-    auto bitcastOp = rewriter.create<vector::BitCastOp>(location, bitcastVectorType, comparisonResult);
-    auto zeroConst = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI32Type());
-    auto integerResult = rewriter.create<vector::ExtractElementOp>(location, static_cast<Value>(bitcastOp), static_cast<Value>(zeroConst));
-    auto zeroExtend = rewriter.create<arith::ExtUIOp>(location, integerResult, rewriter.getI64Type()); 
-    auto index = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(zeroExtend));
-    return index;
   }
 
   void LowerOpForVectorTile(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const {
@@ -864,6 +949,7 @@ struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLowe
                         decisionforest::IsLeafOp,
                         decisionforest::IsLeafTileOp,
                         decisionforest::TraverseTreeTileOp,
+                        decisionforest::InterleavedTraverseTreeTileOp,
                         decisionforest::GetLeafValueOp,
                         decisionforest::GetLeafTileValueOp,
                         decisionforest::GetTreeClassIdOp>();
@@ -892,6 +978,7 @@ void PopulateLowerToArrayRepresentationPatterns(RewritePatternSet& patterns) {
                 GetRootOpLowering,
                 IsLeafOpLowering,
                 TraverseTreeTileOpLowering,
+                InterleavedTraverseTreeTileOpLowering,
                 GetLeafValueOpLowering>(patterns.getContext());
 }
 

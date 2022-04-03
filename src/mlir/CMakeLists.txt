@@ -10,7 +10,9 @@ ExecutionHelpers.cpp
 LowerDebugHelpers.cpp
 UniformTilingTransformation.cpp
 WalkDecisionTreeLoweringPass.cpp
-ProbabilityBasedTilingTransform.cpp)
+ProbabilityBasedTilingTransform.cpp
+CodeGenStateMachine.cpp
+ReorderTiledTreesByDepth.cpp)
 
 target_sources(treebeard-runtime 
 PRIVATE
@@ -24,4 +26,6 @@ ExecutionHelpers.cpp
 LowerDebugHelpers.cpp
 UniformTilingTransformation.cpp
 WalkDecisionTreeLoweringPass.cpp
-ProbabilityBasedTilingTransform.cpp)
+ProbabilityBasedTilingTransform.cpp
+CodeGenStateMachine.cpp
+ReorderTiledTreesByDepth.cpp)

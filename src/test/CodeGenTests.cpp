@@ -1145,8 +1145,8 @@ bool Test_UniformTiling_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   FixedTreeIRConstructor<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType> irGenerator(args.context, 1, forestConstructor);
   irGenerator.Parse();
   auto module = irGenerator.GetEvaluationFunction();
-  decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   decisionforest::DoUniformTiling(args.context, module, tileSize, tileShapeBitWidth, makeAllLeavesSameDepth);
+  decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   // module->dump();
   decisionforest::LowerEnsembleToMemrefs(args.context, module);
   decisionforest::ConvertNodeTypeToIndexType(args.context, module);
