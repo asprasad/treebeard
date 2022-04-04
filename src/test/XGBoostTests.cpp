@@ -1621,6 +1621,15 @@ bool Test_SparseTileSize8_Bosch(TestArgs_t &args) {
   return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 32);
 }
 
+bool Test_SparseTileSize8_Pipelined_Bosch(TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/bosch_xgb_model_save.json";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel(args, modelJSONPath, tileSize, true, 32, 32, "" , nullptr, true, true);
+}
+
 bool Test_SparseScalar_CovType_Int8Type(TestArgs_t &args) {
   decisionforest::UseSparseTreeRepresentation = true;
   return Test_TileSizeVariable_CovType_Int8Type(args, 1);
@@ -1789,6 +1798,15 @@ bool Test_TileSize8_Abalone_TestInputs(TestArgs_t &args) {
   return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
 }
 
+bool Test_TileSize8_Abalone_Pipelined_TestInputs(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath, nullptr, true, true);
+}
+
 bool Test_TileSize8_AirlineOHE_TestInputs(TestArgs_t &args) {
   auto repoPath = GetTreeBeardRepoPath();
   auto testModelsDir = repoPath + "/xgb_models";
@@ -1850,6 +1868,15 @@ bool Test_TileSize8_CovType_TestInputs(TestArgs_t &args) {
   auto modelJSONPath = testModelsDir + "/covtype_xgb_model_save.json";
   auto csvPath = modelJSONPath + ".test.sampled.csv";
   return Test_MultiClass_Int32ReturnType(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
+}
+
+bool Test_TileSize8_CovType_Pipelined_TestInputs(TestArgs_t &args) {
+  int32_t tileSize = 8;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/covtype_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  return Test_MultiClass_Int32ReturnType(args, modelJSONPath, tileSize, false, 16, 16, csvPath, nullptr, true, true);
 }
 
 // ===--------------------------------------------------------=== //

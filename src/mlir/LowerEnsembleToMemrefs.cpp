@@ -21,6 +21,7 @@
 #include "schedule.h"
 #include "CodeGenStateMachine.h"
 #include "TraverseTreeTileOpLowering.h"
+#include "OpLoweringUtils.h"
 
 /*
 Plan and issues
@@ -99,13 +100,6 @@ struct EnsembleConstantLoweringInfo {
 std::map<Operation*, EnsembleConstantLoweringInfo> ensembleConstantToMemrefsMap;
 // Maps a GetTree operation to a memref that represents the tree once the ensemble constant has been replaced
 std::map<Operation*, Value> getTreeOperationMap;
-
-template<typename T>
-T AssertOpIsOfType(Operation* operation) {
-  T typedOp = llvm::dyn_cast<T>(operation);
-  assert(typedOp);
-  return typedOp;
-}
 
 void ClearGlobalMaps() {
   ensembleConstantToMemrefsMap.clear();
@@ -606,10 +600,9 @@ Value ReduceComparisonResultVectorToInt_Bitcast(Value comparisonResult, int32_t 
 
 struct InterleavedTraverseTreeTileOpLowering : public ConversionPattern {
   InterleavedTraverseTreeTileOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::InterleavedTraverseTreeTileOp::getOperationName(), 1 /*benefit*/, ctx) {}
-
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,ConversionPatternRewriter &rewriter) const final {
-    decisionforest::TraverseTreeTileOpLoweringHelper traverseLowringHelper(GetTreeMemrefFromTreeOperand, GetLUTFromTreeOperand);
+    decisionforest::InterleavedTraverseTreeTileOpLoweringHelper traverseLowringHelper(GetTreeMemrefFromTreeOperand, GetLUTFromTreeOperand, decisionforest::Representation::kArray);
     return traverseLowringHelper.matchAndRewrite(AssertOpIsOfType<mlir::decisionforest::InterleavedTraverseTreeTileOp>(op), operands, rewriter);
   }
 };

@@ -20,17 +20,11 @@
 #include "TreeTilingUtils.h"
 
 #include "Logger.h"
+#include "OpLoweringUtils.h"
 
 using namespace mlir;
 
 namespace {
-
-template<typename T>
-T AssertOpIsOfType(Operation* operation) {
-  T typedOp = llvm::dyn_cast<T>(operation);
-  assert(typedOp);
-  return typedOp;
-}
 
 struct NodeToIndexOpLowering : public ConversionPattern {
   NodeToIndexOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::NodeToIndexOp::getOperationName(), 1 /*benefit*/, ctx) {}

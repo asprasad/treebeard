@@ -20,6 +20,7 @@
 #include "Logger.h"
 #include "CodeGenStateMachine.h"
 #include "TraverseTreeTileOpLowering.h"
+#include "OpLoweringUtils.h"
 
 using namespace mlir;
 
@@ -53,13 +54,6 @@ struct GetTreeLoweringInfo {
 
 // Maps a GetTree operation to a memref that represents the tree once the ensemble constant has been replaced
 std::map<Operation*, GetTreeLoweringInfo> getTreeOperationMap;
-
-template<typename T>
-T AssertOpIsOfType(Operation* operation) {
-  T typedOp = llvm::dyn_cast<T>(operation);
-  assert(typedOp);
-  return typedOp;
-}
 
 class SaveAndRestoreInsertionPoint {
   mlir::OpBuilder::InsertPoint m_insertPoint;
@@ -665,7 +659,7 @@ struct InterleavedTraverseTreeTileOpLowering : public ConversionPattern {
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,ConversionPatternRewriter &rewriter) const final {
-    decisionforest::TraverseTreeTileOpLoweringHelper traverseLowringHelper(GetTreeMemrefFromTreeOperand, GetLUTFromTreeOperand);
+    decisionforest::InterleavedTraverseTreeTileOpLoweringHelper traverseLowringHelper(GetTreeMemrefFromTreeOperand, GetLUTFromTreeOperand, decisionforest::Representation::kSparse);
     return traverseLowringHelper.matchAndRewrite(AssertOpIsOfType<mlir::decisionforest::InterleavedTraverseTreeTileOp>(op), operands, rewriter);
   }
 };

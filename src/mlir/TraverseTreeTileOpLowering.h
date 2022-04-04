@@ -2,6 +2,7 @@
 #define TRAVERSE_TREE_TILE_OP_LOWERING
 
 #include "CodeGenStateMachine.h"
+#include "OpLoweringUtils.h"
 
 namespace mlir
 {
@@ -10,12 +11,20 @@ namespace decisionforest
     // TODO - Unify this with the regular traverse tile lowering.
     class InterleavedTraverseTreeTileOpLoweringHelper {
         private:
-            std::function<Value(Value)> m_getTreeMemref;
-            std::function<Value(Value)> m_getLutFromTree;
+        std::function<Value(Value)> m_getTreeMemref;
+        std::function<Value(Value)> m_getLutFromTree;
+        decisionforest::Representation m_representation;
+        
         public:
-        InterleavedTraverseTreeTileOpLoweringHelper(std::function<Value(Value)> getTreeMemref, std::function<Value(Value)> getLutFromTree) : m_getTreeMemref(getTreeMemref), m_getLutFromTree(getLutFromTree) {}
+        InterleavedTraverseTreeTileOpLoweringHelper(
+            std::function<Value(Value)> getTreeMemref,
+            std::function<Value(Value)> getLutFromTree,
+            decisionforest::Representation representation)
+            : m_getTreeMemref(getTreeMemref),
+              m_getLutFromTree(getLutFromTree),
+              m_representation(representation) {}
 
-        LogicalResult matchAndRewrite(Operation *op, ArrayRef<Value> operands,ConversionPatternRewriter &rewriter) const final {
+        LogicalResult matchAndRewrite(Operation *op, ArrayRef<Value> operands,ConversionPatternRewriter &rewriter) const {
             auto traverseTileOp = AssertOpIsOfType<mlir::decisionforest::InterleavedTraverseTreeTileOp>(op);
             if (!traverseTileOp)
                 return mlir::failure();
@@ -29,37 +38,37 @@ namespace decisionforest
 
             decisionforest::InterleavedCodeGenStateMachine codeGenStateMachine;
             for (size_t i = 0; i < trees.size(); i++) {
-            auto tree = trees[i];
-            auto node = nodes[i];
-            auto data = dataRows[i];
+                auto tree = trees[i];
+                auto node = nodes[i];
+                auto data = dataRows[i];
 
-            auto treeMemref = m_getTreeMemref(tree);
-            auto treeMemrefType = treeMemref.getType().cast<MemRefType>();
-            assert (treeMemrefType);
+                auto treeMemref = m_getTreeMemref(tree);
+                auto treeMemrefType = treeMemref.getType().cast<MemRefType>();
+                assert (treeMemrefType);
 
-            auto treeTileType = treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
+                auto treeTileType = treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
 
-            // TODO - tile size should be same for all iterations. Need to assert this somehow.
-            if (treeTileType.getTileSize() == 1) {
-                codeGenStateMachine.AddStateMachine(
-                std::make_unique<decisionforest::ScalarTraverseTileCodeGenerator>(
-                    treeMemref,
-                    data,
-                    node,
-                    traverseTileOp.getResult(i).getType(),
-                    decisionforest::Representation::kArray));
-            }
-            else {
-                codeGenStateMachine.AddStateMachine(
-                std::make_unique<decisionforest::VectorTraverseTileCodeGenerator>(
-                    tree,
-                    treeMemref,
-                    data,
-                    node,
-                    traverseTileOp.getResult(i).getType(),
-                    decisionforest::Representation::kArray,
-                    m_getLutFromTree));
-            }
+                // TODO - tile size should be same for all iterations. Need to assert this somehow.
+                if (treeTileType.getTileSize() == 1) {
+                    codeGenStateMachine.AddStateMachine(
+                    std::make_unique<decisionforest::ScalarTraverseTileCodeGenerator>(
+                        treeMemref,
+                        data,
+                        node,
+                        traverseTileOp.getResult(i).getType(),
+                        m_representation));
+                }
+                else {
+                    codeGenStateMachine.AddStateMachine(
+                    std::make_unique<decisionforest::VectorTraverseTileCodeGenerator>(
+                        tree,
+                        treeMemref,
+                        data,
+                        node,
+                        traverseTileOp.getResult(i).getType(),
+                        m_representation,
+                        m_getLutFromTree));
+                }
             }
 
             auto location = op->getLoc();
@@ -72,4 +81,4 @@ namespace decisionforest
 } // decisionforest
 } // mlir
 
-#endinf // TRAVERSE_TREE_TILE_OP_LOWERING
+#endif // TRAVERSE_TREE_TILE_OP_LOWERING
