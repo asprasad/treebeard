@@ -19,6 +19,7 @@
 #include "TiledTree.h"
 #include "Logger.h"
 #include "CodeGenStateMachine.h"
+#include "TraverseTreeTileOpLowering.h"
 
 using namespace mlir;
 
@@ -659,6 +660,16 @@ struct GetTreeClassIdOpLowering: public ConversionPattern {
   }
 };
 
+struct InterleavedTraverseTreeTileOpLowering : public ConversionPattern {
+  InterleavedTraverseTreeTileOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::InterleavedTraverseTreeTileOp::getOperationName(), 1 /*benefit*/, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,ConversionPatternRewriter &rewriter) const final {
+    decisionforest::TraverseTreeTileOpLoweringHelper traverseLowringHelper(GetTreeMemrefFromTreeOperand, GetLUTFromTreeOperand);
+    return traverseLowringHelper.matchAndRewrite(AssertOpIsOfType<mlir::decisionforest::InterleavedTraverseTreeTileOp>(op), operands, rewriter);
+  }
+};
+
 struct TraverseTreeTileOpLowering : public ConversionPattern {
   TraverseTreeTileOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::TraverseTreeTileOp::getOperationName(), 1 /*benefit*/, ctx) {}
 
@@ -700,7 +711,7 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     while (codeGenStateMachine.EmitNext(rewriter, location));
     
     rewriter.replaceOp(op, static_cast<Value>(codeGenStateMachine.GetResult()[0]));
-    
+
     return mlir::success();
   }
 
@@ -1102,6 +1113,7 @@ void PopulateLowerToSparseRepresentationPatterns(RewritePatternSet& patterns) {
                 IsLeafTileOpLowering,
                 GetTreeClassIdOpLowering,
                 TraverseTreeTileOpLowering,
+                InterleavedTraverseTreeTileOpLowering,
                 GetLeafValueOpLowering,
                 GetLeafTileValueOpLowering>(patterns.getContext());
 }

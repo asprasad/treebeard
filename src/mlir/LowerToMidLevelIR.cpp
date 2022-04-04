@@ -596,8 +596,7 @@ struct PredictForestOpLowering: public ConversionPattern {
     }
     
     return prevAccumulatorValue;
-  }                          
-
+  }
 
   void GenerateLeafLoopForTreeIndex(ConversionPatternRewriter &rewriter, Location location, const decisionforest::IndexVariable& indexVar, 
                         std::list<Value> batchIndices, std::list<Value> treeIndices, PredictOpLoweringState& state) const {
@@ -629,27 +628,49 @@ struct PredictForestOpLowering: public ConversionPattern {
     }
     else if (indexVar.Pipelined()) {
       auto range = indexVar.GetRange();
-      auto stopConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_stop); 
+      int32_t peeledLoopStart = range.m_stop - (range.m_stop - range.m_start) % range.m_step;
+      int32_t peeledLoopStep = range.m_stop - peeledLoopStart;
+
+      auto stopConst = rewriter.create<arith::ConstantIndexOp>(location, peeledLoopStart); 
       auto startConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_start);
       auto stepConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_step);
 
       auto zeroConst = CreateFPConstant(rewriter, location, state.dataMemrefType.getElementType(), 0.0);      
 
-      // TODO - Currently assumes (stop - start) % step == 0. We need to handle the case where that's not true.
       scf::ForOp loop = rewriter.create<scf::ForOp>(location, startConst, stopConst, stepConst, ValueRange{ zeroConst });
       rewriter.setInsertionPointToStart(loop.getBody());
       treeIndices.push_back(loop.getInductionVar());
       auto accumulatedValue = GeneratePipelinedTreeIndexLeafLoopBody(rewriter, location, indexVar, treeIndices, state, row, rowIndex, loop.getBody()->getArguments()[1]);
       rewriter.create<scf::YieldOp>(location, static_cast<Value>(accumulatedValue));
       rewriter.setInsertionPointAfter(loop);
-      
+
       // Don't accumulate into memref in case of multiclass.
-      if (state.isMultiClass) return;
-      
-      // Generate the store back in to the result memref
-      auto currentMemrefElem = rewriter.create<memref::LoadOp>(location, state.resultMemref, ValueRange{rowIndex});
-      auto newMemrefElem = rewriter.create<arith::AddFOp>(location, state.resultMemrefType.getElementType(), loop.getResults()[0], currentMemrefElem);
-      rewriter.create<memref::StoreOp>(location, newMemrefElem, state.resultMemref, ValueRange{rowIndex});
+      if (!state.isMultiClass) {
+        // Generate the store back in to the result memref
+        auto currentMemrefElem = rewriter.create<memref::LoadOp>(location, state.resultMemref, ValueRange{rowIndex});
+        auto newMemrefElem = rewriter.create<arith::AddFOp>(location, state.resultMemrefType.getElementType(), loop.getResults()[0], currentMemrefElem);
+        rewriter.create<memref::StoreOp>(location, newMemrefElem, state.resultMemref, ValueRange{rowIndex});
+      }
+
+      if (peeledLoopStart < range.m_start) {
+        stopConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_stop); 
+        startConst = rewriter.create<arith::ConstantIndexOp>(location, peeledLoopStart);
+        stepConst = rewriter.create<arith::ConstantIndexOp>(location, peeledLoopStep);      
+
+        scf::ForOp peeledLoop = rewriter.create<scf::ForOp>(location, startConst, stopConst, stepConst, ValueRange{ zeroConst });
+        rewriter.setInsertionPointToStart(peeledLoop.getBody());
+        treeIndices.push_back(peeledLoop.getInductionVar());
+        auto accumulatedValue = GeneratePipelinedTreeIndexLeafLoopBody(rewriter, location, indexVar, treeIndices, state, row, rowIndex, peeledLoop.getBody()->getArguments()[1]);
+        rewriter.create<scf::YieldOp>(location, static_cast<Value>(accumulatedValue));
+        rewriter.setInsertionPointAfter(peeledLoop);
+
+        if (!state.isMultiClass) {
+
+          auto currentMemrefElem = rewriter.create<memref::LoadOp>(location, state.resultMemref, ValueRange{rowIndex});
+          auto newMemrefElem = rewriter.create<arith::AddFOp>(location, state.resultMemrefType.getElementType(), loop.getResults()[0], currentMemrefElem);
+          rewriter.create<memref::StoreOp>(location, newMemrefElem, state.resultMemref, ValueRange{rowIndex});
+        }
+      }
     }
     else {
       // Generate leaf loop for tree index var
@@ -786,16 +807,31 @@ struct PredictForestOpLowering: public ConversionPattern {
     else if (indexVar.Pipelined()) {
       // Currently supports only single variable.
       auto range = indexVar.GetRange();
-      if (range.m_start == range.m_stop) return;
       
-      auto stopConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_stop); 
+      int32_t peeledLoopStart = range.m_stop - (range.m_stop - range.m_start) % range.m_step;
+      int32_t peeledLoopStep = range.m_stop - peeledLoopStart;
+
+      auto stopConst = rewriter.create<arith::ConstantIndexOp>(location, peeledLoopStart); 
       auto startConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_start);
       auto stepConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_step);
+      
       scf::ForOp loop = rewriter.create<scf::ForOp>(location, startConst, stopConst, stepConst);
       rewriter.setInsertionPointToStart(loop.getBody());
       batchIndices.push_back(loop.getInductionVar());
       GeneratePipelinedBatchIndexLeafLoopBody(rewriter, location, indexVar, batchIndices, treeType, tree, treeIndex, state);
       rewriter.setInsertionPointAfter(loop);
+
+      if (peeledLoopStart < range.m_start) {
+        stopConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_stop); 
+        startConst = rewriter.create<arith::ConstantIndexOp>(location, peeledLoopStart);
+        stepConst = rewriter.create<arith::ConstantIndexOp>(location, peeledLoopStep);
+
+        scf::ForOp peeledLoop = rewriter.create<scf::ForOp>(location, startConst, stopConst, stepConst);
+        rewriter.setInsertionPointToStart(peeledLoop.getBody());
+        batchIndices.push_back(peeledLoop.getInductionVar());
+        GeneratePipelinedBatchIndexLeafLoopBody(rewriter, location, indexVar, batchIndices, treeType, tree, treeIndex, state);
+        rewriter.setInsertionPointAfter(peeledLoop);
+      }
     }
     else {
       // Generate leaf loop for tree index var
