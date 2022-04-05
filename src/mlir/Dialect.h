@@ -34,6 +34,7 @@ extern bool UseBitcastForComparisonOutcome;
 extern bool UseSparseTreeRepresentation;
 extern bool OptimizedSparseRepresentation;
 extern bool RemoveExtraHopInSparseRepresentation;
+extern bool PeeledCodeGenForProbabiltyBasedTiling;
 
 void populateDebugOpLoweringPatterns(RewritePatternSet& patterns, LLVMTypeConverter& typeConverter);
 

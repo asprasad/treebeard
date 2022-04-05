@@ -209,9 +209,9 @@ struct WalkDecisionTreePeeledOpLowering: public ConversionPattern {
 
     auto nodeType = mlir::decisionforest::NodeType::get(context);
     Value node = rewriter.create<decisionforest::GetRootOp>(location, nodeType, tree);
-    assert (iterationsToPeel >= 1);
+    assert (iterationsToPeel > 1);
     Value walkResult;
-    for (int64_t iteration=0 ; iteration<iterationsToPeel ; ++iteration) {
+    for (int64_t iteration=0 ; iteration<iterationsToPeel-1 ; ++iteration) {
       node = rewriter.create<decisionforest::TraverseTreeTileOp>(
         location,
         nodeType,

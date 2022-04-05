@@ -157,6 +157,7 @@ Schedule& Schedule::Split(IndexVariable& index, IndexVariable& first, IndexVaria
   first.m_unrolled = second.m_unrolled = index.m_unrolled;
   first.m_peelWalk = second.m_peelWalk = index.m_peelWalk;
   first.m_iterationsToPeel = second.m_iterationsToPeel = index.m_iterationsToPeel;
+  first.m_unrollFactor = second.m_unrollFactor = index.m_unrollFactor;
 
   // indexMap[&index] = std::make_pair(&first, &second);
 

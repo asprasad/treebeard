@@ -2142,6 +2142,29 @@ void TiledTree::AddExtraNodesIfNeeded(int32_t tileIndex) {
     SetChildrenForTile(m_tiles.at(tileIndex));
 }
 
+int32_t TiledTree::NumberOfLevelsNeededToCoverInputs(double inputFraction) {
+    assert (inputFraction < 1);
+    int32_t hitCount = 0;
+    for(int32_t depth=1 ; depth<=GetTreeDepth() ; ++depth) {
+        for (auto& tile : m_tiles) {
+            if (!tile.IsLeafTile())
+                continue;
+            auto tileDepth = tile.GetTileDepth();
+            if (depth != tileDepth)
+                continue;
+            // TODO We need to check that we aren't double counting anything here!
+            assert (tile.m_nodeIndices.size() == 1);
+            hitCount += m_modifiedTree.GetNodes().at(tile.m_nodeIndices[0]).hitCount;
+        }
+        auto totalCount = m_owningTree.GetNodes().at(0).hitCount;
+        double fraction = (double)hitCount/totalCount;
+        if(fraction >= inputFraction)
+            return depth;
+    }
+    assert (false && "Couldn't cover required fraction!");
+    return -1;
+}
+
 // -----------------------------------------------
 // Methods for class TileShapeToTileIDMap
 // -----------------------------------------------

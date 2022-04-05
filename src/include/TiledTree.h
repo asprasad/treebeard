@@ -227,6 +227,10 @@ public:
     int32_t GetLevelsToUnroll() const { return m_levelsToUnroll; }
     void SetLevelsToUnroll(int32_t val) { m_levelsToUnroll = val; } 
     
+    // Compute the max depth of all the leaves needed to cover inputFraction
+    // fraction of the inputs (assumes that stats are initialized on the tree)
+    int32_t NumberOfLevelsNeededToCoverInputs(double inputFraction);
+    
     using LevelOrderSorterNodeType = TiledTreeNode;
 
     class LevelOrderTraversal {

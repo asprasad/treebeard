@@ -403,6 +403,15 @@ bool Test_TileSize8_Epsilon_TestInputs_ParallelBatch(TestArgs_t &args);
 bool Test_TileSize8_Higgs_TestInputs_ParallelBatch(TestArgs_t &args);
 bool Test_TileSize8_Year_TestInputs_ParallelBatch(TestArgs_t &args);
 
+// Peeling
+bool Test_WalkPeeling_BalancedTree_TileSize2(TestArgs_t& args);
+bool Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4(TestArgs_t& args);
+bool Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4(TestArgs_t& args);
+bool Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4(TestArgs_t& args);
+bool Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4(TestArgs_t& args);
+bool Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4(TestArgs_t& args);
+bool Test_PeeledHybridProbabilisticTiling_TileSize8_Abalone(TestArgs_t &args);
+
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
     vec[i] = (double)rand()/RAND_MAX;
@@ -989,7 +998,7 @@ bool Test_SplitSchedule(TestArgs_t& args) {
   return true;
 }
 
-#define RUN_ALL_TESTS
+// #define RUN_ALL_TESTS
 
 #ifdef RUN_ALL_TESTS
 TestDescriptor testList[] = {
@@ -1372,13 +1381,17 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_ParallelBatch),
   TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_ParallelBatch),
 #endif // OMP_SUPPORT
+  TEST_LIST_ENTRY(Test_WalkPeeling_BalancedTree_TileSize2),
 };
 
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
-  
+  // TEST_LIST_ENTRY(Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Abalone),
+  // TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
+  // TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4),
+  // TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
   // TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth),
   // TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_MakeLeavesSameDepth),
   // TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_MakeLeavesSameDepth),
