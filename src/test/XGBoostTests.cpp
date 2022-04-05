@@ -35,7 +35,8 @@ bool RunSingleBatchSizeForXGBoostTests = true;
 template<typename FloatType, typename FeatureIndexType=int32_t, typename ResultType=FloatType>
 bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, const std::string& modelJsonPath, const std::string& csvPath, 
                                            int32_t tileSize, int32_t tileShapeBitWidth, int32_t childIndexBitWidth,
-                                           bool makeAllLeavesSameDepth, bool reorderTrees, ScheduleManipulator_t scheduleManipulatorFunc=nullptr) {
+                                           bool makeAllLeavesSameDepth, bool reorderTrees, ScheduleManipulator_t scheduleManipulatorFunc=nullptr,
+                                           int32_t unrollFactor = -1) {
   TestCSVReader csvReader(csvPath);
 
   using NodeIndexType = int32_t;
@@ -46,6 +47,7 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
                                      TreeBeard::TilingType::kUniform, makeAllLeavesSameDepth, reorderTrees, 
                                      scheduleManipulatorFunc ? &scheduleManipulator : nullptr);
   
+  options.SetUnrollFactor(unrollFactor);
   auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
   auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType>(args.context, modelJsonPath, modelGlobalsJSONFilePath, options);
 
@@ -792,10 +794,11 @@ bool Test_SingleTileSize_SingleModel_FloatOnly(TestArgs_t &args, const std::stri
 
 bool Test_MultiClass_Int32ReturnType(TestArgs_t &args, const std::string& modelJSONPath, int32_t tileSize, 
                                      bool skipInt8 = false, int32_t tileShapeBitWidth=32, int32_t childIndexBitWidth=1, std::string csvPath="",
-                                     ScheduleManipulator_t scheduleManipulator=nullptr, bool makeAllLeavesSameDepth=false, bool reorderTrees=false) {
+                                     ScheduleManipulator_t scheduleManipulator=nullptr, bool makeAllLeavesSameDepth=false, bool reorderTrees=false,
+                                     int32_t unrollFactor = -1) {
   if (csvPath == "")
     csvPath = modelJSONPath + ".csv";
-    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int32_t, int8_t>(args, 8, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator)));
+    Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int32_t, int8_t>(args, 8, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, childIndexBitWidth, makeAllLeavesSameDepth, reorderTrees, scheduleManipulator, unrollFactor)));
   return true;
 }
 
@@ -1115,6 +1118,14 @@ static bool Test_TileSizeVariable_Letters_Int8Type(TestArgs_t &args, int32_t til
   return Test_MultiClass_Int32ReturnType(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
 }
 
+static bool Test_TileSizeVariable_Letters_Pipelined_Unrolled_Int8Type(TestArgs_t &args, int32_t tileSize, int32_t unrollFactor = 4) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/letters_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  return Test_MultiClass_Int32ReturnType(args, modelJSONPath, tileSize, false, 16, 16, csvPath, nullptr, true, true, unrollFactor);
+}
+
 bool Test_TileSize1_Letters_Int8Type(TestArgs_t &args) {
   return Test_TileSizeVariable_Letters_Int8Type(args, 1);
 }
@@ -1133,6 +1144,18 @@ bool Test_TileSize4_Letters_Int8Type(TestArgs_t &args) {
 
 bool Test_TileSize8_Letters_Int8Type(TestArgs_t &args) {
   return Test_TileSizeVariable_Letters_Int8Type(args, 8);
+}
+
+bool Test_TileSize3_Letters_Pipelined_Unrolled_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_Letters_Pipelined_Unrolled_Int8Type(args, 3, 2);
+}
+
+bool Test_TileSize4_Letters_Pipelined_Unrolled_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_Letters_Pipelined_Unrolled_Int8Type(args, 4, 3);
+}
+
+bool Test_TileSize8_Letters_Pipelined_Unrolled_Int8Type(TestArgs_t &args) {
+  return Test_TileSizeVariable_Letters_Pipelined_Unrolled_Int8Type(args, 8, 5);
 }
 
 // ===----------------------------------------------------------------=== //

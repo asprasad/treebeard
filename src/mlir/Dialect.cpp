@@ -119,6 +119,11 @@ void DecisionForestDialect::printAttribute(::mlir::Attribute attr,
         auto scheduleAttr = attr.cast<ScheduleAttribute>();
         scheduleAttr.Print(os);
     }
+    else if (attr.isa<UnrollLoopAttribute>())
+    {
+        auto unrollLoopAttr = attr.cast<UnrollLoopAttribute>();
+        unrollLoopAttr.Print(os);
+    }
     else
     {
         assert (false && "Unknow attribute");

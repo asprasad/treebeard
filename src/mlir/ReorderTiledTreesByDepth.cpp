@@ -202,7 +202,7 @@ void DoReorderTreesByDepth(mlir::MLIRContext& context, mlir::ModuleOp module, in
   optPM.addPass(std::make_unique<ReorderTreesByDepthPass>());
   // TODO pipelineSize needs to be added to CompilerOptions
   if (pipelineSize != -1)
-    optPM.addPass(std::make_unique<SplitTreeLoopByDepth>(4));
+    optPM.addPass(std::make_unique<SplitTreeLoopByDepth>(pipelineSize));
 
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to mid level IR failed.\n";

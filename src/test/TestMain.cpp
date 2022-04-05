@@ -156,6 +156,9 @@ bool Test_TileSize2_Letters_Int8Type(TestArgs_t &args);
 bool Test_TileSize3_Letters_Int8Type(TestArgs_t &args);
 bool Test_TileSize4_Letters_Int8Type(TestArgs_t &args);
 bool Test_TileSize8_Letters_Int8Type(TestArgs_t &args);
+bool Test_TileSize3_Letters_Pipelined_Unrolled_Int8Type(TestArgs_t &args);
+bool Test_TileSize4_Letters_Pipelined_Unrolled_Int8Type(TestArgs_t &args);
+bool Test_TileSize8_Letters_Pipelined_Unrolled_Int8Type(TestArgs_t &args);
 
 // XGBoost benchmark models tests with one tree at a time schedule
 bool Test_Scalar_Abalone_OneTreeAtATimeSchedule(TestArgs_t &args);
@@ -1132,6 +1135,9 @@ TestDescriptor testList[] = {
   // TEST_LIST_ENTRY(Test_TileSize3_Letters_Int8Type),
   // TEST_LIST_ENTRY(Test_TileSize4_Letters_Int8Type),
   // TEST_LIST_ENTRY(Test_TileSize8_Letters_Int8Type),
+  TEST_LIST_ENTRY(Test_TileSize3_Letters_Pipelined_Unrolled_Int8Type),
+  TEST_LIST_ENTRY(Test_TileSize4_Letters_Pipelined_Unrolled_Int8Type),
+  TEST_LIST_ENTRY(Test_TileSize8_Letters_Pipelined_Unrolled_Int8Type),
   // TEST_LIST_ENTRY(Test_Scalar_Year),
   // TEST_LIST_ENTRY(Test_TileSize2_Year),
   // TEST_LIST_ENTRY(Test_TileSize3_Year),

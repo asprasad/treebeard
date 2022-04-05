@@ -26,6 +26,7 @@ struct CompilerOptions {
   TilingType tilingType=TilingType::kUniform;
   bool makeAllLeavesSameDepth=false;
   bool reorderTreesByDepth=false;
+  int32_t unrollFactor = -1;
 
   mlir::decisionforest::ScheduleManipulator *scheduleManipulator=nullptr;
 
@@ -39,6 +40,8 @@ struct CompilerOptions {
     tileShapeBitWidth(tileShapeWidth), childIndexBitWidth(childIndexWidth), tilingType(tileType), makeAllLeavesSameDepth(makeLeavesSameDepth),
     reorderTreesByDepth(reorderTrees), scheduleManipulator(scheduleManip)
   { }
+
+  void SetUnrollFactor(int32_t unrollFactor) { this->unrollFactor = unrollFactor; }
 };
 
 template<typename ThresholdType=double, typename ReturnType=double, typename FeatureIndexType=int32_t, 
@@ -68,7 +71,7 @@ mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& cont
 
   // TODO this needs to change to something that knows how to do all schedule manipulation
   if (options.reorderTreesByDepth) {
-    mlir::decisionforest::DoReorderTreesByDepth(context, module, 4);
+    mlir::decisionforest::DoReorderTreesByDepth(context, module, options.unrollFactor);
     assert (!options.scheduleManipulator && "Cannot have a custom schedule manipulator and the inbuilt one together");
   }
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
