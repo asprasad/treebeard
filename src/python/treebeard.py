@@ -1,6 +1,7 @@
 import os
 import ctypes
 from statistics import mode
+from xmlrpc.client import Boolean, boolean
 import numpy
 
 filepath = os.path.abspath(__file__)
@@ -15,7 +16,10 @@ class TreebeardAPI:
   def __init__(self) -> None:
     try:
       self.runtime_lib = ctypes.CDLL(treebeard_runtime_path)
-      
+
+      self.runtime_lib.CreateInferenceRunner.argtypes = (ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int64)
+      self.runtime_lib.CreateInferenceRunner.restype = ctypes.c_int64
+
       self.runtime_lib.InitializeInferenceRunner.argtypes = (ctypes.c_char_p, ctypes.c_char_p)
       self.runtime_lib.InitializeInferenceRunner.restype = ctypes.c_int64
       
@@ -116,14 +120,65 @@ class CompilerOptions:
 
   def __del__(self):
     treebeardAPI.runtime_lib.DeleteCompilerOptions(self.optionsPtr)
+  
+  def SetThresholdTypeWidth(self, val : int):
+    treebeardAPI.runtime_lib.Set_thresholdTypeWidth(self.optionsPtr, val)
 
+  def SetReturnTypeWidth(self, val : int) :
+    treebeardAPI.runtime_lib.Set_returnTypeWidth(self.optionsPtr, val);
+
+  def SetReturnTypeIsFloatType(self, val : Boolean):
+    treebeardAPI.runtime_lib.Set_returnTypeFloatType(self.optionsPtr, 1 if val else 0)
+
+  def SetFeatureIndexTypeWidth(self, val : int) :  
+    treebeardAPI.runtime_lib.Set_featureIndexTypeWidth(self.optionsPtr, val)
+
+  def SetNodeIndexTypeWidth(self, val : int) :
+    self.runtime_lib.Set_nodeIndexTypeWidth(self.optionsPtr, val)
+      
+  def SetInputElementTypeWidth(self, val : int) :
+    self.runtime_lib.Set_inputElementTypeWidth(self.optionsPtr, val)
+
+  def SetTileShapeBitWidth(self, val : int) :  
+    self.runtime_lib.Set_tileShapeBitWidth(self.optionsPtr, val)
+
+  def SetChildIndexBitWidth(self, val : int) :  
+    self.runtime_lib.Set_childIndexBitWidth(self.optionsPtr, val)
+    
+  def SetMakeAllLeavesSameDepth(self, val : int) :
+    self.runtime_lib.Set_makeAllLeavesSameDepth(self.optionsPtr, val)
+
+  def SetReorderTreesByDepth(self, val : Boolean) :
+    self.runtime_lib.Set_reorderTreesByDepth(self.optionsPtr, 1 if val else 0)
+
+  def SetTilingType(self, val : Boolean) :
+    self.runtime_lib.Set_tilingType(self.optionsPtr, val)
 
 class TreebeardInferenceRunner:
-  def __init__(self, modelSOPath : str, modelGlobalsJSONPath : str) -> None:
+  def __init__(self) -> None:
     self.treebeardAPI = treebeardAPI
-    self.inferenceRunner = treebeardAPI.InitializeInferenceRunner(modelSOPath, modelGlobalsJSONPath)
-    self.rowSize = treebeardAPI.GetRowSize(self.inferenceRunner)
-    self.batchSize = treebeardAPI.GetBatchSize(self.inferenceRunner)
+    self.inferenceRunner = 0
+    self.rowSize = -1
+    self.batchSize = -1
+
+  @classmethod
+  def FromSOFile(self, modelSOPath : str, modelGlobalsJSONPath : str) -> None:
+    inferenceRunner = TreebeardInferenceRunner()
+    inferenceRunner.inferenceRunner = treebeardAPI.InitializeInferenceRunner(modelSOPath, modelGlobalsJSONPath)
+    inferenceRunner.rowSize = treebeardAPI.GetRowSize(inferenceRunner.inferenceRunner)
+    inferenceRunner.batchSize = treebeardAPI.GetBatchSize(inferenceRunner.inferenceRunner)
+    return inferenceRunner
+
+  @classmethod
+  def FromModelFile(self, modelJSONPathStr : str, profileCSVPathStr : str, options : CompilerOptions) -> None:
+    inferenceRunner = TreebeardInferenceRunner()
+    modelJSONPath = modelJSONPathStr.encode('ascii')
+    profileCSVPath = profileCSVPathStr.encode('ascii')
+  
+    inferenceRunner.inferenceRunner = treebeardAPI.runtime_lib.CreateInferenceRunner(modelJSONPath, profileCSVPath, options.optionsPtr)
+    inferenceRunner.rowSize = treebeardAPI.GetRowSize(inferenceRunner.inferenceRunner)
+    inferenceRunner.batchSize = treebeardAPI.GetBatchSize(inferenceRunner.inferenceRunner)
+    return inferenceRunner
 
   def __del__(self):
     self.treebeardAPI.DeleteInferenceRunner(self.inferenceRunner)

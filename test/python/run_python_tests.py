@@ -39,7 +39,25 @@ def RunSingleTest(soPath, globalsJSONPath, csvPath, returnType) -> Boolean:
   inputs = numpy.array(data[:, :-1], numpy.float32, order='C')
   expectedOutputs = data[:, data.shape[1]-1]
   
-  inferenceRunner = treebeard.TreebeardInferenceRunner(soPath, globalsJSONPath)
+  inferenceRunner = treebeard.TreebeardInferenceRunner.FromSOFile(soPath, globalsJSONPath)
+  start = time.time()
+  for i in range(0, data.shape[0], 200):
+    batch = inputs[i:i+200, :]
+    results = inferenceRunner.RunInference(batch, returnType)
+    if not CheckArraysEqual(results, expectedOutputs[i:i+200]):
+      print("Failed")
+      return False
+  end = time.time()
+  print("Passed (", end - start, "s )")
+  return True
+
+def RunSingleTestJIT(modelJSONPath, csvPath, options, returnType) -> Boolean:
+  data_df = pandas.read_csv(csvPath, header=None)
+  data = numpy.array(data_df, order='C') # numpy.genfromtxt(csvPath, ',')
+  inputs = numpy.array(data[:, :-1], numpy.float32, order='C')
+  expectedOutputs = data[:, data.shape[1]-1]
+  
+  inferenceRunner = treebeard.TreebeardInferenceRunner.FromModelFile(modelJSONPath, "", options)
   start = time.time()
   for i in range(0, data.shape[0], 200):
     batch = inputs[i:i+200, :]
@@ -65,12 +83,18 @@ def RunTestOnSingleModelTestInputs(modelName : str, returnType=numpy.float32) ->
   csvPath = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), modelName + "_xgb_model_save.json.test.sampled.csv")
   return RunSingleTest(soPath, globalsJSONPath, csvPath, returnType)
 
+def RunTestOnSingleModelTestInputsJIT(modelName : str, options, returnType=numpy.float32) -> Boolean:
+  print("Running actual input JIT test",  modelName, "...", end=" ")
+  modelJSONPath = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), modelName + "_xgb_model_save.json")
+  csvPath = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), modelName + "_xgb_model_save.json.test.sampled.csv")
+  return RunSingleTestJIT(modelJSONPath, csvPath, options, returnType)
+
 def RunSingleTest_Multibatch(soPath, globalsJSONPath, csvPath, returnType=numpy.float32) -> Boolean:
   data_df = pandas.read_csv(csvPath, header=None)
   data = numpy.array(data_df, order='C') # numpy.genfromtxt(csvPath, ',')
   inputs = numpy.array(data[:, :-1], numpy.float32, order='C')
   expectedOutputs = data[:, data.shape[1]-1]
-  inferenceRunner = treebeard.TreebeardInferenceRunner(soPath, globalsJSONPath)
+  inferenceRunner = treebeard.TreebeardInferenceRunner.FromSOFile(soPath, globalsJSONPath)
 
   start = time.time()
   results = inferenceRunner.RunInferenceOnMultipleBatches(inputs, returnType)
@@ -104,6 +128,20 @@ def CompilerOptionsTest() -> Boolean:
   llvmIRFile = os.path.join(tempPath, "abalone_python_test.ll")
   treebeard.GenerateLLVMIRForXGBoostModel(jsonPath, llvmIRFile, globalsJSONPath, compilerOptions)
   return True
+
+defaultTileSize8Options = treebeard.CompilerOptions(200, 8)
+defaultTileSize8MulticlassOptions = treebeard.CompilerOptions(200, 8)
+defaultTileSize8MulticlassOptions.SetReturnTypeWidth(8)
+defaultTileSize8MulticlassOptions.SetReturnTypeIsFloatType(False)
+
+assert RunTestOnSingleModelTestInputsJIT("abalone", defaultTileSize8Options)
+assert RunTestOnSingleModelTestInputsJIT("airline", defaultTileSize8Options)
+assert RunTestOnSingleModelTestInputsJIT("airline-ohe", defaultTileSize8Options)
+assert RunTestOnSingleModelTestInputsJIT("covtype", defaultTileSize8MulticlassOptions, numpy.int8)
+assert RunTestOnSingleModelTestInputsJIT("epsilon", defaultTileSize8Options)
+assert RunTestOnSingleModelTestInputsJIT("higgs", defaultTileSize8Options)
+assert RunTestOnSingleModelTestInputsJIT("letters", defaultTileSize8MulticlassOptions, numpy.int8)
+assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", defaultTileSize8Options)
 
 assert RunTestOnSingleModelRandomInputs_Multibatch("abalone")
 assert RunTestOnSingleModelRandomInputs_Multibatch("airline")
