@@ -119,8 +119,32 @@ int64_t Test_CodeGenForJSON_ProbabilityBasedTiling(int64_t batchSize, const std:
                                      false, false, scheduleManipulator);
   TreeBeard::InitializeMLIRContext(context);
   auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, ReturnType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
-  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ReturnType, FeatureIndexType, int32_t, FloatType>(
-                                                                     context, modelJsonPath, modelGlobalsJSONFilePath, options);
+  // auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ReturnType, FeatureIndexType, int32_t, FloatType>(context, modelJsonPath, modelGlobalsJSONFilePath, options);
+
+  TreeBeard::XGBoostJSONParser<FloatType, ReturnType, FeatureIndexType, NodeIndexType, FloatType>
+                                                      xgBoostParser(context, modelJsonPath, 
+                                                                    modelGlobalsJSONFilePath, statsProfileCSV, options.batchSize);
+  xgBoostParser.Parse();
+  xgBoostParser.SetChildIndexBitWidth(options.childIndexBitWidth);
+  auto module = xgBoostParser.GetEvaluationFunction();
+
+  if (options.scheduleManipulator && !decisionforest::PeeledCodeGenForProbabiltyBasedTiling) {
+    auto schedule = xgBoostParser.GetSchedule();
+    options.scheduleManipulator->Run(schedule);
+  }
+
+  if (probTiling) {
+    mlir::decisionforest::DoHybridTiling(context, module, options.tileSize, options.tileShapeBitWidth);
+    mlir::decisionforest::DoReorderTreesByDepth(context, module, -1);
+  }
+  else
+    mlir::decisionforest::DoUniformTiling(context, module, options.tileSize, options.tileShapeBitWidth, false);
+  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
+  // mlir::decisionforest::DoProbabilityBasedTiling(context, module, options.tileSize, options.tileShapeBitWidth);
+  mlir::decisionforest::LowerEnsembleToMemrefs(context, module);
+  mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
+  // module->dump();
+  mlir::decisionforest::LowerToLLVM(context, module);
 
   decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, floatTypeBitWidth, sizeof(FeatureIndexType)*8);
   
@@ -233,10 +257,10 @@ void RunProbabilisticOneTreeAtATimeSchedule_RemoveExtraHop_XGBoostBenchmarks() {
   TreeBeard::test::ScheduleManipulationFunctionWrapper scheduleManipulator(OneTreeAtATimeSchedule);
   
   decisionforest::UseSparseTreeRepresentation = true;
-  decisionforest::RemoveExtraHopInSparseRepresentation = true;
+  decisionforest::PeeledCodeGenForProbabiltyBasedTiling = true;
   RunAllBenchmarks(&scheduleManipulator, true, "sparse_remove_extra_hop-prob-one_tree");
   decisionforest::UseSparseTreeRepresentation = false;
-  decisionforest::RemoveExtraHopInSparseRepresentation = false;
+  decisionforest::PeeledCodeGenForProbabiltyBasedTiling = false;
 }
 
 void RunXGBoostBenchmarks() {

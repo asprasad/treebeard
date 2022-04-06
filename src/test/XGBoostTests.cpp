@@ -2767,7 +2767,7 @@ bool Test_TileSize8_Abalone_TestInputs_ParallelBatch(TestArgs_t &args) {
   auto csvPath = modelJSONPath + ".test.sampled.csv";
   int32_t tileSize = 8, tileShapeBitWidth=16, childIndexBitWidth=1;
   Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int8_t>(args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, 
-                                                                    childIndexBitWidth, false, [](decisionforest::Schedule* schedule) {
+                                                                    childIndexBitWidth, false, false, [](decisionforest::Schedule* schedule) {
     schedule->Parallel(schedule->GetBatchIndex());
   })));
   return true;
@@ -2780,7 +2780,7 @@ bool Test_TileSize8_Airline_TestInputs_ParallelBatch(TestArgs_t &args) {
   auto csvPath = modelJSONPath + ".test.sampled.csv";
   int32_t tileSize = 8, tileShapeBitWidth=16, childIndexBitWidth=1;
   Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int16_t>(args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, 
-                                                                    childIndexBitWidth, false, [](decisionforest::Schedule* schedule) {
+                                                                    childIndexBitWidth, false, false, [](decisionforest::Schedule* schedule) {
     schedule->Parallel(schedule->GetBatchIndex());
   })));
   return true;
@@ -2793,7 +2793,7 @@ bool Test_TileSize8_AirlineOHE_TestInputs_ParallelBatch(TestArgs_t &args) {
   auto csvPath = modelJSONPath + ".test.sampled.csv";
   int32_t tileSize = 8, tileShapeBitWidth=16, childIndexBitWidth=1;
   Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int16_t>(args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, 
-                                                                    childIndexBitWidth, false, [](decisionforest::Schedule* schedule) {
+                                                                    childIndexBitWidth, false, false, [](decisionforest::Schedule* schedule) {
     schedule->Parallel(schedule->GetBatchIndex());
   })));
   return true;
@@ -2806,7 +2806,7 @@ bool Test_TileSize8_Covtype_TestInputs_ParallelBatch(TestArgs_t &args) {
   auto csvPath = modelJSONPath + ".test.sampled.csv";
   int32_t tileSize = 8, tileShapeBitWidth=16, childIndexBitWidth=1;
   Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int16_t, int8_t>(args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, 
-                                                                    childIndexBitWidth, false, [](decisionforest::Schedule* schedule) {
+                                                                    childIndexBitWidth, false, false, [](decisionforest::Schedule* schedule) {
     schedule->Parallel(schedule->GetBatchIndex());
   })));
   return true;
@@ -2819,7 +2819,7 @@ bool Test_TileSize8_Letters_TestInputs_ParallelBatch(TestArgs_t &args) {
   auto csvPath = modelJSONPath + ".test.sampled.csv";
   int32_t tileSize = 8, tileShapeBitWidth=16, childIndexBitWidth=1;
   Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int16_t, int8_t>(args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, 
-                                                                    childIndexBitWidth, false, [](decisionforest::Schedule* schedule) {
+                                                                    childIndexBitWidth, false, false, [](decisionforest::Schedule* schedule) {
     schedule->Parallel(schedule->GetBatchIndex());
   })));
   return true;
@@ -2832,7 +2832,7 @@ bool Test_TileSize8_Epsilon_TestInputs_ParallelBatch(TestArgs_t &args) {
   auto csvPath = modelJSONPath + ".test.sampled.csv";
   int32_t tileSize = 8, tileShapeBitWidth=16, childIndexBitWidth=1;
   Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int16_t>(args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, 
-                                                                    childIndexBitWidth, false, [](decisionforest::Schedule* schedule) {
+                                                                    childIndexBitWidth, false, false, [](decisionforest::Schedule* schedule) {
     schedule->Parallel(schedule->GetBatchIndex());
   })));
   return true;
@@ -2845,7 +2845,7 @@ bool Test_TileSize8_Higgs_TestInputs_ParallelBatch(TestArgs_t &args) {
   auto csvPath = modelJSONPath + ".test.sampled.csv";
   int32_t tileSize = 8, tileShapeBitWidth=16, childIndexBitWidth=1;
   Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int16_t>(args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, 
-                                                                    childIndexBitWidth, false, [](decisionforest::Schedule* schedule) {
+                                                                    childIndexBitWidth, false, false, [](decisionforest::Schedule* schedule) {
     schedule->Parallel(schedule->GetBatchIndex());
   })));
   return true;
@@ -2858,7 +2858,7 @@ bool Test_TileSize8_Year_TestInputs_ParallelBatch(TestArgs_t &args) {
   auto csvPath = modelJSONPath + ".test.sampled.csv";
   int32_t tileSize = 8, tileShapeBitWidth=16, childIndexBitWidth=1;
   Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int16_t>(args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth, 
-                                                                    childIndexBitWidth, false, [](decisionforest::Schedule* schedule) {
+                                                                    childIndexBitWidth, false, false, [](decisionforest::Schedule* schedule) {
     schedule->Parallel(schedule->GetBatchIndex());
   })));
   return true;

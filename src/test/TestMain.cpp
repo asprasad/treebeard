@@ -411,6 +411,13 @@ bool Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4(TestAr
 bool Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4(TestArgs_t& args);
 bool Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4(TestArgs_t& args);
 bool Test_PeeledHybridProbabilisticTiling_TileSize8_Abalone(TestArgs_t &args);
+bool Test_PeeledHybridProbabilisticTiling_TileSize8_Airline(TestArgs_t &args);
+bool Test_PeeledHybridProbabilisticTiling_TileSize8_AirlineOHE(TestArgs_t &args);
+bool Test_PeeledHybridProbabilisticTiling_TileSize8_Covtype(TestArgs_t &args);
+bool Test_PeeledHybridProbabilisticTiling_TileSize8_Letters(TestArgs_t &args);
+bool Test_PeeledHybridProbabilisticTiling_TileSize8_Epsilon(TestArgs_t &args);
+bool Test_PeeledHybridProbabilisticTiling_TileSize8_Higgs(TestArgs_t &args);
+bool Test_PeeledHybridProbabilisticTiling_TileSize8_Year(TestArgs_t &args);
 
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
@@ -998,7 +1005,7 @@ bool Test_SplitSchedule(TestArgs_t& args) {
   return true;
 }
 
-// #define RUN_ALL_TESTS
+#define RUN_ALL_TESTS
 
 #ifdef RUN_ALL_TESTS
 TestDescriptor testList[] = {
@@ -1382,13 +1389,47 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_ParallelBatch),
 #endif // OMP_SUPPORT
   TEST_LIST_ENTRY(Test_WalkPeeling_BalancedTree_TileSize2),
+  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Year),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Letters),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Epsilon),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Higgs),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_AirlineOHE),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Covtype),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Airline),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Abalone),
 };
 
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  // TEST_LIST_ENTRY(Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Covtype_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Letters_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_WalkPeeling_BalancedTree_TileSize2),
+  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Year),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Letters),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Epsilon),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Higgs),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_AirlineOHE),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Covtype),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Airline),
   TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Abalone),
+
   // TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
   // TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4),
   // TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),

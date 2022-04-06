@@ -23,8 +23,6 @@
 
 using namespace mlir;
 
-extern decisionforest::DecisionForest<> reorderedForest;
-
 namespace TreeBeard
 {
 namespace test
@@ -257,7 +255,6 @@ bool TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int
                                xgBoostParser(args.context, modelJsonPath, modelGlobalsJSONFilePath, statsProfileCSV, options.batchSize);
   xgBoostParser.Parse();
   xgBoostParser.SetChildIndexBitWidth(options.childIndexBitWidth);
-  auto forest = xgBoostParser.GetForest();
   auto module = xgBoostParser.GetEvaluationFunction();
 
   mlir::decisionforest::DoHybridTiling(args.context, module, options.tileSize, options.tileShapeBitWidth);
@@ -285,13 +282,6 @@ bool TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int
     inputData.push_back(batch);
     xgBoostPredictions.push_back(preds);
   }
-  int32_t i=0;
-  for (auto tree : reorderedForest.GetTrees()) {
-    decisionforest::TiledTree& tiledTree = *(tree->GetTiledTree());
-    std::string dotFile = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/tiledTree_" + std::to_string(i) + ".dot";
-    tiledTree.WriteDOTFile(dotFile);
-    ++i;
-  }
 
   size_t rowSize = csvReader.GetRow(0).size() - 1; // The last entry is the xgboost prediction
   auto currentPredictionsIter = xgBoostPredictions.begin();
@@ -301,13 +291,7 @@ bool TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int
     inferenceRunner.RunInference<FloatType, ResultType>(batch.data(), result.data(), rowSize, batchSize);
     for(int64_t rowIdx=0 ; rowIdx<batchSize ; ++rowIdx) {
       ResultType expectedResult = (*currentPredictionsIter)[rowIdx];
-      // Test_ASSERT(FPEqual<ResultType>(result[rowIdx], expectedResult));
-
-      std::vector<double> row(batch.begin() + rowIdx*rowSize, batch.begin() + (rowIdx+1)*rowSize);
-      // FloatType forestPrediction = forest->Predict_Float(row);
-      FloatType reorderedForestPrediction = reorderedForest.Predict_Float(row);
-      // Test_ASSERT(FPEqual<ResultType>(forestPrediction, expectedResult));
-      Test_ASSERT(FPEqual<ResultType>(reorderedForestPrediction, result[rowIdx]));
+      Test_ASSERT(FPEqual<ResultType>(expectedResult, result[rowIdx]));
 
     }
     ++currentPredictionsIter;
@@ -324,6 +308,83 @@ bool Test_PeeledHybridProbabilisticTiling_TileSize8_Abalone(TestArgs_t &args) {
   auto statsProfileCSV = testModelsDir + "/profiles/abalone.test.csv";
   int32_t tileSize = 8;
   return TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize<float, int32_t>(args, 1, modelJSONPath, csvPath, statsProfileCSV, tileSize, 16, 16);
+}
+
+bool Test_PeeledHybridProbabilisticTiling_TileSize8_Airline(TestArgs_t &args) {
+  SetAndResetPeelTreeWalk setPeelWalk;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  auto statsProfileCSV = testModelsDir + "/profiles/airline.test.csv";
+  int32_t tileSize = 8;
+  return TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize<float, int16_t>(args, 1, modelJSONPath, csvPath, statsProfileCSV, tileSize, 16, 16);
+}
+
+bool Test_PeeledHybridProbabilisticTiling_TileSize8_AirlineOHE(TestArgs_t &args) {
+  SetAndResetPeelTreeWalk setPeelWalk;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  auto statsProfileCSV = testModelsDir + "/profiles/airline-ohe.test.csv";
+  int32_t tileSize = 8;
+  return TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize<float, int16_t>(args, 1, modelJSONPath, csvPath, statsProfileCSV, tileSize, 16, 16);
+}
+
+bool Test_PeeledHybridProbabilisticTiling_TileSize8_Covtype(TestArgs_t &args) {
+  SetAndResetPeelTreeWalk setPeelWalk;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/covtype_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  auto statsProfileCSV = testModelsDir + "/profiles/covtype.test.csv";
+  int32_t tileSize = 8;
+  return TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize<float, int16_t, int8_t>(args, 1, modelJSONPath, csvPath, statsProfileCSV, tileSize, 16, 16);
+}
+
+bool Test_PeeledHybridProbabilisticTiling_TileSize8_Letters(TestArgs_t &args) {
+  SetAndResetPeelTreeWalk setPeelWalk;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/letters_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  auto statsProfileCSV = testModelsDir + "/profiles/letters.test.csv";
+  int32_t tileSize = 8;
+  return TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize<float, int16_t, int8_t>(args, 1, modelJSONPath, csvPath, statsProfileCSV, tileSize, 16, 16);
+}
+
+bool Test_PeeledHybridProbabilisticTiling_TileSize8_Epsilon(TestArgs_t &args) {
+  SetAndResetPeelTreeWalk setPeelWalk;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  auto statsProfileCSV = testModelsDir + "/profiles/epsilon.test.csv";
+  int32_t tileSize = 8;
+  return TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize<float, int16_t>(args, 1, modelJSONPath, csvPath, statsProfileCSV, tileSize, 16, 16);
+}
+
+bool Test_PeeledHybridProbabilisticTiling_TileSize8_Higgs(TestArgs_t &args) {
+  SetAndResetPeelTreeWalk setPeelWalk;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  auto statsProfileCSV = testModelsDir + "/profiles/higgs.test.csv";
+  int32_t tileSize = 8;
+  return TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize<float, int16_t>(args, 1, modelJSONPath, csvPath, statsProfileCSV, tileSize, 16, 16);
+}
+
+bool Test_PeeledHybridProbabilisticTiling_TileSize8_Year(TestArgs_t &args) {
+  SetAndResetPeelTreeWalk setPeelWalk;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/year_prediction_msd_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  auto statsProfileCSV = testModelsDir + "/profiles/year_prediction_msd.test.csv";
+  int32_t tileSize = 8;
+  return TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize<float, int16_t>(args, 1, modelJSONPath, csvPath, statsProfileCSV, tileSize, 16, 16);
 }
 
 }

@@ -53,6 +53,8 @@ private:
     void GetThresholds(std::vector<double>::iterator beginIter);
     void GetFeatureIndices(std::vector<int32_t>::iterator beginIter);
     void ComputeTileShapeString(std::string& str, int32_t tileNodeIndex, int32_t stringIndex);
+
+    int32_t GetTileDepth(std::vector<TiledTreeNode>& tiles) const;
 public:
     TiledTreeNode(DecisionTree<>& owningTree, TiledTree& tiledTree, int32_t tileID, int32_t tileIndex)
         :m_owningTree(owningTree), m_tiledTree(tiledTree), m_tileID(tileID), m_tileShapeID(-1), m_tileIndex(tileIndex), m_hasExtraNodes(false)

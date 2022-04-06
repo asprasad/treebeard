@@ -909,6 +909,16 @@ int32_t TiledTreeNode::GetTileDepth() const {
     return tileDepth;
 }
 
+int32_t TiledTreeNode::GetTileDepth(std::vector<TiledTreeNode>& tiles) const {
+    auto tilePtr = this;
+    int32_t tileDepth = 1;
+    while (tilePtr->GetParent() != decisionforest::DecisionTree<>::INVALID_NODE_INDEX) {
+        tilePtr = &(tiles.at(tilePtr->GetParent()));
+        ++tileDepth;
+    }
+    return tileDepth;
+}
+
 const DecisionTree<>::Node& TiledTreeNode::GetNode(int32_t index) const { 
     return m_tiledTree.m_modifiedTree.GetNodes().at(index);
 }
@@ -1819,7 +1829,7 @@ void TiledTree::GetSparseSerializationPeeled(std::vector<double>& thresholds, st
             // if all siblings are leaves, put it into the leaf array
             // if not all siblings are leaves, add an extra hop and insert into both arrays
             
-            int32_t tileDepth = tile.GetTileDepth();
+            int32_t tileDepth = tile.GetTileDepth(sortedTiles);
             if (tileDepth <= m_levelsToUnroll) {
                 tile.GetThresholds(tileThresholds.begin());
                 thresholds.insert(thresholds.end(), tileThresholds.begin(), tileThresholds.end());

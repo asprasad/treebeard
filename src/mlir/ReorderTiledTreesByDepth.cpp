@@ -21,8 +21,6 @@
 
 using namespace mlir;
 
-decisionforest::DecisionForest<> reorderedForest;
-
 namespace {
 
 template<typename T>
@@ -119,7 +117,7 @@ struct ReorderEnsembleConstants : public RewritePattern {
     reorderedTrees.insert(reorderedTrees.end(), probTiledTrees.begin(), probTiledTrees.end());
     reorderedTrees.insert(reorderedTrees.end(), uniformTiledTrees.begin(), uniformTiledTrees.end());
     forest.GetTrees() = reorderedTrees;
-    reorderedForest = forest;
+
     auto newForestAttribute = decisionforest::DecisionForestAttribute::get(forestType, forest);
     auto reorderedPredictForestOp = rewriter.create<decisionforest::PredictForestOp>(op->getLoc(), predictOp.getResult().getType(), 
                                                                                  newForestAttribute, predictOp.data(), 
