@@ -25,6 +25,7 @@
 #include "ForestTestUtils.h"
 
 using namespace mlir;
+using namespace mlir::decisionforest;
 
 namespace TreeBeard
 {
@@ -219,7 +220,7 @@ void RunDefaultScheduleXGBoostBenchmarks() {
 }
 
 void RunOneTreeAtATimeScheduleXGBoostBenchmarks() {
-  TreeBeard::test::ScheduleManipulationFunctionWrapper scheduleManipulator(OneTreeAtATimeSchedule);
+  mlir::decisionforest::ScheduleManipulationFunctionWrapper scheduleManipulator(OneTreeAtATimeSchedule);
   RunAllBenchmarks(&scheduleManipulator, false, "array-one_tree");
   
   decisionforest::UseSparseTreeRepresentation = true;
@@ -230,7 +231,7 @@ void RunOneTreeAtATimeScheduleXGBoostBenchmarks() {
 void RunProbabilisticOneTreeAtATimeScheduleXGBoostBenchmarks() {
   // There is too much of a blow up of model size when we use array + prob tiling. 
   // So not measuring that.
-  TreeBeard::test::ScheduleManipulationFunctionWrapper scheduleManipulator(OneTreeAtATimeSchedule);
+  mlir::decisionforest::ScheduleManipulationFunctionWrapper scheduleManipulator(OneTreeAtATimeSchedule);
   
   decisionforest::UseSparseTreeRepresentation = true;
   RunAllBenchmarks(&scheduleManipulator, true, "sparse-prob-one_tree");
@@ -240,7 +241,7 @@ void RunProbabilisticOneTreeAtATimeScheduleXGBoostBenchmarks() {
 void RunProbabilisticOneTreeAtATimeSchedule_RemoveExtraHop_XGBoostBenchmarks() {
   // There is too much of a blow up of model size when we use array + prob tiling. 
   // So not measuring that.
-  TreeBeard::test::ScheduleManipulationFunctionWrapper scheduleManipulator(OneTreeAtATimeSchedule);
+  mlir::decisionforest::ScheduleManipulationFunctionWrapper scheduleManipulator(OneTreeAtATimeSchedule);
   
   decisionforest::UseSparseTreeRepresentation = true;
   decisionforest::PeeledCodeGenForProbabiltyBasedTiling = true;

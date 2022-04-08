@@ -318,5 +318,31 @@ void DuplicateIndexModifier::Visit(IndexDerivationTreeVisitor& visitor) {
   visitor.VisitDuplicateIndexModifier(*this);
 }
 
+void OneTreeAtATimeSchedule(decisionforest::Schedule* schedule) {
+  auto& batchIndexVar = schedule->GetBatchIndex();
+  auto& treeIndexVar = schedule->GetTreeIndex();
+  schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &treeIndexVar, &batchIndexVar });
+}
+
+void OneTreeAtATimePipelinedSchedule(decisionforest::Schedule* schedule) {
+  auto& batchIndexVar = schedule->GetBatchIndex();
+  auto& treeIndexVar = schedule->GetTreeIndex();
+
+  schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &treeIndexVar, &batchIndexVar });
+  schedule->Pipeline(batchIndexVar, 4);
+}
+
+void OneTreeAtATimeUnrolledSchedule(decisionforest::Schedule* schedule) {
+  auto& batchIndexVar = schedule->GetBatchIndex();
+  auto& treeIndexVar = schedule->GetTreeIndex();
+  schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &treeIndexVar, &batchIndexVar });
+  schedule->Unroll(treeIndexVar);
+}
+
+void UnrollTreeLoop(decisionforest::Schedule* schedule) {
+  auto& treeIndexVar = schedule->GetTreeIndex();
+  schedule->Unroll(treeIndexVar);
+}
+
 } // decisionforest
 } // mlir

@@ -139,7 +139,7 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
       ++i;
   }
   assert (jsonFile != "" && llvmIRFile != "");
-  TreeBeard::test::ScheduleManipulationFunctionWrapper scheduleManipulator(TreeBeard::test::OneTreeAtATimeSchedule);
+  mlir::decisionforest::ScheduleManipulationFunctionWrapper scheduleManipulator(mlir::decisionforest::OneTreeAtATimeSchedule);
   // TreeBeard::test::ScheduleManipulationFunctionWrapper scheduleManipulator(TreeBeard::test::TileTreeDimensionSchedule<10>);
   TreeBeard::CompilerOptions options(thresholdTypeWidth, returnTypeWidth, isReturnTypeFloat, featureIndexTypeWidth,
                                      nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, 

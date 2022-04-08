@@ -92,8 +92,17 @@ class TreebeardAPI:
       self.runtime_lib.Set_statsProfileCSVPath.argtypes = [ctypes.c_int64, ctypes.c_char_p]
       self.runtime_lib.Set_statsProfileCSVPath.restype = None
 
+      self.runtime_lib.SetOneTreeAtATimeSchedule.argtypes = [ctypes.c_int64]
+      self.runtime_lib.SetOneTreeAtATimeSchedule.restype = None
+
       self.runtime_lib.GenerateLLVMIRForXGBoostModel.argtypes = (ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int64)
       self.runtime_lib.GenerateLLVMIRForXGBoostModel.restype = None
+
+      self.runtime_lib.SetEnableSparseRepresentation.argtypes = [ctypes.c_int32]
+      self.runtime_lib.SetEnableSparseRepresentation.restype = None
+
+      self.runtime_lib.IsSparseRepresentationEnabled.argtypes = None
+      self.runtime_lib.IsSparseRepresentationEnabled.restype = ctypes.c_int32
  
     except Exception as e:
       print("Loading the TreeBeard runtime failed with exception :", e)
@@ -172,6 +181,9 @@ class CompilerOptions:
   def SetStatsProfileCSVPath(self, val : str) :
     valStr = val.encode('ascii')
     treebeardAPI.runtime_lib.Set_statsProfileCSVPath(self.optionsPtr, valStr)
+  
+  def SetOneTreeAtATimeSchedule(self) :
+    treebeardAPI.runtime_lib.SetOneTreeAtATimeSchedule(self.optionsPtr)
 
 class TreebeardInferenceRunner:
   def __init__(self) -> None:

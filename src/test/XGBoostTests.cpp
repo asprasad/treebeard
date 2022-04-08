@@ -21,6 +21,7 @@
 #include "CompileUtils.h"
 
 using namespace mlir;
+using namespace mlir::decisionforest;
 
 namespace TreeBeard
 {

@@ -4,6 +4,7 @@
 #include "ExecutionHelpers.h"
 #include "CompileUtils.h"
 #include "xgboostparser.h"
+#include "schedule.h"
 
 // ===-------------------------------------------------------------=== //
 // Execution API
@@ -78,6 +79,7 @@ extern "C" intptr_t CreateCompilerOptions() {
 
 extern "C" void DeleteCompilerOptions(intptr_t options) {
   TreeBeard::CompilerOptions *optionsPtr = reinterpret_cast<TreeBeard::CompilerOptions*>(options);
+  delete optionsPtr->scheduleManipulator;
   delete optionsPtr;
 }
 
@@ -135,4 +137,21 @@ extern "C" intptr_t CreateInferenceRunner(const char* modelJSONPath, const char*
                                                                    optionsPtr->tileSize, optionsPtr->thresholdTypeWidth,
                                                                    optionsPtr->featureIndexTypeWidth);
   return reinterpret_cast<intptr_t>(inferenceRunner);
+}
+
+extern "C" void SetEnableSparseRepresentation(int32_t val) {
+  mlir::decisionforest::UseSparseTreeRepresentation = val;
+}
+
+extern "C" int32_t IsSparseRepresentationEnabled() {
+  return mlir::decisionforest::UseSparseTreeRepresentation;
+}
+
+// ===-------------------------------------------------------------=== //
+// Predefined Schedule Manipulation API
+// ===-------------------------------------------------------------=== //
+
+extern "C" void SetOneTreeAtATimeSchedule(intptr_t options) {
+  TreeBeard::CompilerOptions *optionsPtr = reinterpret_cast<TreeBeard::CompilerOptions*>(options);
+  optionsPtr->scheduleManipulator = new mlir::decisionforest::ScheduleManipulationFunctionWrapper(mlir::decisionforest::OneTreeAtATimeSchedule);
 }

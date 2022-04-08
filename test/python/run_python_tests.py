@@ -143,6 +143,23 @@ assert RunTestOnSingleModelTestInputsJIT("higgs", defaultTileSize8Options)
 assert RunTestOnSingleModelTestInputsJIT("letters", defaultTileSize8MulticlassOptions, numpy.int8)
 assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", defaultTileSize8Options)
 
+invertLoopsTileSize8Options = treebeard.CompilerOptions(200, 8)
+invertLoopsTileSize8Options.SetOneTreeAtATimeSchedule()
+
+invertLoopsTileSize8MulticlassOptions = treebeard.CompilerOptions(200, 8)
+invertLoopsTileSize8MulticlassOptions.SetReturnTypeWidth(8)
+invertLoopsTileSize8MulticlassOptions.SetReturnTypeIsFloatType(False)
+invertLoopsTileSize8MulticlassOptions.SetOneTreeAtATimeSchedule();
+
+assert RunTestOnSingleModelTestInputsJIT("abalone", invertLoopsTileSize8Options)
+assert RunTestOnSingleModelTestInputsJIT("airline", invertLoopsTileSize8Options)
+assert RunTestOnSingleModelTestInputsJIT("airline-ohe", invertLoopsTileSize8Options)
+assert RunTestOnSingleModelTestInputsJIT("covtype", invertLoopsTileSize8MulticlassOptions, numpy.int8)
+assert RunTestOnSingleModelTestInputsJIT("epsilon", invertLoopsTileSize8Options)
+assert RunTestOnSingleModelTestInputsJIT("higgs", invertLoopsTileSize8Options)
+assert RunTestOnSingleModelTestInputsJIT("letters", invertLoopsTileSize8MulticlassOptions, numpy.int8)
+assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", invertLoopsTileSize8Options)
+
 assert RunTestOnSingleModelRandomInputs_Multibatch("abalone")
 assert RunTestOnSingleModelRandomInputs_Multibatch("airline")
 assert RunTestOnSingleModelRandomInputs_Multibatch("airline-ohe")

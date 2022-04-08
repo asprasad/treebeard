@@ -22,6 +22,7 @@
 #include "TiledTree.h"
 
 using namespace mlir;
+using namespace mlir::decisionforest;
 
 namespace TreeBeard
 {

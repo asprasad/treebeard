@@ -13,6 +13,8 @@
 #include "TestUtilsCommon.h"
 #include "ForestTestUtils.h"
 
+using namespace mlir::decisionforest;
+
 namespace TreeBeard
 {
 namespace test
@@ -604,32 +606,6 @@ bool Test_BufferInitializationWithTwoTrees_FloatInt16(TestArgs_t& args) {
 
 bool Test_BufferInitializationWithTwoTrees_FloatInt8(TestArgs_t& args) {
   return Test_BufferInitialization_TwoTrees<float, int8_t>(args);
-}
-
-void OneTreeAtATimeSchedule(decisionforest::Schedule* schedule) {
-  auto& batchIndexVar = schedule->GetBatchIndex();
-  auto& treeIndexVar = schedule->GetTreeIndex();
-  schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &treeIndexVar, &batchIndexVar });
-}
-
-void OneTreeAtATimePipelinedSchedule(decisionforest::Schedule* schedule) {
-  auto& batchIndexVar = schedule->GetBatchIndex();
-  auto& treeIndexVar = schedule->GetTreeIndex();
-
-  schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &treeIndexVar, &batchIndexVar });
-  schedule->Pipeline(batchIndexVar, 4);
-}
-
-void OneTreeAtATimeUnrolledSchedule(decisionforest::Schedule* schedule) {
-  auto& batchIndexVar = schedule->GetBatchIndex();
-  auto& treeIndexVar = schedule->GetTreeIndex();
-  schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &treeIndexVar, &batchIndexVar });
-  schedule->Unroll(treeIndexVar);
-}
-
-void UnrollTreeLoop(decisionforest::Schedule* schedule) {
-  auto& treeIndexVar = schedule->GetTreeIndex();
-  schedule->Unroll(treeIndexVar);
 }
 
 // IR Tests

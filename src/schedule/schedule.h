@@ -196,7 +196,70 @@ public:
 class ScheduleManipulator {
 public:
   virtual void Run(Schedule* schedule) = 0;
+  virtual ~ScheduleManipulator() { }
 };
+
+typedef void (*ScheduleManipulator_t)(mlir::decisionforest::Schedule* schedule);
+
+class ScheduleManipulationFunctionWrapper : public mlir::decisionforest::ScheduleManipulator {
+  ScheduleManipulator_t m_func;
+public:
+  ScheduleManipulationFunctionWrapper(ScheduleManipulator_t func) :m_func(func) { }
+  void Run(mlir::decisionforest::Schedule* schedule) override {
+    m_func(schedule);
+  }
+};
+
+void OneTreeAtATimeSchedule(mlir::decisionforest::Schedule* schedule);
+void OneTreeAtATimePipelinedSchedule(mlir::decisionforest::Schedule* schedule);
+void OneTreeAtATimeUnrolledSchedule(mlir::decisionforest::Schedule* schedule);
+void UnrollTreeLoop(decisionforest::Schedule* schedule);
+
+template<int32_t BatchTileSize, int32_t TreeTileSize>
+void TiledSchedule(mlir::decisionforest::Schedule* schedule) {
+  auto& batchIndexVar = schedule->GetBatchIndex();
+  auto& treeIndexVar = schedule->GetTreeIndex();
+  auto& b0 = schedule->NewIndexVariable("b0");
+  auto& b1 = schedule->NewIndexVariable("b1");
+  auto& t0 = schedule->NewIndexVariable("t0");
+  auto& t1 = schedule->NewIndexVariable("t1");
+  
+  schedule->Tile(batchIndexVar, b0, b1, BatchTileSize);
+  schedule->Tile(treeIndexVar, t0, t1, TreeTileSize);
+
+  schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &t0, &b0, &t1, &b1 });
+}
+
+template<int32_t TreeTileSize>
+void TileTreeDimensionSchedule(mlir::decisionforest::Schedule* schedule) {
+  auto& batchIndexVar = schedule->GetBatchIndex();
+  auto& treeIndexVar = schedule->GetTreeIndex();
+  auto& t0 = schedule->NewIndexVariable("t0");
+  auto& t1 = schedule->NewIndexVariable("t1");
+  
+  schedule->Tile(treeIndexVar, t0, t1, TreeTileSize);
+  // t1.Unroll();
+  schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &t0, &batchIndexVar, &t1 });
+}
+
+template<int32_t split>
+void SplitTreeDimensionSchedule(mlir::decisionforest::Schedule* schedule) {
+  auto& t0 = schedule->NewIndexVariable("t0");
+  auto& t1 = schedule->NewIndexVariable("t1");
+  mlir::decisionforest::Schedule::IndexVariableMapType indexMap;
+  schedule->Split(schedule->GetTreeIndex(), t0, t1, split, indexMap);
+}
+
+template<int32_t split>
+void SwapAndSplitTreeDimensionSchedule(mlir::decisionforest::Schedule* schedule) {
+  auto& batchIndexVar = schedule->GetBatchIndex();
+  auto& treeIndexVar = schedule->GetTreeIndex();
+  schedule->Reorder({ &batchIndexVar, &treeIndexVar });
+  auto& t0 = schedule->NewIndexVariable("t0");
+  auto& t1 = schedule->NewIndexVariable("t1");
+  mlir::decisionforest::Schedule::IndexVariableMapType indexMap;
+  schedule->Split(treeIndexVar, t0, t1, split, indexMap);
+}
 
 } // decisionforest
 } // mlir
