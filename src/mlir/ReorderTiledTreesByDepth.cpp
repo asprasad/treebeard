@@ -146,8 +146,10 @@ struct ReorderTreesByDepthPass : public PassWrapper<ReorderTreesByDepthPass, Fun
 struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
 
   int32_t m_pipelineSize;
-  SplitTreeLoopsByTreeDepthPattern(MLIRContext *ctx, int32_t pipelineSize) 
-    : RewritePattern(mlir::decisionforest::PredictForestOp::getOperationName(), 1 /*benefit*/, ctx), m_pipelineSize(pipelineSize)
+  int32_t m_numberOfCores;
+  SplitTreeLoopsByTreeDepthPattern(MLIRContext *ctx, int32_t pipelineSize, int32_t numCores) 
+    : RewritePattern(mlir::decisionforest::PredictForestOp::getOperationName(), 1 /*benefit*/, ctx), 
+      m_pipelineSize(pipelineSize), m_numberOfCores(numCores)
   {}
 
   void SplitTreeLoopForProbAndUniformTiling(decisionforest::Schedule* schedule, decisionforest::DecisionForest<>& forest,
@@ -298,10 +300,22 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
     if (!schedule->IsDefaultSchedule())
       return mlir::failure();
 
-    // TODO we're assuming that the schedule is the default unmodified schedule
-    auto& batchIndex = schedule->GetBatchIndex();
+    auto* batchIndexPtr = &(schedule->GetBatchIndex());
     auto& treeIndex = schedule->GetTreeIndex();
-    schedule->Reorder({&treeIndex, &batchIndex});
+    if (m_numberOfCores != -1) {
+      auto& batchIndex = schedule->GetBatchIndex();
+      auto& b0 = schedule->NewIndexVariable("b0");
+      auto& b1_parallel = schedule->NewIndexVariable("b1_parallel");
+      schedule->Tile(batchIndex, b0, b1_parallel, m_numberOfCores);
+      schedule->Reorder({&b1_parallel, &b0, &treeIndex});
+      schedule->Parallel(b1_parallel);
+      batchIndexPtr = &b0;
+    }
+
+    // TODO we're assuming that the schedule is the default unmodified schedule
+    
+    
+    schedule->Reorder({&treeIndex, batchIndexPtr});
     decisionforest::IndexVariable* probTreeIndex=nullptr, *probBatchIndex=nullptr;
     decisionforest::IndexVariable* unifTreeIndex=nullptr, *unifBatchIndex=nullptr;
     SplitTreeLoopForProbAndUniformTiling(schedule, forest, probTreeIndex, probBatchIndex, unifTreeIndex, unifBatchIndex);
@@ -311,8 +325,6 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
     // schedule->Tile(batchIndex, b0, b1, m_pipelineSize);
     SplitTreeLoopForProbabilityBasedTiling(schedule, forest, probBatchIndex, probTreeIndex);
     SplitTreeLoopForUniformTiling(schedule, forest, unifBatchIndex, unifTreeIndex);
-    std::string dotFile = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/schedule.dot";
-    schedule->WriteToDOTFile(dotFile);
     return mlir::success();
   }
 
@@ -320,15 +332,16 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
 
 struct SplitTreeLoopByDepth : public PassWrapper<SplitTreeLoopByDepth, FunctionPass> {
   int32_t m_pipelineSize;
-  SplitTreeLoopByDepth(int32_t pipelineSize) 
-  :m_pipelineSize(pipelineSize)
+  int32_t m_numCores;
+  SplitTreeLoopByDepth(int32_t pipelineSize, int32_t numCores) 
+  :m_pipelineSize(pipelineSize), m_numCores(numCores)
   { }
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect, math::MathDialect>();
   }
   void runOnFunction() final {
     RewritePatternSet patterns(&getContext());
-    patterns.add<SplitTreeLoopsByTreeDepthPattern>(&getContext(), m_pipelineSize);
+    patterns.add<SplitTreeLoopsByTreeDepthPattern>(&getContext(), m_pipelineSize, m_numCores);
 
     if (failed(applyPatternsAndFoldGreedily(getFunction(), std::move(patterns))))
         signalPassFailure();
@@ -341,12 +354,12 @@ namespace mlir
 {
 namespace decisionforest
 {
-void DoReorderTreesByDepth(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t pipelineSize) {
+void DoReorderTreesByDepth(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t pipelineSize, int32_t numCores) {
   mlir::PassManager pm(&context);
   mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
   optPM.addPass(std::make_unique<ReorderTreesByDepthPass>());
   // TODO pipelineSize needs to be added to CompilerOptions
-  optPM.addPass(std::make_unique<SplitTreeLoopByDepth>(pipelineSize));
+  optPM.addPass(std::make_unique<SplitTreeLoopByDepth>(pipelineSize, numCores));
 
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to mid level IR failed.\n";

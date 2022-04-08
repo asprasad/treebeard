@@ -1,15 +1,3 @@
-Remove Extra Hop - Attempt 2
-1. Serialization changes 
-    - All leaves upto a certain level into the tiles array
-    - Add extra hops if needed for any leaves after that
-2. Tiling changes
-    - Add whether tiled tree was probabilistically tiled
-2. Code gen changes
-    - New op "Peeled tree walk"
-    - Add to schedule
-    - Set unroll factor on the walk tree op
-
-
 MAJOR HOLES
 1. LightGBM support, random forest support
 2. Categorical features
@@ -296,6 +284,16 @@ Performance Tuning for Tiled Code
 
 [Done] SO support for sparse representation
 
+Remove Extra Hop - Attempt 2
+1. Serialization changes 
+    - All leaves upto a certain level into the tiles array
+    - Add extra hops if needed for any leaves after that
+2. Tiling changes
+    - Add whether tiled tree was probabilistically tiled
+2. Code gen changes
+    - New op "Peeled tree walk"
+    - Add to schedule
+    - Set unroll factor on the walk tree op
 
 ISSUES
-1. How do we know which loop is the batch loop(s) and which loop is the tree loop(s) in the mid-level IR? For example, say we want to tile, we've already lost the information about which loop we're dealing with -- we'll have to infer it from what the loop index is being used for!
+1. [Solved] How do we know which loop is the batch loop(s) and which loop is the tree loop(s) in the mid-level IR? For example, say we want to tile, we've already lost the information about which loop we're dealing with -- we'll have to infer it from what the loop index is being used for!
