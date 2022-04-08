@@ -1,3 +1,8 @@
+Python API
+    - [Done] Expose reordering, pipeling, parallelism, stats CSV path
+    - Expose common schedules
+
+
 MAJOR HOLES
 1. LightGBM support, random forest support
 2. Categorical features

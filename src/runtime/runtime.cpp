@@ -100,6 +100,9 @@ COMPILER_OPTION_SETTER(tileShapeBitWidth, int32_t)
 COMPILER_OPTION_SETTER(childIndexBitWidth, int32_t)
 COMPILER_OPTION_SETTER(makeAllLeavesSameDepth, int32_t)
 COMPILER_OPTION_SETTER(reorderTreesByDepth, int32_t)
+COMPILER_OPTION_SETTER(statsProfileCSVPath,  const char*)
+COMPILER_OPTION_SETTER(pipelineWidth, int32_t)
+COMPILER_OPTION_SETTER(numberOfCores, int32_t)
 
 extern "C" void Set_tilingType(intptr_t options, int32_t val) {
   TreeBeard::CompilerOptions *optionsPtr = reinterpret_cast<TreeBeard::CompilerOptions*>(options);

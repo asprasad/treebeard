@@ -83,6 +83,15 @@ class TreebeardAPI:
       self.runtime_lib.Set_tilingType.argtypes = [ctypes.c_int64, ctypes.c_int32]
       self.runtime_lib.Set_tilingType.restype = None
 
+      self.runtime_lib.Set_pipelineWidth.argtypes = [ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Set_pipelineWidth.restype = None
+
+      self.runtime_lib.Set_numberOfCores.argtypes = [ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Set_numberOfCores.restype = None
+
+      self.runtime_lib.Set_statsProfileCSVPath.argtypes = [ctypes.c_int64, ctypes.c_char_p]
+      self.runtime_lib.Set_statsProfileCSVPath.restype = None
+
       self.runtime_lib.GenerateLLVMIRForXGBoostModel.argtypes = (ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int64)
       self.runtime_lib.GenerateLLVMIRForXGBoostModel.restype = None
  
@@ -134,25 +143,35 @@ class CompilerOptions:
     treebeardAPI.runtime_lib.Set_featureIndexTypeWidth(self.optionsPtr, val)
 
   def SetNodeIndexTypeWidth(self, val : int) :
-    self.runtime_lib.Set_nodeIndexTypeWidth(self.optionsPtr, val)
+    treebeardAPI.runtime_lib.Set_nodeIndexTypeWidth(self.optionsPtr, val)
       
   def SetInputElementTypeWidth(self, val : int) :
-    self.runtime_lib.Set_inputElementTypeWidth(self.optionsPtr, val)
+    treebeardAPI.runtime_lib.Set_inputElementTypeWidth(self.optionsPtr, val)
 
   def SetTileShapeBitWidth(self, val : int) :  
-    self.runtime_lib.Set_tileShapeBitWidth(self.optionsPtr, val)
+    treebeardAPI.runtime_lib.Set_tileShapeBitWidth(self.optionsPtr, val)
 
   def SetChildIndexBitWidth(self, val : int) :  
-    self.runtime_lib.Set_childIndexBitWidth(self.optionsPtr, val)
+    treebeardAPI.runtime_lib.Set_childIndexBitWidth(self.optionsPtr, val)
     
   def SetMakeAllLeavesSameDepth(self, val : int) :
-    self.runtime_lib.Set_makeAllLeavesSameDepth(self.optionsPtr, val)
+    treebeardAPI.runtime_lib.Set_makeAllLeavesSameDepth(self.optionsPtr, val)
 
   def SetReorderTreesByDepth(self, val : Boolean) :
-    self.runtime_lib.Set_reorderTreesByDepth(self.optionsPtr, 1 if val else 0)
+    treebeardAPI.runtime_lib.Set_reorderTreesByDepth(self.optionsPtr, 1 if val else 0)
 
   def SetTilingType(self, val : Boolean) :
-    self.runtime_lib.Set_tilingType(self.optionsPtr, val)
+    treebeardAPI.runtime_lib.Set_tilingType(self.optionsPtr, val)
+  
+  def SetPipelineWidth(self, val : int) :
+    treebeardAPI.runtime_lib.Set_pipelineWidth(self.optionsPtr, val)
+
+  def SetNumberOfCores(self, val : int) :
+    treebeardAPI.runtime_lib.Set_numberOfCores(self.optionsPtr, val)
+  
+  def SetStatsProfileCSVPath(self, val : str) :
+    valStr = val.encode('ascii')
+    treebeardAPI.runtime_lib.Set_statsProfileCSVPath(self.optionsPtr, valStr)
 
 class TreebeardInferenceRunner:
   def __init__(self) -> None:
