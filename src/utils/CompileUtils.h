@@ -31,7 +31,6 @@ struct CompilerOptions {
 
   mlir::decisionforest::ScheduleManipulator *scheduleManipulator=nullptr;
   std::string statsProfileCSVPath = "";
-  int32_t pipelineWidth = -1;
   int32_t numberOfCores = -1;
 
   CompilerOptions() { }
