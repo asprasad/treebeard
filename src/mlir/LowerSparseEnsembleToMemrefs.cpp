@@ -19,6 +19,8 @@
 #include "TiledTree.h"
 #include "Logger.h"
 #include "CodeGenStateMachine.h"
+#include "TraverseTreeTileOpLowering.h"
+#include "OpLoweringUtils.h"
 
 using namespace mlir;
 
@@ -52,13 +54,6 @@ struct GetTreeLoweringInfo {
 
 // Maps a GetTree operation to a memref that represents the tree once the ensemble constant has been replaced
 std::map<Operation*, GetTreeLoweringInfo> getTreeOperationMap;
-
-template<typename T>
-T AssertOpIsOfType(Operation* operation) {
-  T typedOp = llvm::dyn_cast<T>(operation);
-  assert(typedOp);
-  return typedOp;
-}
 
 class SaveAndRestoreInsertionPoint {
   mlir::OpBuilder::InsertPoint m_insertPoint;
@@ -665,6 +660,16 @@ struct GetTreeClassIdOpLowering: public ConversionPattern {
   }
 };
 
+struct InterleavedTraverseTreeTileOpLowering : public ConversionPattern {
+  InterleavedTraverseTreeTileOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::InterleavedTraverseTreeTileOp::getOperationName(), 1 /*benefit*/, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,ConversionPatternRewriter &rewriter) const final {
+    decisionforest::InterleavedTraverseTreeTileOpLoweringHelper traverseLowringHelper(GetTreeMemrefFromTreeOperand, GetLUTFromTreeOperand, decisionforest::Representation::kSparse);
+    return traverseLowringHelper.matchAndRewrite(AssertOpIsOfType<mlir::decisionforest::InterleavedTraverseTreeTileOp>(op), operands, rewriter);
+  }
+};
+
 struct TraverseTreeTileOpLowering : public ConversionPattern {
   TraverseTreeTileOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::TraverseTreeTileOp::getOperationName(), 1 /*benefit*/, ctx) {}
 
@@ -706,7 +711,7 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     while (codeGenStateMachine.EmitNext(rewriter, location));
     
     rewriter.replaceOp(op, static_cast<Value>(codeGenStateMachine.GetResult()[0]));
-    
+
     return mlir::success();
   }
 
@@ -1114,6 +1119,7 @@ void PopulateLowerToSparseRepresentationPatterns(RewritePatternSet& patterns) {
                 IsLeafTileOpLowering,
                 GetTreeClassIdOpLowering,
                 TraverseTreeTileOpLowering,
+                InterleavedTraverseTreeTileOpLowering,
                 GetLeafValueOpLowering,
                 GetLeafTileValueOpLowering>(patterns.getContext());
 }

@@ -17,17 +17,11 @@
 #include <set>
 #include <cassert>
 #include "Logger.h"
+#include "OpLoweringUtils.h"
 #include "TiledTree.h"
 
 using namespace mlir;
 namespace {
-
-template<typename T>
-T AssertOpIsOfType(Operation* operation) {
-  T typedOp = llvm::dyn_cast<T>(operation);
-  assert(typedOp);
-  return typedOp;
-}
 
 struct TileEnsembleAttribute : public RewritePattern {
   int32_t m_tileSize;

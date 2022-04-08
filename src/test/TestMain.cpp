@@ -26,10 +26,9 @@ bool Test_LoadTileThresholdOp_DoubleInt32_TileSize1(TestArgs_t& args);
 bool Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args);
 bool Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args);
 bool Test_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_1Tree_BatchSize1_Pipelined(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_1Tree_BatchSize1_Pipelined_Vector(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_Pipelined_Vector(TestArgs_t &args);
-bool Test_RandomXGBoostJSONs_1Tree_BatchSize1_NotPipelined_Vector(TestArgs_t& args);
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize8_TileSize2_4Pipelined(TestArgs_t& args);
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize8_TlieSize4_4Pipelined(TestArgs_t& args);
+bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_4Pipelined(TestArgs_t &args);
 bool Test_RandomXGBoostJSONs_1Tree_BatchSize2(TestArgs_t& args);
 bool Test_RandomXGBoostJSONs_1Tree_BatchSize4(TestArgs_t& args);
 bool Test_RandomXGBoostJSONs_2Trees_BatchSize1(TestArgs_t& args);
@@ -158,6 +157,9 @@ bool Test_TileSize2_Letters_Int8Type(TestArgs_t &args);
 bool Test_TileSize3_Letters_Int8Type(TestArgs_t &args);
 bool Test_TileSize4_Letters_Int8Type(TestArgs_t &args);
 bool Test_TileSize8_Letters_Int8Type(TestArgs_t &args);
+bool Test_TileSize3_Letters_2Pipelined_Int8Type(TestArgs_t &args);
+bool Test_TileSize4_Letters_3Pipelined_Int8Type(TestArgs_t &args);
+bool Test_TileSize8_Letters_5Pipelined_Int8Type(TestArgs_t &args);
 
 // XGBoost benchmark models tests with one tree at a time schedule
 bool Test_Scalar_Abalone_OneTreeAtATimeSchedule(TestArgs_t &args);
@@ -243,16 +245,19 @@ bool Test_SparseTileSize2_Airline(TestArgs_t &args);
 bool Test_SparseTileSize3_Airline(TestArgs_t &args);
 bool Test_SparseTileSize4_Airline(TestArgs_t &args);
 bool Test_SparseTileSize8_Airline(TestArgs_t &args);
+bool Test_SparseTileSize8_Pipeline4_Airline(TestArgs_t &args);
 bool Test_SparseScalar_AirlineOHE(TestArgs_t &args);
 bool Test_SparseTileSize2_AirlineOHE(TestArgs_t &args);
 bool Test_SparseTileSize3_AirlineOHE(TestArgs_t &args);
 bool Test_SparseTileSize4_AirlineOHE(TestArgs_t &args);
 bool Test_SparseTileSize8_AirlineOHE(TestArgs_t &args);
+bool Test_SparseTileSize8_Pipelined4_AirlineOHE(TestArgs_t &args);
 bool Test_SparseScalar_Bosch(TestArgs_t &args);
 bool Test_SparseTileSize2_Bosch(TestArgs_t &args);
 bool Test_SparseTileSize3_Bosch(TestArgs_t &args);
 bool Test_SparseTileSize4_Bosch(TestArgs_t &args);
 bool Test_SparseTileSize8_Bosch(TestArgs_t &args);
+bool Test_SparseTileSize8_4Pipelined_Bosch(TestArgs_t &args);
 bool Test_SparseScalar_CovType_Int8Type(TestArgs_t &args);
 bool Test_SparseTileSize8_CovType_Int8Type(TestArgs_t &args);
 bool Test_SparseScalar_Epsilon(TestArgs_t &args);
@@ -260,11 +265,13 @@ bool Test_SparseTileSize2_Epsilon(TestArgs_t &args);
 bool Test_SparseTileSize3_Epsilon(TestArgs_t &args);
 bool Test_SparseTileSize4_Epsilon(TestArgs_t &args);
 bool Test_SparseTileSize8_Epsilon(TestArgs_t &args);
+bool Test_SparseTileSize8_Pipelined_Epsilon(TestArgs_t &args);
 bool Test_SparseScalar_Higgs(TestArgs_t &args);
 bool Test_SparseTileSize2_Higgs(TestArgs_t &args);
 bool Test_SparseTileSize3_Higgs(TestArgs_t &args);
 bool Test_SparseTileSize4_Higgs(TestArgs_t &args);
 bool Test_SparseTileSize8_Higgs(TestArgs_t &args);
+bool Test_SparseTileSize8_Pipelined_Higgs(TestArgs_t &args);
 bool Test_SparseScalar_Letters_Int8Type(TestArgs_t &args);
 bool Test_SparseTileSize8_Letters_Int8Type(TestArgs_t &args);
 bool Test_SparseScalar_Year(TestArgs_t &args);
@@ -272,9 +279,11 @@ bool Test_SparseTileSize2_Year(TestArgs_t &args);
 bool Test_SparseTileSize3_Year(TestArgs_t &args);
 bool Test_SparseTileSize4_Year(TestArgs_t &args);
 bool Test_SparseTileSize8_Year(TestArgs_t &args);
+bool Test_SparseTileSize8_Pipelined_Year(TestArgs_t &args);
 
 // Tests for actual model inputs
 bool Test_TileSize8_Abalone_TestInputs(TestArgs_t &args);
+bool Test_TileSize8_Abalone_4Pipelined_TestInputs(TestArgs_t &args);
 bool Test_TileSize8_Airline_TestInputs(TestArgs_t &args);
 bool Test_TileSize8_AirlineOHE_TestInputs(TestArgs_t &args);
 bool Test_TileSize8_Bosch_TestInputs(TestArgs_t &args);
@@ -282,6 +291,7 @@ bool Test_TileSize8_Epsilon_TestInputs(TestArgs_t &args);
 bool Test_TileSize8_Higgs_TestInputs(TestArgs_t &args);
 bool Test_TileSize8_Year_TestInputs(TestArgs_t &args);
 bool Test_TileSize8_CovType_TestInputs(TestArgs_t &args);
+bool Test_TileSize8_CovType_4Pipelined_TestInputs(TestArgs_t &args);
 
 // Tiled schedule test
 bool Test_TileSize8_Abalone_TestInputs_TiledSchedule(TestArgs_t &args);
@@ -1212,7 +1222,7 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs),
   TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs),
   TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs),
-
+  
   // Non-trivial schedule array representation tests
   TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize2_XGBoostSchedule),
   TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize2_XGBoostSchedule),
@@ -1364,6 +1374,23 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_ParallelBatch),
   TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_ParallelBatch),
 #endif // OMP_SUPPORT
+
+  // Pipelining + Unrolling tests
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize8_TileSize2_4Pipelined),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_4Pipelined),
+  TEST_LIST_ENTRY(Test_TileSize3_Letters_2Pipelined_Int8Type),
+  TEST_LIST_ENTRY(Test_TileSize4_Letters_3Pipelined_Int8Type),
+  TEST_LIST_ENTRY(Test_TileSize8_Letters_5Pipelined_Int8Type),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_4Pipelined_Bosch),
+  TEST_LIST_ENTRY(Test_TileSize8_Abalone_4Pipelined_TestInputs),
+  TEST_LIST_ENTRY(Test_TileSize8_CovType_4Pipelined_TestInputs),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Pipeline4_Airline),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Pipelined4_AirlineOHE),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Pipelined_Year),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Pipelined_Higgs),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_Pipelined_Epsilon),
+
+  // Hybrid Tiling
   TEST_LIST_ENTRY(Test_WalkPeeling_BalancedTree_TileSize2),
   TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
   TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4),
@@ -1383,6 +1410,15 @@ TestDescriptor testList[] = {
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
+  
+  TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth),
+  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_MakeLeavesSameDepth),
+  TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_MakeLeavesSameDepth),
+  TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_MakeLeavesSameDepth),
+  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_MakeLeavesSameDepth),
+  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_MakeLeavesSameDepth),
+  TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth),
   TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_ParallelBatch),
   TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_ParallelBatch),
   TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_ParallelBatch),
@@ -1417,58 +1453,62 @@ TestDescriptor testList[] = {
   // TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_MakeLeavesSameDepth),
   // TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth),
   
-  // TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_EqualDepth_TileSize8),
-  // TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_EqualDepth_TileSize8),
-  // TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_EqualDepth_TileSize8),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_EqualDepth_TileSize8),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_EqualDepth_TileSize8),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_EqualDepth_TileSize8),
 
-  // // Remove extra hop tests
-  // TEST_LIST_ENTRY(Test_RemoveExtraHop_BalancedTree_TileSize2),
-  // TEST_LIST_ENTRY(Test_SparseSerialization_BalancedTree_TileSize2),
-  // TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_RemoveExtraHop_TileSize8),
-  // TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_RemoveExtraHop_TileSize8),
-  // TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_RemoveExtraHop_TileSize8),
-  // TEST_LIST_ENTRY(Test_SparseSerialization_BalancedTree_TileSize2),
-  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Airline),
-  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_AirlineOHE),
-  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Epsilon),
-  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Higgs),
-  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Year),
-  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
-  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Airline),
-  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_AirlineOHE),
-  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Epsilon),
-  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Higgs),
-  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Year),
-  // TEST_LIST_ENTRY(Test_CovtypeStatGenerationAndReading),
-  // TEST_LIST_ENTRY(Test_EpsilonStatGenerationAndReading),
-  // TEST_LIST_ENTRY(Test_HiggsStatGenerationAndReading),
-  // TEST_LIST_ENTRY(Test_YearStatGenerationAndReading),
-  // TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs),
-  // TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs),
-  // TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4),
-  // TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
-  // TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
-  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape),
-  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape),
-  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize),
-  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1),
-  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize),
-  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1),
-  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape),
-  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape),
-  // TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize1_I32ChildIdx),
-  // TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize1_I32ChildIdx),
-  // TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize2_I32ChildIdx),
-  // TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize2_I32ChildIdx),
-  // TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx),
-  // TEST_LIST_ENTRY(Test_TileSize8_Airline),
-  // TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE),
-  // TEST_LIST_ENTRY(Test_TileSize8_Bosch),
-  // TEST_LIST_ENTRY(Test_TileSize8_Epsilon),
-  // TEST_LIST_ENTRY(Test_TileSize8_Higgs),
-  // TEST_LIST_ENTRY(Test_TileSize8_Year),
-  // TEST_LIST_ENTRY(Test_TileSize3_Abalone),
-  // TEST_LIST_ENTRY(Test_TileSize4_Abalone),
+  // Remove extra hop tests
+  TEST_LIST_ENTRY(Test_RemoveExtraHop_BalancedTree_TileSize2),
+  TEST_LIST_ENTRY(Test_SparseSerialization_BalancedTree_TileSize2),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_RemoveExtraHop_TileSize8),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_RemoveExtraHop_TileSize8),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_RemoveExtraHop_TileSize8),
+  TEST_LIST_ENTRY(Test_SparseSerialization_BalancedTree_TileSize2),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Airline),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_AirlineOHE),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Epsilon),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Higgs),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Year),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Airline),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_AirlineOHE),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Epsilon),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Higgs),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Year),
+  TEST_LIST_ENTRY(Test_CovtypeStatGenerationAndReading),
+  TEST_LIST_ENTRY(Test_EpsilonStatGenerationAndReading),
+  TEST_LIST_ENTRY(Test_HiggsStatGenerationAndReading),
+  TEST_LIST_ENTRY(Test_YearStatGenerationAndReading),
+  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs),
+  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs),
+  TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4),
+  TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
+  TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape),
+  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize1_I32ChildIdx),
+  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize1_I32ChildIdx),
+  TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize2_I32ChildIdx),
+  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize2_I32ChildIdx),
+  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx),
+  TEST_LIST_ENTRY(Test_TileSize8_Airline),
+  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE),
+  TEST_LIST_ENTRY(Test_TileSize8_Bosch),
+  TEST_LIST_ENTRY(Test_TileSize8_Epsilon),
+  TEST_LIST_ENTRY(Test_TileSize8_Higgs),
+  TEST_LIST_ENTRY(Test_TileSize8_Year),
+  TEST_LIST_ENTRY(Test_TileSize3_Abalone),
+  TEST_LIST_ENTRY(Test_TileSize4_Abalone),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize8_TileSize2_4Pipelined),
+  TEST_LIST_ENTRY(Test_TileSize4_Letters_3Pipelined_Int8Type),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_4Pipelined_Bosch),
+  TEST_LIST_ENTRY(Test_TileSize8_Abalone_4Pipelined_TestInputs),
 };
 #endif // RUN_ALL_TESTS
 
