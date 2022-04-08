@@ -48,61 +48,6 @@ constexpr int32_t NUM_RUNS = 100;
 constexpr int32_t NUM_RUNS = 1000;
 #endif
 
-template<typename FloatType, typename ReturnType=FloatType>
-int64_t Test_CodeGenForJSON_VariableBatchSize(int64_t batchSize, const std::string& modelJsonPath, int32_t tileSize, int32_t tileShapeBitWidth, 
-                                              int32_t childIndexBitWidth, mlir::decisionforest::ScheduleManipulator *scheduleManipulator) {
-  // TODO consider changing this so that you use the smallest possible type possible (need to make it a parameter)
-  using FeatureIndexType = int16_t;
-  using NodeIndexType = int16_t;
-
-  mlir::MLIRContext context;
-  int32_t floatTypeBitWidth = sizeof(FloatType)*8;
-  TreeBeard::CompilerOptions options(floatTypeBitWidth, sizeof(ReturnType)*8, IsFloatType(ReturnType()), sizeof(FeatureIndexType)*8, sizeof(NodeIndexType)*8,
-                                     floatTypeBitWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, 
-                                     TreeBeard::TilingType::kUniform, false, false, scheduleManipulator);
-  TreeBeard::InitializeMLIRContext(context);
-  auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, ReturnType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
-  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ReturnType, FeatureIndexType, int32_t, FloatType>(context, modelJsonPath, modelGlobalsJSONFilePath, options);
-
-  decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, floatTypeBitWidth, sizeof(FeatureIndexType)*8);
-  
-  TestCSVReader csvReader(modelJsonPath + ".test.sampled.csv");
-  std::vector<std::vector<FloatType>> inputData;
-  for (size_t i=batchSize  ; i<csvReader.NumberOfRows()-1 ; i += batchSize) {
-    std::vector<FloatType> batch, preds;
-    for (int32_t j=0 ; j<batchSize ; ++j) {
-      auto rowIndex = (i-batchSize) + j;
-      auto row = csvReader.GetRowOfType<FloatType>(rowIndex);
-      row.pop_back();
-      batch.insert(batch.end(), row.begin(), row.end());
-    }
-    inputData.push_back(batch);
-  }
-
-#ifdef PROFILE_MODE
-  char ch;
-  std::cout << "Attach profiler and press any key...";
-  std::cin >> ch;
-#endif
-
-  size_t rowSize = csvReader.GetRow(0).size() - 1; // The last entry is the xgboost prediction
-  std::vector<FloatType> result(batchSize, -1);
-  std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-  for (int32_t trial=0 ; trial<NUM_RUNS ; ++trial) {
-    for(auto& batch : inputData) {
-      // assert (batch.size() % batchSize == 0);
-      inferenceRunner.RunInference<FloatType, FloatType>(batch.data(), result.data(), rowSize, batchSize);
-    }
-  }
-  std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-
-#ifdef PROFILE_MODE
-  std::cout << "Detach profiler and press any key...";
-  std::cin >> ch;
-#endif
-  return std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
-}
-
 int32_t GetNumberOfCores() { 
   return 8;
 }

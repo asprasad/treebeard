@@ -530,7 +530,7 @@ void ForestJSONReader::InitializeLengthBuffer(void* bufPtr, int32_t tileSize, in
 void ForestJSONReader::InitializeLookUpTable(void* bufPtr, int32_t tileSize, int32_t entryBitWidth) {
     assert (entryBitWidth == 8 && "LUT entry must be i8");
     int8_t* lutBufferPtr = reinterpret_cast<int8_t*>(bufPtr);
-    TileShapeToTileIDMap tileShapeToTileIDMap(tileSize);
+    TileShapeToTileIDMap& tileShapeToTileIDMap = *TileShapeToTileIDMap::Get(tileSize);
     auto lut = tileShapeToTileIDMap.ComputeTileLookUpTable();
     for (size_t tileShapeID=0 ; tileShapeID<lut.size() ; ++tileShapeID) {
         for (size_t outcome=0 ; outcome<lut.at(tileShapeID).size() ; ++outcome) {
@@ -1157,7 +1157,7 @@ void TiledTreeNode::WriteDOTSubGraph(std::ofstream& fout) {
 
 TiledTree::TiledTree(DecisionTree<>& owningTree)
  : m_numberOfDummyTiles(0), m_owningTree(owningTree), m_modifiedTree(owningTree), 
-   m_tileShapeToTileIDMap(m_owningTree.TilingDescriptor().MaxTileSize()), m_probabilisticallyTiled(false),
+   m_tileShapeToTileIDMap(*TileShapeToTileIDMap::Get(m_owningTree.TilingDescriptor().MaxTileSize())), m_probabilisticallyTiled(false),
    m_levelsToUnroll(-1)
 {
     ConstructTiledTree();
@@ -2290,6 +2290,7 @@ void TileShapeToTileIDMap::TileStringGenerator(int32_t numNodes) {
 }
 
 std::map<int32_t, int32_t> TileShapeToTileIDMap::tileSizeToNumberOfShapesMap;
+std::map<int32_t, TileShapeToTileIDMap*> TileShapeToTileIDMap::tileSizeToTileShapeMapMap;
 
 int32_t TileShapeToTileIDMap::NumberOfTileShapes(int32_t tileSize) {
     assert(tileSize >= 0);
@@ -2306,6 +2307,16 @@ int32_t TileShapeToTileIDMap::NumberOfTileShapes(int32_t tileSize) {
     }
     tileSizeToNumberOfShapesMap[tileSize] = numShapes;
     return numShapes;
+}
+
+TileShapeToTileIDMap* TileShapeToTileIDMap::Get(int32_t tileSize) {
+    auto iter = tileSizeToTileShapeMapMap.find(tileSize);
+    if (iter == tileSizeToTileShapeMapMap.end()) {
+        tileSizeToTileShapeMapMap[tileSize] = new TileShapeToTileIDMap(tileSize);
+        iter = tileSizeToTileShapeMapMap.find(tileSize);
+    }
+    assert (iter != tileSizeToTileShapeMapMap.end());
+    return iter->second;
 }
 
 int32_t ConstructTreeForTile(const std::string& tileStr, int32_t root, DecisionTree<>& tree) {

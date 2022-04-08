@@ -79,23 +79,25 @@ class TiledTreeNode;
 class TileShapeToTileIDMap
 {
     static std::map<int32_t, int32_t> tileSizeToNumberOfShapesMap;
-
+    static std::map<int32_t, TileShapeToTileIDMap*> tileSizeToTileShapeMapMap;
     int32_t m_tileSize;
     std::map<std::string, int32_t> m_tileStringToTileIDMap;
     int32_t m_currentTileID = 0;
     void TileStringGenerator(int32_t numNodes);
     void InitMap();
-public:
     TileShapeToTileIDMap(int32_t tileSize) 
-     : m_tileSize(tileSize)
+      : m_tileSize(tileSize)
     {
         InitMap();
     }
+
+public:
     int32_t GetTileID(TiledTreeNode& tile);
     // Index is (tileShapeID, comparison result)
     std::vector<std::vector<int32_t>> ComputeTileLookUpTable();
     // Number of tile shapes with the given tile size
     static int32_t NumberOfTileShapes(int32_t tileSize);
+    static TileShapeToTileIDMap* Get(int32_t tileSize);
 };
 
 struct TiledTreeStats {
@@ -133,7 +135,7 @@ class TiledTree {
     // tree is the modified tree with nodes added if required.
     DecisionTree<> m_modifiedTree;
     std::map<int32_t, int32_t> m_nodeToTileMap;
-    TileShapeToTileIDMap m_tileShapeToTileIDMap;
+    TileShapeToTileIDMap& m_tileShapeToTileIDMap;
     bool m_probabilisticallyTiled;
     int32_t m_levelsToUnroll;
 
