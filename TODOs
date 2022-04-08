@@ -1,6 +1,8 @@
 Python API
     - [Done] Expose reordering, pipeling, parallelism, stats CSV path
-    - Expose common schedules
+    - [Done] Expose common schedules
+    - Expose PeelProbabilisticWalk
+Fix the tiling for parallelization
 
 
 MAJOR HOLES

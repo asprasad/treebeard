@@ -304,12 +304,11 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
     auto& treeIndex = schedule->GetTreeIndex();
     if (m_numberOfCores != -1) {
       auto& batchIndex = schedule->GetBatchIndex();
-      auto& b0 = schedule->NewIndexVariable("b0");
-      auto& b1_parallel = schedule->NewIndexVariable("b1_parallel");
-      schedule->Tile(batchIndex, b0, b1_parallel, m_numberOfCores);
-      schedule->Reorder({&b1_parallel, &b0, &treeIndex});
-      schedule->Parallel(b1_parallel);
-      batchIndexPtr = &b0;
+      auto& b0_parallel = schedule->NewIndexVariable("b0_parallel");
+      auto& b1 = schedule->NewIndexVariable("b1");
+      schedule->Tile(batchIndex, b0_parallel, b1, schedule->GetBatchSize()/m_numberOfCores);
+      schedule->Parallel(b0_parallel);
+      batchIndexPtr = &b1;
     }
 
     // TODO we're assuming that the schedule is the default unmodified schedule
