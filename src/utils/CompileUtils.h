@@ -27,6 +27,7 @@ struct CompilerOptions {
   bool makeAllLeavesSameDepth=false;
   bool reorderTreesByDepth=false;
   int32_t unrollFactor = -1;
+  int32_t pipelineSize = -1;
 
   mlir::decisionforest::ScheduleManipulator *scheduleManipulator=nullptr;
 
@@ -42,6 +43,7 @@ struct CompilerOptions {
   { }
 
   void SetUnrollFactor(int32_t unrollFactor) { this->unrollFactor = unrollFactor; }
+  void SetPipelineSize(int32_t pipelineSize) { this->pipelineSize = pipelineSize; }
 };
 
 template<typename ThresholdType=double, typename ReturnType=double, typename FeatureIndexType=int32_t, 
@@ -71,7 +73,8 @@ mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& cont
 
   // TODO this needs to change to something that knows how to do all schedule manipulation
   if (options.reorderTreesByDepth) {
-    mlir::decisionforest::DoReorderTreesByDepth(context, module, options.unrollFactor);
+    assert(options.pipelineSize == -1 || (options.pipelineSize <= options.batchSize));
+    mlir::decisionforest::DoReorderTreesByDepth(context, module, options.pipelineSize);
     assert (!options.scheduleManipulator && "Cannot have a custom schedule manipulator and the inbuilt one together");
   }
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
