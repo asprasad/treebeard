@@ -17,6 +17,7 @@
 #include <set>
 #include <cassert>
 #include "Logger.h"
+#include "TiledTree.h"
 
 using namespace mlir;
 namespace {
@@ -66,6 +67,14 @@ struct TileEnsembleAttribute : public RewritePattern {
       
       auto tiledProbabilistically = TileSingleDecisionTree(forest.GetTree(i));
       numTreesTiledProbabilistically += tiledProbabilistically ? 1 : 0;
+      if (mlir::decisionforest::PeeledCodeGenForProbabiltyBasedTiling && tiledProbabilistically) {
+        auto tiledTree = forest.GetTree(i).GetTiledTree();
+        tiledTree->SetProbabilisticallyTiled(tiledProbabilistically);
+        // Set the number of levels that need to be peeled.
+        const double inputFractionToCover = 0.9;
+        auto levelsToPeel = tiledTree->NumberOfLevelsNeededToCoverInputs(inputFractionToCover);
+        tiledTree->SetLevelsToUnroll(levelsToPeel);
+      }
       // if (tiledProbabilistically) 
       //   std::cout << i << " ";
 

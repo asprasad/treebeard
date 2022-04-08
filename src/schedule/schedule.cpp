@@ -157,6 +157,7 @@ Schedule& Schedule::Split(IndexVariable& index, IndexVariable& first, IndexVaria
   first.m_unrolled = second.m_unrolled = index.m_unrolled;
   first.m_peelWalk = second.m_peelWalk = index.m_peelWalk;
   first.m_iterationsToPeel = second.m_iterationsToPeel = index.m_iterationsToPeel;
+  first.m_unrollFactor = second.m_unrollFactor = index.m_unrollFactor;
 
   // indexMap[&index] = std::make_pair(&first, &second);
 
@@ -315,6 +316,32 @@ void DuplicateIndexModifier::Validate() {
 
 void DuplicateIndexModifier::Visit(IndexDerivationTreeVisitor& visitor) {
   visitor.VisitDuplicateIndexModifier(*this);
+}
+
+void OneTreeAtATimeSchedule(decisionforest::Schedule* schedule) {
+  auto& batchIndexVar = schedule->GetBatchIndex();
+  auto& treeIndexVar = schedule->GetTreeIndex();
+  schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &treeIndexVar, &batchIndexVar });
+}
+
+void OneTreeAtATimePipelinedSchedule(decisionforest::Schedule* schedule) {
+  auto& batchIndexVar = schedule->GetBatchIndex();
+  auto& treeIndexVar = schedule->GetTreeIndex();
+
+  schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &treeIndexVar, &batchIndexVar });
+  schedule->Pipeline(batchIndexVar, 4);
+}
+
+void OneTreeAtATimeUnrolledSchedule(decisionforest::Schedule* schedule) {
+  auto& batchIndexVar = schedule->GetBatchIndex();
+  auto& treeIndexVar = schedule->GetTreeIndex();
+  schedule->Reorder(std::vector<mlir::decisionforest::IndexVariable*>{ &treeIndexVar, &batchIndexVar });
+  schedule->Unroll(treeIndexVar);
+}
+
+void UnrollTreeLoop(decisionforest::Schedule* schedule) {
+  auto& treeIndexVar = schedule->GetTreeIndex();
+  schedule->Unroll(treeIndexVar);
 }
 
 } // decisionforest

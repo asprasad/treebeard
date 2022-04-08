@@ -529,7 +529,10 @@ struct IsLeafTileOpLowering: public ConversionPattern {
     
     if (decisionforest::InsertDebugHelpers) {
       Value outcome = rewriter.create<mlir::arith::ExtUIOp>(location, rewriter.getI32Type(), static_cast<Value>(comparison));
-      rewriter.create<decisionforest::PrintIsLeafOp>(location, nodeIndex, childIndexValue, outcome);
+      Value childIndexI32 = childIndexValue;
+      if (!childIndexType.isInteger(32))
+        childIndexI32 = rewriter.create<mlir::arith::ExtSIOp>(location, rewriter.getI32Type(), childIndexValue);
+      rewriter.create<decisionforest::PrintIsLeafOp>(location, nodeIndex, childIndexI32, outcome);
     }
     rewriter.replaceOp(op, static_cast<Value>(comparison));
 
@@ -618,7 +621,10 @@ struct IsLeafOpLowering: public ConversionPattern {
         
         if (decisionforest::InsertDebugHelpers) {
           Value outcome = rewriter.create<mlir::arith::ExtUIOp>(location, rewriter.getI32Type(), static_cast<Value>(comparison));
-          rewriter.create<decisionforest::PrintIsLeafOp>(location, nodeIndex, featureIndexValue, outcome);
+          Value featureIndexI32 = featureIndexValue;
+          if (!featureIndexType.isInteger(32))
+            featureIndexI32 = rewriter.create<mlir::arith::ExtSIOp>(location, rewriter.getI32Type(), featureIndexValue);
+          rewriter.create<decisionforest::PrintIsLeafOp>(location, nodeIndex, featureIndexI32, outcome);
         }
         rewriter.replaceOp(op, static_cast<Value>(comparison));
       }
@@ -1068,8 +1074,14 @@ struct GetLeafTileValueOpLowering : public ConversionPattern {
     Value leafValue = loadThresholdOp;
     
     if (treeTileType.getTileSize() != 1) {
+      auto thresholdVectorType = thresholdType.cast<VectorType>();
       if (decisionforest::InsertDebugHelpers) {
-        InsertPrintVectorOp(rewriter, location, 0, treeTileType.getThresholdElementType().getIntOrFloatBitWidth(), treeTileType.getTileSize(), loadThresholdOp);
+        Value vectorVal = loadThresholdOp;
+        if (!thresholdVectorType.getElementType().isF64()) {
+          auto doubleVectorType = mlir::VectorType::get({ treeTileType.getTileSize() }, rewriter.getF64Type());
+          vectorVal = rewriter.create<arith::ExtFOp>(location, doubleVectorType, loadThresholdOp);
+        }
+        InsertPrintVectorOp(rewriter, location, 0, 64, treeTileType.getTileSize(), vectorVal);
       }
       auto zeroConst = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI32Type());
       auto extractElement = rewriter.create<vector::ExtractElementOp>(location, static_cast<Value>(loadThresholdOp), zeroConst);
