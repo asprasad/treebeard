@@ -57,18 +57,25 @@ int64_t Test_CodeGenForJSON_ProbabilityBasedTiling(int64_t batchSize, const std:
                                               const std::string& statsProfileCSV,
                                               int32_t tileSize, int32_t tileShapeBitWidth, 
                                               int32_t childIndexBitWidth, mlir::decisionforest::ScheduleManipulator *scheduleManipulator, 
-                                              bool probTiling, bool parallel) {
+                                              bool probTiling, bool parallel,
+                                              int32_t pipelineSize) {
   // TODO consider changing this so that you use the smallest possible type possible (need to make it a parameter)
   using FeatureIndexType = int16_t;
   using NodeIndexType = int16_t;
 
   mlir::MLIRContext context;
   int32_t floatTypeBitWidth = sizeof(FloatType)*8;
+  bool reorderTrees = probTiling || parallel || pipelineSize > 1;
   TreeBeard::CompilerOptions options(floatTypeBitWidth, sizeof(ReturnType)*8, IsFloatType(ReturnType()), sizeof(FeatureIndexType)*8, sizeof(NodeIndexType)*8,
                                      floatTypeBitWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth,
                                      (probTiling ? TreeBeard::TilingType::kHybrid : TreeBeard::TilingType::kUniform), 
-                                     false, probTiling || parallel, ((probTiling || parallel) ? nullptr : scheduleManipulator));
+                                     pipelineSize > 1, // make all leaves same depth
+                                     reorderTrees, // reorder trees
+                                     reorderTrees ? nullptr : scheduleManipulator);
+
   options.statsProfileCSVPath = statsProfileCSV;
+  options.SetPipelineSize(pipelineSize);
+
   if (parallel)
     options.numberOfCores = GetNumberOfCores();
   TreeBeard::InitializeMLIRContext(context);
@@ -117,42 +124,51 @@ int64_t Test_CodeGenForJSON_ProbabilityBasedTiling(int64_t batchSize, const std:
 
 template<typename FPType, typename ReturnType, int32_t TileSize, int32_t BatchSize>
 int64_t RunSingleBenchmark_SingleConfig(const std::string& modelName, mlir::decisionforest::ScheduleManipulator *scheduleManipulator,
-                                        bool probTiling, bool parallel) {
+                                        bool probTiling, bool parallel, int32_t pipelineSize) {
   auto repoPath = GetTreeBeardRepoPath();
   auto testModelsDir = repoPath + "/xgb_models";
   auto modelJSONPath = testModelsDir + "/" + modelName + "_xgb_model_save.json";
   std::string statsProfileCSV = testModelsDir + "/profiles/" + modelName + ".test.csv";
   auto time = Test_CodeGenForJSON_ProbabilityBasedTiling<FPType, ReturnType>(BatchSize, modelJSONPath, statsProfileCSV, 
                                                                             TileSize, 16, 16, scheduleManipulator,
-                                                                            probTiling, parallel);
+                                                                            probTiling, parallel, pipelineSize);
   return time;
 }
 
-
 template<typename FPType, int32_t TileSize, int32_t BatchSize>
-void RunBenchmark_SingleConfig(mlir::decisionforest::ScheduleManipulator *scheduleManipulator, bool probTiling, const std::string& config, bool parallel) {
+void RunBenchmark_SingleConfig(mlir::decisionforest::ScheduleManipulator *scheduleManipulator, bool probTiling, const std::string& config, bool parallel, int32_t pipelineSize) {
   std::cout << config << ", ";
   std::cout << GetTypeName(FPType()) << ", " << BatchSize << " , " << TileSize;
-  std::cout << ", " << RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("abalone", scheduleManipulator, probTiling, parallel) << std::flush;
-  std::cout << ", " << RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("airline", scheduleManipulator, probTiling, parallel) << std::flush;
-  std::cout << ", " << RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("airline-ohe", scheduleManipulator, probTiling, parallel) << std::flush;
+  std::cout << ", " << RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("abalone", scheduleManipulator, probTiling, parallel, pipelineSize) << std::flush;
+  std::cout << ", " << RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("airline", scheduleManipulator, probTiling, parallel, pipelineSize) << std::flush;
+  std::cout << ", " << RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("airline-ohe", scheduleManipulator, probTiling, parallel, pipelineSize) << std::flush;
   // // RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("bosch", scheduleManipulator) << std::flush;
-  std::cout << ", " << RunSingleBenchmark_SingleConfig<FPType, int8_t, TileSize, BatchSize>("covtype", scheduleManipulator, probTiling, parallel) << std::flush;
-  std::cout << ", " << RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("epsilon", nullptr, probTiling, parallel) << std::flush;
-  std::cout << ", " << RunSingleBenchmark_SingleConfig<FPType, int8_t, TileSize, BatchSize>("letters", scheduleManipulator, probTiling, parallel) << std::flush;
-  std::cout << ", " << RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("higgs", scheduleManipulator, probTiling, parallel) << std::flush;
-  std::cout << ", " << RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("year_prediction_msd", scheduleManipulator, probTiling, parallel) << std::flush;
+  std::cout << ", " << RunSingleBenchmark_SingleConfig<FPType, int8_t, TileSize, BatchSize>("covtype", scheduleManipulator, probTiling, parallel, pipelineSize) << std::flush;
+  std::cout << ", " << RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("epsilon", nullptr, probTiling, parallel, pipelineSize) << std::flush;
+  std::cout << ", " << RunSingleBenchmark_SingleConfig<FPType, int8_t, TileSize, BatchSize>("letters", scheduleManipulator, probTiling, parallel, pipelineSize) << std::flush;
+  std::cout << ", " << RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("higgs", scheduleManipulator, probTiling, parallel, pipelineSize) << std::flush;
+  std::cout << ", " << RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("year_prediction_msd", scheduleManipulator, probTiling, parallel, pipelineSize) << std::flush;
   std::cout << std::endl;
 }
 
 void RunAllBenchmarks(mlir::decisionforest::ScheduleManipulator *scheduleManipulator, 
-                      bool probTiling, const std::string& config, bool parallel=false) {
+                      bool probTiling, const std::string& config, bool parallel=false, int32_t pipelineSize = -1) {
   constexpr int32_t batchSize = 500;
   {
     using FPType = float;
-    RunBenchmark_SingleConfig<FPType, 1, batchSize>(scheduleManipulator, false, config, parallel);
-    RunBenchmark_SingleConfig<FPType, 4, batchSize>(scheduleManipulator, probTiling, config, parallel);
-    RunBenchmark_SingleConfig<FPType, 8, batchSize>(scheduleManipulator, probTiling, config, parallel);
+    RunBenchmark_SingleConfig<FPType, 1, batchSize>(scheduleManipulator, false, config, parallel, pipelineSize);
+    RunBenchmark_SingleConfig<FPType, 4, batchSize>(scheduleManipulator, probTiling, config, parallel, pipelineSize);
+    RunBenchmark_SingleConfig<FPType, 8, batchSize>(scheduleManipulator, probTiling, config, parallel, pipelineSize);
+  }
+}
+
+void RunAllPipelinedBenchmarks(const std::string& config, bool parallel=false) {
+  constexpr int32_t batchSize = 500;
+  {
+    using FPType = float;
+    RunBenchmark_SingleConfig<FPType, 4, batchSize>(nullptr, false, config, parallel, 2);
+    RunBenchmark_SingleConfig<FPType, 8, batchSize>(nullptr, false, config, parallel, 4);
+    RunBenchmark_SingleConfig<FPType, 8, batchSize>(nullptr, false, config, parallel, 8);
   }
 }
 
@@ -203,12 +219,21 @@ void RunOneTreeAtATimeParallelScheduleXGBoostBenchmarks() {
   decisionforest::UseSparseTreeRepresentation = false;
 }
 
+void RunPipeliningBenchmarks() {
+  RunAllPipelinedBenchmarks("array-pipelined_sched");
+  
+  decisionforest::UseSparseTreeRepresentation = true;
+  RunAllPipelinedBenchmarks("sparse-pipelined_sched");
+  decisionforest::UseSparseTreeRepresentation = false;
+}
+
 void RunXGBoostBenchmarks() {
   RunDefaultScheduleXGBoostBenchmarks();
-  RunOneTreeAtATimeScheduleXGBoostBenchmarks();
+  // RunOneTreeAtATimeScheduleXGBoostBenchmarks();
   // RunProbabilisticOneTreeAtATimeScheduleXGBoostBenchmarks();
-  RunProbabilisticOneTreeAtATimeSchedule_RemoveExtraHop_XGBoostBenchmarks();
+  // RunProbabilisticOneTreeAtATimeSchedule_RemoveExtraHop_XGBoostBenchmarks();
   // RunOneTreeAtATimeParallelScheduleXGBoostBenchmarks();
+  RunPipeliningBenchmarks();
 
   // {
   //   decisionforest::UseSparseTreeRepresentation = false;

@@ -546,7 +546,7 @@ struct PredictForestOpLowering: public ConversionPattern {
   Value GeneratePipelinedTreeIndexLeafLoopBody(
     ConversionPatternRewriter &rewriter,
     Location location,
-    const decisionforest::IndexVariable& indexVar,
+    int32_t stepSize,
     std::list<Value> treeIndices,
     PredictOpLoweringState& state,
     Value row,
@@ -562,7 +562,7 @@ struct PredictForestOpLowering: public ConversionPattern {
     std::vector <Value> rows;
     std::vector <Value> trees;
     std::vector <Type> treeResultTypes;
-    for (int32_t i = 0; i < indexVar.GetRange().m_step; i++) {
+    for (int32_t i = 0; i < stepSize; i++) {
       treeIndices.push_back(rewriter.create<arith::ConstantIndexOp>(location, i));
       
       Value treeIndex = SumOfValues(rewriter, location, treeIndices);
@@ -640,7 +640,7 @@ struct PredictForestOpLowering: public ConversionPattern {
       scf::ForOp loop = rewriter.create<scf::ForOp>(location, startConst, stopConst, stepConst, ValueRange{ zeroConst });
       rewriter.setInsertionPointToStart(loop.getBody());
       treeIndices.push_back(loop.getInductionVar());
-      auto accumulatedValue = GeneratePipelinedTreeIndexLeafLoopBody(rewriter, location, indexVar, treeIndices, state, row, rowIndex, loop.getBody()->getArguments()[1]);
+      auto accumulatedValue = GeneratePipelinedTreeIndexLeafLoopBody(rewriter, location, range.m_step, treeIndices, state, row, rowIndex, loop.getBody()->getArguments()[1]);
       rewriter.create<scf::YieldOp>(location, static_cast<Value>(accumulatedValue));
       rewriter.setInsertionPointAfter(loop);
 
@@ -663,7 +663,7 @@ struct PredictForestOpLowering: public ConversionPattern {
         treeIndices.pop_back();
         treeIndices.push_back(peeledLoop.getInductionVar());
         
-        auto accumulatedValue = GeneratePipelinedTreeIndexLeafLoopBody(rewriter, location, indexVar, treeIndices, state, row, rowIndex, peeledLoop.getBody()->getArguments()[1]);
+        auto accumulatedValue = GeneratePipelinedTreeIndexLeafLoopBody(rewriter, location, peeledLoopStep, treeIndices, state, row, rowIndex, peeledLoop.getBody()->getArguments()[1]);
         rewriter.create<scf::YieldOp>(location, static_cast<Value>(accumulatedValue));
         rewriter.setInsertionPointAfter(peeledLoop);
 
@@ -705,6 +705,7 @@ struct PredictForestOpLowering: public ConversionPattern {
     ConversionPatternRewriter &rewriter,
     Location location,
     const decisionforest::IndexVariable& indexVar,
+    int32_t stepSize,
     std::list<Value> batchIndices,
     decisionforest::TreeType treeType,
     Value tree,
@@ -715,7 +716,7 @@ struct PredictForestOpLowering: public ConversionPattern {
     std::vector <Value> rows;
     std::vector <Value> trees;
     std::vector <Type> treeResultTypes;
-    for (int32_t i = 0; i < indexVar.GetRange().m_step; i++) {
+    for (int32_t i = 0; i < stepSize; i++) {
       batchIndices.push_back(rewriter.create<arith::ConstantIndexOp>(location, i));
       auto rowIndex = SumOfValues(rewriter, location, batchIndices);
       
@@ -821,7 +822,7 @@ struct PredictForestOpLowering: public ConversionPattern {
       scf::ForOp loop = rewriter.create<scf::ForOp>(location, startConst, stopConst, stepConst);
       rewriter.setInsertionPointToStart(loop.getBody());
       batchIndices.push_back(loop.getInductionVar());
-      GeneratePipelinedBatchIndexLeafLoopBody(rewriter, location, indexVar, batchIndices, treeType, tree, treeIndex, state);
+      GeneratePipelinedBatchIndexLeafLoopBody(rewriter, location, indexVar, range.m_step, batchIndices, treeType, tree, treeIndex, state);
       rewriter.setInsertionPointAfter(loop);
 
       if (peeledLoopStart < range.m_stop) {
@@ -835,7 +836,7 @@ struct PredictForestOpLowering: public ConversionPattern {
         batchIndices.pop_back();
         batchIndices.push_back(peeledLoop.getInductionVar());
 
-        GeneratePipelinedBatchIndexLeafLoopBody(rewriter, location, indexVar, batchIndices, treeType, tree, treeIndex, state);
+        GeneratePipelinedBatchIndexLeafLoopBody(rewriter, location, indexVar, peeledLoopStep, batchIndices, treeType, tree, treeIndex, state);
         rewriter.setInsertionPointAfter(peeledLoop);
       }
     }
