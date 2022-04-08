@@ -337,7 +337,8 @@ llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> InferenceRunner::CreateEx
     executionEngineLibs.push_back(debugSOPath.data());
   }
 #ifdef OMP_SUPPORT
-  executionEngineLibs.push_back("/home/ashwin/mlir-build/llvm-project/build.omp/lib/libomp.so");
+  executionEngineLibs.push_back("/home/ashwin/mlir-build/llvm-project/full_release/lib/libomp.so");
+  // executionEngineLibs.push_back("/usr/lib/llvm-10/lib/libomp.so");
 #endif
   // Create an MLIR execution engine. The execution engine eagerly JIT-compiles
   // the module.

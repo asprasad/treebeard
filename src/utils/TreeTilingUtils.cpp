@@ -530,7 +530,7 @@ void ForestJSONReader::InitializeLengthBuffer(void* bufPtr, int32_t tileSize, in
 void ForestJSONReader::InitializeLookUpTable(void* bufPtr, int32_t tileSize, int32_t entryBitWidth) {
     assert (entryBitWidth == 8 && "LUT entry must be i8");
     int8_t* lutBufferPtr = reinterpret_cast<int8_t*>(bufPtr);
-    TileShapeToTileIDMap tileShapeToTileIDMap(tileSize);
+    TileShapeToTileIDMap& tileShapeToTileIDMap = *TileShapeToTileIDMap::Get(tileSize);
     auto lut = tileShapeToTileIDMap.ComputeTileLookUpTable();
     for (size_t tileShapeID=0 ; tileShapeID<lut.size() ; ++tileShapeID) {
         for (size_t outcome=0 ; outcome<lut.at(tileShapeID).size() ; ++outcome) {
@@ -909,6 +909,16 @@ int32_t TiledTreeNode::GetTileDepth() const {
     return tileDepth;
 }
 
+int32_t TiledTreeNode::GetTileDepth(std::vector<TiledTreeNode>& tiles) const {
+    auto tilePtr = this;
+    int32_t tileDepth = 1;
+    while (tilePtr->GetParent() != decisionforest::DecisionTree<>::INVALID_NODE_INDEX) {
+        tilePtr = &(tiles.at(tilePtr->GetParent()));
+        ++tileDepth;
+    }
+    return tileDepth;
+}
+
 const DecisionTree<>::Node& TiledTreeNode::GetNode(int32_t index) const { 
     return m_tiledTree.m_modifiedTree.GetNodes().at(index);
 }
@@ -1147,7 +1157,7 @@ void TiledTreeNode::WriteDOTSubGraph(std::ofstream& fout) {
 
 TiledTree::TiledTree(DecisionTree<>& owningTree)
  : m_numberOfDummyTiles(0), m_owningTree(owningTree), m_modifiedTree(owningTree), 
-   m_tileShapeToTileIDMap(m_owningTree.TilingDescriptor().MaxTileSize()), m_probabilisticallyTiled(false),
+   m_tileShapeToTileIDMap(*TileShapeToTileIDMap::Get(m_owningTree.TilingDescriptor().MaxTileSize())), m_probabilisticallyTiled(false),
    m_levelsToUnroll(-1)
 {
     ConstructTiledTree();
@@ -1819,7 +1829,7 @@ void TiledTree::GetSparseSerializationPeeled(std::vector<double>& thresholds, st
             // if all siblings are leaves, put it into the leaf array
             // if not all siblings are leaves, add an extra hop and insert into both arrays
             
-            int32_t tileDepth = tile.GetTileDepth();
+            int32_t tileDepth = tile.GetTileDepth(sortedTiles);
             if (tileDepth <= m_levelsToUnroll) {
                 tile.GetThresholds(tileThresholds.begin());
                 thresholds.insert(thresholds.end(), tileThresholds.begin(), tileThresholds.end());
@@ -2142,6 +2152,29 @@ void TiledTree::AddExtraNodesIfNeeded(int32_t tileIndex) {
     SetChildrenForTile(m_tiles.at(tileIndex));
 }
 
+int32_t TiledTree::NumberOfLevelsNeededToCoverInputs(double inputFraction) {
+    assert (inputFraction < 1);
+    int32_t hitCount = 0;
+    for(int32_t depth=1 ; depth<=GetTreeDepth() ; ++depth) {
+        for (auto& tile : m_tiles) {
+            if (!tile.IsLeafTile())
+                continue;
+            auto tileDepth = tile.GetTileDepth();
+            if (depth != tileDepth)
+                continue;
+            // TODO We need to check that we aren't double counting anything here!
+            assert (tile.m_nodeIndices.size() == 1);
+            hitCount += m_modifiedTree.GetNodes().at(tile.m_nodeIndices[0]).hitCount;
+        }
+        auto totalCount = m_owningTree.GetNodes().at(0).hitCount;
+        double fraction = (double)hitCount/totalCount;
+        if(fraction >= inputFraction)
+            return depth;
+    }
+    assert (false && "Couldn't cover required fraction!");
+    return -1;
+}
+
 // -----------------------------------------------
 // Methods for class TileShapeToTileIDMap
 // -----------------------------------------------
@@ -2257,6 +2290,7 @@ void TileShapeToTileIDMap::TileStringGenerator(int32_t numNodes) {
 }
 
 std::map<int32_t, int32_t> TileShapeToTileIDMap::tileSizeToNumberOfShapesMap;
+std::map<int32_t, TileShapeToTileIDMap*> TileShapeToTileIDMap::tileSizeToTileShapeMapMap;
 
 int32_t TileShapeToTileIDMap::NumberOfTileShapes(int32_t tileSize) {
     assert(tileSize >= 0);
@@ -2273,6 +2307,16 @@ int32_t TileShapeToTileIDMap::NumberOfTileShapes(int32_t tileSize) {
     }
     tileSizeToNumberOfShapesMap[tileSize] = numShapes;
     return numShapes;
+}
+
+TileShapeToTileIDMap* TileShapeToTileIDMap::Get(int32_t tileSize) {
+    auto iter = tileSizeToTileShapeMapMap.find(tileSize);
+    if (iter == tileSizeToTileShapeMapMap.end()) {
+        tileSizeToTileShapeMapMap[tileSize] = new TileShapeToTileIDMap(tileSize);
+        iter = tileSizeToTileShapeMapMap.find(tileSize);
+    }
+    assert (iter != tileSizeToTileShapeMapMap.end());
+    return iter->second;
 }
 
 int32_t ConstructTreeForTile(const std::string& tileStr, int32_t root, DecisionTree<>& tree) {

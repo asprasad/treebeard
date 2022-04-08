@@ -30,6 +30,9 @@ struct CompilerOptions {
   int32_t pipelineSize = -1;
 
   mlir::decisionforest::ScheduleManipulator *scheduleManipulator=nullptr;
+  std::string statsProfileCSVPath = "";
+  int32_t pipelineWidth = -1;
+  int32_t numberOfCores = -1;
 
   CompilerOptions() { }
   CompilerOptions(int32_t thresholdWidth, int32_t returnWidth, bool isReturnTypeFloat, int32_t featureIndexWidth, 
@@ -50,7 +53,8 @@ template<typename ThresholdType=double, typename ReturnType=double, typename Fea
          typename NodeIndexType=int32_t, typename InputElementType=ThresholdType>
 mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, const std::string& modelJsonPath, 
                                                          const std::string& modelGlobalsJSONPath, const CompilerOptions& options) {
-  TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType> xgBoostParser(context, modelJsonPath, modelGlobalsJSONPath, options.batchSize);
+  TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>
+                               xgBoostParser(context, modelJsonPath, modelGlobalsJSONPath, options.statsProfileCSVPath, options.batchSize);
   xgBoostParser.Parse();
   xgBoostParser.SetChildIndexBitWidth(options.childIndexBitWidth);
   auto module = xgBoostParser.GetEvaluationFunction();
@@ -74,7 +78,7 @@ mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& cont
   // TODO this needs to change to something that knows how to do all schedule manipulation
   if (options.reorderTreesByDepth) {
     assert(options.pipelineSize == -1 || (options.pipelineSize <= options.batchSize));
-    mlir::decisionforest::DoReorderTreesByDepth(context, module, options.pipelineSize);
+    mlir::decisionforest::DoReorderTreesByDepth(context, module, options.pipelineSize, options.numberOfCores);
     assert (!options.scheduleManipulator && "Cannot have a custom schedule manipulator and the inbuilt one together");
   }
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);

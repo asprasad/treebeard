@@ -34,6 +34,7 @@ extern bool UseBitcastForComparisonOutcome;
 extern bool UseSparseTreeRepresentation;
 extern bool OptimizedSparseRepresentation;
 extern bool RemoveExtraHopInSparseRepresentation;
+extern bool PeeledCodeGenForProbabiltyBasedTiling;
 
 void populateDebugOpLoweringPatterns(RewritePatternSet& patterns, LLVMTypeConverter& typeConverter);
 
@@ -48,7 +49,7 @@ int dumpLLVMIRToFile(mlir::ModuleOp module, const std::string& filename);
 void DoUniformTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth, bool makeAllLeavesSameDepth);
 void DoProbabilityBasedTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth);
 void DoHybridTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth);
-void DoReorderTreesByDepth(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t pipelineSize=-1);
+void DoReorderTreesByDepth(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t pipelineSize=-1, int32_t numCores=-1);
 
 }
 }

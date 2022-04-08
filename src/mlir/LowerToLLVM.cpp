@@ -318,6 +318,7 @@ struct GetModelMemrefSizeOpLowering : public ConversionPattern {
   }
 };
 
+#ifndef OMP_SUPPORT
 struct DecisionForestToLLVMLoweringPass : public PassWrapper<DecisionForestToLLVMLoweringPass, OperationPass<ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect, memref::MemRefDialect, 
@@ -326,7 +327,6 @@ struct DecisionForestToLLVMLoweringPass : public PassWrapper<DecisionForestToLLV
   void runOnOperation() final;
 };
 
-#ifndef OMP_SUPPORT
 void DecisionForestToLLVMLoweringPass::runOnOperation() {
   // define the conversion target
   LowerToLLVMOptions options(&getContext());

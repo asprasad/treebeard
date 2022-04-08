@@ -53,6 +53,8 @@ private:
     void GetThresholds(std::vector<double>::iterator beginIter);
     void GetFeatureIndices(std::vector<int32_t>::iterator beginIter);
     void ComputeTileShapeString(std::string& str, int32_t tileNodeIndex, int32_t stringIndex);
+
+    int32_t GetTileDepth(std::vector<TiledTreeNode>& tiles) const;
 public:
     TiledTreeNode(DecisionTree<>& owningTree, TiledTree& tiledTree, int32_t tileID, int32_t tileIndex)
         :m_owningTree(owningTree), m_tiledTree(tiledTree), m_tileID(tileID), m_tileShapeID(-1), m_tileIndex(tileIndex), m_hasExtraNodes(false)
@@ -77,23 +79,25 @@ class TiledTreeNode;
 class TileShapeToTileIDMap
 {
     static std::map<int32_t, int32_t> tileSizeToNumberOfShapesMap;
-
+    static std::map<int32_t, TileShapeToTileIDMap*> tileSizeToTileShapeMapMap;
     int32_t m_tileSize;
     std::map<std::string, int32_t> m_tileStringToTileIDMap;
     int32_t m_currentTileID = 0;
     void TileStringGenerator(int32_t numNodes);
     void InitMap();
-public:
     TileShapeToTileIDMap(int32_t tileSize) 
-     : m_tileSize(tileSize)
+      : m_tileSize(tileSize)
     {
         InitMap();
     }
+
+public:
     int32_t GetTileID(TiledTreeNode& tile);
     // Index is (tileShapeID, comparison result)
     std::vector<std::vector<int32_t>> ComputeTileLookUpTable();
     // Number of tile shapes with the given tile size
     static int32_t NumberOfTileShapes(int32_t tileSize);
+    static TileShapeToTileIDMap* Get(int32_t tileSize);
 };
 
 struct TiledTreeStats {
@@ -131,7 +135,7 @@ class TiledTree {
     // tree is the modified tree with nodes added if required.
     DecisionTree<> m_modifiedTree;
     std::map<int32_t, int32_t> m_nodeToTileMap;
-    TileShapeToTileIDMap m_tileShapeToTileIDMap;
+    TileShapeToTileIDMap& m_tileShapeToTileIDMap;
     bool m_probabilisticallyTiled;
     int32_t m_levelsToUnroll;
 
@@ -226,6 +230,10 @@ public:
 
     int32_t GetLevelsToUnroll() const { return m_levelsToUnroll; }
     void SetLevelsToUnroll(int32_t val) { m_levelsToUnroll = val; } 
+    
+    // Compute the max depth of all the leaves needed to cover inputFraction
+    // fraction of the inputs (assumes that stats are initialized on the tree)
+    int32_t NumberOfLevelsNeededToCoverInputs(double inputFraction);
     
     using LevelOrderSorterNodeType = TiledTreeNode;
 

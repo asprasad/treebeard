@@ -215,7 +215,7 @@ namespace decisionforest
                 auto doubleVectorType = mlir::VectorType::get({ m_tileSize }, rewriter.getF64Type());
                 vectorVal = rewriter.create<arith::ExtFOp>(location, doubleVectorType, m_loadThresholdOp);
               }
-              InsertPrintVectorOp(rewriter, location, 0 /*fp kind*/, m_thresholdVectorType.getElementType().getIntOrFloatBitWidth(), m_tileSize, vectorVal);
+              InsertPrintVectorOp(rewriter, location, 0 /*fp kind*/, 64, m_tileSize, vectorVal);
             }
             m_state = kLoadFeatureIndex;
           }
@@ -296,13 +296,19 @@ namespace decisionforest
               zeroPassThruVector);
 
               if (decisionforest::InsertDebugHelpers) {
+                Value vectorVal = m_features;
+                if (!featuresVectorType.getElementType().isF64()) {
+                  auto doubleVectorType = mlir::VectorType::get({ m_tileSize }, rewriter.getF64Type());
+                  vectorVal = rewriter.create<arith::ExtFOp>(location, doubleVectorType, m_features);
+                }
+
                 InsertPrintVectorOp(
                   rewriter,
                   location,
                   0 /*fp kind*/,
-                  featuresVectorType.getElementType().getIntOrFloatBitWidth(),
+                  64, // double
                   m_tileSize,
-                  static_cast<Value>(m_features));
+                  vectorVal);
               }
             m_state = kCompare;
           }
