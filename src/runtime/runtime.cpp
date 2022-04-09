@@ -147,6 +147,14 @@ extern "C" int32_t IsSparseRepresentationEnabled() {
   return mlir::decisionforest::UseSparseTreeRepresentation;
 }
 
+extern "C" void SetPeeledCodeGenForProbabilityBasedTiling(int32_t val) {
+  mlir::decisionforest::PeeledCodeGenForProbabiltyBasedTiling = val;
+}
+
+extern "C" int32_t IsPeeledCodeGenForProbabilityBasedTilingEnabled() {
+  return mlir::decisionforest::PeeledCodeGenForProbabiltyBasedTiling;
+}
+
 // ===-------------------------------------------------------------=== //
 // Predefined Schedule Manipulation API
 // ===-------------------------------------------------------------=== //

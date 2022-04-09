@@ -119,15 +119,11 @@ def RunTestOnSingleModelTestInputs_Multibatch(modelName : str, returnType=numpy.
   csvPath = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), modelName + "_xgb_model_save.json.test.sampled.csv")
   return RunSingleTest_Multibatch(soPath, globalsJSONPath, csvPath, returnType)
 
-def CompilerOptionsTest() -> Boolean:
-  model_name = "abalone"
-  compilerOptions = treebeard.CompilerOptions(20, 8)
-  jsonPath = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), model_name + "_xgb_model_save.json")
-  tempPath = os.path.join(os.path.join(treebeard_repo_dir, "debug"), "temp")
-  globalsJSONPath = os.path.join(tempPath, "abalone_python_test.treebeard-globals.json")
-  llvmIRFile = os.path.join(tempPath, "abalone_python_test.ll")
-  treebeard.GenerateLLVMIRForXGBoostModel(jsonPath, llvmIRFile, globalsJSONPath, compilerOptions)
-  return True
+def SetStatsProfileCSVPath(options, modelName):
+  profilesDir = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), "profiles") 
+  csvPath = os.path.join(profilesDir, modelName + ".test.csv")
+  options.SetStatsProfileCSVPath(csvPath)
+  return options
 
 defaultTileSize8Options = treebeard.CompilerOptions(200, 8)
 defaultTileSize8MulticlassOptions = treebeard.CompilerOptions(200, 8)
@@ -159,6 +155,35 @@ assert RunTestOnSingleModelTestInputsJIT("epsilon", invertLoopsTileSize8Options)
 assert RunTestOnSingleModelTestInputsJIT("higgs", invertLoopsTileSize8Options)
 assert RunTestOnSingleModelTestInputsJIT("letters", invertLoopsTileSize8MulticlassOptions, numpy.int8)
 assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", invertLoopsTileSize8Options)
+
+treebeard.SetEnableSparseRepresentation(1)
+assert RunTestOnSingleModelTestInputsJIT("abalone", invertLoopsTileSize8Options)
+assert RunTestOnSingleModelTestInputsJIT("airline", invertLoopsTileSize8Options)
+assert RunTestOnSingleModelTestInputsJIT("airline-ohe", invertLoopsTileSize8Options)
+assert RunTestOnSingleModelTestInputsJIT("covtype", invertLoopsTileSize8MulticlassOptions, numpy.int8)
+assert RunTestOnSingleModelTestInputsJIT("epsilon", invertLoopsTileSize8Options)
+assert RunTestOnSingleModelTestInputsJIT("higgs", invertLoopsTileSize8Options)
+assert RunTestOnSingleModelTestInputsJIT("letters", invertLoopsTileSize8MulticlassOptions, numpy.int8)
+assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", invertLoopsTileSize8Options)
+
+probTilingOptions = treebeard.CompilerOptions(200, 8)
+probTilingOptions.SetTilingType(2) # prob tiling
+probTilingOptions.SetReorderTreesByDepth(True)
+
+probTilingMulticlassOptions = treebeard.CompilerOptions(200, 8)
+probTilingMulticlassOptions.SetReturnTypeWidth(8)
+probTilingMulticlassOptions.SetReturnTypeIsFloatType(False)
+
+assert RunTestOnSingleModelTestInputsJIT("abalone", SetStatsProfileCSVPath(probTilingOptions, "abalone"))
+assert RunTestOnSingleModelTestInputsJIT("airline", SetStatsProfileCSVPath(probTilingOptions, "airline"))
+assert RunTestOnSingleModelTestInputsJIT("airline-ohe", SetStatsProfileCSVPath(probTilingOptions, "airline-ohe"))
+assert RunTestOnSingleModelTestInputsJIT("covtype", SetStatsProfileCSVPath(probTilingMulticlassOptions, "covtype"), numpy.int8)
+assert RunTestOnSingleModelTestInputsJIT("epsilon", SetStatsProfileCSVPath(probTilingOptions, "epsilon"))
+assert RunTestOnSingleModelTestInputsJIT("higgs", SetStatsProfileCSVPath(probTilingOptions, "higgs"))
+assert RunTestOnSingleModelTestInputsJIT("letters", SetStatsProfileCSVPath(probTilingMulticlassOptions, "letters"), numpy.int8)
+assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", SetStatsProfileCSVPath(probTilingOptions, "year_prediction_msd"))
+
+treebeard.SetEnableSparseRepresentation(0)
 
 assert RunTestOnSingleModelRandomInputs_Multibatch("abalone")
 assert RunTestOnSingleModelRandomInputs_Multibatch("airline")
@@ -196,4 +221,3 @@ assert RunTestOnSingleModelTestInputs("higgs")
 assert RunTestOnSingleModelTestInputs("letters", numpy.int8)
 assert RunTestOnSingleModelTestInputs("year_prediction_msd")
 
-assert CompilerOptionsTest()
