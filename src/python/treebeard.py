@@ -103,7 +103,13 @@ class TreebeardAPI:
 
       self.runtime_lib.IsSparseRepresentationEnabled.argtypes = None
       self.runtime_lib.IsSparseRepresentationEnabled.restype = ctypes.c_int32
- 
+
+      self.runtime_lib.SetPeeledCodeGenForProbabilityBasedTiling.argtypes = [ctypes.c_int32]
+      self.runtime_lib.SetPeeledCodeGenForProbabilityBasedTiling.restype = None
+
+      self.runtime_lib.IsPeeledCodeGenForProbabilityBasedTilingEnabled.argtypes = None
+      self.runtime_lib.IsPeeledCodeGenForProbabilityBasedTilingEnabled.restype = ctypes.c_int32
+
     except Exception as e:
       print("Loading the TreeBeard runtime failed with exception :", e)
   
@@ -169,7 +175,7 @@ class CompilerOptions:
   def SetReorderTreesByDepth(self, val : Boolean) :
     treebeardAPI.runtime_lib.Set_reorderTreesByDepth(self.optionsPtr, 1 if val else 0)
 
-  def SetTilingType(self, val : Boolean) :
+  def SetTilingType(self, val : int) :
     treebeardAPI.runtime_lib.Set_tilingType(self.optionsPtr, val)
   
   def SetPipelineWidth(self, val : int) :
@@ -233,3 +239,15 @@ def GenerateLLVMIRForXGBoostModel(modelJSONPathStr, llvmIRPathStr, modelGlobalsJ
   llvmIRPath = llvmIRPathStr.encode('ascii')
   modelGlobalsJSONPath = modelGlobalsJSONPathStr.encode('ascii')
   treebeardAPI.runtime_lib.GenerateLLVMIRForXGBoostModel(ctypes.c_char_p(modelJSONPath), ctypes.c_char_p(llvmIRPath), ctypes.c_char_p(modelGlobalsJSONPath), options.optionsPtr)
+
+def SetEnableSparseRepresentation(val : Boolean):
+  treebeardAPI.runtime_lib.SetEnableSparseRepresentation(1 if val else 0)
+
+def IsSparseRepresentationEnabled():
+  return treebeardAPI.runtime_lib.IsSparseRepresentationEnabled()
+
+def SetPeeledCodeGenForProbabilityBasedTiling(val : Boolean):
+  treebeardAPI.runtime_lib.SetPeeledCodeGenForProbabilityBasedTiling(1 if val else 0)
+
+def IsPeeledCodeGenForProbabilityBasedTilingEnabled():
+  return treebeardAPI.runtime_lib.IsPeeledCodeGenForProbabilityBasedTilingEnabled()
