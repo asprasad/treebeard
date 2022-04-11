@@ -1,9 +1,10 @@
 # Introduction
 * Importance of decision trees and their performance
 * Motivation for building a compiler
-  * Repeated effort to write libraries and several new architectures
+  * Compilers have been successful with ML models like DNNs \cite{TVM, Tiramisu, XLA}. However, compiler techniques for decision tree ensembles are less well studied.
+  * Repeated effort to write libraries and several new architectures \cite{Halide?}
   * Model, batch size and architecture specific specialization and optimizations [cite : cache conscious ensemble ranking, vpred]
-  * Disparate optimizations that have been built in different systems. A unifying system is needed. Current systems are hard coded to use a certain type of optimization.
+  * Different optimizations have been designed in different libraries \cite{xgboost, Treelite, lightgbm, vpred}. However, libraries are hard coded to use certain optimizations and cannot tailor the generated code according to the model being used. [TODO we also need to say the search through the potential optimization space maybe somewhat limited]
 * Contributions
   * We build an extensible compiler infrastructure to compile decision tree models. The infrastructure is built to allow exploration of optimization and code generation techniques. [TODO is this claim too grand? Should we be saying something like MLIR?]
   * We develop a general infrastructure for the vectorization of decision tree walks based on grouping tree nodes into "tiles". This includes general support for code generation and the in-memory representation of tiled trees. The infrastructure can be used to tile trees based on different cost functions. 
