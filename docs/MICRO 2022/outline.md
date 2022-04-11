@@ -14,6 +14,7 @@
 # Background
 * Decision trees
 * Decision tree probabilities and notation
+* MLIR
 * XGBoost
 
 # Compiler Overview
@@ -72,5 +73,6 @@
 * No comparison with daal (we can say that is hand tuned assembly and is not portable across architectures)
 * All models are XGBoost
 * Distinguish from prior works -- especially QuickScorer (the bit mask based algorithm that I mentioned a while ago. We can claim this is orthogonal as it is an strategy  that can be implemented in the compiler if needed?)
+  * Also need to distinguish from Humming bird
 * We still don't have Treelite style code gen (blow everything up into ifs) in our compiler
 * We don't do any exploration or optimizations for tiling the iteration space. Several optimizations are left unexplored.
