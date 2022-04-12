@@ -1,15 +1,26 @@
 \section{Compiler Overview}
-Figure \ref{Fig:CompilerStructure} shows the high level structure of Treebeard. The input to the compiler is a JSON file that describes the decision forest model and a set of options. The output of the compiler is a callable function that takes an array of rows and returns an array containing the model's prediction for each row. \TODO{Add a diagram, including IR stages}. The specified set of options includes information such as the batch size, the type of the input features, the type for node thresholds and the type for feature indices \TODO{There are also several optimization related inputs like tile size, type of tiling, pipeline depth etc. Should we mention those?}. Treebeard is written as a dialect in the MLIR framework \cite{MLIR}. At a high level, Treebeard first performs transformations on the trees in the model and subsequently generates and performs optimizations on a more traditional loop based IR. From an implementation perspective, Treebeard first constructs a high level representation of the decision forest inference operation and then progressively optimizes and lowers it to LLVM IR \cite{LLVM}. LLVM is then used to JIT compile the generated IR to executable code. The following sections describe each level of the IR and their lowering in more detail.
+Figure \ref{Fig:CompilerStructure} shows the high level structure of Treebeard. 
+The input to TreeBeard is a JSON serialized decision forest model, it supports popular frameworks like XGBoost and LightGBM and is extensible to other frameworks.
+Given an input model our compiler generates optimized inference code. Specifically it generates a callable batch inference function \texttt{predictForest} that given an array of inputs, outputs an array of model predictions. 
+ 
+TreeBeard specializes the code generated for inference by progressively optimizing and lowering a high level representation of the \texttt{predictForest} function down to LLVM IR \cite{LLVM}.
+It is implemented as a dialect in the MLIR framework \cite{MLIR},
+%Treebeard first constructs a high level representation of the decision forest inference operation. 
+ At this level (HIR) it applies transformations that determine how inputs traverse the decision forest. It re-order trees in the forest and determines the high level loop structure (process one tree at a time or one input at a time). It then lowers to a traditional loop based IR (MIR). Several loop level optimizations like unrolling and pipelining are applied at this level. At the lowest level of IR TreeBeard applies layout optimizations and generates parallel code in LLVM IR. 
+LLVM is then used to JIT compile the generated IR to executable code. The following sections describe each level of the IR and their lowering in more detail.
+
+ %The specified set of options includes information such as the batch size, the type of the input features, the type for node thresholds and the type for feature indices \TODO{There are also several optimization related inputs like tile size, type of tiling, pipeline depth etc. Should we mention those?}. 
+
 
 \begin{figure}
   \centering
-  \includegraphics[scale = 0.3]{figures/CompilerStructure.PNG}
+  \includegraphics[width=\linewidth]{figures/compiler.pdf}
   \caption{Treebeard Compiler Structure}
   \label{Fig:CompilerStructure}
 \end{figure}
 
 \TODO{Should we describe the dialect's type system?}
-
+\TODO{Kr : consider focusing on the example instead of verbose description of optimizations. This section can be short, descriptions can come in later sections.}
 \subsection{High Level IR}
 Treebeard parses the input JSON file and generates a function with a single MLIR operation, \texttt{predictForest} that represents inference using the input model on a set of rows. The operation contains within it a tree based representation of the model that can be manipulated by optimizing transformations. Transformations on the model such as tiling, tree reordering and leaf padding are done at this level. The structure of the loop nest to walk the iteration space of trees and inputs is also decided at this level of the IR. \TODO{Should we mention that there is a scheduling language to decide this?}
 
