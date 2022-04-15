@@ -4,23 +4,24 @@
   forests. These models are used in applications ranging from recommendation systems
   to tabular data analysis and are also deployed at scale in the enterprise.
   Several libraries such as XGBoost, LightGBM, and Sklearn expose algorithms for both
-  training and inference with decision tree ensembles. These systems incorporate a
-  limited set of optimizations usually targeted at specific hardware. Further, existing
-  systems do not specialize the inference code to the model being used.
+  training and inference with decision tree ensembles. These libraries incorporate a
+  limited set of optimizations usually targeted at specific hardware. Further, they
+  do not specialize the inference code to the model being used.
  
   This paper presents Treebeard, an extensible compiler for decision tree models.
-  Treebeard progressively lowers inference code to LLVM IR through multiple intermediate
-  representations. By applying model specific optimizations at the higher levels, loop
-  optimizations at the middle level, and machine specific optimizations lower down,
+  Treebeard progressively lowers inference code to LLVM IR through 
+  multiple levels of intermediate abstractions.
+  By applying model-specific optimizations at the higher levels, loop
+  optimizations at the middle level, and machine-specific optimizations lower down,
   Treebeard can specialize inference code for each model on each supported
   hardware target. To improve model inference performance, Treebeard performs several 
   novel optimizations such as tree tiling, tree walk unrolling, and tree walk interleaving.
  
   We implement Treebeard using the MLIR compiler infrastructure and
   demonstrate the utility of Treebeard by evaluating it on a diverse set of
-  tree ensemble models. We report that Treebeard optimizations improve
-  average latency over a batch of inputs by 2.2X compared to an unoptimized baseline.
-  Further, we find that Treebeard is significantly faster than other frameworks like
-  XGBoost  (3X on average) and Treelite (5X on average) in both single and multi-core
-  settings.
+  tree ensemble models. Experimental evaluation demonstrates that Treebeard optimizations 
+  improve average latency over a batch of inputs by 2.2X compared to an unoptimized baseline.
+  Further, Treebeard is significantly faster than other frameworks like
+  XGBoost and Treelite in both single-core (2.8X and 5.1X respectively) and multi-core
+  (3.2X and 2.6X respectively) settings.
 \end{abstract}
