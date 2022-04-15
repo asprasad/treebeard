@@ -1,4 +1,5 @@
 \subsection{Uniform Tiling}
+\label{sec:UnifTiling}
 % The justification for uniform tiling -- if we assume all paths are equally likely,
 % we want to minimize the depth of speculation
 The first tree tiling algorithm we implement is uniform tiling. The basic idea of uniform tiling is to construct tiles
@@ -57,12 +58,14 @@ as shown in the following listing.
     prediction = 0
     for t = 0 to 2 step 1 {
       tree = getTree(forest, t) 
+      node = getRoot(tree)
       node = traverseTreeTile(tree, node, rows[i])
       treePrediction = getLeafValue(tree, node)
       prediction = prediction + treePrediction
     }
     for t = 2 to 4 step 1 {
       tree = getTree(forest, t) 
+      node = getRoot(tree)
       node = traverseTreeTile(tree, node, rows[i])
       node = traverseTreeTile(tree, node, rows[i])
       treePrediction = getLeafValue(tree, node)
