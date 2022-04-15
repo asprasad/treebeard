@@ -40,7 +40,7 @@ In order to formulate the probability based tiling algorithm as an optimization 
     \end{equation}
     \item For any tree $T$, $\mathcal{C}(T)$ represents the set of all valid tilings of $T$.
     \item For every $v \in V$, we define $S_v$ as the subtree rooted at $v$.
-    \item For every $v \in V$, we define $L_v$ as the set of leaves of $T_v$.
+    \item For every $v \in V$, we define $L_v$ as the set of leaves of $S_v$.
     \item For a every tile $T_i$, we define $root(T_i)$ as the node $v \in T_i$ such that $v$ has no incoming edges from any other node $u \in T_i$.
     \item For a tile $T_i$, $out(T_i) \subseteq E$ is the set of edges $(u, v)$ such that $u \in T_i$ and $v \notin T_i$.
 \end{enumerate}
@@ -104,7 +104,7 @@ Subsequently, the tiling procedure is recursively performed on all nodes that ar
             \EndWhile
             \State $Tiles =  \{ Tile \}$
             \For{$(u,v) \in Out(Tile)$}
-                \State $Tiles \leftarrow Tiles \cup TileTree(T_v, n_t)$
+                \State $Tiles \leftarrow Tiles \cup TileTree(S_v, n_t)$
             \EndFor
             \State \textbf{return} $Tiles$
         \EndProcedure

@@ -11,7 +11,7 @@ $r \in V$ is the root. For each node $n \in V$, the following are given.
 We use $L \subset V$ to denote the set of leaves. 
 
 \subsection{Tiling}
-
+\label{sec:Tiling}
 Treebeard vectorizes tree walks by grouping nodes of a decision tree into \textbf{\emph{tiles}}. The nodes in a tile are evaluated concurrently using vector instructions. Once the nodes of the current tile are evaluated, a look up table is used to compute which child of the current tile to move to next. The listing below shows at a high level how a tiled tree is walked. 
 \begin{lstlisting}[style=c++]
   // A lookup table that determines the child index of
