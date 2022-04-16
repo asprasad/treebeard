@@ -56,14 +56,17 @@ JIT compiled to executable code.
 \begin{figure}
   \centering
   \includegraphics[width=\linewidth]{figures/compiler.pdf}
-  \caption{Treebeard Compiler Structure}
+  \caption{Treebeard compiler structure}
   \label{Fig:CompilerStructure}
 \end{figure}
 
 \begin{figure*}
   \centering
   \includegraphics[width=\textwidth]{figures/OverviewExample.pdf}
-  \caption{Treebeard IR lowering and optimization details}
+  \caption{Treebeard IR lowering and optimization details. The three abstraction level in Treebeard's IR are shown. The
+           high level IR is a tree based IR to perform model level optimization, the mid-level IR is for
+           loop optimizations that are independent of memory layout and the low level IR allows us to perform
+           vectorization and other memory layout dependent optimizations.}
   \label{Fig:Overview}
 \end{figure*}
 
