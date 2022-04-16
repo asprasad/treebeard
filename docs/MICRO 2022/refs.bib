@@ -7,23 +7,286 @@
  address = "Reading, Massachusetts"
 }
 
-@inproceedings{nicepaper1,
-  author = "Firstname1 Lastname1 and Firstname2 Lastname2",
-  title = "A Very Nice Paper To Cite",
-  year = "2016",
-  booktitle = "Proceedings of the 49th Annual IEEE/ACM International Symposium on Microarchitecture"
+@INPROCEEDINGS{LLVM,
+  author={Lattner, C. and Adve, V.},
+  booktitle={International Symposium on Code Generation and Optimization, 2004. CGO 2004.}, 
+  title={LLVM: a compilation framework for lifelong program analysis  amp; transformation}, 
+  year={2004},
+  volume={},
+  number={},
+  pages={75-86},
+  doi={10.1109/CGO.2004.1281665}
 }
 
-@inproceedings{nicepaper2,
-  author = "Firstname1 Lastname1 and Firstname2 Lastname2 and Firstname3 Lastname3",
-  title = "Another Very Nice Paper to Cite",
-  year = "2015",
-  booktitle = "Proceedings of the 48th Annual IEEE/ACM International Symposium on Microarchitecture"
+@INPROCEEDINGS{MLIR,
+  author={Lattner, Chris and Amini, Mehdi and Bondhugula, Uday and Cohen, Albert and Davis, Andy and Pienaar, Jacques and Riddle, River and Shpeisman, Tatiana and Vasilache, Nicolas and Zinenko, Oleksandr},
+  booktitle={2021 IEEE/ACM International Symposium on Code Generation and Optimization (CGO)}, 
+  title={MLIR: Scaling Compiler Infrastructure for Domain Specific Computation}, 
+  year={2021},
+  volume={},
+  number={},
+  pages={2-14},
+  doi={10.1109/CGO51591.2021.9370308}}
+
+@inproceedings{XGBoost,
+  author = {Chen, Tianqi and Guestrin, Carlos},
+  title = {XGBoost: A Scalable Tree Boosting System},
+  year = {2016},
+  isbn = {9781450342322},
+  publisher = {Association for Computing Machinery},
+  address = {New York, NY, USA},
+  url = {https://doi.org/10.1145/2939672.2939785},
+  doi = {10.1145/2939672.2939785},
+  abstract = {Tree boosting is a highly effective and widely used machine learning method. In this paper, we describe a scalable end-to-end tree boosting system called XGBoost, which is used widely by data scientists to achieve state-of-the-art results on many machine learning challenges. We propose a novel sparsity-aware algorithm for sparse data and weighted quantile sketch for approximate tree learning. More importantly, we provide insights on cache access patterns, data compression and sharding to build a scalable tree boosting system. By combining these insights, XGBoost scales beyond billions of examples using far fewer resources than existing systems.},
+  booktitle = {Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining},
+  pages = {785–794},
+  numpages = {10},
+  keywords = {large-scale machine learning},
+  location = {San Francisco, California, USA},
+  series = {KDD '16}
 }
 
-@inproceedings{nicepaper3,
-  author = "Firstname1 Lastname1 and Firstname2 Lastname2 and Firstname3 Lastname3 and Firstname4 Lastname4 and Firstname5 Lastname5 and Firstname6 Lastname6 and Firstname7 Lastname7 and Firstname8 Lastname8 and Firstname9 Lastname9 and Firstname10 Lastname10 and Firstname11 Lastname11 and Firstname12 Lastname12",
-  title = "Yet Another Very Nice Paper To Cite, With Many Author Names All Spelled Out",
-  year = "2011",
-  booktitle = "Proceedings of the 38th Annual International Symposium on Computer Architecture"
+@inproceedings{LightGBM,
+  author = {Ke, Guolin and Meng, Qi and Finley, Thomas and Wang, Taifeng and Chen, Wei and Ma, Weidong and Ye, Qiwei and Liu, Tie-Yan},
+  title = {LightGBM: A Highly Efficient Gradient Boosting Decision Tree},
+  year = {2017},
+  isbn = {9781510860964},
+  publisher = {Curran Associates Inc.},
+  address = {Red Hook, NY, USA},
+  abstract = {Gradient Boosting Decision Tree (GBDT) is a popular machine learning algorithm, and has quite a few effective implementations such as XGBoost and pGBRT. Although many engineering optimizations have been adopted in these implementations, the efficiency and scalability are still unsatisfactory when the feature dimension is high and data size is large. A major reason is that for each feature, they need to scan all the data instances to estimate the information gain of all possible split points, which is very time consuming. To tackle this problem, we propose two novel techniques: Gradient-based One-Side Sampling (GOSS) and Exclusive Feature Bundling (EFB). With GOSS, we exclude a significant proportion of data instances with small gradients, and only use the rest to estimate the information gain. We prove that, since the data instances with larger gradients play a more important role in the computation of information gain, GOSS can obtain quite accurate estimation of the information gain with a much smaller data size. With EFB, we bundle mutually exclusive features (i.e., they rarely take nonzero values simultaneously), to reduce the number of features. We prove that finding the optimal bundling of exclusive features is NP-hard, but a greedy algorithm can achieve quite good approximation ratio (and thus can effectively reduce the number of features without hurting the accuracy of split point determination by much). We call our new GBDT implementation with GOSS and EFB LightGBM. Our experiments on multiple public datasets show that, LightGBM speeds up the training process of conventional GBDT by up to over 20 times while achieving almost the same accuracy.},
+  booktitle = {Proceedings of the 31st International Conference on Neural Information Processing Systems},
+  pages = {3149–3157},
+  numpages = {9},
+  location = {Long Beach, California, USA},
+  series = {NIPS'17}
+}
+
+@inproceedings {TVM,
+author = {Tianqi Chen and Thierry Moreau and Ziheng Jiang and Lianmin Zheng and Eddie Yan and Haichen Shen and Meghan Cowan and Leyuan Wang and Yuwei Hu and Luis Ceze and Carlos Guestrin and Arvind Krishnamurthy},
+title = {{TVM}: An Automated {End-to-End} Optimizing Compiler for Deep Learning},
+booktitle = {13th USENIX Symposium on Operating Systems Design and Implementation (OSDI 18)},
+year = {2018},
+isbn = {978-1-939133-08-3},
+address = {Carlsbad, CA},
+pages = {578--594},
+url = {https://www.usenix.org/conference/osdi18/presentation/chen},
+publisher = {USENIX Association},
+month = oct,
+}
+
+@inproceedings{Tiramisu,
+author = {Baghdadi, Riyadh and Ray, Jessica and Romdhane, Malek Ben and Del Sozzo, Emanuele and Akkas, Abdurrahman and Zhang, Yunming and Suriana, Patricia and Kamil, Shoaib and Amarasinghe, Saman},
+title = {Tiramisu: A Polyhedral Compiler for Expressing Fast and Portable Code},
+year = {2019},
+isbn = {9781728114361},
+publisher = {IEEE Press},
+abstract = {This paper introduces Tiramisu, a polyhedral framework designed to generate high performance code for multiple platforms including multicores, GPUs, and distributed machines. Tiramisu introduces a scheduling language with novel extensions to explicitly manage the complexities that arise when targeting these systems. The framework is designed for the areas of image processing, stencils, linear algebra and deep learning. Tiramisu has two main features: it relies on a flexible representation based on the polyhedral model and it has a rich scheduling language allowing fine-grained control of optimizations. Tiramisu uses a four-level intermediate representation that allows full separation between the algorithms, loop transformations, data layouts, and communication. This separation simplifies targeting multiple hardware architectures with the same algorithm. We evaluate Tiramisu by writing a set of image processing, deep learning, and linear algebra benchmarks and compare them with state-of-the-art compilers and hand-tuned libraries. We show that Tiramisu matches or outperforms existing compilers and libraries on different hardware architectures, including multicore CPUs, GPUs, and distributed machines.},
+booktitle = {Proceedings of the 2019 IEEE/ACM International Symposium on Code Generation and Optimization},
+pages = {193–205},
+numpages = {13},
+keywords = {Code Optimization, Distributed Systems, Code Generation, Polyhedral Model, Deep Learning, Tensors, GPU},
+location = {Washington, DC, USA},
+series = {CGO 2019}
+}
+
+@misc{XLA,
+  title = {XLA : Optimizing Compiler for Machine Learning},
+  howpublished = {\url{https://www.tensorflow.org/xla}},
+  note = {Accessed: 2022-04-16}
+}
+
+@misc{Treelite,
+  title = {Treelite : model compiler for decision tree ensembles},
+  howpublished = {\url{https://treelite.readthedocs.io/en/latest/}},
+  note = {Accessed: 2022-04-16}
+}
+
+@inproceedings{Halide,
+author = {Ragan-Kelley, Jonathan and Barnes, Connelly and Adams, Andrew and Paris, Sylvain and Durand, Fr\'{e}do and Amarasinghe, Saman},
+title = {Halide: A Language and Compiler for Optimizing Parallelism, Locality, and Recomputation in Image Processing Pipelines},
+year = {2013},
+isbn = {9781450320146},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/2491956.2462176},
+doi = {10.1145/2491956.2462176},
+abstract = {Image processing pipelines combine the challenges of stencil computations and stream programs. They are composed of large graphs of different stencil stages, as well as complex reductions, and stages with global or data-dependent access patterns. Because of their complex structure, the performance difference between a naive implementation of a pipeline and an optimized one is often an order of magnitude. Efficient implementations require optimization of both parallelism and locality, but due to the nature of stencils, there is a fundamental tension between parallelism, locality, and introducing redundant recomputation of shared values.We present a systematic model of the tradeoff space fundamental to stencil pipelines, a schedule representation which describes concrete points in this space for each stage in an image processing pipeline, and an optimizing compiler for the Halide image processing language that synthesizes high performance implementations from a Halide algorithm and a schedule. Combining this compiler with stochastic search over the space of schedules enables terse, composable programs to achieve state-of-the-art performance on a wide range of real image processing pipelines, and across different hardware architectures, including multicores with SIMD, and heterogeneous CPU+GPU execution. From simple Halide programs written in a few hours, we demonstrate performance up to 5x faster than hand-tuned C, intrinsics, and CUDA implementations optimized by experts over weeks or months, for image processing applications beyond the reach of past automatic compilers.},
+booktitle = {Proceedings of the 34th ACM SIGPLAN Conference on Programming Language Design and Implementation},
+pages = {519–530},
+numpages = {12},
+keywords = {optimization, domain specific language, vectorization, parallelism, locality, image processing, compiler, autotuning, redundant computation, gpu},
+location = {Seattle, Washington, USA},
+series = {PLDI '13}
+}
+
+@ARTICLE{VPred,
+  author={Asadi, Nima and Lin, Jimmy and de Vries, Arjen P.},
+  journal={IEEE Transactions on Knowledge and Data Engineering}, 
+  title={Runtime Optimizations for Tree-Based Machine Learning Models}, 
+  year={2014},
+  volume={26},
+  number={9},
+  pages={2281-2292},
+  doi={10.1109/TKDE.2013.73}
+}
+
+@inproceedings{QuickScorer,
+author = {Lucchese, Claudio and Nardini, Franco Maria and Orlando, Salvatore and Perego, Raffaele and Tonellotto, Nicola and Venturini, Rossano},
+title = {QuickScorer: A Fast Algorithm to Rank Documents with Additive Ensembles of Regression Trees},
+year = {2015},
+isbn = {9781450336215},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/2766462.2767733},
+doi = {10.1145/2766462.2767733},
+abstract = {Learning-to-Rank models based on additive ensembles of regression trees have proven to be very effective for ranking query results returned by Web search engines, a scenario where quality and efficiency requirements are very demanding. Unfortunately, the computational cost of these ranking models is high. Thus, several works already proposed solutions aiming at improving the efficiency of the scoring process by dealing with features and peculiarities of modern CPUs and memory hierarchies. In this paper, we present QuickScorer, a new algorithm that adopts a novel bitvector representation of the tree-based ranking model, and performs an interleaved traversal of the ensemble by means of simple logical bitwise operations. The performance of the proposed algorithm are unprecedented, due to its cache-aware approach, both in terms of data layout and access patterns, and to a control flow that entails very low branch mis-prediction rates. The experiments on real Learning-to-Rank datasets show that QuickScorer is able to achieve speedups over the best state-of-the-art baseline ranging from 2x to 6.5x.},
+booktitle = {Proceedings of the 38th International ACM SIGIR Conference on Research and Development in Information Retrieval},
+pages = {73–82},
+numpages = {10},
+keywords = {cache-aware algorithms, learning to rank, efficiency},
+location = {Santiago, Chile},
+series = {SIGIR '15}
+}
+
+@inproceedings{CacheConscious1,
+author = {Tang, Xun and Jin, Xin and Yang, Tao},
+title = {Cache-Conscious Runtime Optimization for Ranking Ensembles},
+year = {2014},
+isbn = {9781450322577},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/2600428.2609525},
+doi = {10.1145/2600428.2609525},
+abstract = {Multi-tree ensemble models have been proven to be effective for document ranking. Using a large number of trees can improve accuracy, but it takes time to calculate ranking scores of matched documents. This paper investigates data traversal methods for fast score calculation with a large ensemble. We propose a 2D blocking scheme for better cache utilization with simpler code structure compared to previous work. The experiments with several benchmarks show significant acceleration in score calculation without loss of ranking accuracy.},
+booktitle = {Proceedings of the 37th International ACM SIGIR Conference on Research &amp; Development in Information Retrieval},
+pages = {1123–1126},
+numpages = {4},
+keywords = {query processing, ensemble methods, cache locality},
+location = {Gold Coast, Queensland, Australia},
+series = {SIGIR '14}
+}
+
+@inproceedings{CacheConscious2,
+author = {Jin, Xin and Yang, Tao and Tang, Xun},
+title = {A Comparison of Cache Blocking Methods for Fast Execution of Ensemble-Based Score Computation},
+year = {2016},
+isbn = {9781450340694},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/2911451.2911520},
+doi = {10.1145/2911451.2911520},
+abstract = {Machine-learned classification and ranking techniques often use ensembles to aggregate partial scores of feature vectors for high accuracy and the runtime score computation can become expensive when employing a large number of ensembles. The previous work has shown the judicious use of memory hierarchy in a modern CPU architecture which can effectively shorten the time of score computation. However, different traversal methods and blocking parameter settings can exhibit different cache and cost behavior depending on data and architectural characteristics. It is very time-consuming to conduct exhaustive search for performance comparison and optimum selection. This paper provides an analytic comparison of cache blocking methods on their data access performance with an approximation and proposes a fast guided sampling scheme to select a traversal method and blocking parameters for effective use of memory hierarchy. The evaluation studies with three datasets show that within a reasonable amount of time, the proposed scheme can identify a highly competitive solution that significantly accelerates score calculation.},
+booktitle = {Proceedings of the 39th International ACM SIGIR Conference on Research and Development in Information Retrieval},
+pages = {629–638},
+numpages = {10},
+keywords = {ensemble methods, cache locality, query processing},
+location = {Pisa, Italy},
+series = {SIGIR '16}
+}
+
+@inproceedings {Hummingbird,
+author = {Supun Nakandala and Karla Saur and Gyeong-In Yu and Konstantinos Karanasos and Carlo Curino and Markus Weimer and Matteo Interlandi},
+title = {A Tensor Compiler for Unified Machine Learning Prediction Serving},
+booktitle = {14th USENIX Symposium on Operating Systems Design and Implementation (OSDI 20)},
+year = {2020},
+isbn = {978-1-939133-19-9},
+pages = {899--917},
+url = {https://www.usenix.org/conference/osdi20/presentation/nakandala},
+publisher = {USENIX Association},
+month = nov,
+}
+
+@INPROCEEDINGS{ProbBasedLayout,
+  author={Buschjager, Sebastian and Chen, Kuan-Hsun and Chen, Jian-Jia and Morik, Katharina},
+  booktitle={2018 IEEE International Conference on Data Mining (ICDM)}, 
+  title={Realization of Random Forest for Real-Time Evaluation through Tree Framing}, 
+  year={2018},
+  volume={},
+  number={},
+  pages={19-28},
+  doi={10.1109/ICDM.2018.00017}
+}
+
+@inproceedings{Tahoe,
+author = {Xie, Zhen and Dong, Wenqian and Liu, Jiawen and Liu, Hang and Li, Dong},
+title = {Tahoe: Tree Structure-Aware High Performance Inference Engine for Decision Tree Ensemble on GPU},
+year = {2021},
+isbn = {9781450383349},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3447786.3456251},
+doi = {10.1145/3447786.3456251},
+abstract = {Decision trees are widely used and often assembled as a forest to boost prediction accuracy. However, using decision trees for inference on GPU is challenging, because of irregular memory access patterns and imbalance workloads across threads. This paper proposes Tahoe, a tree structure-aware high performance inference engine for decision tree ensemble. Tahoe rearranges tree nodes to enable efficient and coalesced memory accesses; Tahoe also rearranges trees, such that trees with similar structures are grouped together in memory and assigned to threads in a balanced way. Besides memory access efficiency, we introduce a set of inference strategies, each of which uses shared memory differently and has different implications on reduction overhead. We introduce performance models to guide the selection of the inference strategies for arbitrary forests and data set. Tahoe consistently outperforms the state-of-the-art industry-quality library FIL by 3.82x, 2.59x, and 2.75x on three generations of NVIDIA GPUs (Kepler, Pascal, and Volta), respectively.},
+booktitle = {Proceedings of the Sixteenth European Conference on Computer Systems},
+pages = {426–440},
+numpages = {15},
+keywords = {tree structure, performance model, decision tree ensemble, decision tree inference},
+location = {Online Event, United Kingdom},
+series = {EuroSys '21}
+}
+
+@inproceedings{MilindTreeVectorization,
+author = {Jo, Youngjoon and Goldfarb, Michael and Kulkarni, Milind},
+title = {Automatic Vectorization of Tree Traversals},
+year = {2013},
+isbn = {9781479910212},
+publisher = {IEEE Press},
+abstract = {Repeated tree traversals are ubiquitous in many domains such as scientific simulation, data mining and graphics. Modern commodity processors support SIMD instructions, and using these instructions to process multiple traversals at once has the potential to provide substantial performance improvements. Unfortunately these algorithms often feature highly diverging traversals which inhibit efficient SIMD utilization, to the point that other, less profitable sources of vectorization must be exploited instead. Previous work has proposed traversal splicing, a locality transformation for tree traversals, which dynamically reorders traversals based on previous behavior, based on the insight that traversals which have behaved similarly so far are likely to behave similarly in the future. In this work, we cast this dynamic reordering as a scheduling for efficient SIMD execution, and show that it can dramatically improve the SIMD utilization of diverging traversals, close to ideal utilization. For five irregular tree traversal algorithms, our techniques are able to deliver speedups of 2.78 on average over baseline implementations. Furthermore our techniques can effectively SIMDize algorithms that prior, manual vectorization attempts could not.},
+booktitle = {Proceedings of the 22nd International Conference on Parallel Architectures and Compilation Techniques},
+pages = {363–374},
+numpages = {12},
+keywords = {SIMD, tree traversals, automatic vectorization, irregular programs},
+location = {Edinburgh, Scotland, UK},
+series = {PACT '13}
+}
+
+@article{PortableVM,
+author = {Ren, Bin and Mytkowicz, Todd and Agrawal, Gagan},
+title = {A Portable Optimization Engine for Accelerating Irregular Data-Traversal Applications on SIMD Architectures},
+year = {2014},
+issue_date = {June 2014},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {11},
+number = {2},
+issn = {1544-3566},
+url = {https://doi.org/10.1145/2632215},
+doi = {10.1145/2632215},
+abstract = {Fine-grained data parallelism is increasingly common in the form of longer vectors integrated with mainstream processors (SSE, AVX) and various GPU architectures. This article develops support for exploiting such data parallelism for a class of nonnumeric, nongraphic applications, which perform computations while traversing many independent, irregular data structures. We address this problem by developing several novel techniques. First, for code generation, we develop an intermediate language for specifying such traversals, followed by a runtime scheduler that maps traversals to various SIMD units. Second, we observe that good data locality is crucial to sustained performance from SIMD architectures, whereas many applications that operate on irregular data structures (e.g., trees and graphs) have poor data locality. To address this challenge, we develop a set of data layout optimizations that improve spatial locality for applications that traverse many irregular data structures. Unlike prior data layout optimizations, our approach incorporates a notion of both interthread and intrathread spatial reuse into data layout. Finally, we enable performance portability (i.e., the ability to automatically optimize applications for different architectures) by accurately modeling the impact of inter- and intrathread locality on program performance. As a consequence, our model can predict which data layout optimization to use on a wide variety of SIMD architectures.To demonstrate the efficacy of our approach and optimizations, we first show how they enable up to a 12X speedup on one SIMD architecture for a set of real-world applications. To demonstrate that our approach enables performance portability, we show how our model predicts the optimal layout for applications across a diverse set of three real-world SIMD architectures, which offers as much as 45% speedup over a suboptimal solution.},
+journal = {ACM Trans. Archit. Code Optim.},
+month = {jun},
+articleno = {16},
+numpages = {31},
+keywords = {SIMD, fine-grained parallelism, Irregular data structure}
+}
+
+@article{FAST,
+author = {Ren, Bin and Mytkowicz, Todd and Agrawal, Gagan},
+title = {A Portable Optimization Engine for Accelerating Irregular Data-Traversal Applications on SIMD Architectures},
+year = {2014},
+issue_date = {June 2014},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {11},
+number = {2},
+issn = {1544-3566},
+url = {https://doi.org/10.1145/2632215},
+doi = {10.1145/2632215},
+abstract = {Fine-grained data parallelism is increasingly common in the form of longer vectors integrated with mainstream processors (SSE, AVX) and various GPU architectures. This article develops support for exploiting such data parallelism for a class of nonnumeric, nongraphic applications, which perform computations while traversing many independent, irregular data structures. We address this problem by developing several novel techniques. First, for code generation, we develop an intermediate language for specifying such traversals, followed by a runtime scheduler that maps traversals to various SIMD units. Second, we observe that good data locality is crucial to sustained performance from SIMD architectures, whereas many applications that operate on irregular data structures (e.g., trees and graphs) have poor data locality. To address this challenge, we develop a set of data layout optimizations that improve spatial locality for applications that traverse many irregular data structures. Unlike prior data layout optimizations, our approach incorporates a notion of both interthread and intrathread spatial reuse into data layout. Finally, we enable performance portability (i.e., the ability to automatically optimize applications for different architectures) by accurately modeling the impact of inter- and intrathread locality on program performance. As a consequence, our model can predict which data layout optimization to use on a wide variety of SIMD architectures.To demonstrate the efficacy of our approach and optimizations, we first show how they enable up to a 12X speedup on one SIMD architecture for a set of real-world applications. To demonstrate that our approach enables performance portability, we show how our model predicts the optimal layout for applications across a diverse set of three real-world SIMD architectures, which offers as much as 45% speedup over a suboptimal solution.},
+journal = {ACM Trans. Archit. Code Optim.},
+month = {jun},
+articleno = {16},
+numpages = {31},
+keywords = {SIMD, fine-grained parallelism, Irregular data structure}
+}
+
+@misc{LookingGlass,
+  doi = {10.48550/ARXIV.1912.09536},
+  url = {https://arxiv.org/abs/1912.09536},
+  author = {Psallidas, Fotis and Zhu, Yiwen and Karlas, Bojan and Interlandi, Matteo and Floratou, Avrilia and Karanasos, Konstantinos and Wu, Wentao and Zhang, Ce and Krishnan, Subru and Curino, Carlo and Weimer, Markus},
+  keywords = {Machine Learning (cs.LG), Distributed, Parallel, and Cluster Computing (cs.DC), Machine Learning (stat.ML), FOS: Computer and information sciences, FOS: Computer and information sciences},
+  title = {Data Science through the looking glass and what we found there},
+  publisher = {arXiv},
+  year = {2019},
+  copyright = {Creative Commons Attribution Non Commercial Share Alike 4.0 International}
 }
