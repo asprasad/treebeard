@@ -6,43 +6,43 @@ Figure \ref{Fig:CompilerStructure} shows the high level structure of Treebeard.
 The input to Treebeard is a serialized decision tree ensemble. Popular frameworks 
 like XGBoost and LightGBM are supported and the system is easily extensible to other frameworks.
 Given an input model our compiler generates optimized inference code. Specifically it generates a 
-callable batch inference function \texttt{predictForest} that given an array of input rows, outputs an
+callable batch inference function \texttt{predictForest} that, given an array of input rows, computes an
 array of model predictions. 
  
 Treebeard specializes the code generated for inference by progressively optimizing and lowering a 
 high level representation of the \texttt{predictForest} function down to LLVM IR \cite{LLVM}.
 By \textbf{\emph{lowering}}, we mean the process of transforming an operation at a higher 
 abstraction to a sequence of operations at a lower abstraction. Optimizations in Treebeard 
-are implemented using a combination of annotation and lowering. An Operation at a higher 
-abstraction is annotated with meta-data that indicates what kind of optimization is 
+are implemented using a combination of annotation and lowering. An operation at a higher 
+abstraction is annotated with attributes that indicate what kind of optimization is 
 to be performed while lowering it. The lowering transformation uses this information to generate 
 optimized lower level code. For example, tree tiling and loop order are decided 
 at the highest abstraction. These decisions are communicated to the lowering pass 
 which explicitly encodes them in the lowered IR as shown in figure \ref{Fig:Overview}.
 
 %Treebeard first constructs a high level representation of the decision forest inference operation.
-Treebeard's IR has three abstractions as shown in Figure \ref{fig:Overview}.  
+Treebeard's IR has three abstractions as shown in Figure \ref{Fig:Overview}.  
 At the highest level (HIR), the input model is represented as a collection of binary trees. This is shown 
-in the second row of figure \ref{fig:Overview}. At this level of abstraction,
+in the second row of figure \ref{Fig:Overview}. At this level of abstraction,
 Treebeard tiles nodes together to transform a binary tree into an $n$-ary tree 
 and decides what order trees are to be traversed in. In the example in the figure, 
 trees are tiled with a tile size of 2. Tiling is indicated using colored elipses drawn 
 around nodes that are in the same tile. Tree reordering is another transformation that is performed at this abstraction. 
 One objective of tree reordering is to group identically structured trees so that they can share the same traversal code. 
-With the tiling shown in Figure \ref{fig:Overview}, Tree1 and Tree3 have depth 2, while Tree2 has a depth of 3.
+With the tiling shown in Figure \ref{Fig:Overview}, Tree1 and Tree3 have depth 2, while Tree2 has a depth of 3.
 Therefore, the trees are reordered so that Tree1 and Tree3 are together. 
 
 The high level IR is then lowered to a mid-level IR (MIR). The aim of MIR is 
 to allow optimizations that are independent of the final memory layout of the model. 
-The lowering to MIR performs loop optimizations like loop-reordering, parallelization and unrolling.
-At this level of the IR (the third row in Figure \ref{fig:Overview}),
+The lowering to MIR performs loop transformations like loop tiling, permutation, parallelization and unrolling.
+At this level of the IR (the third row in Figure \ref{Fig:Overview}),
 the order in which trees, input row pairs are walked is explicitly represented in the IR using loop nests.
-Figure \ref{fig:Overview} shows two possible ways that loop nests could be generated -- the first
+Figure \ref{Fig:Overview} shows two possible ways that loop nests could be generated -- the first
 walks all rows for one tree before moving to the next tree while the second walks all trees for 
 one row before moving to the next row. Another aspect handled by this lowering is the fissing of 
 loops to make sure that trees with the same structure share code. Here, both versions of MIR shown 
 ensure that Tree1 and Tree3 share the same traversal code, while traversal code for Tree2 is different.
-Additionally, tree walk optimizations, such as tree walk unrolling (shown in figure \ref{fig:Overview}) and 
+Additionally, tree walk optimizations, such as tree walk unrolling (shown in figure \ref{Fig:Overview}) and 
 peeling are performed on the MIR.
 
 Treebeard then further lowers the IR to explicitly represent the memory layout of the model. Buffers to hold model 
@@ -60,12 +60,12 @@ JIT compiled to executable code.
   \label{Fig:CompilerStructure}
 \end{figure}
 
-% \begin{figure}
-%   \centering
-%   \includegraphics[width=\textwidth]{figures/CompilerOverview.png}
-%   \caption{Treebeard IR lowering and optimization details}
-%   \label{Fig:Overview}
-% \end{figure}
+\begin{figure*}
+  \centering
+  \includegraphics[width=\textwidth]{figures/OverviewExample.pdf}
+  \caption{Treebeard IR lowering and optimization details}
+  \label{Fig:Overview}
+\end{figure*}
 
 
 
