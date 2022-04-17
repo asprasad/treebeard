@@ -1,4 +1,22 @@
 \subsection{Probability Based Tiling}
+\subsubsection{More Notation}
+In order to formulate the probability based tiling algorithm as an optimization problem, we define the following.
+\begin{enumerate}
+    \item For every leaf $l \in L$, we define $p_l$ as the probability that the leaf $l$ is reached.
+    \item For each node $n \in V$, we define the absolute probability $p_v$ as
+    \begin{equation}
+        p_v = \begin{cases}
+        p_l &\text{if $l \in L$}\\
+        p_{left(v)} + p_{right(v)} &\text{otherwise}
+        \end{cases}
+    \end{equation}
+    \item For any tree $T$, $\mathcal{C}(T)$ represents the set of all valid tilings of $T$.
+    \item For every $v \in V$, we define $S_v$ as the subtree rooted at $v$.
+    \item For every $v \in V$, we define $L_v$ as the set of leaves of $S_v$.
+    \item For a every tile $T_i$, we define $root(T_i)$ as the node $v \in T_i$ such that $v$ has no incoming edges from any other node $u \in T_i$.
+    \item For a tile $T_i$, $out(T_i) \subseteq E$ is the set of edges $(u, v)$ such that $u \in T_i$ and $v \notin T_i$.
+\end{enumerate}
+
 \label{sec:ProbTiling}
 \subsubsection{Motivation}
 Uniform tiling optimizes tree walks assuming that all root to leaf paths in the tree are equally likely. 

@@ -1,42 +1,19 @@
-\subsubsection{More Notation}
-In order to formulate the probability based tiling algorithm as an optimization problem, we define the following.
-\begin{enumerate}
-    \item For every leaf $l \in L$, we define $p_l$ as the probability that the leaf $l$ is reached.
-    \item For each node $n \in V$, we define the absolute probability $p_v$ as
-    \begin{equation}
-        p_v = \begin{cases}
-        p_l &\text{if $l \in L$}\\
-        p_{left(v)} + p_{right(v)} &\text{otherwise}
-        \end{cases}
-    \end{equation}
-    \item For any tree $T$, $\mathcal{C}(T)$ represents the set of all valid tilings of $T$.
-    \item For every $v \in V$, we define $S_v$ as the subtree rooted at $v$.
-    \item For every $v \in V$, we define $L_v$ as the set of leaves of $S_v$.
-    \item For a every tile $T_i$, we define $root(T_i)$ as the node $v \in T_i$ such that $v$ has no incoming edges from any other node $u \in T_i$.
-    \item For a tile $T_i$, $out(T_i) \subseteq E$ is the set of edges $(u, v)$ such that $u \in T_i$ and $v \notin T_i$.
-\end{enumerate}
-
-\subsection{Uniform Tiling}
+\subsection{Basic Tiling Algorithm}
 \label{sec:UnifTiling}
 % The justification for uniform tiling -- if we assume all paths are equally likely,
 % we want to minimize the depth of speculation
-The first tree tiling algorithm we implement is \textbf{\emph{uniform tiling}}. The core idea of uniform tiling is to construct tiles,
-with a tile size $n_t$, so that we evaluate 
-the least possible number of nodes speculatively. Intuitively, this translates to minimizing the height of the constructed tile. We minimize
-the height of the tile by performing a level order traversal starting at the root node of the tile. 
-\TODO{AP Should we say this is optimal when probabilities are equal? Problem is we haven't said what optimal is.}
-This traversal collects at most $n_t$ nodes
-and does not include any leaves in the tile so that the constraints listed in section \ref{sec:ValidTiling} are satisfied. Algorithm 
-\ref{Alg:UnifTilingAlgo} lists the algorithm for uniform tiling. Tiling starts at the root and constructs a tile $Tile$ by performing
-a level order traversal. Once the current tile is constructed, the tiling procedure is recursively performed on all nodes that are 
-destinations for edges going out of the constructed tile. The set of tiles constructed by algorithm \ref{Alg:UnifTilingAlgo} constitutes 
-a uniform tiling of the input tree.
+Algorithm~\ref{Alg:UnifTilingAlgo} shows a simple tiling algorithm that satisfies all the above constraints. 
+Tiling starts at the root and constructs a tile $Tile$ by performing
+a level order traversal. The call \op{LevelOrderTraversal(r, $n_t$)} picks the next $n_t$ nodes according to the standard level order tree traversal algorithm (not described here) applied only to internal nodes of the tree. Once the current tile is constructed, the tiling procedure is recursively performed on all nodes that are 
+destinations for edges going out of the constructed tile.
+It is easy to see that the set of tiles constructed by algorithm \ref{Alg:UnifTilingAlgo} satisfies the constraints above.
+\TODO{Pass a modified tree without leafs to the level order traversal call. Explicitly add leaves as seperate tiles}
 % Algorithm for uniform tiling
 \begin{algorithm}
   \caption{Uniform tree tiling}
   \label{Alg:UnifTilingAlgo}
   \begin{algorithmic}
-      \Procedure{TileTree}{$T = (V, E, r)$, $n_t$} 
+      \Procedure{TileTree}{$tree = (V, E, r)$, $n_t$} 
           \If {$r \in L$}
               \State \textbf{return} $\{ r \}$
           \EndIf

@@ -1,5 +1,5 @@
 \subsection{Notation}
-\TODO{Notation needs to be introduced in the background section}
+\TODO{Notation needs to be introduced in the background section, Tiling should be the first subsection}
 We represent a decision tree by $T = (V, E, r)$ where $V$ is the set of nodes, $E$ the set of edges and
 $r \in V$ is the root. For each node $n \in V$, we define the following.
 \begin{enumerate}
@@ -13,6 +13,15 @@ We use $L \subseteq V$ to denote the set of leaves. % subseteq because tree coul
 \subsection{Tiling}
 \label{sec:Tiling}
 % Treebeard vectorizes tree walks by grouping nodes of a decision tree into \textbf{\emph{tiles}}. The nodes in a tile are evaluated concurrently using vector instructions. Once the nodes of the current tile are evaluated, a look up table is used to compute which child of the current tile to move to next.
+
+While a decision tree is naturally represented by a binary tree, 
+it is not the best representation for tree traversal as it (i) requires many memory accesses, 
+(ii) has poor branching structure and (iii) cannot make use of vector instructions. 
+This section proposes a tiling optimization where we group multiple nodes in a decision tree into a single tile, effectively transforming a binary tree into an $n$-ary tiled tree. This not only allows the compiler to generate vectorized code (see Section~\ref{sec:Vectorization} ) to traverse trees but also enables spatial locality improvements by grouping nodes that are likely to be accessed together. We demonstrate this with two tiling heuristics later in the section. 
+
+
+
+\CommentOut{
 Treebeard groups nodes of the decision tree into \textbf{\emph{tiles}}. Tiling provides two benefits. 
 \begin{enumerate}
   \item It allows the compiler to generate vector code to traverse trees. Section \ref{sec:Vectorization} describes how Treebeard does this.
@@ -21,6 +30,9 @@ Treebeard groups nodes of the decision tree into \textbf{\emph{tiles}}. Tiling p
 Once nodes are grouped into tiles, an $n$-ary tree whose nodes are tiles is constructed. Treebeard then generates 
 optimized code to walk this tree. The listing below shows at a high level how a tiled tree is walked (This is not 
 true IR, but presented for clarity). 
+}
+
+Once trees are tiled Treebeard generates tree walks with the code structure shown below.
 \begin{lstlisting}[style=c++]
   ResultType Prediction_Function(...) {
     // ...
@@ -36,7 +48,10 @@ true IR, but presented for clarity).
     // ...
   }  
 \end{lstlisting}
+The code is just an abstract representation of a tiled tree walk that enables efficient lowering of specific steps in subsequent stages. 
+\op{evaluateTilePredicates} (speculatively) computes the predicates on all nodes in a tile (line 6). Then \op{getChildTile} (line 9), uses the computed predicate values to determine which child of the current tile to move to. We defer a description of how these operators are lowered to a later section but focus on tiling algorithms in this section.
 
+\CommentOut{
 To compute the prediction of the tree, the predicates of all nodes in the tile are computed simultaneously (line 6). 
 Then, the computed predicate values are used to determine which child of the current tile to move to (in the 
 $n$-ary tree). This section presents the details of tiling and how Treebeard's general tiling infrastructure 
@@ -46,23 +61,21 @@ are described in section \ref{sec:Vectorization}.
 
 \subsection{Tiles and Tree Tiling}
 \label{sec:ValidTiling}
-A \textbf{\emph{tile}} is a collection of connected non-leaf nodes of a decision tree. The path connecting any pair of nodes
-in the tile must be contained fully within the tile. The \textbf{\emph{tile size}} $n_t$ is the number of nodes contained in a tile.
-
-A \textbf{\emph{tiling}} $\mathcal{T}$ of the tree $T = (V, E, r)$ with tile size $n_t$ is a partition $\{ T_1, T_2, ... ,T_m \}$ of the set $V$ such that 
-\begin{enumerate}
-    \item $T_1 \cup T_2 ... \cup T_m = V$
-    \item $T_i \cap T_j = \emptyset$ for all $i, j \in [1, m]$ and $i \neq j$
-    \item Tiles are \textbf{connected}, i.e. for an $u, v \in T_i$, there is a (undirected) path connecting $u$ and $v$ fully contained in $T_i$.
-\end{enumerate} 
-
-We say a tiling $\mathcal{T}$ is a \textbf{\emph{valid tiling}} iff
-\begin{enumerate}
-  \item $|T_i| \leq n_t$ for all $i \in [1, m]$
-  \item $\forall l \in L$ : $l \in T_i \rightarrow v \notin T_i \;\; \forall v \in V \backslash \{l\}$
-  \item Tiles are \textbf{maximal}, i.e. if $|T_i| < n_t$, then there is no $v \in V\backslash \{ T_i \cup L \}$ such that $(u, v) \in E$ for some $u \in T_i$. 
-\end{enumerate}
-
+}
+\subsection{Conditions for Tiling}
+\label{sec:ValidTiling}
+While any arbitrary partitioning of the nodes of a tree could be considered for tiling we impose a few intuitive constraints to only allow nodes that are likely to be accessed together to be grouped into a tile. 
+\TODO{kr : replace $n_t$ with sz?}
+Specifically given $tree = (V, E, r)$ and a tile size $n_t$ we impose the following constraints on the generated tiles $\{ T_1, T_2, ... ,T_m \}$ .
+\begin{description}
+    \item[Partitioning] $T_1 \cup T_2 ... \cup T_m = V$ and $T_i \cap T_j = \emptyset$ for all $i\neq j$
+    \item[Connectedness] If $u, v \in T_i$, there is a (undirected) path connecting $u$ and $v$ fully contained in $T_i$.
+   \item [Leaf seperation] $\forall l \in L$ : $l \in T_i \rightarrow v \notin T_i \;\; \forall v \in V \backslash \{l\}$
+  \item [Maximal tiling] if there are tiles such that. $|T_i| < n_t$ then there is no $v \in V\backslash \{ T_i \cup L \}$ such that $(u, v) \in E$ for some $u \in T_i$. 
+\end{description}
+The \textbf{partitioning} and \textbf{maximal tiling} constraints together ensure that we group nodes into as few tiles as possible. {\textbf{Connectedness}} ensures that each tile is a sub-tree, a natural grouping of nodes that are accessed together. {\textbf{Leaf separation}} is critical to ensure that leaf checks can be efficiently performed.
+\TODO{kr: improve the above}
+\CommentOut{
 \subsection{Tiled Trees}
 A tiling transformation communicates the tiling to the Treebeard infrastructure by assigning a tile ID to each node in the decision tree. Using these tile IDs, Treebeard checks the validity of the tiling and then contructs a tree whose nodes are tiles. We call this tree the \textbf{\emph{tree of tiles}}. \TODO{We need a better name for this}
 Figure \ref{Fig:ValidTilingTileSize3} shows a valid tiling with tile size 3 and the tree of tiles constructed by Treebeard. Three nodes are grouped into each of the tiles $t_1$ and $t_2$ as shown. Each tile is collapsed into a single node in the tree of tiles. However, each leaf in the original tree becomes a leaf in the tree of tiles.
@@ -80,4 +93,4 @@ Treebeard maintains the following invariants.
   \item Nodes within tiles are always ordered in level order and left to right within a level. The numbering of the nodes in the above diagram shows this node order.
   \item Children of a node are numbered from left to right (regardless of level). For example, $l_1$ is the first child of $t_1$, $l_2$ is the second and so on.
 \end{enumerate}
-    
+   }
