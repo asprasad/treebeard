@@ -7,3 +7,6 @@ runtime_test_binaries/
 *.treebeard-globals.json
 *.pyc
 *.stats.csv
+*.aux
+*.log
+*.gz

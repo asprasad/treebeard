@@ -1,0 +1,907 @@
+%%
+%% This is file `flushend.sty',
+%% generated with the docstrip utility.
+%%
+%% The original source files were:
+%%
+%% flushend.dtx  (with options: `package')
+%% 
+%% Copyright (C) 1997-2020 by Sigitas Tolu\v{s}is <sigitas@vtex.lt>
+%% VTeX Ltd., Mokslinink\k{u} 2a, Vilnius, Lithuania
+%% --------------------------------------------------------------------------
+%% This work may be distributed and/or modified under the
+%% conditions of the LaTeX Project Public License, either version 1.3
+%% of this license or (at your option) any later version.
+%% The latest version of this license is in
+%%   http://www.latex-project.org/lppl.txt
+%% and version 1.3 or later is part of all distributions of LaTeX
+%% version 2005/12/01 or later.
+%%
+%% PURPOSE:   Balanced columns on last page in twocolumn mode.
+%%
+\NeedsTeXFormat{LaTeX2e}[1999/12/01]
+\ProvidesPackage{flushend}
+    [2020/10/16 v3.5 Balancing columns in twocolumn mode]
+\newif\if@auto@baselineskip \@auto@baselineskiptrue
+\newif\if@ancient@balance@version \@ancient@balance@versionfalse
+\newif\if@right@column@spread \@right@column@spreadtrue
+\newif\if@remove@lastbox@at@balancing \@remove@lastbox@at@balancingtrue
+\newif\if@balance@debug \@balance@debugfalse
+\DeclareOption{autobase}{\global\@auto@baselineskiptrue}
+\DeclareOption{noautobase}{\global\@auto@baselineskipfalse}
+\DeclareOption{ancient}{\global\@ancient@balance@versiontrue}
+\DeclareOption{modern}{\global\@ancient@balance@versionfalse}
+\DeclareOption{spread}{\global\@right@column@spreadtrue}
+\DeclareOption{nospread}{\global\@right@column@spreadfalse}
+\DeclareOption{removelastbox}{\global\@remove@lastbox@at@balancingtrue}
+\DeclareOption{keeplastbox}{\global\@remove@lastbox@at@balancingfalse}
+\DeclareOption{checkfootnote}{%
+    \AtEndOfPackage{%
+        \let\check@@footnoterule@@box\initial@check@@footnoterule@@box
+        }%
+    }
+\DeclareOption{nocheckfootnote}{%
+    \AtEndOfPackage{%
+        \let\check@@footnoterule@@box\@gobblethree
+        }%
+    }
+\DeclareOption{checkfloat}{%
+    \AtEndOfPackage{%
+        \let\top@@floatbox@min\top@@floatbox@min@default
+        }%
+    }
+\DeclareOption{nocheckfloat}{%
+    \AtEndOfPackage{%
+        \let\top@@floatbox@min\maxdimen
+        }%
+    }
+\DeclareOption{debug}{\global\@balance@debugtrue}
+\DeclareOption{nodebug}{\global\@balance@debugfalse}
+\ProcessOptions
+\newskip\flushend@@lastskip@a
+\newskip\flushend@@lastskip@b
+\newskip\flushend@@lastskip@c
+\newcount\flushend@@penalty@a
+\newcount\var@@loop@iter
+\newdimen\flushend@@lastkern@a
+\newdimen\var@@temp@spread
+\newdimen\var@@temp@a
+\newdimen\var@@temp@loop
+\def\top@@skip@@limit{.7\topskip}
+\newdimen\flushend@@page@rule \flushend@@page@rule\z@
+\def\showcolsendrule{\global\flushend@@page@rule=.4\p@}
+\gdef\top@@floatbox@min@default{4\topskip}
+\let\top@@floatbox@min\top@@floatbox@min@default
+\newbox\flushend@@varbox@a
+\newbox\flushend@@varbox@c
+\newbox\flushend@@tempbox@a
+\newbox\flushend@@tempbox@c
+\@ifundefined{@viper}{\newbox\@viper}{}
+\@ifundefined{hold@viper}{\newbox\hold@viper}{}
+\newtoks\atColsBreak \atColsBreak={}
+\newtoks\atColsEnd   \atColsEnd={}
+\@ifundefined{fmt@box@adds}{\def\fmt@box@adds#1{#1}}{}
+\@ifundefined{fmt@vbox@adds}{\def\fmt@vbox@adds[#1]#2{#2}}{}
+\def\unskip@three@kern@penalty{%
+    \unskip\unkern\unpenalty
+    \unskip\unkern\unpenalty
+    \unskip\unkern\unpenalty
+    }
+\gdef\remove@lastbox@at@balancing{%
+    \unskip@three@kern@penalty
+    \if@remove@lastbox@at@balancing
+    \else
+        \expandafter\null
+    \fi
+    \bgroup
+        \setbox\z@\lastbox
+        \ifdim\wd\z@>\z@
+            \box\z@
+        \else
+            \aftergroup\unskip@three@kern@penalty
+        \fi
+    \egroup
+    }
+\def\set@split@topskip@to#1{%
+    \splittopskip#1\relax \vfuzz\maxdimen \vbadness\maxdimen
+    }
+\def\show@@box#1{%
+    \bgroup
+        \showboxbreadth=20000\showboxdepth=20000%
+        \showbox#1\relax
+    \egroup
+    }
+\def\wlog@balance@debug#1{\if@balance@debug \wlog{#1}\fi}
+\def\log@box@info#1{<box\the#1>(\the\ht#1+\the\dp#1)x\the\wd#1}
+\let\show@@box@next\@gobble
+\gdef\analyze@lastbox@box#1{%
+    \setbox\flushend@@varbox@a\vbox{%
+        \unvbox#1%
+        \global\flushend@@lastskip@a\lastskip
+        \unskip
+        \global\var@@temp@a\lastkern
+        \unkern
+        \global\flushend@@penalty@a\lastpenalty
+        \unpenalty
+        \ifdim\lastskip>\z@
+            \global\flushend@@lastskip@a\lastskip
+        \fi
+        \unskip
+        \ifdim\lastkern>\z@
+            \global\var@@temp@a\lastkern
+        \fi
+        \unkern
+        \ifnum\lastpenalty>\z@
+            \global\flushend@@penalty@a\lastpenalty
+        \fi
+        \unpenalty
+        \global\setbox\flushend@@tempbox@a\lastbox
+        }%
+    \wlog@balance@debug{^^J::analyze@lastbox@box::\log@box@info{#1}%
+                        ^^J ::unvbox: \log@box@info{\flushend@@varbox@a}%
+                        ^^J::lastbox: \log@box@info{\flushend@@tempbox@a}%
+                        ^^J::lastskip: \the\flushend@@lastskip@a;
+                            lastkern: \the\var@@temp@a;
+                         lastpenalty: \the\flushend@@penalty@a
+                       }%
+    }
+\gdef\analyze@leftcolumn@box#1{%
+    \set@split@topskip@to\z@
+    \flushend@@lastskip@b\ht#1%
+    \wlog@balance@debug{^^Jmainbox: \log@box@info{#1}}%
+    \setbox\flushend@@varbox@a\vbox{%
+        \unvbox#1%
+        \global\flushend@@lastskip@a\lastskip
+        \unskip
+        \global\flushend@@lastkern@a\lastkern
+        \unkern
+        \global\flushend@@penalty@a\lastpenalty
+        \unpenalty
+        \global\setbox\flushend@@tempbox@a\lastbox
+        }%
+    \advance\flushend@@lastskip@b -\ht\flushend@@varbox@a
+    \advance\flushend@@lastskip@b -\ht\flushend@@tempbox@a
+    \wlog@balance@debug{.-box: \log@box@info{\flushend@@varbox@a}%
+                 ^^J.-lastbox: \log@box@info{\flushend@@tempbox@a}%
+                ^^J.-lastskip: \the\flushend@@lastskip@a;
+                     lastkern: \the\flushend@@lastkern@a;
+                  lastpenalty: \the\flushend@@penalty@a
+                    ^^J.-diff: \the\flushend@@lastskip@b
+        }%
+    \check@@footnoterule@@box\flushend@@tempbox@a\flushend@@lastskip@b\flushend@@varbox@a
+    \check@@baselineskip@@skip
+        \flushend@@lastskip@a
+        \flushend@@lastskip@b
+        \flushend@@lastskip@c
+    \ifx\check@@footnoterule@@box\check@@baselineskip@@skip
+    \else
+        \ifvoid\flushend@@tempbox@a
+            \ifdim\ht\flushend@@varbox@a>\topskip
+                \flushend@@lastskip@b\ht\flushend@@varbox@a
+                \var@@temp@a\ht\flushend@@varbox@a
+                \loop
+                    \setbox\flushend@@tempbox@c\vsplit\flushend@@varbox@a to\var@@temp@a
+                    \ifvoid\flushend@@varbox@a
+                        \setbox\flushend@@varbox@a\vbox{\unvbox\flushend@@tempbox@c}%
+                        \advance \var@@temp@a -3\p@
+                    \else
+                        \var@@temp@a=-1\p@
+                    \fi
+                \ifdim \var@@temp@a>\z@
+                \repeat
+                \setbox\flushend@@varbox@a\vbox{\unvbox\flushend@@varbox@a}%
+                \setbox\flushend@@tempbox@c\vbox{\unvbox\flushend@@tempbox@c}%
+                \advance\flushend@@lastskip@b -\ht\flushend@@varbox@a
+                \advance\flushend@@lastskip@b -\ht\flushend@@tempbox@c
+                \wlog@balance@debug{..--box: \log@box@info{\flushend@@tempbox@c}%
+                             ^^J..--lastbox: \log@box@info{\flushend@@varbox@a}%
+                                ^^J..--diff: \the\flushend@@lastskip@b
+                    }%
+                \check@@footnoterule@@box\flushend@@varbox@a\flushend@@lastskip@b
+                    \flushend@@tempbox@c
+                \check@@baselineskip@@skip\flushend@@lastskip@a\flushend@@lastskip@b
+                    \flushend@@lastskip@c
+                \ifx\check@@footnoterule@@box\check@@baselineskip@@skip
+                \else
+                    \ifdim\ht\flushend@@varbox@a>.5\topskip
+                        \analyze@lastbox@box\flushend@@varbox@a
+                    \fi
+                    \setbox\flushend@@varbox@a\vbox{\unvbox\flushend@@tempbox@c}%
+                \fi
+            \else
+                \wlog@balance@debug{lastbox: \log@box@info{\flushend@@varbox@a}}%
+            \fi
+        \fi
+        \ifdim\var@@temp@loop=\ht\flushend@@varbox@a\relax
+           \global\advance\var@@loop@iter\@ne
+        \fi
+        \var@@temp@loop=\ht\flushend@@varbox@a\relax
+        \ifnum\var@@loop@iter<3\relax
+            \wlog@balance@debug{analyze left col: iteration \number\var@@loop@iter; ht \the\var@@temp@loop}%
+        \else
+            \wlog@balance@debug{analyze left col loop limit!}%
+            \ht\flushend@@varbox@a\z@
+        \fi
+        \ifdim\ht\flushend@@varbox@a>\topskip
+            \expandafter\analyze@leftcolumn@box\expandafter\flushend@@varbox@a
+        \fi
+    \fi
+    }
+\def\get@@footnoterule@@box{%
+    \set@split@topskip@to\z@
+    \setbox\flushend@@varbox@a\vbox{\strut
+        \vskip\z@
+        \footnoterule
+        \unskip\unkern\unpenalty
+        \unskip\unkern\unpenalty
+        }%
+    \setbox\flushend@@tempbox@c\vsplit\flushend@@varbox@a to\p@
+    \xdef\footnoterule@@box@@ht{\the\ht\flushend@@varbox@a}%
+    \xdef\footnoterule@@box@@dp{\the\dp\flushend@@varbox@a}%
+    \xdef\footnoterule@@box@@wd{\the\wd\flushend@@varbox@a}%
+    \wlog@balance@debug{:footnoterule: \log@box@info{\flushend@@varbox@a}}%
+    \setbox\flushend@@tempbox@c\vbox{\unvbox\flushend@@varbox@a}%
+    }
+\long\def\@gobblethree#1#2#3{}
+\def\check@@footnoterule@@box#1#2#3{%
+    \ifdim\ht#1=\footnoterule@@box@@ht
+        \ifdim\dp#1=\footnoterule@@box@@dp
+            \ifdim\wd#1=\footnoterule@@box@@wd
+                \ifdim#2=\topskip
+                \else
+                    \xdef\main@box@height{\the\ht#3}%
+                    \xdef\main@box@skip{\the#2}%
+                    \wlog@balance@debug{^^J:footnoterule found:
+                                        main@box <ht=\main@box@height,
+                                        skip=\main@box@skip>
+                                       }%
+                    \global\let\check@@footnoterule@@box\@gobblethree
+                    \global\let\check@@baselineskip@@skip\reset@check@@baselineskip@@skip
+                \fi
+            \fi
+        \fi
+    \fi
+    }
+\let\initial@check@@footnoterule@@box\check@@footnoterule@@box
+\def\check@@baselineskip@@skip#1#2#3{%
+    \ifdim#1>\z@
+        \ifdim#2>\z@
+            \global#3=\the#1%
+            \global\let\check@@baselineskip@@skip\@gobblethree
+        \fi
+    \fi
+    }
+\let\initial@check@@baselineskip@@skip\check@@baselineskip@@skip
+\def\reset@check@@baselineskip@@skip#1#2#3{%
+    \global#3=\z@
+    \global\let\check@@baselineskip@@skip\initial@check@@baselineskip@@skip
+    }
+\def\analyze@rightcolumn@box#1{%
+    \bgroup
+        \xdef\top@@floatbox@ht{\z@}%
+        \xdef\top@@floatbox@skip{\z@}%
+        \xdef\top@@section@skip{\z@}%
+        \set@split@topskip@to\z@
+        \setbox\flushend@@varbox@a\vbox{\strut
+            \vskip\z@
+            \unvcopy#1%
+            }%
+        \setbox\flushend@@tempbox@c\vsplit\flushend@@varbox@a to\p@
+        \wlog@balance@debug{^^J(R)mainbox: \log@box@info{#1}}%
+        \flushend@@lastskip@a\ht\flushend@@varbox@a
+        \advance\flushend@@lastskip@a\dp\flushend@@varbox@a
+        \ifdim\flushend@@lastskip@a>\z@
+            \analyze@nonempty@rightcolumn@box
+        \fi
+    \egroup
+    }
+\def\analyze@nonempty@rightcolumn@box{%
+    \bgroup
+        \var@@temp@a3\p@
+        \loop
+            \flushend@@lastskip@b\ht\flushend@@varbox@a
+            \advance\flushend@@lastskip@b\dp\flushend@@varbox@a
+            \setbox\flushend@@tempbox@c\vsplit\flushend@@varbox@a to\var@@temp@a
+            \ifvoid\flushend@@tempbox@c
+                \advance \var@@temp@a 3\p@
+                \ifdim\var@@temp@a>\flushend@@lastskip@b
+                    \var@@temp@a=-1\p@
+                \fi
+            \else
+                \setbox\flushend@@tempbox@c\vbox{\unvbox\flushend@@tempbox@c}%
+                \ifdim\ht\flushend@@tempbox@c>\top@@floatbox@min
+                    \advance\flushend@@lastskip@b -\ht\flushend@@tempbox@c
+                    \advance\flushend@@lastskip@b -\dp\flushend@@tempbox@c
+                    \advance\flushend@@lastskip@b -\ht\flushend@@varbox@a
+                    \advance\flushend@@lastskip@b -\dp\flushend@@varbox@a
+                    \xdef\top@@floatbox@skip{\the\flushend@@lastskip@b}%
+                    \flushend@@lastskip@b\flushend@@lastskip@a
+                    \advance\flushend@@lastskip@b -\ht\flushend@@varbox@a
+                    \advance\flushend@@lastskip@b -\top@@floatbox@skip
+                    \xdef\top@@floatbox@ht{\the\flushend@@lastskip@b}%
+                    \var@@temp@a=3\p@
+                \else
+                    \advance\flushend@@lastskip@b -\ht\flushend@@tempbox@c
+                    \advance\flushend@@lastskip@b -\dp\flushend@@tempbox@c
+                    \advance\flushend@@lastskip@b -\ht\flushend@@varbox@a
+                    \advance\flushend@@lastskip@b -\dp\flushend@@varbox@a
+                    \ifdim\ht\flushend@@tempbox@c>\topskip
+                    \else
+                        \xdef\top@@section@skip{\the\flushend@@lastskip@b}%
+                    \fi
+                    \var@@temp@a=-1\p@
+                \fi
+            \fi
+        \ifdim \var@@temp@a>\z@
+        \repeat
+        \ifvoid\flushend@@tempbox@c
+        \else
+            \ifdim\top@@section@skip>\z@
+            \else
+                \ifdim\ht\flushend@@tempbox@c>\z@
+                    \setbox\flushend@@varbox@a\vbox{\unvbox\flushend@@tempbox@c}%
+                \fi
+                \flushend@@lastskip@b\ht\flushend@@varbox@a
+                \var@@temp@a=3\p@
+                \loop
+                    \setbox\flushend@@tempbox@c\vsplit\flushend@@varbox@a to\var@@temp@a
+                    \ifvoid\flushend@@tempbox@c
+                        \advance \var@@temp@a 3\p@
+                        \ifdim\var@@temp@a>\flushend@@lastskip@b
+                            \var@@temp@a=-1\p@
+                        \fi
+                    \else
+                        \ifdim\ht\flushend@@tempbox@c<\z@
+                        \else
+                            \var@@temp@a=-1\p@
+                        \fi
+                    \fi
+                \ifdim \var@@temp@a>\z@
+                \repeat
+                \loop
+                    \setbox\flushend@@varbox@a\vbox{%
+                        \unvbox\flushend@@tempbox@c
+                        \unskip\unkern\unpenalty
+                        \unskip\unkern\unpenalty
+                        \unskip\unkern\unpenalty
+                        \setbox\flushend@@tempbox@c\lastbox
+                        }%
+                    \flushend@@lastskip@b\ht\flushend@@varbox@a
+                    \setbox\flushend@@varbox@a\vbox{%
+                        \unvbox\flushend@@varbox@a
+                        \unskip\unkern\unpenalty
+                        \unskip\unkern\unpenalty
+                        \unskip\unkern\unpenalty
+                        }%
+                    \advance\flushend@@lastskip@b -\ht\flushend@@varbox@a
+                    \ifdim\flushend@@lastskip@b>\topskip
+                        \xdef\top@@section@skip{\the\flushend@@lastskip@b}%
+                    \fi
+                    \ifdim\var@@temp@loop=\ht\flushend@@varbox@a\relax
+                        \advance\var@@loop@iter\@ne
+                    \fi
+                    \var@@temp@loop=\ht\flushend@@varbox@a\relax
+                    \ifnum\var@@loop@iter<3\relax
+                        \wlog@balance@debug{analyze right col: iteration \number\var@@loop@iter; ht \the\var@@temp@loop}%
+                    \else
+                        \wlog@balance@debug{analyze right col loop limit!}%
+                        \ht\flushend@@varbox@a=\z@
+                    \fi
+                \ifdim\ht\flushend@@varbox@a>2\topskip
+                    \setbox\flushend@@tempbox@c\vbox{\unvbox\flushend@@varbox@a}%
+                \repeat
+            \fi
+        \fi
+    \egroup
+    }
+\def\combine@columns@for@balance{%
+    \setbox\@outputbox\vbox{\strut
+        \vskip\z@
+        \unvbox\@outputbox
+        }%
+    \set@split@topskip@to\z@
+    \setbox\flushend@@tempbox@c\vsplit\@outputbox to\p@
+    \if@auto@baselineskip
+        %% Trying guess baselineskip value on column break
+        \ifdim\top@@floatbox@skip>\z@
+            \setbox\flushend@@tempbox@c\vsplit\@outputbox to\top@@floatbox@ht
+            \setbox\flushend@@tempbox@c\vbox{\unvbox\flushend@@tempbox@c}%
+        \fi
+        \setbox\@tempboxa\vbox{%
+            \unvbox\flushend@@varbox@a
+            \unskip\unkern\unpenalty
+            \hrule\@height\flushend@@page@rule width\columnwidth
+            \vskip-\flushend@@page@rule
+            \hrule\@height\z@ width\columnwidth
+            \vskip\flushend@@lastskip@c
+            \the\atColsBreak
+            \ifdim\top@@section@skip>\top@@skip@@limit
+                \vskip\top@@section@skip
+            \fi
+            \unvbox\@outputbox
+            \remove@lastbox@at@balancing
+            \the\atColsEnd
+            }%
+        \ifdim\top@@floatbox@skip>\z@
+            \setbox\@outputbox\vbox{\unvbox\flushend@@tempbox@c}%
+        \fi
+    \else
+        %% Ignore baselineskip value on column break
+        \setbox\@tempboxa\vbox{%
+            \unvbox\flushend@@varbox@a
+            \unskip\unkern\unpenalty
+            \hrule\@height\flushend@@page@rule width\columnwidth
+            \vskip-\flushend@@page@rule
+            \hrule\@height\z@ width\columnwidth
+            \the\atColsBreak
+            \unvbox\@outputbox
+            \remove@lastbox@at@balancing
+            \the\atColsEnd
+            }%
+    \fi
+    }
+\def\set@outputbox@with@footnote{%
+    %% footnote in left column
+    \@tempdimb\ht\@tempboxa
+    \ifdim\top@@floatbox@skip>\z@
+        \advance\@tempdimb \top@@floatbox@skip
+        \advance\@tempdimb \top@@floatbox@ht
+    \fi
+    \advance\@tempdimb \main@box@skip
+    \advance\@tempdimb \ht\@leftcolumn
+    \@tempdimb .5\@tempdimb
+    \advance\@tempdimb -\main@box@skip
+    \advance\@tempdimb -\ht\@leftcolumn
+    \set@split@topskip@to\topskip
+    \loop
+        \setbox\flushend@@varbox@a\copy\@tempboxa
+        \setbox\flushend@@tempbox@a\vsplit\flushend@@varbox@a to\@tempdimb
+        \setbox\flushend@@tempbox@c\vbox{\unvcopy\flushend@@tempbox@a}%
+        \ifdim\top@@floatbox@skip>\z@
+        \setbox\flushend@@varbox@c\vbox{%
+                \unvcopy\@outputbox
+                \vskip\top@@floatbox@skip
+                \unvbox\flushend@@varbox@a
+                }%
+        \else
+            \setbox\flushend@@varbox@c\vbox{\unvbox\flushend@@varbox@a}%
+        \fi
+        \var@@temp@spread=\ht\flushend@@tempbox@c
+        \advance\var@@temp@spread by\dp\flushend@@tempbox@c
+        \advance\var@@temp@spread \main@box@skip
+        \advance\var@@temp@spread \ht\@leftcolumn
+        \advance\var@@temp@spread by-\ht\flushend@@varbox@c
+        \advance\var@@temp@spread by-\dp\flushend@@varbox@c
+        \wlog@balance@debug{Left x: \the\ht\flushend@@tempbox@a
+                            +\the\dp\flushend@@tempbox@a=\the\ht\flushend@@varbox@a
+                            +\the\dp\flushend@@varbox@a::\the\@tempdimb
+                            ^^JLeft 0: \the\ht\flushend@@tempbox@c
+                            +\the\dp\flushend@@tempbox@c::\the\@tempdimb
+                            ^^JRight x: \the\ht\flushend@@varbox@c
+                            +\the\dp\flushend@@varbox@c=\the\ht\flushend@@varbox@a
+                            +\the\dp\flushend@@varbox@a::\the\@tempdimb
+                            ^^JExtra height:\the\var@@temp@spread\space when \the\@tempdimb
+                            }%
+    \ifdim\var@@temp@spread<\z@
+        \advance\@tempdimb 1\p@
+    \repeat
+    \flushend@@lastskip@a\the\ht\flushend@@tempbox@c
+    \advance\flushend@@lastskip@a \main@box@skip
+    \advance\flushend@@lastskip@a \ht\@leftcolumn
+    \flushend@@lastskip@b\the\@tempdimb
+    \setbox\flushend@@tempbox@a\vsplit\@tempboxa to\@tempdimb
+    \setbox\@leftcolumn\vbox to\@tempdima{%
+        \vbox to \flushend@@lastskip@a{%
+            \unvbox\flushend@@tempbox@a
+            \vskip\main@box@skip
+            \unvbox\@leftcolumn
+            \vss
+            }%
+        \hrule\@height\flushend@@page@rule width\textwidth
+        \vskip-\flushend@@page@rule
+        \hrule\@height\z@ width\columnwidth
+        \vss
+        }%
+    \global\ht\@leftcolumn=\the\@tempdima
+    \wlog{- LAST -%
+          ^^JExtra skip:\the\var@@temp@spread
+          ^^JLeft:\the\ht\@leftcolumn/\the\dp\@leftcolumn
+          ^^JRight:\the\ht\@tempboxa/\the\dp\@tempboxa
+          ^^JOutput:\the\@tempdimb
+          }%
+    \ifdim\top@@floatbox@skip>\z@
+        \setbox\@outputbox\vbox to\@tempdima{%
+            \if@right@column@spread
+                \vbox spread\var@@temp@spread{%
+                    \unvbox\@outputbox
+                    \vskip\top@@floatbox@skip
+                    \unvbox\@tempboxa
+                    }%
+            \else
+                \vbox spread\var@@temp@spread{%
+                    \unvbox\@outputbox
+                    \vskip\top@@floatbox@skip
+                    \unvbox\@tempboxa
+                    \vss
+                    }%
+            \fi
+            \vss
+            }%
+    \else
+        \setbox\@outputbox\vbox to\@tempdima{%
+            \if@right@column@spread
+                \vbox spread\var@@temp@spread{%
+                    \unvbox\@tempboxa
+                    }%
+            \else
+                \vbox spread\var@@temp@spread{%
+                    \unvbox\@tempboxa
+                    \vss
+                    }%
+            \fi
+            \vss
+            }%
+    \fi
+    }
+\def\set@outputbox@without@footnote{%
+    %% no footnote in left column
+    \@tempdimb \ht\@tempboxa
+    \ifdim\top@@floatbox@skip>\z@
+        \advance\@tempdimb \top@@floatbox@skip
+        \advance\@tempdimb \top@@floatbox@ht
+    \fi
+    \@tempdimb .5\@tempdimb
+    \set@split@topskip@to\topskip
+    \loop
+        \setbox\flushend@@varbox@a\copy\@tempboxa
+        \setbox\flushend@@tempbox@a\vsplit\flushend@@varbox@a to\@tempdimb
+        \setbox\flushend@@tempbox@c\vbox{\unvcopy\flushend@@tempbox@a}%
+        \ifdim\top@@floatbox@skip>\z@
+            \setbox\flushend@@varbox@c\vbox{%
+                \unvcopy\@outputbox
+                \vskip\top@@floatbox@skip
+                \unvbox\flushend@@varbox@a
+                }%
+        \else
+            \setbox\flushend@@varbox@c\vbox{\unvbox\flushend@@varbox@a}%
+        \fi
+        \var@@temp@spread=\ht\flushend@@tempbox@c
+        \advance\var@@temp@spread by\dp\flushend@@tempbox@c
+        \advance\var@@temp@spread by-\ht\flushend@@varbox@c
+        \advance\var@@temp@spread by-\dp\flushend@@varbox@c
+        \wlog@balance@debug{Left x: \the\ht\flushend@@tempbox@a
+                            +\the\dp\flushend@@tempbox@a=\the\ht\flushend@@varbox@a
+                            +\the\dp\flushend@@varbox@a::\the\@tempdimb
+                            ^^JLeft 0: \the\ht\flushend@@tempbox@c
+                            +\the\dp\flushend@@tempbox@c::\the\@tempdimb
+                            ^^JRight x: \the\ht\flushend@@varbox@c
+                            +\the\dp\flushend@@varbox@c=\the\ht\flushend@@varbox@a
+                            +\the\dp\flushend@@varbox@a::\the\@tempdimb
+                            ^^JExtra height:\the\var@@temp@spread\space when \the\@tempdimb
+                           }%
+    \ifdim\var@@temp@spread<\z@ \advance\@tempdimb 1\p@ \repeat
+    \wlog{- LAST -%
+          ^^JExtra skip:\the\var@@temp@spread
+          ^^JLeft:\the\ht\flushend@@tempbox@c/\the\dp\flushend@@tempbox@c
+          ^^JRight:\the\ht\flushend@@varbox@c/\the\dp\flushend@@varbox@c
+          ^^JOutput:\the\@tempdimb
+          }%
+    \setbox\flushend@@tempbox@c\vsplit\@tempboxa to\@tempdimb
+    \setbox\flushend@@varbox@c\vbox{\unvbox\flushend@@tempbox@c}%
+    \setbox\@leftcolumn\vbox to\@tempdima{%
+        \vbox to\@tempdimb{\unvbox\flushend@@varbox@c\vss}%
+        \hrule\@height\flushend@@page@rule width\textwidth
+        \vskip-\flushend@@page@rule
+        \hrule\@height\z@ width\textwidth
+        \vss
+        }%
+    \global\ht\@leftcolumn=\the\@tempdima
+    \ifdim\top@@floatbox@skip>\z@
+        \setbox\@outputbox\vbox to\@tempdima{%
+            \if@right@column@spread
+                \vbox spread\var@@temp@spread{%
+                    \unvbox\@outputbox
+                    \vskip\top@@floatbox@skip
+                    \unvbox\@tempboxa
+                    }%
+            \else
+                \vbox spread\var@@temp@spread{%
+                    \unvbox\@outputbox
+                    \vskip\top@@floatbox@skip
+                    \unvbox\@tempboxa
+                    \vss
+                    }%
+            \fi
+            \vss
+            }%
+    \else
+        \setbox\@outputbox\vbox to\@tempdima{%
+            \if@right@column@spread
+                \vbox spread\var@@temp@spread{%
+                    \unvbox\@tempboxa
+                    }%
+            \else
+                \vbox spread\var@@temp@spread{%
+                    \unvbox\@tempboxa
+                    \vss
+                    }%
+            \fi
+            \vss
+            }%
+    \fi
+    }
+\def\last@outputdblcol@modern{%
+    \if@firstcolumn
+        \global \@firstcolumnfalse
+        \global\setbox\@leftcolumn\copy\@outputbox
+        \splitmaxdepth\maxdimen
+        \vbadness\maxdimen
+        \setbox\@outputbox\vbox{\unvbox\@outputbox\unskip}%
+        \setbox\@outputbox\vsplit\@outputbox to\maxdimen
+        \toks@\expandafter{\topmark}%
+        \xdef\@firstcoltopmark{\the\toks@}%
+        \toks@\expandafter{\splitfirstmark}%
+        \xdef\@firstcolfirstmark{\the\toks@}%
+        \ifx\@firstcolfirstmark\@empty
+            \global\let\@setmarks\relax
+        \else
+            \gdef\@setmarks{%
+                \let\firstmark\@firstcolfirstmark
+                \let\topmark\@firstcoltopmark
+                }%
+        \fi
+    \else
+        \global \@firstcolumntrue
+        \@tempdima\ht\@leftcolumn
+        \advance\@tempdima by\dp\@leftcolumn
+        \set@split@topskip@to\topskip
+        \var@@temp@spread=\wd\@outputbox
+        \get@@footnoterule@@box
+        \xdef\main@box@height{\the\ht\@leftcolumn}%
+        \xdef\main@box@skip{\z@}%
+        \reset@check@@baselineskip@@skip\relax\relax\flushend@@lastskip@c
+        \setbox\flushend@@varbox@a\vbox{\unvcopy\@leftcolumn}%
+        \var@@loop@iter\z@ \var@@temp@loop\z@
+        \analyze@leftcolumn@box\flushend@@varbox@a
+        \setbox\flushend@@varbox@a\vbox{\unvcopy\@outputbox}%
+        \var@@loop@iter\z@ \var@@temp@loop\z@
+        \analyze@rightcolumn@box\flushend@@varbox@a
+        \ifdim\main@box@skip>\z@
+            %% footnote in left column
+            \set@split@topskip@to\z@
+            \setbox\flushend@@varbox@a\vsplit\@leftcolumn to\main@box@height
+        \else
+            %% no footnote in left column
+            \setbox\flushend@@varbox@a\box\@leftcolumn
+        \fi
+        \ifdim\var@@temp@spread>\z@
+            %% rightcolumn non empty
+            \combine@columns@for@balance
+       \else
+            %% rightcolumn empty
+            \setbox\@tempboxa\vbox{%
+                \unvbox\flushend@@varbox@a
+                \remove@lastbox@at@balancing
+                \the\atColsEnd
+                }%
+       \fi
+        \ifdim\main@box@skip>\z@
+            %% footnote in left column
+            \set@outputbox@with@footnote
+        \else
+            %% no footnote in left column
+           \set@outputbox@without@footnote
+        \fi
+        \setbox\@outputbox \vbox {%
+            \hb@xt@\textwidth {%
+                \hb@xt@\columnwidth {%
+                    \fmt@box@adds{\box\@leftcolumn}\hss}%
+                    \hfil
+                    \vrule \@width\columnseprule
+                    \hfil
+                    \hb@xt@\columnwidth {%
+                        \fmt@box@adds{\box\@outputbox}\hss}%
+                        }%
+                    }%
+        \global\let\@outputdblcol\saved@orig@@outputdblcol
+        \global\atColsEnd{}%
+        \ifvoid\hold@viper
+        \else
+            \setbox\@outputbox\vbox{\box\hold@viper\box\@outputbox}%
+        \fi
+        \@combinedblfloats
+        \csname @setmarks\endcsname
+        \@outputpage
+        \begingroup
+            \@dblfloatplacement
+            \@startdblcolumn
+            \@whilesw\if@fcolmade\fi
+                {\@outputpage\@startdblcolumn}%
+            \ifvoid\@viper
+            \else
+                \global\setbox\@viper\vbox{%
+                    \vskip-\stripsep
+                    \unvbox\@viper
+                    }%
+                \csname @viperoutput\endcsname
+            \fi
+        \endgroup
+    \fi
+    }
+\def\last@outputdblcol@ancient{%
+    \if@firstcolumn
+        \global\@firstcolumnfalse
+        \global\setbox\@leftcolumn\box\@outputbox
+    \else
+        \global\@firstcolumntrue
+        \@tempdima\ht\@leftcolumn
+        \set@split@topskip@to\topskip
+        \if@auto@baselineskip
+            \setbox\@tempboxa\vbox{%
+                \unvcopy\@leftcolumn
+                \global\flushend@@lastskip@c\lastskip
+                \global\flushend@@lastskip@b\lastskip
+                \loop
+                    \global\flushend@@lastskip@a\flushend@@lastskip@b
+                    \unskip\unpenalty
+                    \global\flushend@@lastskip@b\lastskip
+                    \global\advance\flushend@@lastskip@c by\lastskip
+                \ifdim\flushend@@lastskip@b=-\flushend@@lastskip@a
+                    \global\advance\flushend@@lastskip@c by-\lastskip
+                \else
+                \repeat
+                \ifdim\flushend@@lastskip@b=-\flushend@@lastskip@a
+                    \ifdim\flushend@@lastskip@b=\z@
+                        \setbox\flushend@@varbox@a\lastbox
+                        \global\advance\flushend@@lastskip@c by\ht\flushend@@varbox@a
+                        \global\advance\flushend@@lastskip@c by\lastskip
+                        \unskip\unpenalty
+                        \setbox\flushend@@varbox@a\lastbox
+                        \global\advance\flushend@@lastskip@c by\dp\flushend@@varbox@a
+                    \else
+                        \global\flushend@@lastskip@c\lastskip
+                        \global\advance\flushend@@lastskip@c by\topskip
+                    \fi
+                \fi
+                \global\advance\flushend@@lastskip@c by-\topskip
+                }%
+            \setbox\@tempboxa\vbox{%
+                \unvbox\@leftcolumn
+                \unskip\unpenalty
+                \vskip\flushend@@lastskip@c
+                \hrule\@height\flushend@@page@rule width\columnwidth
+                \vskip-\flushend@@page@rule
+                \hrule\@height\z@ width\textwidth
+                \the\atColsBreak
+                \unvbox\@outputbox
+                \remove@lastbox@at@balancing
+                \the\atColsEnd
+            }%
+        \else
+            \setbox\@tempboxa\vbox{%
+                \unvbox\@leftcolumn
+                \setbox\z@\lastbox
+                \unskip
+                \hrule\@height\flushend@@page@rule width\columnwidth
+                \vskip-\flushend@@page@rule
+                \hrule\@height\z@ width\textwidth
+                \the\atColsBreak
+                \unvbox\@outputbox
+                \remove@lastbox@at@balancing
+                \the\atColsEnd
+                }%
+        \fi
+        \@tempdimb .5\ht\@tempboxa
+        \loop
+            \setbox\flushend@@tempbox@a\copy\@tempboxa
+            \setbox\flushend@@tempbox@c\vbox to\@tempdimb{%
+                \vsplit\flushend@@tempbox@a to\@tempdimb
+                \vss
+                \vsplit\flushend@@tempbox@a to\@tempdimb
+                }%
+            \wlog{Extra height:\the\ht\flushend@@tempbox@a\space when \the\@tempdimb}%
+        \ifvoid\flushend@@tempbox@a
+        \else
+            \advance\@tempdimb 1\p@
+        \repeat
+        \loop
+            \setbox\flushend@@tempbox@a\copy\@tempboxa
+            \setbox\flushend@@tempbox@c\vbox to\@tempdimb{%
+                \vsplit\flushend@@tempbox@a to\@tempdimb
+                \vss
+                }%
+            \wlog{(2)Left:\the\ht\flushend@@tempbox@c\space
+                    Right:\the\ht\flushend@@tempbox@a\space
+                   Output:\the\@tempdimb
+                 }%
+        \ifdim\ht\flushend@@tempbox@c<\ht\flushend@@tempbox@a
+            \@tempdimb=\the\ht\flushend@@tempbox@a
+        \repeat
+        \wlog{- LAST -^^JExtra skip: \the\z@
+                      ^^JLeft:\the\ht\flushend@@tempbox@c
+                      ^^JRight:\the\ht\flushend@@tempbox@a
+                      ^^JOutput:\the\@tempdimb
+             }%
+        \setbox\flushend@@tempbox@c\vbox to\@tempdimb{%
+            \vsplit\@tempboxa to\@tempdimb
+            \vss
+            }%
+        \setbox\@leftcolumn\vbox to\@tempdima{%
+            \fmt@vbox@adds[\columnwidth]{%
+                \vbox to\@tempdimb{%
+                    \unvbox
+                    \flushend@@tempbox@c
+                    }%
+                }%
+            \hrule\@height\flushend@@page@rule
+            \vskip-\flushend@@page@rule
+            \hrule\@height\z@ width\textwidth
+            \vss
+            }%
+        \setbox\@outputbox\vbox to\@tempdima{%
+            \fmt@vbox@adds[\columnwidth]{%
+                \vbox to\@tempdimb{%
+                    \unvbox\@tempboxa
+                    \vskip\z@
+                    }%
+                }%
+            \hrule\@height\flushend@@page@rule
+            \vskip-\flushend@@page@rule
+            \hrule\@height\z@ width\textwidth
+            \vss
+            }%
+        \setbox\@outputbox\vbox{%
+            \hb@xt@\textwidth{%
+                \hb@xt@\columnwidth{\box\@leftcolumn\hss}%
+                \hfil
+                \vrule \@width\columnseprule
+                \hfil
+                \hb@xt@\columnwidth{\box\@outputbox\hss}%
+                }%
+            }%
+        \global\let\@outputdblcol\saved@orig@@outputdblcol
+        \global\atColsEnd{}%
+        \ifvoid\hold@viper
+        \else
+            \setbox\@outputbox\vbox{\box\hold@viper\box\@outputbox}%
+        \fi
+        \@combinedblfloats
+        \@outputpage
+        \begingroup
+            \@dblfloatplacement
+            \@startdblcolumn
+            \@whilesw\if@fcolmade\fi
+                {\@outputpage\@startdblcolumn}%
+            \ifvoid\@viper
+            \else
+                \global\setbox\@viper\vbox{%
+                    \vskip-\stripsep
+                    \unvbox\@viper
+                    }%
+                \csname @viperoutput\endcsname
+            \fi
+        \endgroup
+    \fi
+    }
+\usepackage{etoolbox}
+\AtBeginDocument{%
+    \global\let\saved@orig@@outputdblcol\@outputdblcol
+    \if@ancient@balance@version
+        \global\let\last@outputdblcol\last@outputdblcol@ancient
+    \else
+        \global\let\last@outputdblcol\last@outputdblcol@modern
+    \fi
+    \global\let\balanced@@outputdblcol\last@outputdblcol
+    \preto\enddocument{\let\@outputdblcol\balanced@@outputdblcol}%
+    \appto\footnoterule{\vskip\z@}%
+    }
+\def\flushcolsend{\global\let\@outputdblcol\last@outputdblcol}
+\def\raggedcolsend{\global\let\@outputdblcol\saved@orig@@outputdblcol}
+\def\flushend{\global\let\balanced@@outputdblcol\last@outputdblcol}
+\def\raggedend{\global\let\balanced@@outputdblcol\saved@orig@@outputdblcol}
+\if@balance@debug
+    \showcolsendrule
+\fi
+\endinput
+%%
+%% End of file `flushend.sty'.

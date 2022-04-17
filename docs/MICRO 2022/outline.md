@@ -4,7 +4,7 @@
   * Compilers have been successful with ML models like DNNs \cite{TVM, Tiramisu, XLA}. However, compiler techniques for decision tree ensembles are less well studied.
   * Repeated effort to write libraries and several new architectures \cite{Halide?}
   * Model, batch size and architecture specific specialization and optimizations [cite : cache conscious ensemble ranking, vpred]
-  * Different optimizations have been designed in different libraries \cite{xgboost, Treelite, lightgbm, vpred}. However, libraries are hard coded to use certain optimizations and cannot tailor the generated code according to the model being used. [TODO we also need to say the search through the potential optimization space maybe somewhat limited]
+  * Existing libraries \cite{xgboost, Treelite, lightgbm, vpred} target specific optimizations and are hard to maintain/upgrade as hardware evolves. They cannot tailor the generated code according to the model being used. [TODO we also need to say the search through the potential optimization space maybe somewhat limited]
 * Contributions
   * We build an extensible compiler infrastructure to compile decision tree models. The infrastructure is built to allow exploration of optimization and code generation techniques. [TODO is this claim too grand? Should we be saying something like MLIR?]
   * We develop a general infrastructure for the vectorization of decision tree walks based on grouping tree nodes into "tiles". This includes general support for code generation and the in-memory representation of tiled trees. The infrastructure can be used to tile trees based on different cost functions. 
@@ -14,6 +14,7 @@
 # Background
 * Decision trees
 * Decision tree probabilities and notation
+* MLIR
 * XGBoost
 
 # Compiler Overview
@@ -72,5 +73,6 @@
 * No comparison with daal (we can say that is hand tuned assembly and is not portable across architectures)
 * All models are XGBoost
 * Distinguish from prior works -- especially QuickScorer (the bit mask based algorithm that I mentioned a while ago. We can claim this is orthogonal as it is an strategy  that can be implemented in the compiler if needed?)
+  * Also need to distinguish from Humming bird
 * We still don't have Treelite style code gen (blow everything up into ifs) in our compiler
 * We don't do any exploration or optimizations for tiling the iteration space. Several optimizations are left unexplored.

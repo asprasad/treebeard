@@ -1,0 +1,40 @@
+\section{Optimizations}
+
+\TODO{This section needs a better name!}
+\input{tiling}
+\input{uniftiling}
+\input{probtiling}
+\input{unrollandjam}
+
+\subsection{Vectorization}
+Vectorization performed by Treebeard is enabled by the tiling transformations described in section \ref{sec:Tiling}. 
+When the low level IR is translated to LLVM IR, Treebeard generates LLVM instructions that operate on the threholds and feature indices 
+of nodes within a tile in a vector fashion. Therefore, thresholds and feature indices are loaded using vector loads and predicates are 
+evaluated using vector comparisons. These vector LLVM IR instructions are then converted to vector instructions in the target ISA by 
+the LLVM JIT.
+
+\subsection{Parallelization}
+Currently, Treebeard performs a naive parallelization of the inference computation. When parallelism is enabled, the 
+loop over the input rows is parallelized using OpenMP. Treebeard rewrites 
+the mid-level IR by tiling the loop over the input rows with a tile size equal to the number of cores. 
+As a concrete example, consider the case where we intend to perform inference using a model with 4 trees 
+on a batch of 64 rows. Further, assume that we wish to parallelize this computation across 8 cores. 
+Treebeard then generates the following IR.
+\begin{lstlisting}[style=c++]
+  forest = ensemble(...)
+  parallel.for i0 = 0 to 64 step 8 {
+    for i1 = 0 to 8 step 1 {
+      i = i0 + i1
+      prediction = 0
+      for t = 0 to 4 step 1 {
+        tree = getTree(forest, t) 
+        treePrediction = WalkTree(tree, rows[i])
+        prediction = prediction + treePrediction
+      }
+      predictions[i] = prediction
+    }
+  }
+\end{lstlisting}
+Currently, as our focus is on single core performance, we do not 
+do any parallelism related optimizations (such as loop tiling). We leave a more thorough exploration of parallelization 
+to future work.
