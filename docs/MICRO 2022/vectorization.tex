@@ -166,7 +166,7 @@ cannot be used because of the memory footprint increase (a large part of the tre
 On the other hand, the sparse representation in section \ref{sec:SparseRep} adds 
 an extra hop for leaves that have non-leaf siblings. But this would mean that we add extra hops for 
 the most probable leaves after probability based tiling which defeats the optimization.
-
+\TODO{kr: connect to Peeling in MIR}
 We address these challenges using a code generation strategy. Treebeard peels 
 the tree walk and specializes the leaf checks at higher levels to avoid the extra hop. Currently, 
 we determine the maximum depth of leaves needed to cover 90 percent of the inputs and peel the tree 
