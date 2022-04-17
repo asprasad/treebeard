@@ -1,4 +1,4 @@
-\subsection{Unroll and Jam}
+\subsection{Tree Walk Interleaving}
 While tiling and subsequent vectorization gives significant performance gains, profiling 
 the generated code showed that true dependencies between instructions were still causing
 a significant number of stall cycles. In order to fill these stall cycles, Treebeard does 
@@ -9,7 +9,7 @@ in the stall cycles.
 
 This optimization is performed across both the mid-level IR and low-level IR. Loops on which 
 to perform unroll and jam are identified in the mid-level IR. This information is communicated to the 
-lowering passes by replacing these tree walks with specialized tree walk operations. The lowering 
+lowering passes by annotating these tree walk operations as descibred in section \ref{sec:Overview}. The lowering 
 passes that transform the mid-level IR to low-level IR interleave operations across independent
 tree walks.
 
@@ -18,8 +18,8 @@ by a factor of 2 and the two resulting tree walks are jammed together.
 
 \begin{lstlisting}[style=c++]
   forest = ensemble(...)
-  for t = 0 to 4 step 1 {
-    for i = 0 to 2 step 2 {
+  for t = 0 to numTrees step 1 {
+    for i = 0 to batchSize step 2 {
       tree = getTree(forest, t)
       prediction1, prediction2 = InterleavedWalk((tree, rows[i]), (tree, rows[i+1]))
     }
@@ -47,6 +47,6 @@ walk is listed below.
 \end{lstlisting}
 These transformations are fairly general and are not aware of the in memory representation of the model. Therefore, they 
 are reusable across different in memory representations - the ones that are currently built into Treebeard or ones that 
-are added in the future.
+maybe added in the future.
 \TODO{AP I feel the way this section is currently written makes the optimization seem extremely trivial. Is there a different 
 way to present it?}
