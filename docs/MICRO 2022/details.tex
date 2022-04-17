@@ -5,13 +5,7 @@
 \input{uniftiling}
 \input{probtiling}
 \input{unrollandjam}
-
-\subsection{Vectorization}
-Vectorization performed by Treebeard is enabled by the tiling transformations described in section \ref{sec:Tiling}. 
-When the low level IR is translated to LLVM IR, Treebeard generates LLVM instructions that operate on the threholds and feature indices 
-of nodes within a tile in a vector fashion. Therefore, thresholds and feature indices are loaded using vector loads and predicates are 
-evaluated using vector comparisons. These vector LLVM IR instructions are then converted to vector instructions in the target ISA by 
-the LLVM JIT.
+\input{vectorization}
 
 \subsection{Parallelization}
 Currently, Treebeard performs a naive parallelization of the inference computation. When parallelism is enabled, the 
