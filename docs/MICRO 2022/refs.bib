@@ -113,6 +113,12 @@ series = {CGO 2019}
   note = {Accessed: 2022-04-16}
 }
 
+@misc{CUTLASS,
+  title = {NVIDIA CUTLASS},
+  howpublished = {\url{https://github.com/NVIDIA/cutlass}},
+  note = {Accessed: 2022-04-16}
+}
+
 @inproceedings{Halide,
 author = {Ragan-Kelley, Jonathan and Barnes, Connelly and Adams, Andrew and Paris, Sylvain and Durand, Fr\'{e}do and Amarasinghe, Saman},
 title = {Halide: A Language and Compiler for Optimizing Parallelism, Locality, and Recomputation in Image Processing Pipelines},
@@ -428,3 +434,124 @@ doi = {10.5120/2237-2860}
   biburl    = {https://dblp.org/rec/journals/corr/abs-1811-09886.bib},
   bibsource = {dblp computer science bibliography, https://dblp.org}
 }
+
+@inproceedings{atlas_sc98,
+AUTHOR    = "R. Clint Whaley and Jack Dongarra",
+TITLE     = "Automatically Tuned Linear Algebra Software",
+BOOKTITLE = "SuperComputing 1998: High Performance Networking and Computing",
+YEAR      = "1998",
+NOTE      = "CD-ROM Proceedings. {\bf Winner, best paper in the systems
+            category.}\\
+            URL: \verb+http://www.cs.utsa.edu/~whaley/papers/atlas_sc98.ps+"
+}
+
+@article{BLIS,
+author = {Van Zee, Field G. and van de Geijn, Robert A.},
+title = {BLIS: A Framework for Rapidly Instantiating BLAS Functionality},
+year = {2015},
+issue_date = {June 2015},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {41},
+number = {3},
+issn = {0098-3500},
+url = {https://doi.org/10.1145/2764454},
+doi = {10.1145/2764454},
+abstract = {The BLAS-like Library Instantiation Software (BLIS) framework is a new infrastructure for rapidly instantiating Basic Linear Algebra Subprograms (BLAS) functionality. Its fundamental innovation is that virtually all computation within level-2 (matrix-vector) and level-3 (matrix-matrix) BLAS operations can be expressed and optimized in terms of very simple kernels. While others have had similar insights, BLIS reduces the necessary kernels to what we believe is the simplest set that still supports the high performance that the computational science community demands. Higher-level framework code is generalized and implemented in ISO C99 so that it can be reused and/or reparameterized for different operations (and different architectures) with little to no modification. Inserting high-performance kernels into the framework facilitates the immediate optimization of any BLAS-like operations which are cast in terms of these kernels, and thus the framework acts as a productivity multiplier. Users of BLAS-dependent applications are given a choice of using the traditional Fortran-77 BLAS interface, a generalized C interface, or any other higher level interface that builds upon this latter API. Preliminary performance of level-2 and level-3 operations is observed to be competitive with two mature open source libraries (OpenBLAS and ATLAS) as well as an established commercial product (Intel MKL).},
+journal = {ACM Trans. Math. Softw.},
+month = {jun},
+articleno = {14},
+numpages = {33},
+keywords = {libraries, Linear algebra, high-performance, matrix, BLAS}
+}
+
+@ARTICLE{SPIRAL,  
+  author= {Puschel, M. and Moura, J.M.F. and Johnson, J.R. and Padua, D. and Veloso, M.M. and Singer, B.W. and Jianxin Xiong and Franchetti, F. and Gacic, A. and Voronenko, Y. and Chen, K. and Johnson, R.W. and Rizzolo, N.},
+  journal={Proceedings of the IEEE},
+  title={SPIRAL: Code Generation for DSP Transforms},
+  year={2005},
+  volume={93},
+  number={2},
+  pages={232-275},
+  doi={10.1109/JPROC.2004.840306}
+}
+
+@article{Jansson2014gpuRFAG,
+  title={gpuRF and gpuERT: Efficient and Scalable GPU Algorithms for Decision Tree Ensembles},
+  author={Karl Jansson and H{\aa}kan Sundell and Henrik Bostr{\"o}m},
+  journal={2014 IEEE International Parallel \& Distributed Processing Symposium Workshops},
+  year={2014},
+  pages={1612-1621}
+}
+
+@article{Nasridinov2013DecisionTC,
+  title={Decision tree construction on GPU: ubiquitous parallel computing approach},
+  author={Aziz Nasridinov and Yangsun Lee and Young-Ho Park},
+  journal={Computing},
+  year={2013},
+  volume={96},
+  pages={403-413}
+}
+
+@inproceedings{TensorFlow,
+author = {Abadi, Mart\'{\i}n and Barham, Paul and Chen, Jianmin and Chen, Zhifeng and Davis, Andy and Dean, Jeffrey and Devin, Matthieu and Ghemawat, Sanjay and Irving, Geoffrey and Isard, Michael and Kudlur, Manjunath and Levenberg, Josh and Monga, Rajat and Moore, Sherry and Murray, Derek G. and Steiner, Benoit and Tucker, Paul and Vasudevan, Vijay and Warden, Pete and Wicke, Martin and Yu, Yuan and Zheng, Xiaoqiang},
+title = {TensorFlow: A System for Large-Scale Machine Learning},
+year = {2016},
+isbn = {9781931971331},
+publisher = {USENIX Association},
+address = {USA},
+abstract = {TensorFlow is a machine learning system that operates at large scale and in heterogeneous environments. Tensor-Flow uses dataflow graphs to represent computation, shared state, and the operations that mutate that state. It maps the nodes of a dataflow graph across many machines in a cluster, and within a machine across multiple computational devices, including multicore CPUs, general-purpose GPUs, and custom-designed ASICs known as Tensor Processing Units (TPUs). This architecture gives flexibility to the application developer: whereas in previous "parameter server" designs the management of shared state is built into the system, TensorFlow enables developers to experiment with novel optimizations and training algorithms. TensorFlow supports a variety of applications, with a focus on training and inference on deep neural networks. Several Google services use TensorFlow in production, we have released it as an open-source project, and it has become widely used for machine learning research. In this paper, we describe the TensorFlow dataflow model and demonstrate the compelling performance that TensorFlow achieves for several real-world applications.},
+booktitle = {Proceedings of the 12th USENIX Conference on Operating Systems Design and Implementation},
+pages = {265–283},
+numpages = {19},
+location = {Savannah, GA, USA},
+series = {OSDI'16}
+}
+
+@inproceedings{10.1145/301618.301661,
+author = {Frigo, Matteo},
+title = {A Fast Fourier Transform Compiler},
+year = {1999},
+isbn = {1581130945},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/301618.301661},
+doi = {10.1145/301618.301661},
+abstract = {The FFTW library for computing the discrete Fourier transform (DFT) has gained a wide acceptance in both academia and industry, because it provides excellent performance on a variety of machines (even competitive with or faster than equivalent libraries supplied by vendors). In FFTW, most of the performance-critical code was generated automatically by a special-purpose compiler, called genfft, that outputs C code. Written in Objective Caml, genfft can produce DFT programs for any input length, and it can specialize the DFT program for the common case where the input data are real instead of complex. Unexpectedly, genfft "discovered" algorithms that were previously unknown, and it was able to reduce the arithmetic complexity of some other existing algorithms. This paper describes the internals of this special-purpose compiler in some detail, and it argues that a specialized compiler is a valuable tool.},
+booktitle = {Proceedings of the ACM SIGPLAN 1999 Conference on Programming Language Design and Implementation},
+pages = {169–180},
+numpages = {12},
+location = {Atlanta, Georgia, USA},
+series = {PLDI '99}
+}
+
+@article{FFTW,
+author = {Frigo, Matteo},
+title = {A Fast Fourier Transform Compiler},
+year = {1999},
+issue_date = {May 1999},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {34},
+number = {5},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/301631.301661},
+doi = {10.1145/301631.301661},
+abstract = {The FFTW library for computing the discrete Fourier transform (DFT) has gained a wide acceptance in both academia and industry, because it provides excellent performance on a variety of machines (even competitive with or faster than equivalent libraries supplied by vendors). In FFTW, most of the performance-critical code was generated automatically by a special-purpose compiler, called genfft, that outputs C code. Written in Objective Caml, genfft can produce DFT programs for any input length, and it can specialize the DFT program for the common case where the input data are real instead of complex. Unexpectedly, genfft "discovered" algorithms that were previously unknown, and it was able to reduce the arithmetic complexity of some other existing algorithms. This paper describes the internals of this special-purpose compiler in some detail, and it argues that a specialized compiler is a valuable tool.},
+journal = {SIGPLAN Not.},
+month = {may},
+pages = {169–180},
+numpages = {12}
+}
+
+@misc{TensorComprehensions,
+  doi = {10.48550/ARXIV.1802.04730},
+  url = {https://arxiv.org/abs/1802.04730},
+  author = {Vasilache, Nicolas and Zinenko, Oleksandr and Theodoridis, Theodoros and Goyal, Priya and DeVito, Zachary and Moses, William S. and Verdoolaege, Sven and Adams, Andrew and Cohen, Albert},
+  keywords = {Programming Languages (cs.PL), Machine Learning (cs.LG), FOS: Computer and information sciences, FOS: Computer and information sciences},
+  title = {Tensor Comprehensions: Framework-Agnostic High-Performance Machine Learning Abstractions},
+  publisher = {arXiv},
+  year = {2018},
+  copyright = {arXiv.org perpetual, non-exclusive license}
+}
+

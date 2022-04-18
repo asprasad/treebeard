@@ -14,8 +14,8 @@ abstraction to a sequence of operations at a lower abstraction. Optimizations in
 are implemented using a combination of annotation and lowering. An operation at a higher 
 abstraction is annotated with attributes that indicate what kind of optimization is 
 to be performed while lowering it. The lowering transformation uses this information to generate 
-optimized lower level code. For example, tree tiling and loop nest structure (figure \ref{Fig:Overview} 
-shows two possible loop nest structures -- one tree at a time and one row at a time) are decided 
+optimized lower level code. For example, tree tiling and loop ordering (figure \ref{Fig:Overview} 
+shows two possible loop orders -- one tree at a time and one row at a time) are decided 
 at the highest abstraction. These decisions are communicated to the lowering pass 
 which explicitly encodes them in the lowered IR as shown in Figure \ref{Fig:Overview}.
 

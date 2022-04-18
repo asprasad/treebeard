@@ -1,24 +1,67 @@
 \section{Related Work}
 
 \emph{Decision Tree Ensemble Compilers:}
-Treelite\cite{Treelite} only supports generation of if-else style code and is not extensible.
-Hummingbird\cite{Hummingbird} tries to compile decision tree models to tensor primitives so 
+Treelite\cite{Treelite} is a model compiler for decision tree ensembles and is the system most
+closely related to our work. Even though Treelite compiles ensembles, it only supports 
+generation of if-else style code and is not easily extensible. It cannot perform any of the optimizations 
+\Treebeard{} is designed to perform. 
+Hummingbird\cite{Hummingbird} is a compiler for traditional ML models that can also compile decision trees. 
+It compiles decision tree models to tensor primitives so 
 they can be integrated into tensor based frameworks like TensorFlow \cite{TensorFlow}.
+Hummingbird does not perform any optimizations tailored to decision trees. It 
+also does not perform model specific optimizations. 
 
 \emph{Libraries:} Currently, the most popular systems for decision tree based models 
 are libraries. XGBoost\cite{XGBoost} and LightGBM\cite{LightGBM} are the most  
 popular gradient boosting libraries while scikit-learn\cite{Sklearn} is 
 extremely popular for random forest models. These libraries implement both 
-training and inference. 
+training and inference. However, as mentioned in section \ref{sec:Intro}, porting 
+optimizations in these libraries to newer architectures and maintaining them is 
+extremely difficult. Additionally, the inference routines in these libraries have 
+to be general and cannot be specialized to a specific model.
+
+Tahoe\cite{Tahoe} is a library and a performance model that performs high 
+performance tree inference on GPUs. Even though it performs some model 
+specific optimizations, the techniques are GPU specific and cannot easily 
+be ported to architectures like CPUs. Asadi et. al.\cite{VPred} optimizes tree walks
+by hiding dependency stalls by interleaving tree walks. However, their system
+does not do perform any vectorization, tree reordering and specialized code
+generation. They also do not build an easily extensible end-to-end system.
+QuickScorer\cite{QuickScorer, QuickScorer1} is an algorithm that uses 
+bit manipulation to compute tree predictions. Even though QuickScorer is 
+extremely fast for smaller models, it does not scale well to larger 
+models\cite{ProbBasedLayout}. The goal of QuickScorer is orthogonal 
+to the goals of \Treebeard{} and the QuickScorer algorithm can easily  
+be integrated into \Treebeard{} as another traversal strategy for the 
+system to explore. Tang et. al.\cite{CacheConscious1} and Jin et. al.\cite{CacheConscious2}
+build models to predict cache performance of decision tree ensembles on CPUs.
+This work is again orthogonal to the work described in this paper and 
+can easily be incorporated into \Treebeard{}. Some systems have been proposed 
+to parallelize decision tree training on CPUs and GPUs\cite{Jansson2014gpuRFAG, Nasridinov2013DecisionTC}.
+
 
 \emph{Other Systems and Techniques}: 
 Ren et al \cite{PortableVM} build an intermediate language and VM to 
 enable SIMD execution of decision tree inference. The SIMD execution itself is implemented 
 by hand in the VM and the VM needs to be reimplemented for every supported target architecture.
 Additionally, even though they perform layout optimizations, their system doesn't perform 
-any model specific optimizations. 
+any model specific optimizations. Jo et. al.\cite{MilindTreeVectorization} describe techniques 
+to vectorize tree based applications. They do not study optimizations specific to decision trees.
 
-Tahoe, Vpred, CacheConscious1, QuickScorer, QuickScorer1, MilindTreeVectorization
-Bliss?
-
-Decision tree training parallelization references
+\emph{Code Generation Systems from Other Domains:}
+Several compilers and code generation techniques exist for other domains.
+TVM\cite{TVM}, Tiramisu\cite{Tiramisu} and Tensor 
+Comprehensions\cite{TensorComprehensions} are domain specific compilers 
+for deep learning models. Halide\cite{Halide} is a DSL and compiler 
+primarily designed for image processing applications. Several systems
+that generate optimized processing routines have also been designed 
+for BLAS and signal processing. BLIS\cite{BLIS} and ATLAS\cite{atlas_sc98}
+are systems to instantiate high performance BLAS routines on multiple 
+target architectures. CUTLASS\cite{CUTLASS} provides building blocks 
+in the form of C++ templates to quickly instantiate high performance 
+BLAS functions on different GPU architectures. SPIRAL\cite{SPIRAL}
+is a domain specific compilers for signal processing applications
+that instantiates high performance routines for linear transformations 
+like FFTs and FIR filters. FFTW\cite{FFTW} is a fast fourier transform 
+compiler that generates high performance FFT routines by customizing 
+the routine based on FFT size and the target machine.
