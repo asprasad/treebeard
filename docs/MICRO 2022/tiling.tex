@@ -95,3 +95,9 @@ Treebeard maintains the following invariants.
   \item Children of a node are numbered from left to right (regardless of level). For example, $l_1$ is the first child of $t_1$, $l_2$ is the second and so on.
 \end{enumerate}
    }
+\input{uniftiling}
+\input{probtiling}
+
+\subsection{A note on implementation}
+\TODO{Kr : Not sure if this is needed}
+The tiling algorithms generate \op{TileId} attributes per tree and this information is used when lowering to the mid level abstraction in the form of loops. The \op{TileId} attribute maintains a mapping from a Node to the TileId asigned to it. A sample of the lowered MIR code is shown in Figure~\ref{Fig:Overview}.	

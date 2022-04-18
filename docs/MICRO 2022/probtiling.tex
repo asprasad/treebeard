@@ -16,7 +16,7 @@ We call trees with a small number of extremely likely leaves \textbf{\emph{leaf 
 
 On the other hand, for the benchmark \op{epsilon},
 figure \ref{Fig:EpsilonStats} shows that a trees need a much larger fraction of their leaves to cover a significant fraction of the training input.
-This means that most trees in the \op{epsilon} model are not leaf biased.
+This means that most trees in \op{epsilon} are not leaf biased.
 
 \CommentOut{
 \subsubsection{More Notation}
@@ -141,7 +141,7 @@ number of tile shapes. This in turn caused a loss in performance because the lar
 lookup table needed (section \ref{sec:LookupTable}) caused increased L1 cache misses. In order to 
 alleviate this, we only perform probability based tiling on trees that are leaf biased.
 }
-We find probability based tiling is only beneficial for leaf biased trees\footnote{Turns out that probability based tiling produces many more tile shapes (see Section~\ref{sec:tileShapes}) which direclty impacts the cost of \op{getChildTile} making it more expensive than basic tiling}.  Recall that   
+We find probability based tiling is only beneficial for leaf biased trees\footnote{Turns out that for trees that are not leaf biased, probability based tiling produces many more tile shapes (see Section~\ref{sec:tileShapes}) which direclty impacts the cost of \op{getChildTile} making it more expensive than basic tiling.}.  Recall that   
 a tree to be leaf biased if a small fraction of leaves, say $\alpha$, can cover a large fraction of training inputs, say $\beta$.
 We only perform probability based tiling on trees with thresholds $\alpha=0.05$ and $\beta=0.9$ and fall back to uniform tiling otherwise. 
 
