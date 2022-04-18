@@ -47,6 +47,20 @@ by hand in the VM and the VM needs to be reimplemented for every supported targe
 Additionally, even though they perform layout optimizations, their system doesn't perform 
 any model specific optimizations. Jo et. al.\cite{MilindTreeVectorization} describe techniques 
 to vectorize tree based applications. They do not study optimizations specific to decision trees.
+Both these works vectorize tree walks by performing different tree walks on each vector lane.
+The main issue with this approach is the divergence of tree walks. Another issue is that 
+memory accesses are gathers rather than vector loads. \Treebeard{}'s approach to 
+vectorization solves both these issues. Also, these approaches are not precluded 
+by \Treebeard{}'s tiling based vectorization. Multiple tiled tree walks can be combined
+into a single vectorized walk. We leave an exploration of this to future work. 
+FAST\cite{FAST} is a system that accelerates tree structured index search 
+on CPUs and GPUs. FAST defines a layout for the index tree that enables vectorization 
+of the tree walk. FAST uses a tree tiling approach to vectorize tree walks. However, 
+FAST only uses a single triangular tile shape. \Treebeard{}'s basic tiling algorithm 
+is a generalization of the tiling used in FAST. If given a perfectly balanced tree,
+the basic tiling algorithm would return exactly the tiling used by FAST. 
+Also, the tree walks in FAST are hand coded using intrinsics on the CPU and CUDA 
+on the GPU and therefore need repeated effort to implement on each target. 
 
 \emph{Code Generation Systems from Other Domains:}
 Several compilers and code generation techniques exist for other domains.

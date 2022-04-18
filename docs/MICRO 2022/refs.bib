@@ -296,24 +296,30 @@ numpages = {31},
 keywords = {SIMD, fine-grained parallelism, Irregular data structure}
 }
 
-@article{FAST,
-author = {Ren, Bin and Mytkowicz, Todd and Agrawal, Gagan},
-title = {A Portable Optimization Engine for Accelerating Irregular Data-Traversal Applications on SIMD Architectures},
-year = {2014},
-issue_date = {June 2014},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-volume = {11},
-number = {2},
-issn = {1544-3566},
-url = {https://doi.org/10.1145/2632215},
-doi = {10.1145/2632215},
-abstract = {Fine-grained data parallelism is increasingly common in the form of longer vectors integrated with mainstream processors (SSE, AVX) and various GPU architectures. This article develops support for exploiting such data parallelism for a class of nonnumeric, nongraphic applications, which perform computations while traversing many independent, irregular data structures. We address this problem by developing several novel techniques. First, for code generation, we develop an intermediate language for specifying such traversals, followed by a runtime scheduler that maps traversals to various SIMD units. Second, we observe that good data locality is crucial to sustained performance from SIMD architectures, whereas many applications that operate on irregular data structures (e.g., trees and graphs) have poor data locality. To address this challenge, we develop a set of data layout optimizations that improve spatial locality for applications that traverse many irregular data structures. Unlike prior data layout optimizations, our approach incorporates a notion of both interthread and intrathread spatial reuse into data layout. Finally, we enable performance portability (i.e., the ability to automatically optimize applications for different architectures) by accurately modeling the impact of inter- and intrathread locality on program performance. As a consequence, our model can predict which data layout optimization to use on a wide variety of SIMD architectures.To demonstrate the efficacy of our approach and optimizations, we first show how they enable up to a 12X speedup on one SIMD architecture for a set of real-world applications. To demonstrate that our approach enables performance portability, we show how our model predicts the optimal layout for applications across a diverse set of three real-world SIMD architectures, which offers as much as 45% speedup over a suboptimal solution.},
-journal = {ACM Trans. Archit. Code Optim.},
-month = {jun},
-articleno = {16},
-numpages = {31},
-keywords = {SIMD, fine-grained parallelism, Irregular data structure}
+@inproceedings{FAST,
+  author    = {Changkyu Kim and
+               Jatin Chhugani and
+               Nadathur Satish and
+               Eric Sedlar and
+               Anthony D. Nguyen and
+               Tim Kaldewey and
+               Victor W. Lee and
+               Scott A. Brandt and
+               Pradeep Dubey},
+  editor    = {Ahmed K. Elmagarmid and
+               Divyakant Agrawal},
+  title     = {{FAST:} fast architecture sensitive tree search on modern CPUs and
+               GPUs},
+  booktitle = {Proceedings of the {ACM} {SIGMOD} International Conference on Management
+               of Data, {SIGMOD} 2010, Indianapolis, Indiana, USA, June 6-10, 2010},
+  pages     = {339--350},
+  publisher = {{ACM}},
+  year      = {2010},
+  url       = {https://doi.org/10.1145/1807167.1807206},
+  doi       = {10.1145/1807167.1807206},
+  timestamp = {Thu, 11 Mar 2021 15:20:15 +0100},
+  biburl    = {https://dblp.org/rec/conf/sigmod/KimCSSNKLBD10.bib},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
 }
 
 @misc{LookingGlass,
