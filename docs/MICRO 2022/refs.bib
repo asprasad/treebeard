@@ -160,6 +160,24 @@ location = {Santiago, Chile},
 series = {SIGIR '15}
 }
 
+@inproceedings{QuickScorer1,
+author = {Lucchese, Claudio and Nardini, Franco Maria and Orlando, Salvatore and Perego, Raffaele and Tonellotto, Nicola and Venturini, Rossano},
+title = {Exploiting CPU SIMD Extensions to Speed-up Document Scoring with Tree Ensembles},
+year = {2016},
+isbn = {9781450340694},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/2911451.2914758},
+doi = {10.1145/2911451.2914758},
+abstract = {Scoring documents with learning-to-rank (LtR) models based on large ensembles of regression trees is currently deemed one of the best solutions to effectively rank query results to be returned by large scale Information Retrieval systems. This paper investigates the opportunities given by SIMD capabilities of modern CPUs to the end of efficiently evaluating regression trees ensembles. We propose V-QuickScorer (vQS), which exploits SIMD extensions to vectorize the document scoring, i.e., to perform the ensemble traversal by evaluating multiple documents simultaneously. We provide a comprehensive evaluation of vQS against the state of the art on three publicly available datasets. Experiments show that vQS provides speed-ups up to a factor of 3.2x.},
+booktitle = {Proceedings of the 39th International ACM SIGIR Conference on Research and Development in Information Retrieval},
+pages = {833–836},
+numpages = {4},
+keywords = {ensemble methods, learning to rank, document scoring},
+location = {Pisa, Italy},
+series = {SIGIR '16}
+}
+
 @inproceedings{CacheConscious1,
 author = {Tang, Xun and Jin, Xin and Yang, Tao},
 title = {Cache-Conscious Runtime Optimization for Ranking Ensembles},
