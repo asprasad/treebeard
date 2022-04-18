@@ -1,0 +1,5 @@
+\subsection{Loop peeling and walk unrolling}
+\Treebeard{} splits the loop that performs a tree walk into two parts. As it is aware of the depth of the first leaf in a tree, it peels and introduces a \op{prologue} loop that walks down the tree a constant number of steps (up to first leaf) and then performs the rest of the tree walk in a separate loop. Further \Treebeard{} unrolls the prologue completely, avoiding all traversal induced branching in it.
+
+Note that for trees where \Treebeard{} has already padded and balanced the tree (Section~\ref{sec:treeorder}), walk unrolling completely avoids all traversal induced spills.
+\TODO{kr: Add example?}
