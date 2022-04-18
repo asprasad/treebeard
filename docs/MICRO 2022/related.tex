@@ -1,12 +1,14 @@
 \section{Related Work}
-
+While decision trees are heavily used there is little prior work on building optimizing compilers for tree based inference. Below we discuss some related work and contrast it to \Treebeard{}.
 \emph{Decision Tree Ensemble Compilers:}
-Treelite\cite{Treelite} is a model compiler for decision tree ensembles and is the system most
-closely related to our work. Even though Treelite compiles ensembles, it only supports 
-generation of if-else style code and is not easily extensible. It cannot perform any of the optimizations 
+Treelite\cite{Treelite} is a model compiler for decision tree ensembles and is the system
+ most closely related to our work. Even though Treelite compiles ensembles, it only supports 
+generation of simple \op{if-else} style code, it does not perform the rich 
+optimizations \Treebeard{} perform and is not easily extensible.
+% It cannot perform any of the optimizations 
 \Treebeard{} is designed to perform. 
-Hummingbird\cite{Hummingbird} is a compiler for traditional ML models that can also compile decision trees. 
-It compiles decision tree models to tensor primitives so 
+Hummingbird\cite{Hummingbird} compiles traditional ML models to make use 
+of tensor primitives so 
 they can be integrated into tensor based frameworks like TensorFlow \cite{TensorFlow}.
 Hummingbird does not perform any optimizations tailored to decision trees. It 
 also does not perform model specific optimizations. 
@@ -23,10 +25,8 @@ to be general and cannot be specialized to a specific model.
 Tahoe\cite{Tahoe} is a library and a performance model that performs high 
 performance tree inference on GPUs. Even though it performs some model 
 specific optimizations, the techniques are GPU specific and cannot easily 
-be ported to architectures like CPUs. Asadi et. al.\cite{VPred} optimizes tree walks
-by hiding dependency stalls by interleaving tree walks. However, their system
-does not do perform any vectorization, tree reordering and specialized code
-generation. They also do not build an easily extensible end-to-end system.
+be ported to CPUs. Asadi et. al.\cite{VPred} optimizes tree walks
+by hiding dependency stalls by interleaving tree walks. \Treebeard{} is an extensible optimizing compiler that carefully implements this and many other optimizations at different levels of abstractions.
 QuickScorer\cite{QuickScorer, QuickScorer1} is an algorithm that uses 
 bit manipulation to compute tree predictions. Even though QuickScorer is 
 extremely fast for smaller models, it does not scale well to larger 
@@ -35,8 +35,7 @@ to the goals of \Treebeard{} and the QuickScorer algorithm can easily
 be integrated into \Treebeard{} as another traversal strategy for the 
 system to explore. Tang et. al.\cite{CacheConscious1} and Jin et. al.\cite{CacheConscious2}
 build models to predict cache performance of decision tree ensembles on CPUs.
-This work is again orthogonal to the work described in this paper and 
-can easily be incorporated into \Treebeard{}. Some systems have been proposed 
+This work is again orthogonal to the work described in this paper. Some systems have been proposed 
 to parallelize decision tree training on CPUs and GPUs\cite{Jansson2014gpuRFAG, Nasridinov2013DecisionTC}.
 
 
@@ -44,7 +43,7 @@ to parallelize decision tree training on CPUs and GPUs\cite{Jansson2014gpuRFAG, 
 Ren et al \cite{PortableVM} build an intermediate language and VM to 
 enable SIMD execution of decision tree inference. The SIMD execution itself is implemented 
 by hand in the VM and the VM needs to be reimplemented for every supported target architecture.
-Additionally, even though they perform layout optimizations, their system doesn't perform 
+Additionally, even though they perform layout optimizations, their system does not perform 
 any model specific optimizations. Jo et. al.\cite{MilindTreeVectorization} describe techniques 
 to vectorize tree based applications. They do not study optimizations specific to decision trees.
 Both these works vectorize tree walks by performing different tree walks on each vector lane.
