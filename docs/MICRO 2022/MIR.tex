@@ -58,7 +58,7 @@ loop over the input rows is parallelized using a parallel for construct in MLIR.
 the mid-level IR by tiling the loop over the input rows with a tile size equal to the number of cores. 
 As a concrete example, consider the case where we intend to perform inference using a model with 4 trees 
 on a batch of 64 rows. Further, assume that we wish to parallelize this computation across 8 cores. 
-Treebeard then generates the following IR.
+\Treebeard{} then generates the following IR.
 \begin{lstlisting}[style=c++]
   forest = ensemble(...)
   parallel.for i0 = 0 to 64 step 8 {
@@ -74,5 +74,6 @@ Treebeard then generates the following IR.
     }
   }
 \end{lstlisting}
-Currently, \Treebeard{} does not perform other standard parallelization optimizations  (such as loop tiling) as they are generic and independent of the problem domain. We leave a more thorough exploration of parallelizing decision trees
+Currently, \Treebeard{} does not perform other standard parallelization optimizations  (such as loop tiling) as they
+are generic and independent of the problem domain. We leave a more thorough exploration of parallelizing decision trees
 to future work.
