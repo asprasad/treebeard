@@ -1,33 +1,25 @@
 \subsection{Probability Based Tiling}
-\subsubsection{Motivation}
-As discussed in section \ref{sec:UnifTiling}, uniform tiling optimizes tree walks assuming that all paths in the tree from root to leaf are equally likely. 
-However, we find that this is not always the case. We performed inference on the complete training set of each of our benchmarks and measured how many
-times each leaf was reached. While for some benchmarks all leaves are roughly equally likely, for others, a small number of leaves are extremely likely 
-while the rest aren't reached often. We call trees with a small number of extremely likely leaves \textbf{\emph{skewed}}.
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{figures/airline-ohe.stats.train.txt.png}
-    \caption{Statistical profile for airline-ohe}
-    \label{Fig:AirlineOHEStats}
-\end{figure}
-\begin{figure}
-    \centering
-    \includegraphics[width=\linewidth]{figures/epsilon.stats.train.txt.png}
-    \caption{Statistical profile for epsilon}
-    \label{Fig:EpsilonStats}
-\end{figure}
-Figures \ref{Fig:AirlineOHEStats} and \ref{Fig:EpsilonStats} show this. Each line in these graphs corresponds to a fixed fraction of the input (say $f$). 
-A point on a line at coordinate $(x, y)$ means that $y$ percent of trees in the model could handle a fraction $f$ of all training inputs with $x$ percent of 
-leaves. \TODO{Explain with a specific point in one of the graphs}
-Figure \ref{Fig:AirlineOHEStats} shows that very few leaves are reached for a very large fraction of inputs for the benchmark airline-ohe. 
-This means that a small fraction of leaves are very likely. On the other hand,
-figure \ref{Fig:EpsilonStats} shows that a large fraction of trees need a large fraction of their leaves to handle any fraction of the test input 
-for the benchmark epsilon. One other observation we made is that most models have some skewed trees while the rest of the trees have equally likely leaves.
-\TODO{AP Define a term for trees with roughly equally likely leaves.} We design the probability based tiling algorithm to take advantage of this property 
-of decision tree ensembles. 
-\TODO{This section needs to be rewritten. Define ``leaves covering inputs'' to clarify the presentation.}
+\label{sec:ProbTiling}
+%\subsubsection*{Motivation}
 
-\subsubsection{Notation}
+The next algorithm we propose exploits the inherent biases among the leaves of a decision tree. In typical machine learning models some leafs (equivalently outcomes or predictions) are more likely to be reached than others. In such settings, having balanced tiled trees is not sufficient to minimize expected inference time. 
+
+Consider for example two machine learning models \op{airline-ohe} and \op{epsilon} (also used in our evaluation). 
+Consider the graphs shown in   
+figures \ref{Fig:AirlineOHEStats} and \ref{Fig:EpsilonStats} that are generated from training data. Each line in these graphs corresponds to a fixed fraction of the input (say $f$). 
+A point on a line at coordinate $(x, y)$ means that a fraction $y$ of trees in the model could cover a fraction $f$ of all training inputs with a fraction $x$ of 
+leaves. For example, the first point on the $f=0.9$ line in figure \ref{Fig:AirlineOHEStats} says that about 52\% of trees ($y$ value) need only 1\% of their
+leaves ($x$ value) to cover 90\% of the training input. 
+In general, Figure \ref{Fig:AirlineOHEStats} shows that very few leaves are needed to cover a very large fraction of inputs for the benchmark \op{airline-ohe}. 
+This means that a small fraction of leaves are very likely. 
+We call trees with a small number of extremely likely leaves \textbf{\emph{leaf biased}}.
+
+On the other hand, for the benchmark \op{epsilon},
+figure \ref{Fig:EpsilonStats} shows that a trees need a much larger fraction of their leaves to cover a significant fraction of the training input.
+This means that most trees in \op{epsilon} are not leaf biased.
+
+\CommentOut{
+\subsubsection{More Notation}
 In order to formulate the probability based tiling algorithm as an optimization problem, we define the following.
 \begin{enumerate}
     \item For every leaf $l \in L$, we define $p_l$ as the probability that the leaf $l$ is reached.
@@ -44,21 +36,51 @@ In order to formulate the probability based tiling algorithm as an optimization 
     \item For a every tile $T_i$, we define $root(T_i)$ as the node $v \in T_i$ such that $v$ has no incoming edges from any other node $u \in T_i$.
     \item For a tile $T_i$, $out(T_i) \subseteq E$ is the set of edges $(u, v)$ such that $u \in T_i$ and $v \notin T_i$.
 \end{enumerate}
+}
 
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{figures/airline-ohe.stats.train.txt.png}
+    \caption{Statistical profile for airline-ohe}
+    \label{Fig:AirlineOHEStats}
+\end{figure}
+\begin{figure}
+    \centering
+    \includegraphics[width=\linewidth]{figures/epsilon.stats.train.txt.png}
+    \caption{Statistical profile for epsilon}
+    \label{Fig:EpsilonStats}
+\end{figure}
+\CommentOut{
+We say that an input row $r_i$ is \textbf{\emph{covered}} by a subset of leaves $L' \subseteq L$ of a tree $T$, if the leaf $l$ reached by 
+walking $T$ for row $r_i$ is in $L'$. We show how different models (and even different trees within the same model) behave differently 
+using models for two benchmarks, airline-ohe and epsilon. Consider the graphs shown in   
+figures \ref{Fig:AirlineOHEStats} and \ref{Fig:EpsilonStats}. Each line in these graphs corresponds to a fixed fraction of the input (say $f$). 
+A point on a line at coordinate $(x, y)$ means that a fraction $y$ of trees in the model could cover a fraction $f$ of all training inputs with a fraction $x$ of 
+leaves. For example, the first point on the $f=0.9$ line in figure \ref{Fig:AirlineOHEStats} says that about 52\% of trees ($y$ value) need only 1\% of their
+leaves ($x$ value) to cover 90\% of the training input. 
+In general, Figure \ref{Fig:AirlineOHEStats} shows that very few leaves are needed to cover a very large fraction of inputs for the benchmark airline-ohe. 
+This means that a small fraction of leaves are very likely. On the other hand, for the benchmark epsilon,
+figure \ref{Fig:EpsilonStats} shows that a trees need a much larger fraction of their leaves to cover a significant fraction of the test input.
+This means that most trees in the epsilon model are not leaf biased.
+One other observation we make is that most models have some leaf biased trees while the rest of the trees have equally likely leaves.
+\TODO{AP Maybe define a term for trees with roughly equally likely leaves?} We design the probability based tiling algorithm to take advantage of this property 
+of decision tree ensembles. 
+}
 \subsubsection{The Optimization Problem}
 
 %We assume that we are given the probabilities of each leaf node of the decision tree (these can easily be computed using the training data). For every leaf $l \in L$, we %are given the probability $p_l$ that the leaf $l$ is reached. 
 
-We observe that the latency of one tree walk is proportional to the number of tiles that need to be evaluated to reach the leaf.
-Therefore, the average inference latency can be modelled as the expected number of tiles that are evaluated to compute one tree prediction. More formally, the problem is to find a tiling $\mathcal{T}$ such that the following objective is minimized.
+Observe that the latency of one tree walk is proportional to the number of tiles that need to be evaluated to reach the leaf. It is easy to see that for a leaf biased tree, basic tilling does not optimize for this objective, it considers all leafs to be equally likely. 
+ 
+The goal of probablistic tiling is to minimize the average inference latency, or equivalently the minimize the expected number of tiles that are evaluated to compute one tree prediction. More formally, the problem is to find a \emph{valid} (as defined in Section~\ref{sec:ValidTiling}) tiling $\mathcal{T}$ such that the following objective is minimized.
 \[
     \min_{\mathcal{T} \in \mathcal{C}(T)}{\sum_{l \in L} p_l.depth_{\mathcal{T}}(l)}
 \]
-where the minimization is over all valid tilings $\mathcal{T}$ of the tree $T$, $depth_{\mathcal{T}}(l)$ is the depth of the leaf $l$ given tiling ${\mathcal{T}}$.
+where the minimization is over all valid tilings $\mathcal{T}$ of the tree $T$, $depth_{\mathcal{T}}(l)$ is the depth of the leaf $l$ given tiling ${\mathcal{T}}$. $p_l$ is the probability of of reaching leaf $l$ as observed during training.
 
-The constraints on the optimization are the constraints listed in Section \ref{sec:ValidTiling}. 
-The above optimization problem can be solved optimally using dynamic programming. We leave this out in the interest of space. 
-Instead, we use the simple greedy algorithm listed in algorithm \ref{Alg:GreedyTilingAlgo} to construct a valid tiling given the node probabilities.
+The above optimization problem can be solved optimally using dynamic programming. 
+We leave this out in the interest of space. 
+Instead, we use the simple greedy algorithm listed in algorithm \ref{Alg:GreedyTilingAlgo} to construct a valid tiling given the node probabilities\footnote{Probabilites for internal nodes can be computed from probablities for leafs by summing up the probabilities of all leafs that belong to the sub-tree rooted at the internal node. Leaf probabilities are collected during training.}.
 The algorithm starts at the root and greedily keeps adding the most probable legal node to the current tile until the maximum tile size is reached.
 Subsequently, the tiling procedure is recursively performed on all nodes that are destinations for edges going out of the constructed tile.
 
@@ -112,56 +134,16 @@ Subsequently, the tiling procedure is recursively performed on all nodes that ar
 \end{algorithm}
 
 % Talk about problems with increasing number of tile shapes and only performing such tiling on skewed trees
+\CommentOut{
 When we tried to apply algorithm \ref{Alg:GreedyTilingAlgo} on all trees in our benchmarks, we found
 that even minor variations in probability caused the tiling algorithm to generate a large 
 number of tile shapes. This in turn caused a loss in performance because the large size of the 
 lookup table needed (section \ref{sec:LookupTable}) caused increased L1 cache misses. In order to 
-alleviate this, we only perform probability based tiling on trees that are skewed. We say a tree is
-skewed if a small fraction of leaves, say $\alpha$, cover a large fraction of training inputs, say $\beta$.
-We only perform probability based tiling on skewed trees and fall back to uniform tiling otherwise. 
-In our experiments we use $\alpha=0.05$ and $\beta=0.9$. 
+alleviate this, we only perform probability based tiling on trees that are leaf biased.
+}
+We find probability based tiling is only beneficial for leaf biased trees\footnote{Turns out that for trees that are not leaf biased, probability based tiling produces many more tile shapes (see Section~\ref{sec:tileShapes}) which direclty impacts the cost of \op{getChildTile} making it more expensive than basic tiling.}.  Recall that   
+a tree to be leaf biased if a small fraction of leaves, say $\alpha$, can cover a large fraction of training inputs, say $\beta$.
+We only perform probability based tiling on trees with thresholds $\alpha=0.05$ and $\beta=0.9$ and fall back to uniform tiling otherwise. 
 
-\subsubsection{Code Generation}
-As probability based tiling pulls the most probable leaves of a decision tree nearest the root, it poses 
-some implementation challenges. By design, the tiling process makes the tree of tiles 
-imbalanced. Therefore, the simple array based representation described in section \ref{sec:ArrayBased}
-cannot be used because of the memory footprint blow up (a large part of the tree is empty, but would 
-need to be allocated). On the other hand, the sparse representation in section \ref{sec:SparseRep} adds 
-an extra hop for leaves that have non-leaf siblings. But this would mean that we add extra hops for 
-the most probable leaves after probability based tiling. To address these problems, Treebeard peels 
-the tree walk and specializes the leaf checks at higher levels to avoid the extra hop. Currently, 
-we determine the maximum depth of leaves needed to cover 90 percent of the inputs and peel the tree 
-walk by as many iterations. For example, consider the case where leaves until depth 2 are needed to 
-cover 90 percent of the training input. Then, Treebeard generates the following IR. 
 
-\begin{lstlisting}{style=c++}
-    // ...
-    tree = getTree(forest, t)
-    node = getRoot(tree)
-    node = traverseTreeTile(tree, node, rows[i])
-    if (isLeafTile(node)) {
-        treePrediction = getLeafValue(tree, node)
-    } else {    
-        node = traverseTreeTile(tree, node, rows[i])
-        if (isLeafTile(node)) {
-            treePrediction = getLeafValue(tree, node)
-        } else {    
-            // Loop based traversal 
-        }
-    }
-    treePrediction = getLeafValue(tree, node)
-    // ...
-\end{lstlisting}
-
-The if statements check whether a node is a leaf tile and hence avoid the extra hop. The memory 
-requirement is also not increased because only a small fraction of leaves are represented as full tiles.
-While walk peeling is used to improve the performance of probability based tiling by specializing leaf tests,
-the transformation is by itself general and can be used in different contexts. For example, it could be used 
-to elide leaf checks until a depth $d$ is reached if we know all leaves are at a depth greater than $d$. 
-
-One other issue that the code generator needs to handle is that walks of different trees in the same ensemble may 
-need to be peeled to different depths. In order to handle this, trees are reordered so that all trees 
-with equal peeling depth are grouped together and the loops in the IR are fissed so that tree walks 
-for these groups of trees can be specialized differently. This is very similar to the code generation strategy
-used for uniform tiling.
 

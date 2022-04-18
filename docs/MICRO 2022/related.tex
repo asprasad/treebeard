@@ -1,0 +1,24 @@
+\section{Related Work}
+
+\emph{Decision Tree Ensemble Compilers:}
+Treelite\cite{Treelite} only supports generation of if-else style code and is not extensible.
+Hummingbird\cite{Hummingbird} tries to compile decision tree models to tensor primitives so 
+they can be integrated into tensor based frameworks like TensorFlow \cite{TensorFlow}.
+
+\emph{Libraries:} Currently, the most popular systems for decision tree based models 
+are libraries. XGBoost\cite{XGBoost} and LightGBM\cite{LightGBM} are the most  
+popular gradient boosting libraries while scikit-learn\cite{Sklearn} is 
+extremely popular for random forest models. These libraries implement both 
+training and inference. 
+
+\emph{Other Systems and Techniques}: 
+Ren et al \cite{PortableVM} build an intermediate language and VM to 
+enable SIMD execution of decision tree inference. The SIMD execution itself is implemented 
+by hand in the VM and the VM needs to be reimplemented for every supported target architecture.
+Additionally, even though they perform layout optimizations, their system doesn't perform 
+any model specific optimizations. 
+
+Tahoe, Vpred, CacheConscious1, QuickScorer, QuickScorer1, MilindTreeVectorization
+Bliss?
+
+Decision tree training parallelization references

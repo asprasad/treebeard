@@ -1,24 +1,19 @@
-\subsection{Uniform Tiling}
+\subsection{Basic Tiling Algorithm}
 \label{sec:UnifTiling}
 % The justification for uniform tiling -- if we assume all paths are equally likely,
 % we want to minimize the depth of speculation
-The first tree tiling algorithm we implement is uniform tiling. The basic idea of uniform tiling is to construct tiles
-with a tile size $n_t$ so that we evaluate 
-the least possible number of nodes speculatively. Intuitively, this translates to minimizing the height of the constructed tile. We minimize
-the height of the tile by performing a level order traversal starting at the root node of the tile. 
-\TODO{AP Should we say this is optimal when probabilities are equal? Problem is we haven't said what optimal is.}
-This traversal collects at most $n_t$ nodes
-and does not include any leaves in the tile so that the constraints listed in section \ref{sec:ValidTiling} are respected. Algorithm 
-\ref{Alg:UnifTilingAlgo} lists the algorithm for uniform tiling. Tiling starts at the root and constructs a tile $Tile$ by performing
-a level order traversal. Once the current tile is constructed, the tiling procedure is recursively performed on all nodes that are 
-destinations for edges going out of the constructed tile. The set of tiles constructed by algorithm \ref{Alg:UnifTilingAlgo} constitutes 
-a uniform tiling of the input tree.
+Algorithm~\ref{Alg:UnifTilingAlgo} shows a simple tiling algorithm that satisfies the above constraints and produces a valid tiling. 
+Tiling starts at the root and constructs a tile $Tile$ by performing
+a level order traversal. The call \op{LevelOrderTraversal(r, $n_t$)} picks the next $n_t$ nodes according to the standard level order tree traversal algorithm (not described here) applied only to internal nodes of the tree. Once the current tile is constructed, the tiling procedure is recursively performed on all nodes that are 
+destinations for edges going out of the constructed tile.
+It is easy to see that the tiled tree constructed by algorithm \ref{Alg:UnifTilingAlgo} is valid.
+\TODO{Pass a modified tree without leafs to the level order traversal call. Explicitly add leaves as seperate tiles}
 % Algorithm for uniform tiling
 \begin{algorithm}
   \caption{Uniform tree tiling}
   \label{Alg:UnifTilingAlgo}
   \begin{algorithmic}
-      \Procedure{TileTree}{$T = (V, E, r)$, $n_t$} 
+      \Procedure{TileTree}{$tree = (V, E, r)$, $n_t$} 
           \If {$r \in L$}
               \State \textbf{return} $\{ r \}$
           \EndIf
@@ -27,24 +22,27 @@ a uniform tiling of the input tree.
           \State $Tile \leftarrow LevelOrderTraveral(r, n_t)$
           \State $Tiles =  \{ Tile \}$
           \For{$(u,v) \in Out(Tile)$}
-              \State $Tiles \leftarrow Tiles \cup TileTree(T_v, n_t)$
+              \State $Tiles \leftarrow Tiles \cup TileTree(S_v, n_t)$
           \EndFor
           \State \textbf{return} $Tiles$
       \EndProcedure
   \end{algorithmic}
 \end{algorithm}
 
+One interesting property of this tilling algorithm is that it naturally reduces the imbalance in trees, especially at large tile sizes. As the algorithm traverses down to sparser levels of the tree, it naturally groups sub-trees containing chains of nodes, thus balancing the trees. While its possible to further enhance the algorithm to explicitly balance tiled trees, we find that basic tiling suffices in practice.
+\CommentOut{
 \subsubsection{Further Opimization and Code Generation}
 We found that most leaf tiles for a given tree are at the same depth when uniform tiling is used. Furthermore, we see that deeper leaves 
 are more likely to be reached.
 %\footnote{Intuitively, this is true because training algorithms keep splitting nodes to maximize gain and gain
 %will typically be maximized by splitting a large number of inputs.}.
-Based on these observations, we pad the tree of tiles generated with uniform tiling so that all leaves are at the same depth.
+Based on these observations, we (optionally) pad the tree of tiles generated with uniform tiling so that all leaves are at the same depth.
 This transformation is performed on the high level IR after uniform tiling. 
 Once the trees have been padded to make all leaves equal depth, the tree walks are fully unrolled to evaluate a fixed 
-number of tiles and all leaf checks are elided.
+number of tiles and all leaf checks are omitted.
 
-One other complication the code generator needs to handle is the fact that trees potentially have different depths. In order to handle
+One other complication the code generator needs to handle is the fact that different trees in the model being 
+compiled potentially have different depths. In order to handle
 this, Treebeard sorts the trees by their depth. This ensures that all trees with equal depth are grouped together. Once this is done, 
 the loop over the trees is fissed so that each of the resulting loops only walks trees of a single depth. Consider for example a 
 forest with 4 trees $T_1$, $T_2$, $T_3$, and $T_4$ in that order. Further, assume that $T_1$ and $T_4$ have depth 2 while $T_2$ and $T_3$
@@ -75,4 +73,6 @@ as shown in the following listing.
   }  
 \end{lstlisting}
 
-\TODO{AP: This listing is unnecesarily long. Can we maybe leave out the loop bodies and say something like "depth 2 walk"?}
+\TODO{AP: This listing is unnecesarily long. Can we maybe leave out the loop bodies and say something like "depth 2 walk"? Should 
+we point to the figure in the overview section instead?}
+}

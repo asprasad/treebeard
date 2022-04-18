@@ -95,9 +95,21 @@ series = {CGO 2019}
   note = {Accessed: 2022-04-16}
 }
 
+@misc{KaggleSurvey,
+  title = {Kaggle State of Data Science and Machine Learning 2021},
+  howpublished = {\url{https://www.kaggle.com/kaggle-survey-2021}},
+  note = {Accessed: 2022-04-16}
+}
+
 @misc{Treelite,
   title = {Treelite : model compiler for decision tree ensembles},
   howpublished = {\url{https://treelite.readthedocs.io/en/latest/}},
+  note = {Accessed: 2022-04-16}
+}
+
+@misc{Sklearn,
+  title = {scikit-learn : Machine Learning in Python},
+  howpublished = {\url{https://scikit-learn.org/stable/}},
   note = {Accessed: 2022-04-16}
 }
 
@@ -148,6 +160,24 @@ location = {Santiago, Chile},
 series = {SIGIR '15}
 }
 
+@inproceedings{QuickScorer1,
+author = {Lucchese, Claudio and Nardini, Franco Maria and Orlando, Salvatore and Perego, Raffaele and Tonellotto, Nicola and Venturini, Rossano},
+title = {Exploiting CPU SIMD Extensions to Speed-up Document Scoring with Tree Ensembles},
+year = {2016},
+isbn = {9781450340694},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/2911451.2914758},
+doi = {10.1145/2911451.2914758},
+abstract = {Scoring documents with learning-to-rank (LtR) models based on large ensembles of regression trees is currently deemed one of the best solutions to effectively rank query results to be returned by large scale Information Retrieval systems. This paper investigates the opportunities given by SIMD capabilities of modern CPUs to the end of efficiently evaluating regression trees ensembles. We propose V-QuickScorer (vQS), which exploits SIMD extensions to vectorize the document scoring, i.e., to perform the ensemble traversal by evaluating multiple documents simultaneously. We provide a comprehensive evaluation of vQS against the state of the art on three publicly available datasets. Experiments show that vQS provides speed-ups up to a factor of 3.2x.},
+booktitle = {Proceedings of the 39th International ACM SIGIR Conference on Research and Development in Information Retrieval},
+pages = {833–836},
+numpages = {4},
+keywords = {ensemble methods, learning to rank, document scoring},
+location = {Pisa, Italy},
+series = {SIGIR '16}
+}
+
 @inproceedings{CacheConscious1,
 author = {Tang, Xun and Jin, Xin and Yang, Tao},
 title = {Cache-Conscious Runtime Optimization for Ranking Ensembles},
@@ -158,7 +188,7 @@ address = {New York, NY, USA},
 url = {https://doi.org/10.1145/2600428.2609525},
 doi = {10.1145/2600428.2609525},
 abstract = {Multi-tree ensemble models have been proven to be effective for document ranking. Using a large number of trees can improve accuracy, but it takes time to calculate ranking scores of matched documents. This paper investigates data traversal methods for fast score calculation with a large ensemble. We propose a 2D blocking scheme for better cache utilization with simpler code structure compared to previous work. The experiments with several benchmarks show significant acceleration in score calculation without loss of ranking accuracy.},
-booktitle = {Proceedings of the 37th International ACM SIGIR Conference on Research &amp; Development in Information Retrieval},
+booktitle = {Proceedings of the 37th International ACM SIGIR Conference on Research amp; Development in Information Retrieval},
 pages = {1123–1126},
 numpages = {4},
 keywords = {query processing, ensemble methods, cache locality},
@@ -289,4 +319,112 @@ keywords = {SIMD, fine-grained parallelism, Irregular data structure}
   publisher = {arXiv},
   year = {2019},
   copyright = {Creative Commons Attribution Non Commercial Share Alike 4.0 International}
+}
+
+@misc{LHCModel,
+  doi = {10.48550/ARXIV.2001.06033},
+  url = {https://arxiv.org/abs/2001.06033},
+  author = {Lalchand, Vidhi},
+  keywords = {Machine Learning (stat.ML), Machine Learning (cs.LG), Applications (stat.AP), FOS: Computer and information sciences, FOS: Computer and information sciences},
+  title = {Extracting more from boosted decision trees: A high energy physics case study},
+  publisher = {arXiv},
+  year = {2020},
+  copyright = {arXiv.org perpetual, non-exclusive license}
+}
+
+@article{DecisionTreesOverview,
+author = {Kotsiantis, Sotiris},
+year = {2013},
+month = {04},
+pages = {1-23},
+title = {Decision trees: A recent overview},
+isbn = {0269-2821},
+journal = {Artificial Intelligence Review},
+doi = {10.1007/s10462-011-9272-4}
+}
+
+@ARTICLE{YahooSearch,
+  author={Cossock, David and Zhang, Tong},
+  journal={IEEE Transactions on Information Theory}, 
+  title={Statistical Analysis of Bayes Optimal Subset Ranking}, 
+  year={2008},
+  volume={54},
+  number={11},
+  pages={5140-5154},
+  doi={10.1109/TIT.2008.929939}
+}
+
+@article{Finance,
+author = {Delen, Dursun and Kuzey, Cemil and Uyar, Ali},
+year = {2013},
+month = {08},
+pages = {3970–3983},
+title = {Measuring firm performance using financial ratios: A decision tree approach},
+volume = {40},
+journal = {Expert Systems with Applications},
+doi = {10.1016/j.eswa.2013.01.012}
+}
+
+@article{Med1,
+author = {Azar, Ahmad and El-Metwally, Shereen},
+year = {2013},
+month = {11},
+pages = {2387-2403},
+title = {Decision tree classifiers for automated medical diagnosis},
+volume = {23},
+journal = {Neural Computing and Applications},
+doi = {10.1007/s00521-012-1196-7}
+}
+
+@article{Med2,
+author = {Soni, Jyoti and Ansari, Ujma and Sharma, Dipesh and Soni, Sunita},
+year = {2011},
+month = {03},
+pages = {43-48},
+title = {Predictive Data Mining for Medical Diagnosis: An Overview of Heart Disease Prediction},
+volume = {17},
+journal = {International Journal of Computer Applications},
+doi = {10.5120/2237-2860}
+}
+
+@article{Facebook,
+  author    = {Jongsoo Park and
+               Maxim Naumov and
+               Protonu Basu and
+               Summer Deng and
+               Aravind Kalaiah and
+               Daya Shanker Khudia and
+               James Law and
+               Parth Malani and
+               Andrey Malevich and
+               Nadathur Satish and
+               Juan Miguel Pino and
+               Martin Schatz and
+               Alexander Sidorov and
+               Viswanath Sivakumar and
+               Andrew Tulloch and
+               Xiaodong Wang and
+               Yiming Wu and
+               Hector Yuen and
+               Utku Diril and
+               Dmytro Dzhulgakov and
+               Kim M. Hazelwood and
+               Bill Jia and
+               Yangqing Jia and
+               Lin Qiao and
+               Vijay Rao and
+               Nadav Rotem and
+               Sungjoo Yoo and
+               Mikhail Smelyanskiy},
+  title     = {Deep Learning Inference in Facebook Data Centers: Characterization,
+               Performance Optimizations and Hardware Implications},
+  journal   = {CoRR},
+  volume    = {abs/1811.09886},
+  year      = {2018},
+  url       = {http://arxiv.org/abs/1811.09886},
+  eprinttype = {arXiv},
+  eprint    = {1811.09886},
+  timestamp = {Mon, 16 Aug 2021 13:30:45 +0200},
+  biburl    = {https://dblp.org/rec/journals/corr/abs-1811-09886.bib},
+  bibsource = {dblp computer science bibliography, https://dblp.org}
 }
