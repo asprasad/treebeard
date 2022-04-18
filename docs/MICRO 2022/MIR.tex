@@ -1,0 +1,78 @@
+\subsection{Tree Walk Interleaving}
+A key bottleneck we found when we profiled code generated from tiled walks (even after vectorization) was that true dependencies between instructions were still causing
+a significant number of processor stalls. Performing a walk with a single input-tree pair was not providing enough independent instructions to keep the processor busy. IN order to address this \Treebeard{} applies an unroll and jam transformation on the inner most loops of the loop nest. This has 
+the effect of walking multiple tree and input row pairs in an interleaved fashion. 
+This mitigates the dependency stalls by enabling scheduling of instructions from independent tree walks. 
+
+This optimization is performed in two steps. 
+First a pass on the mid-level IR transforms the loop structure. 
+The following listing shows the mid-level IR when the inner loop over the input rows is unrolled 
+by a factor of 2 and the two resulting tree walks are jammed together.
+
+\begin{lstlisting}[style=c++]
+  forest = ensemble(...)
+  for t = 0 to numTrees step 1 {
+    for i = 0 to batchSize step 2 {
+      tree = getTree(forest, t)
+      prediction1, prediction2 = InterleavedWalk((tree, rows[i]), (tree, rows[i+1]))
+    }
+  }
+\end{lstlisting}
+Next when lowering, the operations to traverse each of the tree, input row pairs 
+(the arguments to the \texttt{InterleavedWalk}) are interleaved. One step of the interleaved 
+walk is listed below. 
+\begin{lstlisting}[style=c++]
+  // ... 
+  n1 = n2 = getRoot(tree)
+  // ...
+  threshold1 = loadThresholds(n1)
+  threshold2 = loadThresholds(n2)
+  featureIndex1 = loadFeatureIndices(n1)
+  featureIndex2 = loadFeatureIndices(n2)
+  feature1 = rows[i][featureIndex1]
+  feature2 = rows[i][featureIndex2]
+  pred1 = feature1 < threshold1
+  pred2 = feature2 < threshold2
+  n1 = getChildNode(n1, pred1)
+  n2 = getChildNode(n2, pred2)
+  // ...
+\end{lstlisting}
+
+\CommentOut{
+These transformations are fairly general and are not aware of the in memory representation of the model. Therefore, they 
+are reusable across different in memory representations - the ones that are currently built into Treebeard or ones that 
+maybe added in the future.
+\TODO{AP I feel the way this section is currently written makes the optimization seem extremely trivial. Is there a different 
+way to present it?}
+}
+\subsection{Loop peeling and walk unrolling}
+\Treebeard{} splits the loop that performs a tree walk into two parts. As can be made aware (through a simple pass on the IR) of the depth of the first leaf in a tree, it peels and introduces a \op{prologue} loop that walks down the tree a constant number of steps (up to first leaf) and then performs the rest of the tree walk in a separate loop. Next \Treebeard{} unrolls the prologue completely, avoiding all traversal induced branching in it.
+
+Note that for trees where \Treebeard{} has already padded and balanced the tree (Section~\ref{sec:treeorder}), walk unrolling completely avoids all traversal induced spills.
+\TODO{kr: Add example?}
+
+
+\subsection{Parallelization}
+Currently, \Treebeard{} performs a naive parallelization of the inference computation. When parallelism is enabled, the 
+loop over the input rows is parallelized using a parallel for construct in MLIR. Treebeard rewrites 
+the mid-level IR by tiling the loop over the input rows with a tile size equal to the number of cores. 
+As a concrete example, consider the case where we intend to perform inference using a model with 4 trees 
+on a batch of 64 rows. Further, assume that we wish to parallelize this computation across 8 cores. 
+Treebeard then generates the following IR.
+\begin{lstlisting}[style=c++]
+  forest = ensemble(...)
+  parallel.for i0 = 0 to 64 step 8 {
+    for i1 = 0 to 8 step 1 {
+      i = i0 + i1
+      prediction = 0
+      for t = 0 to 4 step 1 {
+        tree = getTree(forest, t) 
+        treePrediction = WalkTree(tree, rows[i])
+        prediction = prediction + treePrediction
+      }
+      predictions[i] = prediction
+    }
+  }
+\end{lstlisting}
+Currently, \Treebeard{} does not perform other standard parallelization optimizations  (such as loop tiling) as they are generic and independent of the problem domain. We leave a more thorough exploration of parallelizing decision trees
+to future work.
