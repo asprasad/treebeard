@@ -102,6 +102,7 @@ Treebeard maintains the following invariants.
 \input{uniftiling}
 \input{probtiling}
 
-\subsection{A note on implementation}
+\subsection{A Note on Implementation}
 \TODO{Kr : Not sure if this is needed}
-The tiling algorithms generate \op{TileId} attributes per tree and this information is used when lowering to the mid level abstraction in the form of loops. The \op{TileId} attribute maintains a mapping from a Node to the TileId asigned to it. A sample of the lowered MIR code is shown in Figure~\ref{Fig:Overview}.	
+The tiling algorithms generate a \op{TileId} attribute per tree. The \op{TileId} attribute contains a mapping from a Node to the TileId asigned to it.
+This information is used when lowering to the mid level abstraction in the form of loops. A sample of the lowered MIR code is shown in Figure~\ref{Fig:Overview}.	

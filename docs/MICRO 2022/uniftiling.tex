@@ -4,11 +4,12 @@
 % we want to minimize the depth of speculation
 Algorithm~\ref{Alg:UnifTilingAlgo} shows a simple tiling algorithm that satisfies the above constraints and produces a valid tiling. 
 Tiling starts at the root and constructs a tile $Tile$ by performing
-a level order traversal. The call \op{LevelOrderTraversal(r, $n_t$)} picks the next $n_t$ nodes according to the standard 
-level order tree traversal algorithm (not described here) applied only to internal nodes of the tree. Once the current tile is constructed, 
-the tiling procedure is recursively performed on all nodes that are destinations for edges going out of the constructed tile.
-It is easy to see that the tiled tree constructed by algorithm \ref{Alg:UnifTilingAlgo} is valid.
-\TODO{Pass a modified tree without leafs to the level order traversal call. Explicitly add leaves as seperate tiles}
+a level order traversal. The call \op{LevelOrderTraversal($\Tree$, $n_t$)} picks the next $n_t$ non-leaf nodes according to the standard 
+level order tree traversal algorithm. Once the current tile is constructed, 
+the tiling procedure is recursively performed on subtrees rooted at each node that is a destination of an edge going out of the constructed 
+tile. These edges are denoted by $Out(Tile)$ and the subtree rooted at a node $v$ is denoted by $S_v$.
+It is easy to see that the tiling constructed by algorithm \ref{Alg:UnifTilingAlgo} is valid.
+% \TODO{Pass a modified tree without leafs to the level order traversal call. Explicitly add leaves as seperate tiles}
 % Algorithm for basic tiling
 \begin{algorithm}
   \caption{Basic tree tiling}
