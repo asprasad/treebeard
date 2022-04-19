@@ -14,7 +14,7 @@ by a factor of 2 and the two resulting tree walks are jammed together.
   for t = 0 to numTrees step 1 {
     for i = 0 to batchSize step 2 {
       tree = getTree(forest, t)
-      prediction1, prediction2 = InterleavedWalk((tree, rows[i]), (tree, rows[i+1]))
+      pred1, pred2 = InterleavedWalk((tree, rows[i]), (tree, rows[i+1]))
     }
   }
 \end{lstlisting}
@@ -51,9 +51,9 @@ way to present it?}
 
 Several rewrites of the peeled loop are possible. \Treebeard{} completely unrolls the prologue if the peeled loop 
 walks the tree upto the depth of the first leaf. In cases where \Treebeard{} has already padded and balanced the 
-tree (Section~\ref{sec:treeorder}), walk unrolling completely avoids all traversal induced spills. In the case of 
-probability based tiling, the prologue loop is specialized to optimize leaf checks so that these checks 
-are faster (and less general) for the most likely nodes.
+tree (Section~\ref{sec:treeorder}), walk unrolling completely avoids all traversal induced branching. In the case of 
+probability based tiling, the prologue loop enables specialization of leaf checks so that these checks 
+are faster (and less general) for the most probable leaves.
 
 % \TODO{kr: Add example?}
 

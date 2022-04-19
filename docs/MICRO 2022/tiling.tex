@@ -1,5 +1,5 @@
 \subsection{Notation}
-\TODO{Notation needs to be introduced in the background section, Tiling should be the first subsection}
+%TODO{Notation needs to be introduced in the background section, Tiling should be the first subsection}
 We represent a decision tree by $\Tree = (V, E, r)$ where $V$ is the set of nodes, $E$ the set of edges and
 $r \in V$ is the root. For each node $n \in V$, we define the following.
 \begin{enumerate}
@@ -62,11 +62,11 @@ are described in section \ref{sec:Vectorization}.
 \subsection{Tiles and Tree Tiling}
 \label{sec:ValidTiling}
 }
-\subsection*{Conditions for Efficient Tiling}
+\subsubsection*{Conditions for Efficient Tiling}
 \label{sec:ValidTiling}
 While any arbitrary partitioning of the nodes of a tree could be considered for tiling we impose a few intuitive constraints.
 % to only allow nodes that are likely to be accessed together to be grouped into a tile. 
-\TODO{kr : replace $n_t$ with sz?}
+% \TODO{kr : replace $n_t$ with sz?}
 Given a tree $\Tree = (V, E, r)$ and a tile size $n_t$ we impose the following constraints on the generated tiles $\{ T_1, T_2, ... ,T_m \}$ .
 \begin{description}
     \item[Partitioning] $T_1 \cup T_2 ... \cup T_m = V$ and $T_i \cap T_j = \emptyset$ for all $i\neq j$
@@ -74,8 +74,7 @@ Given a tree $\Tree = (V, E, r)$ and a tile size $n_t$ we impose the following c
    \item [Leaf seperation] $\forall l \in L_{\Tree}$ : $l \in T_i \rightarrow v \notin T_i \;\; \forall v \in V \backslash \{l\}$
   \item [Maximal tiling] if there are tiles such that. $|T_i| < n_t$ then there is no $v \in V\backslash \{ T_i \cup L_{\Tree} \}$ such that $(u, v) \in E$ for some $u \in T_i$. 
 \end{description}
-The \textbf{partitioning} and \textbf{maximal tiling} constraints together ensure that we group nodes into as few tiles as possible. {\textbf{Connectedness}} ensures that each tile is a sub-tree, a natural grouping of nodes that are likely to be accessed together. The {\textbf{Leaf separation}} constraint ensures that leafs are not tiled along with internal nodes. Leafs in a decision tree need special handling, they are used to check for walk termination and to determine the output (prediction). This constraint ensures that tiles are homogenous, this in-turn allows us to specialize the in-memory layout of trees and also simplifies code generation. We discuss leaf handling and tree layout in Section~\ref{sec:}.
-We refer to any tiling that satisties the above constraints as a \emph{valid} tilling.
+The \textbf{partitioning} and \textbf{maximal tiling} constraints together ensure that we group nodes into as few tiles as possible. {\textbf{Connectedness}} ensures that each tile is a sub-tree, a natural grouping of nodes that are likely to be accessed together. The {\textbf{Leaf separation}} constraint ensures that leafs are not tiled along with internal nodes. Leafs in a decision tree need special handling, they are used to check for walk termination and to determine the output (prediction). This constraint ensures that tiles are homogenous, this in-turn allows us to specialize the in-memory layout of trees and also simplifies code generation. We discuss leaf handling and tree layout in section ~\ref{Sec:MemoryRep}. We refer to any tiling that satisfies the above constraints as a \emph{valid} tilling.
 
 %%% COMMENT %%%% 
 \CommentOut{
