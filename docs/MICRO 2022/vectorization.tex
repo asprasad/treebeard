@@ -41,15 +41,17 @@ The below listing shows some of the details of a vectorized tree walk.
 To evaluate the current tile, the vector of thresholds is first loaded (\texttt{loadThresholds}). This vector contains the thresholds of all nodes in the tile. Then, the features required for comparison are gathered into a vector (lines 11 and 13). The feature vector is compared to the threshold vector and the child tile to move to is determined (lines 15 to 25). More details about tile shapes and the look up table are presented in subsequent sections.
 
 \subsubsection{Tile Shapes}
-Informally, the \textbf{\emph{tile shape}} is the shape of the region that encloses all nodes in a tile in a diagram of the decision tree. More formally, for a tile size $n_t$, each unique legal binary tree containing $n_t$ nodes (nodes being indistinguishable) corresponds to a tile shape.
+Informally, the \textbf{\emph{tile shape}} is the shape of the region that encloses all nodes in a tile in a diagram of the decision tree.
+More formally, for a tile size $n_t$, each unique legal binary tree containing $n_t$ nodes (nodes being indistinguishable) corresponds to
+a tile shape. Figure \ref{Fig:TileSize3Shapes} enumerates all tile shapes with a tile size of 3. 
 
-Figure \ref{Fig:TileSize3Shapes} enumerates all tile shapes with a tile size of 3. There are a total of 5 tile shapes with size 3. The number of tile shapes with a tile size $n_t$, denoted by $NTS(n_t)$ is given by the following equation. 
+% There are a total of 5 tile shapes with size 3. The number of tile shapes with a tile size $n_t$, denoted by $NTS(n_t)$ is given by the following equation. 
 
-\begin{equation}
-  NTS(n) = \sum_{k=0}^{n-1} NTS(k) \times NTS(n-k-1)
-\end{equation}
+% \begin{equation}
+%   NTS(n) = \sum_{k=0}^{n-1} NTS(k) \times NTS(n-k-1)
+% \end{equation}
 
-where $NTS(0) = NTS(1) = 1$.
+% where $NTS(0) = NTS(1) = 1$.
 
 \begin{figure}
   \centering
@@ -89,9 +91,9 @@ In order to realize this LUT in generated code, Treebeard associates a non-negat
 %   int16_t LUT[NTS(n_t), pow(2, n_t)]  
 % \end{lstlisting}
 Treebeard computes the values in the LUT statically as the tile size is a compile time constant.
-\TODO{AP What comes after subsubsection?}
 
 \subsection{In Memory Representation of Tiled Trees}
+\label{Sec:MemoryRep}
 Treebeard currently has two in memory representations for tiled trees - an array based representation and a sparse representation. Both representations use an array of structs to represent all tiles of the model. 
 
 \subsubsection{Array Based Representation}
@@ -158,6 +160,7 @@ and \ref{sec:SparseRep}, support for other representations is not hard to add. A
 the high level and mid level IR will continue to work as is. Programmers need only provide new lowering passes for
 a few operations in the low level IR.
 
+\CommentOut{
 \subsubsection{Code Generation for Probability Based Tiling}
 As probability based tiling pulls the most probable leaves of a decision tree nearest the root, it poses 
 some implementation challenges. By design, the tiling process makes the tree of tiles 
@@ -200,8 +203,9 @@ the transformation is by itself general and can be used in different contexts. F
 to elide leaf checks until a depth $d$ is reached if we know all leaves are at a depth greater than $d$. 
 
 One other issue that the code generator needs to handle is that walks of different trees in the same ensemble may 
-need to be peeled to different depths. A strategy similar to what is used for uniform tiling is used to handle this.
+need to be peeled to different depths. A strategy similar to what is used for basic tiling is used to handle this.
 Trees are reordered so that all trees 
 with equal peeling depth are grouped together and the loops in the IR are fissed so that tree walks 
 for these groups of trees can be specialized differently.
-% This is very similar to the code generation strategy used for uniform tiling.
+% This is very similar to the code generation strategy used for basic tiling.
+}

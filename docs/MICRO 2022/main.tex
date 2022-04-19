@@ -14,18 +14,19 @@
 \usepackage[final]{microtype}
 \usepackage[keeplastbox]{flushend}
 \usepackage{subfig}
-% Always include hyperref last
-\usepackage[bookmarks=true,breaklinks=true,letterpaper=true,colorlinks,citecolor=blue,linkcolor=blue,urlcolor=blue]{hyperref}
 \usepackage{algorithm}
 %\usepackage{algorithmic}
 \usepackage{algpseudocode}
+% Always include hyperref last
+\usepackage[bookmarks=true,breaklinks=true,letterpaper=true,colorlinks,citecolor=blue,linkcolor=blue,urlcolor=blue]{hyperref}
+
 
 \newcommand{\CommentOut}[1]{}
 \newcommand\TODO[1]{\textcolor{red}{TODO #1}}
 \newcommand\COMMENT[1]{\textcolor{green}{COMMENT #1}}
 \newcommand{\Treebeard}{{\sc {Treebeard}}}
 \newcommand{\op}[1]{{\texttt {#1}}}
-
+\DeclareMathOperator{\Tree}{\ensuremath{\tau}}
 
 \definecolor{codegreen}{rgb}{0,0.6,0}
 \definecolor{codegray}{rgb}{0.5,0.5,0.5}
@@ -33,10 +34,12 @@
 \definecolor{backcolour}{rgb}{0.95,0.95,0.92}
 
 \lstdefinestyle{c++}{language=C++,
-    morekeywords={ensemble, getTree, getRoot, isLeaf, isLeafTile, traverseTreeTile, getLeafValue, loadThresholds, loadFeatureIndices, loadTileShape, getChildNode},    
+    morekeywords={ensemble, getTree, getRoot, isLeaf, isLeafTile, traverseTreeTile, getLeafValue, loadThresholds,
+                  loadFeatureIndices, loadTileShape, getChildNode, parallel, InterleavedWalk, evaluateTilePredicates,
+                  getChildTile, WalkDecisionTree},    
     backgroundcolor=\color{backcolour},   
     commentstyle=\color{codegreen},
-    keywordstyle=\color{magenta},
+    keywordstyle=\color{blue},
     numberstyle=\tiny\color{codegray},
     stringstyle=\color{codepurple},
     basicstyle=\scriptsize,
@@ -59,7 +62,7 @@
 \pdfpageheight=11in
 
 %%%%%%%%%%%---SETME-----%%%%%%%%%%%%%
-\newcommand{\microsubmissionnumber}{XXX}
+\newcommand{\microsubmissionnumber}{654}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \fancypagestyle{firstpage}{

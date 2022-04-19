@@ -74,9 +74,9 @@ Observe that the latency of one tree walk is proportional to the number of tiles
  
 The goal of probablistic tiling is to minimize the average inference latency, or equivalently the minimize the expected number of tiles that are evaluated to compute one tree prediction. More formally, the problem is to find a \emph{valid} (as defined in Section~\ref{sec:ValidTiling}) tiling $\mathcal{T}$ such that the following objective is minimized.
 \[
-    \min_{\mathcal{T} \in \mathcal{C}(T)}{\sum_{l \in L} p_l.depth_{\mathcal{T}}(l)}
+    \min_{\mathcal{T} \in \mathcal{C}(T)}{\sum_{l \in L_{\Tree}} p_l.depth_{\mathcal{T}}(l)}
 \]
-where the minimization is over all valid tilings $\mathcal{T}$ of the tree $T$, $depth_{\mathcal{T}}(l)$ is the depth of the leaf $l$ given tiling ${\mathcal{T}}$. $p_l$ is the probability of of reaching leaf $l$ as observed during training.
+where the minimization is over all valid tilings $\mathcal{T}$ of the tree $\Tree$, $depth_{\mathcal{T}}(l)$ is the depth of the leaf $l$ given tiling ${\mathcal{T}}$. $p_l$ is the probability of of reaching leaf $l$ as observed during training.
 
 The above optimization problem can be solved optimally using dynamic programming. 
 We leave this out in the interest of space. 
@@ -112,8 +112,8 @@ Subsequently, the tiling procedure is recursively performed on all nodes that ar
     \caption{Greedy Probability Based Tree Tiling}
     \label{Alg:GreedyTilingAlgo}
     \begin{algorithmic}
-        \Procedure{TileTree}{$T = (V, E, r)$, $n_t$} 
-            \If {$r \in L$}
+        \Procedure{TileTree}{$\Tree = (V, E, r)$, $n_t$} 
+            \If {$r \in L_{\Tree}$}
                 \State \textbf{return} $\{ r \}$
             \EndIf
             \State $Tile \leftarrow \{ r \}$
@@ -143,7 +143,7 @@ alleviate this, we only perform probability based tiling on trees that are leaf 
 }
 We find probability based tiling is only beneficial for leaf biased trees\footnote{Turns out that for trees that are not leaf biased, probability based tiling produces many more tile shapes (see Section~\ref{sec:tileShapes}) which direclty impacts the cost of \op{getChildTile} making it more expensive than basic tiling.}.  Recall that   
 a tree to be leaf biased if a small fraction of leaves, say $\alpha$, can cover a large fraction of training inputs, say $\beta$.
-We only perform probability based tiling on trees with thresholds $\alpha=0.05$ and $\beta=0.9$ and fall back to uniform tiling otherwise. 
+We only perform probability based tiling on trees with thresholds $\alpha=0.05$ and $\beta=0.9$ and fall back to basic tiling otherwise. 
 
 
 
