@@ -1,12 +1,13 @@
 \section{Related Work}
-While decision trees are heavily used there is little prior work on building optimizing compilers for tree based inference. Below we discuss some related work and contrast it to \Treebeard{}.
+While decision trees are heavily used there is little prior work on building optimizing compilers for tree 
+based inference. Below we discuss some related work and contrast it to \Treebeard{}.
+
 \emph{Decision Tree Ensemble Compilers:}
 Treelite\cite{Treelite} is a model compiler for decision tree ensembles and is the system
- most closely related to our work. Even though Treelite compiles ensembles, it only supports 
-generation of simple \op{if-else} style code, it does not perform the rich 
-optimizations \Treebeard{} perform and is not easily extensible.
-% It cannot perform any of the optimizations 
-\Treebeard{} is designed to perform. 
+most closely related to our work. Even though Treelite compiles ensembles, it only supports 
+generation of simple \op{if-else} style code. It does not perform the rich 
+optimizations \Treebeard{} performs and is not easily extensible.
+% It cannot perform any of the optimizations \Treebeard{} is designed to perform. 
 Hummingbird\cite{Hummingbird} compiles traditional ML models to make use 
 of tensor primitives so 
 they can be integrated into tensor based frameworks like TensorFlow \cite{TensorFlow}.
@@ -25,8 +26,9 @@ to be general and cannot be specialized to a specific model.
 Tahoe\cite{Tahoe} is a library and a performance model that performs high 
 performance tree inference on GPUs. Even though it performs some model 
 specific optimizations, the techniques are GPU specific and cannot easily 
-be ported to CPUs. Asadi et. al.\cite{VPred} optimizes tree walks
-by hiding dependency stalls by interleaving tree walks. \Treebeard{} is an extensible optimizing compiler that carefully implements this and many other optimizations at different levels of abstractions.
+be ported to CPUs. Asadi et. al.\cite{VPred} optimize tree walks
+by hiding dependency stalls by interleaving tree walks. In contrast, \Treebeard{} is an extensible 
+optimizing compiler that carefully implements this and many other optimizations at different levels of abstractions.
 QuickScorer\cite{QuickScorer, QuickScorer1} is an algorithm that uses 
 bit manipulation to compute tree predictions. Even though QuickScorer is 
 extremely fast for smaller models, it does not scale well to larger 
