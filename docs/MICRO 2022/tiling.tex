@@ -1,6 +1,6 @@
 \subsection{Notation}
 \TODO{Notation needs to be introduced in the background section, Tiling should be the first subsection}
-We represent a decision tree by $T = (V, E, r)$ where $V$ is the set of nodes, $E$ the set of edges and
+We represent a decision tree by $\Tree = (V, E, r)$ where $V$ is the set of nodes, $E$ the set of edges and
 $r \in V$ is the root. For each node $n \in V$, we define the following.
 \begin{enumerate}
     \item $threshold(n) \in \mathbb{R}$, the threshold value for $n$.
@@ -8,7 +8,7 @@ $r \in V$ is the root. For each node $n \in V$, we define the following.
     \item $left(n) \in V$, the left child of $n$ or $\emptyset$ if $n$ is a leaf. If $left(n) \neq \emptyset$, then $(n, left(n)) \in E$.
     \item $right(n) \in V$, the right child of $n$ or $\emptyset$ if $n$ is a leaf. If $right(n) \neq \emptyset$, then $(n, right(n)) \in E$.
 \end{enumerate}
-We use $L \subseteq V$ to denote the set of leaves. % subseteq because tree could have single node
+We use $L_{\Tree} \subseteq V$ to denote the set of leaves. % subseteq because tree could have single node
 
 \subsection{Tiling}
 \label{sec:Tiling}
@@ -38,7 +38,7 @@ Once trees are tiled Treebeard generates tree walks with the code structure show
     // ...
     Tile t = getRootTile(tree)
     while (!isLeaf(tree, t)) do {
-      // Evaluate conditions of all nodes in the tile
+      // Evaluate predicates of all nodes in the tile
       predicates = evaluateTilePredicates(t, rows[i])
       
       // Move to the correct child of the current tile
@@ -67,15 +67,17 @@ are described in section \ref{sec:Vectorization}.
 While any arbitrary partitioning of the nodes of a tree could be considered for tiling we impose a few intuitive constraints.
 % to only allow nodes that are likely to be accessed together to be grouped into a tile. 
 \TODO{kr : replace $n_t$ with sz?}
-Given a $tree = (V, E, r)$ and a tile size $n_t$ we impose the following constraints on the generated tiles $\{ T_1, T_2, ... ,T_m \}$ .
+Given a tree $\Tree = (V, E, r)$ and a tile size $n_t$ we impose the following constraints on the generated tiles $\{ T_1, T_2, ... ,T_m \}$ .
 \begin{description}
     \item[Partitioning] $T_1 \cup T_2 ... \cup T_m = V$ and $T_i \cap T_j = \emptyset$ for all $i\neq j$
     \item[Connectedness] If $u, v \in T_i$, there is a (undirected) path connecting $u$ and $v$ fully contained in $T_i$.
-   \item [Leaf seperation] $\forall l \in L$ : $l \in T_i \rightarrow v \notin T_i \;\; \forall v \in V \backslash \{l\}$
-  \item [Maximal tiling] if there are tiles such that. $|T_i| < n_t$ then there is no $v \in V\backslash \{ T_i \cup L \}$ such that $(u, v) \in E$ for some $u \in T_i$. 
+   \item [Leaf seperation] $\forall l \in L_{\Tree}$ : $l \in T_i \rightarrow v \notin T_i \;\; \forall v \in V \backslash \{l\}$
+  \item [Maximal tiling] if there are tiles such that. $|T_i| < n_t$ then there is no $v \in V\backslash \{ T_i \cup L_{\Tree} \}$ such that $(u, v) \in E$ for some $u \in T_i$. 
 \end{description}
 The \textbf{partitioning} and \textbf{maximal tiling} constraints together ensure that we group nodes into as few tiles as possible. {\textbf{Connectedness}} ensures that each tile is a sub-tree, a natural grouping of nodes that are likely to be accessed together. The {\textbf{Leaf separation}} constraint ensures that leafs are not tiled along with internal nodes. Leafs in a decision tree need special handling, they are used to check for walk termination and to determine the output (prediction). This constraint ensures that tiles are homogenous, this in-turn allows us to specialize the in-memory layout of trees and also simplifies code generation. We discuss leaf handling and tree layout in Section~\ref{sec:}.
 We refer to any tiling that satisties the above constraints as a \emph{valid} tilling.
+
+%%% COMMENT %%%% 
 \CommentOut{
 \subsection{Tiled Trees}
 A tiling transformation communicates the tiling to the Treebeard infrastructure by assigning a tile ID to each node in the decision tree. Using these tile IDs, Treebeard checks the validity of the tiling and then contructs a tree whose nodes are tiles. We call this tree the \textbf{\emph{tree of tiles}}. \TODO{We need a better name for this}
@@ -94,7 +96,9 @@ Treebeard maintains the following invariants.
   \item Nodes within tiles are always ordered in level order and left to right within a level. The numbering of the nodes in the above diagram shows this node order.
   \item Children of a node are numbered from left to right (regardless of level). For example, $l_1$ is the first child of $t_1$, $l_2$ is the second and so on.
 \end{enumerate}
-   }
+}
+%%% END COMMENT %%%%
+
 \input{uniftiling}
 \input{probtiling}
 

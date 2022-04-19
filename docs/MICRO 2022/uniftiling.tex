@@ -10,11 +10,11 @@ It is easy to see that the tiled tree constructed by algorithm \ref{Alg:UnifTili
 \TODO{Pass a modified tree without leafs to the level order traversal call. Explicitly add leaves as seperate tiles}
 % Algorithm for uniform tiling
 \begin{algorithm}
-  \caption{Uniform tree tiling}
+  \caption{Basic tree tiling}
   \label{Alg:UnifTilingAlgo}
   \begin{algorithmic}
-      \Procedure{TileTree}{$tree = (V, E, r)$, $n_t$} 
-          \If {$r \in L$}
+      \Procedure{TileTree}{$\Tree = (V, E, r)$, $n_t$} 
+          \If {$r \in L_{\Tree}$}
               \State \textbf{return} $\{ r \}$
           \EndIf
           \State \textcolor{codegreen}{\textit{//Level order traversal to collect $n_t$ or fewer nodes. }}
@@ -30,6 +30,8 @@ It is easy to see that the tiled tree constructed by algorithm \ref{Alg:UnifTili
 \end{algorithm}
 
 One interesting property of this tilling algorithm is that it naturally reduces the imbalance in trees, especially at large tile sizes. As the algorithm traverses down to sparser levels of the tree, it naturally groups sub-trees containing chains of nodes, thus balancing the trees. While its possible to further enhance the algorithm to explicitly balance tiled trees, we find that basic tiling suffices in practice.
+
+%%%% COMMENT %%%%% 
 \CommentOut{
 \subsubsection{Further Opimization and Code Generation}
 We found that most leaf tiles for a given tree are at the same depth when uniform tiling is used. Furthermore, we see that deeper leaves 
@@ -76,3 +78,4 @@ as shown in the following listing.
 \TODO{AP: This listing is unnecesarily long. Can we maybe leave out the loop bodies and say something like "depth 2 walk"? Should 
 we point to the figure in the overview section instead?}
 }
+%%%% COMMENT END %%%%% 
