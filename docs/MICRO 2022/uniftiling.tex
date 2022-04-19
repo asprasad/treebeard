@@ -1,25 +1,39 @@
 \subsection{Basic Tiling Algorithm}
 \label{sec:UnifTiling}
-% The justification for uniform tiling -- if we assume all paths are equally likely,
+% The justification for basic tiling -- if we assume all paths are equally likely,
 % we want to minimize the depth of speculation
 Algorithm~\ref{Alg:UnifTilingAlgo} shows a simple tiling algorithm that satisfies the above constraints and produces a valid tiling. 
 Tiling starts at the root and constructs a tile $Tile$ by performing
-a level order traversal. The call \op{LevelOrderTraversal(r, $n_t$)} picks the next $n_t$ nodes according to the standard level order tree traversal algorithm (not described here) applied only to internal nodes of the tree. Once the current tile is constructed, the tiling procedure is recursively performed on all nodes that are 
-destinations for edges going out of the constructed tile.
+a level order traversal. The call \op{LevelOrderTraversal(r, $n_t$)} picks the next $n_t$ nodes according to the standard 
+level order tree traversal algorithm (not described here) applied only to internal nodes of the tree. Once the current tile is constructed, 
+the tiling procedure is recursively performed on all nodes that are destinations for edges going out of the constructed tile.
 It is easy to see that the tiled tree constructed by algorithm \ref{Alg:UnifTilingAlgo} is valid.
 \TODO{Pass a modified tree without leafs to the level order traversal call. Explicitly add leaves as seperate tiles}
-% Algorithm for uniform tiling
+% Algorithm for basic tiling
 \begin{algorithm}
   \caption{Basic tree tiling}
   \label{Alg:UnifTilingAlgo}
   \begin{algorithmic}
+      \Procedure{LevelOrderTraversal}{$\Tree = (V, E, r)$, $n_t$}
+        \State $queue = \{ r \}$
+        \State $Tile = \emptyset$
+        \While{$\neg queue.empty() \wedge |Tile|<n_t$}
+          \State $n = queue.pop()$
+          \If {$n \in L_{\Tree}$}
+              \State \textbf{continue}
+          \EndIf
+          \State $Tile = Tile \cup \{ n \}$
+          \State $queue.push(left(n), right(n))$
+        \EndWhile
+      \EndProcedure
+      \State {}
       \Procedure{TileTree}{$\Tree = (V, E, r)$, $n_t$} 
           \If {$r \in L_{\Tree}$}
               \State \textbf{return} $\{ r \}$
           \EndIf
-          \State \textcolor{codegreen}{\textit{//Level order traversal to collect $n_t$ or fewer nodes. }}
-          \State \textcolor{codegreen}{\textit{//Leaves are not included in the constructed tile. }}
-          \State $Tile \leftarrow LevelOrderTraveral(r, n_t)$
+          % \State \textcolor{codegreen}{\textit{//Level order traversal to collect $n_t$ or fewer nodes. }}
+          % \State \textcolor{codegreen}{\textit{//Leaves are not included in the constructed tile. }}
+          \State $Tile \leftarrow LevelOrderTraveral(\Tree, n_t)$
           \State $Tiles =  \{ Tile \}$
           \For{$(u,v) \in Out(Tile)$}
               \State $Tiles \leftarrow Tiles \cup TileTree(S_v, n_t)$
@@ -34,12 +48,12 @@ One interesting property of this tilling algorithm is that it naturally reduces 
 %%%% COMMENT %%%%% 
 \CommentOut{
 \subsubsection{Further Opimization and Code Generation}
-We found that most leaf tiles for a given tree are at the same depth when uniform tiling is used. Furthermore, we see that deeper leaves 
+We found that most leaf tiles for a given tree are at the same depth when basic tiling is used. Furthermore, we see that deeper leaves 
 are more likely to be reached.
 %\footnote{Intuitively, this is true because training algorithms keep splitting nodes to maximize gain and gain
 %will typically be maximized by splitting a large number of inputs.}.
-Based on these observations, we (optionally) pad the tree of tiles generated with uniform tiling so that all leaves are at the same depth.
-This transformation is performed on the high level IR after uniform tiling. 
+Based on these observations, we (optionally) pad the tree of tiles generated with basic tiling so that all leaves are at the same depth.
+This transformation is performed on the high level IR after basic tiling. 
 Once the trees have been padded to make all leaves equal depth, the tree walks are fully unrolled to evaluate a fixed 
 number of tiles and all leaf checks are omitted.
 
@@ -51,7 +65,7 @@ forest with 4 trees $T_1$, $T_2$, $T_3$, and $T_4$ in that order. Further, assum
 have depth 3. First, Treebeard reorders the trees to be in the order $T_1$, $T_4$, $T_2$, $T_3$. Then, the loop over the trees is fissed
 as shown in the following listing.
 
-% loop transformations for uniform tiling (splitting) 
+% loop transformations for basic tiling (splitting) 
 \begin{lstlisting}{style=c++}
   forest = ensemble(...)
   for i = 0 to batchSize step 1 {

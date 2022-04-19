@@ -200,8 +200,8 @@ the transformation is by itself general and can be used in different contexts. F
 to elide leaf checks until a depth $d$ is reached if we know all leaves are at a depth greater than $d$. 
 
 One other issue that the code generator needs to handle is that walks of different trees in the same ensemble may 
-need to be peeled to different depths. A strategy similar to what is used for uniform tiling is used to handle this.
+need to be peeled to different depths. A strategy similar to what is used for basic tiling is used to handle this.
 Trees are reordered so that all trees 
 with equal peeling depth are grouped together and the loops in the IR are fissed so that tree walks 
 for these groups of trees can be specialized differently.
-% This is very similar to the code generation strategy used for uniform tiling.
+% This is very similar to the code generation strategy used for basic tiling.
