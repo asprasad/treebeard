@@ -83,8 +83,8 @@ class TreebeardAPI:
       self.runtime_lib.Set_tilingType.argtypes = [ctypes.c_int64, ctypes.c_int32]
       self.runtime_lib.Set_tilingType.restype = None
 
-      self.runtime_lib.Set_pipelineWidth.argtypes = [ctypes.c_int64, ctypes.c_int32]
-      self.runtime_lib.Set_pipelineWidth.restype = None
+      self.runtime_lib.Set_pipelineSize.argtypes = [ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Set_pipelineSize.restype = None
 
       self.runtime_lib.Set_numberOfCores.argtypes = [ctypes.c_int64, ctypes.c_int32]
       self.runtime_lib.Set_numberOfCores.restype = None
@@ -179,7 +179,7 @@ class CompilerOptions:
     treebeardAPI.runtime_lib.Set_tilingType(self.optionsPtr, val)
   
   def SetPipelineWidth(self, val : int) :
-    treebeardAPI.runtime_lib.Set_pipelineWidth(self.optionsPtr, val)
+    treebeardAPI.runtime_lib.Set_pipelineSize(self.optionsPtr, val)
 
   def SetNumberOfCores(self, val : int) :
     treebeardAPI.runtime_lib.Set_numberOfCores(self.optionsPtr, val)

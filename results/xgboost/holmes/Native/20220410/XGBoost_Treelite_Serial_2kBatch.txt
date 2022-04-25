@@ -1,0 +1,42 @@
+TreeBeard  abalone ... ( 0.7812545299530029 s )
+XGBoost  abalone ... ( 1.9303805828094482 s )
+Treelite  abalone ... ( 4.306597471237183 s )
+XGBoost Speedup :  2.4708728190357783
+Treelite Speedup :  5.512412800340818
+TreeBeard  airline ... ( 0.1192631721496582 s )
+XGBoost  airline ... ( 0.31911325454711914 s )
+Treelite  airline ... ( 0.5901186466217041 s )
+XGBoost Speedup :  2.6757065806255573
+Treelite Speedup :  4.948037487055851
+TreeBeard  airline-ohe ... ( 2.893732786178589 s )
+XGBoost  airline-ohe ... ( 4.06711220741272 s )
+Treelite  airline-ohe ... ( 4.5506017208099365 s )
+XGBoost Speedup :  1.405489901085053
+Treelite Speedup :  1.5725715043714796
+TreeBeard  covtype ... ( 0.9689197540283203 s )
+XGBoost  covtype ... ( 1.6940991878509521 s )
+Treelite  covtype ... ( 3.4391908645629883 s )
+XGBoost Speedup :  1.7484411694649336
+Treelite Speedup :  3.5495105247513252
+TreeBeard  epsilon ... ( 0.584073543548584 s )
+XGBoost  epsilon ... ( 1.754979133605957 s )
+Treelite  epsilon ... ( 1.6567895412445068 s )
+XGBoost Speedup :  3.004722869218567
+Treelite Speedup :  2.8366111760148454
+TreeBeard  letters ... ( 21.738025903701782 s )
+XGBoost  letters ... ( 75.31602549552917 s )
+Treelite  letters ... ( 311.56550550460815 s )
+XGBoost Speedup :  3.4647132094319364
+Treelite Speedup :  14.33274147729999
+TreeBeard  higgs ... ( 0.12404084205627441 s )
+XGBoost  higgs ... ( 0.33043789863586426 s )
+Treelite  higgs ... ( 0.7680060863494873 s )
+XGBoost Speedup :  2.663944336059508
+Treelite Speedup :  6.191558148251372
+TreeBeard  year_prediction_msd ... ( 0.13089823722839355 s )
+XGBoost  year_prediction_msd ... ( 0.360093355178833 s )
+Treelite  year_prediction_msd ... ( 0.5076625347137451 s )
+XGBoost Speedup :  2.750941210541558
+Treelite Speedup :  3.878299245756584
+XGBoost geomean speedup :  2.4358790778075226
+Treelite geomean speedup :  4.431140203939142
