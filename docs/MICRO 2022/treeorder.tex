@@ -1,16 +1,19 @@
-\subsection{Tree ordering}
+\subsection{Tree Reordering}
 \label{sec:treeorder}	
 %Another objective at the HIR is to reduce the number of trees that need to be specialized by the lower levels.   
 % \TODO{kr : Not sure if i got this para right}
-Specializing the code for each tree in a model comes at a cost. First, the size of the generated code increases if the
+Specializing the code, as we do later in MIR for example by unrolling tree walks, for each tree in a model comes at a cost.
+First, the size of the generated code increases if the
 code generator needs to generate different code for different trees. This causes several front end stalls like instruction 
 cache misses and delays in instruction decoding. Second, some cross tree optimizations 
 like tree walk interleaving (applied at the lower levels of abstraction) are more effective when multiple trees share identical code. 
 
-In order to handle this, \Treebeard{} groups trees by their structure so that trees with the same structure can 
-share code. For example, the compiler pads trees with dummy tiles to make them balanced and then sorts the trees by 
-their depth, so that trees of same depth can share the same unrolled tree walk. Padding is only done for almost balanced trees (as generated 
-by basic tiling). This is shown in the example in figure \ref{Fig:Overview}. Other metrics, like feature set commonality, 
+In order to handle this, \Treebeard{} groups trees by tree structure so that they can 
+share traversal code. For example, the compiler pads trees with dummy tiles to make them balanced and then sorts the trees by 
+their depth, so that isomorphic trees can share the same unrolled tree walk. Padding is only done for almost balanced trees (as generated 
+by basic tiling). Additionally, the loop rewriting infrastructure described in Section~\ref{Sec:LoopReordering} is used 
+to modify the loop nest so that the same code walks all trees in a group. 
+This is shown in the example in the third row of Figure \ref{Fig:Overview}. Other metrics, like feature set commonality, 
 could also be used to reorder trees\cite{Tahoe}. However, we leave the exploration of such optimizations to future work.
 
 % , this is ensured by only adding up to a fixed fraction of dummy nodes. \TODO{Kr : Can we add a threshold say 10\%?}

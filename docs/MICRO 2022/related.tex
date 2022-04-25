@@ -1,6 +1,7 @@
 \section{Related Work}
-While decision trees are heavily used there is little prior work on building optimizing compilers for tree 
-based inference. Below we discuss some related work and contrast it to \Treebeard{}.
+While decision trees are heavily used there is little prior work on building 
+optimizing compilers for tree-based inference. We discuss below related work and 
+contrast it to \Treebeard{}.
 
 \emph{Decision Tree Ensemble Compilers:}
 Treelite\cite{Treelite} is a model compiler for decision tree ensembles and is the system
@@ -10,15 +11,15 @@ optimizations \Treebeard{} performs and is not easily extensible.
 % It cannot perform any of the optimizations \Treebeard{} is designed to perform. 
 Hummingbird\cite{Hummingbird} compiles traditional ML models to make use 
 of tensor primitives so 
-they can be integrated into tensor based frameworks like TensorFlow \cite{TensorFlow}.
+they can be integrated into tensor-based frameworks like TensorFlow \cite{TensorFlow}.
 Hummingbird does not perform any optimizations tailored to decision trees. It 
 also does not perform model specific optimizations. 
 
-\emph{Libraries:} Currently, the most popular systems for decision tree based models 
+\emph{Libraries:} Currently, the most popular systems for decision tree-based models 
 are libraries. XGBoost\cite{XGBoost} and LightGBM\cite{LightGBM} are the most  
 popular gradient boosting libraries while scikit-learn\cite{Sklearn} is 
 extremely popular for random forest models. These libraries implement both 
-training and inference. However, as mentioned in section \ref{sec:Intro}, porting 
+training and inference. However, as mentioned in Section \ref{sec:intro}, porting 
 optimizations in these libraries to newer architectures and maintaining them is 
 extremely difficult. Additionally, the inference routines in these libraries have 
 to be general and cannot be specialized to a specific model.
@@ -47,10 +48,10 @@ enable SIMD execution of decision tree inference. The SIMD execution itself is i
 by hand in the VM and the VM needs to be reimplemented for every supported target architecture.
 Additionally, even though they perform layout optimizations, their system does not perform 
 any model specific optimizations. Jo et. al.\cite{MilindTreeVectorization} describe techniques 
-to vectorize tree based applications. They do not study optimizations specific to decision trees.
+to vectorize tree-based applications. They do not study optimizations specific to decision trees.
 Both these works vectorize tree walks by performing different tree walks on each vector lane.
 The main issue with this approach is the divergence of tree walks. Another issue is that 
-memory accesses are gathers rather than vector loads. \Treebeard{}'s approach to 
+memory accesses are \op{gather}'s rather than vector loads. \Treebeard{}'s approach to 
 vectorization solves both these issues. Also, these approaches are not precluded 
 by \Treebeard{}'s tiling based vectorization. Multiple tiled tree walks can be combined
 into a single vectorized walk. We leave an exploration of this to future work. 
@@ -79,4 +80,7 @@ is a domain specific compilers for signal processing applications
 that instantiates high performance routines for linear transformations 
 like FFTs and FIR filters. FFTW\cite{FFTW} is a fast fourier transform 
 compiler that generates high performance FFT routines by customizing 
-the routine based on FFT size and the target machine.
+the routine based on FFT size and the target machine. 
+However, no such frameworks for decision tree ensembles exist currently.
+\Treebeard{} is a first step in this direction and unlocks several future 
+optimization opportunities.

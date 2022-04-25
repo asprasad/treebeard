@@ -90,9 +90,11 @@ series = {CGO 2019}
 }
 
 @misc{XLA,
-  title = {XLA : Optimizing Compiler for Machine Learning},
-  howpublished = {\url{https://www.tensorflow.org/xla}},
-  note = {Accessed: 2022-04-16}
+    key = "XLA",
+    author = {Google Inc},
+    title = "{XLA (Accelerated Linear Algebra) for TensorFlow}",
+    note = "https://www.tensorflow.org/performance/xla/",
+    year = 2017,
 }
 
 @misc{KaggleSurvey,
@@ -511,7 +513,7 @@ location = {Savannah, GA, USA},
 series = {OSDI'16}
 }
 
-@inproceedings{10.1145/301618.301661,
+@inproceedings{FFTW,
 author = {Frigo, Matteo},
 title = {A Fast Fourier Transform Compiler},
 year = {1999},
@@ -528,25 +530,6 @@ location = {Atlanta, Georgia, USA},
 series = {PLDI '99}
 }
 
-@article{FFTW,
-author = {Frigo, Matteo},
-title = {A Fast Fourier Transform Compiler},
-year = {1999},
-issue_date = {May 1999},
-publisher = {Association for Computing Machinery},
-address = {New York, NY, USA},
-volume = {34},
-number = {5},
-issn = {0362-1340},
-url = {https://doi.org/10.1145/301631.301661},
-doi = {10.1145/301631.301661},
-abstract = {The FFTW library for computing the discrete Fourier transform (DFT) has gained a wide acceptance in both academia and industry, because it provides excellent performance on a variety of machines (even competitive with or faster than equivalent libraries supplied by vendors). In FFTW, most of the performance-critical code was generated automatically by a special-purpose compiler, called genfft, that outputs C code. Written in Objective Caml, genfft can produce DFT programs for any input length, and it can specialize the DFT program for the common case where the input data are real instead of complex. Unexpectedly, genfft "discovered" algorithms that were previously unknown, and it was able to reduce the arithmetic complexity of some other existing algorithms. This paper describes the internals of this special-purpose compiler in some detail, and it argues that a specialized compiler is a valuable tool.},
-journal = {SIGPLAN Not.},
-month = {may},
-pages = {169–180},
-numpages = {12}
-}
-
 @misc{TensorComprehensions,
   doi = {10.48550/ARXIV.1802.04730},
   url = {https://arxiv.org/abs/1802.04730},
@@ -556,5 +539,17 @@ numpages = {12}
   publisher = {arXiv},
   year = {2018},
   copyright = {arXiv.org perpetual, non-exclusive license}
+}
+
+@misc{SageMaker,
+  title = {The total cost of ownership of Amazon SageMaker},
+  howpublished = {\url{https://pages.awscloud.com/rs/112-TZM-766/images/Amazon_SageMaker_TCO_uf.pdf}},
+  year = {2020}
+}
+
+@misc{MLBenchmarks,
+  title = {Intel Machine Learning Benchmarks},
+  howpublished = {\url{https://github.com/IntelPython/scikit-learn_bench}},
+  year = {2020}
 }
 

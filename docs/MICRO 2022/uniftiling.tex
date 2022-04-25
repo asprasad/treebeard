@@ -1,30 +1,31 @@
-\subsection{Basic Tiling Algorithm}
+\subsection{Basic Tiling}
 \label{sec:UnifTiling}
 % The justification for basic tiling -- if we assume all paths are equally likely,
 % we want to minimize the depth of speculation
-Algorithm~\ref{Alg:UnifTilingAlgo} shows a simple tiling algorithm that satisfies the above constraints and produces a valid tiling. 
+Algorithm~\ref{Alg:UnifTilingAlgo} shows the basic tiling algorithm that produces a valid tiling. It 
+attempts to minimize the depths of all constructed tiles. 
 Tiling starts at the root and constructs a tile $Tile$ by performing
 a level order traversal. The call \op{LevelOrderTraversal($\Tree$, $n_t$)} picks the next $n_t$ non-leaf nodes according to the standard 
 level order tree traversal algorithm. Once the current tile is constructed, 
 the tiling procedure is recursively performed on subtrees rooted at each node that is a destination of an edge going out of the constructed 
-tile. These edges are denoted by $Out(Tile)$ and the subtree rooted at a node $v$ is denoted by $S_v$.
-It is easy to see that the tiling constructed by algorithm \ref{Alg:UnifTilingAlgo} is valid.
-% \TODO{Pass a modified tree without leafs to the level order traversal call. Explicitly add leaves as seperate tiles}
+tile. It is easy to see that the tiling constructed by Algorithm \ref{Alg:UnifTilingAlgo} is valid.
+% \TODO{Pass a modified tree without leaves to the level order traversal call. Explicitly add leaves as seperate tiles}
 % Algorithm for basic tiling
 \begin{algorithm}
   \caption{Basic tree tiling}
   \label{Alg:UnifTilingAlgo}
-  \begin{algorithmic}
+  \small{
+  \begin{algorithmic}[1]
       \Procedure{LevelOrderTraversal}{$\Tree = (V, E, r)$, $n_t$}
         \State $queue = \{ r \}$
         \State $Tile = \emptyset$
         \While{$\neg queue.empty() \wedge |Tile|<n_t$}
-          \State $n = queue.pop()$
+          \State $n = queue.dequeue()$
           \If {$n \in L_{\Tree}$}
               \State \textbf{continue}
           \EndIf
           \State $Tile = Tile \cup \{ n \}$
-          \State $queue.push(left(n), right(n))$
+          \State $queue.enqueue([left(n), right(n)])$
         \EndWhile
       \EndProcedure
       \State {}
@@ -42,9 +43,15 @@ It is easy to see that the tiling constructed by algorithm \ref{Alg:UnifTilingAl
           \State \textbf{return} $Tiles$
       \EndProcedure
   \end{algorithmic}
+  }
 \end{algorithm}
 
-One interesting property of this tilling algorithm is that it naturally reduces the imbalance in trees, especially at large tile sizes. As the algorithm traverses down to sparser levels of the tree, it naturally groups sub-trees containing chains of nodes, thus balancing the trees. While its possible to further enhance the algorithm to explicitly balance tiled trees, we find that basic tiling suffices in practice.
+One interesting property of this tiling algorithm is that it naturally reduces 
+the imbalance in trees, especially at large tile sizes. As the algorithm 
+traverses down to sparser levels of the tree, it naturally groups sub-trees 
+containing chains of nodes, thus balancing the trees. While it is possible to 
+further enhance the algorithm to explicitly balance tiled trees, we find that 
+basic tiling suffices in practice.
 
 %%%% COMMENT %%%%% 
 \CommentOut{

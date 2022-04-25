@@ -8,15 +8,20 @@
 \usepackage{listings}
 \usepackage{fancyhdr}
 \usepackage{xcolor}
+\usepackage{tabularx,booktabs}
+\usepackage{multirow}
 \usepackage[normalem]{ulem}
 \usepackage[hyphens]{url}
 \usepackage[sort,nocompress]{cite}
 \usepackage[final]{microtype}
 \usepackage[keeplastbox]{flushend}
-\usepackage{subfig}
+%\usepackage{subfig}
 \usepackage{algorithm}
 %\usepackage{algorithmic}
 \usepackage{algpseudocode}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{authblk}
 % Always include hyperref last
 \usepackage[bookmarks=true,breaklinks=true,letterpaper=true,colorlinks,citecolor=blue,linkcolor=blue,urlcolor=blue]{hyperref}
 
@@ -35,23 +40,23 @@
 
 \lstdefinestyle{c++}{language=C++,
     morekeywords={ensemble, getTree, getRoot, isLeaf, isLeafTile, traverseTreeTile, getLeafValue, loadThresholds,
-                  loadFeatureIndices, loadTileShape, getChildNode, parallel, InterleavedWalk, evaluateTilePredicates,
-                  getChildTile, WalkDecisionTree},    
-    backgroundcolor=\color{backcolour},   
+                  loadFeatureIndices, loadTileShape, getChildTile, parallel, InterleavedWalk, evaluateTilePredicates,
+                  getChildTile, WalkDecisionTree, moveToChildTile},
+    backgroundcolor=\color{backcolour},
     commentstyle=\color{codegreen},
     keywordstyle=\color{blue},
     numberstyle=\tiny\color{codegray},
     stringstyle=\color{codepurple},
     basicstyle=\scriptsize,
-    breakatwhitespace=false,         
-    breaklines=true,                 
-    captionpos=b,                    
-    keepspaces=true,                 
-    numbers=left,                    
-    numbersep=5pt,                  
-    showspaces=false,                
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
     showstringspaces=false,
-    showtabs=false,                  
+    showtabs=false,
     tabsize=2
 }
 
@@ -69,15 +74,72 @@
   \fancyhf{}
   \renewcommand{\headrulewidth}{0pt}
   \fancyhead[C]{\vspace{10pt}\normalsize{MICRO 2022 Submission
-      \textbf{\#\microsubmissionnumber} -- Confidential Draft -- Do NOT Distribute!!}\\\vspace{-25pt}} 
+      \textbf{\#\microsubmissionnumber} -- Confidential Draft -- Do NOT Distribute!!}\\\vspace{-25pt}}
   \fancyfoot[C]{\thepage}
 }
 
 \pagenumbering{arabic}
 
 %%%%%%%%%%%---SETME-----%%%%%%%%%%%%%
-\title{Treebeard : An Optimizing Compiler for Tree Based ML Inference} 
+\title{Treebeard : An Optimizing Compiler for Decision Tree Based ML Inference}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\author[1]{Ashwin Prasad}
+\author[2]{Sampath Rajendra}
+\author[2]{Kaushik Rajan}
+\author[1]{R Govindarajan}
+\author[1]{Uday Bondhugula}
+\affil[1]{Department of Computer Science And Automation, Indian Institute of Science}
+\affil[2]{Microsoft Research}
+
+%\numberofauthors{5} %  in this sample file, there are a *total*
+% of EIGHT authors. SIX appear on the 'first-page' (for formatting
+% reasons) and the remaining two appear in the \additionalauthors section.
+%
+
+% \author{Ashwin Prasad}
+% \affiliation{%
+%  \institution{Indian Institute of Science}
+%  \city{Bangalore}
+%  \state{KA}
+%  \country{India}}
+% \email{ashwinprasad@iisc.ac.in}
+
+% \author{
+% % You can go ahead and credit any number of authors here,
+% % e.g. one 'row of three' or two rows (consisting of one row of three
+% % and a second row of one, two or three).
+% %
+% % The command \alignauthor (no curly braces needed) should
+% % precede each author name, affiliation/snail-mail address and
+% % e-mail address. Additionally, tag each line of
+% % affiliation/address with \affaddr, and tag the
+% % e-mail address with \email.
+% %
+% \alignauthor
+% Ashwin Prasad\\
+%       \affaddr{Indian Institute of Science, Bangalore}
+%       \email{ashwinprasad@iisc.ac.in}
+% \alignauthor
+% Sampath Rajendra\\
+%       \affaddr{Microsoft Research}
+%        \email{srajendra@microsoft.com}
+% \alignauthor
+% Kaushik Rajan\\
+%       \affaddr{Microsoft Research}
+%        \email{krajan@microsoft.com}
+% % \and
+% \alignauthor
+% R Govindarajan\\
+%       \affaddr{Indian Institute of Science, Bangalore}
+%       \email{govind@iisc.ac.in}
+% \alignauthor
+% Uday Bondhugula\\
+%       \affaddr{Indian Institute of Science, Bangalore}
+%       \email{udayb@iisc.ac.in}
+% }
+
+\renewcommand\Affilfont{\itshape\small}
 
 \begin{document}
 \maketitle
@@ -90,8 +152,11 @@
 \input{abstract}
 \input{introduction}
 \input{overview}
-\input{details}
+\input{opts}
+\input{results}
 \input{related}
+\input{conclusions}
+
 %%%%%%% -- PAPER CONTENT ENDS -- %%%%%%%%
 
 

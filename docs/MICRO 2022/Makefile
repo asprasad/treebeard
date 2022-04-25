@@ -1,8 +1,8 @@
 PAPER=main
 
-default: paper
+default: $(PAPER).pdf
 
-paper:
+$(PAPER).pdf: $(PAPER).tex *.tex figures/*.png figures/*.PNG figures/*.pdf figures/*.pptx
 	pdflatex $(PAPER).tex </dev/null
 	bibtex $(PAPER)
 	pdflatex $(PAPER).tex </dev/null >/dev/null

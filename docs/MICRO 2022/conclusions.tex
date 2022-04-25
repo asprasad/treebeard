@@ -1,0 +1,20 @@
+\section{Conclusions}
+This paper presents \Treebeard{}, a compiler that automatically generates  
+efficient code for decision tree inference. \Treebeard{} gradually lowers  
+inference code to LLVM IR through multiple intermediate abstractions.
+It composes several novel optimizations to specialize inference code 
+for each model on each supported hardware target. 
+Experimental evaluation demonstrates that \Treebeard{} is 
+significantly faster than state-of-the-art frameworks XGBoost and Treelite.
+
+%% when executing 
+% on both single core (by 2.6$\times$ and 4.7$\times$ respectively) and %% on 
+% multiple cores (2.3$\times$ and 2.7$\times$ respectively). 
+% The optimizations implemented in \Treebeard{} optimizations improved average latency over a batch of inputs by 2.2$\times$ over its
+% own baseline version. %% lays a strong foundation to
+%% automatically delivering high performance with high productivity through
+%% compiler infrastructure for decision tree inference.
+\Treebeard{} is a first step in automatically generating high performance
+inference code for decision tree ensembles. It significantly simplifies retargeting 
+high performance inference routines to new hardware targets. We believe that this methodology
+can be extended to benefit a richer ensemble of ML models. 

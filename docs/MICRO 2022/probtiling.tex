@@ -1,8 +1,10 @@
-\subsection{Probability Based Tiling}
+\subsection{Probability-Based Tiling}
 \label{sec:ProbTiling}
 %\subsubsection*{Motivation}
 
-The next algorithm we propose exploits the inherent biases among the leaves of a decision tree. In typical machine learning models some leafs (equivalently outcomes or predictions) are more likely to be reached than others. In such settings, having balanced tiled trees is not sufficient to minimize expected inference time. 
+\CommentOut{
+%% We have already given the motivation for probabilistic tiling!
+The next algorithm we propose exploits the inherent biases among the leaves of a decision tree. In typical machine learning models some leaves (equivalently outcomes or predictions) are more likely to be reached than others. In such settings, having balanced tiled trees is not sufficient to minimize expected inference time. 
 
 Consider for example two machine learning models \op{airline-ohe} and \op{epsilon} (also used in our evaluation). 
 Consider the graphs shown in   
@@ -17,10 +19,11 @@ We call trees with a small number of extremely likely leaves \textbf{\emph{leaf 
 On the other hand, for the benchmark \op{epsilon},
 figure \ref{Fig:EpsilonStats} shows that a trees need a much larger fraction of their leaves to cover a significant fraction of the training input.
 This means that most trees in \op{epsilon} are not leaf biased.
+}
 
 \CommentOut{
 \subsubsection{More Notation}
-In order to formulate the probability based tiling algorithm as an optimization problem, we define the following.
+In order to formulate the probability-based tiling algorithm as an optimization problem, we define the following.
 \begin{enumerate}
     \item For every leaf $l \in L$, we define $p_l$ as the probability that the leaf $l$ is reached.
     \item For each node $n \in V$, we define the absolute probability $p_v$ as
@@ -38,18 +41,22 @@ In order to formulate the probability based tiling algorithm as an optimization 
 \end{enumerate}
 }
 
+\CommentOut{
 \begin{figure}
+  \subfloat[airline-ohe]{
     \centering
     \includegraphics[width=\linewidth]{figures/airline-ohe.stats.train.txt.png}
-    \caption{Statistical profile for airline-ohe}
     \label{Fig:AirlineOHEStats}
-\end{figure}
-\begin{figure}
+  }
+  \subfloat[epsilon]{
     \centering
     \includegraphics[width=\linewidth]{figures/epsilon.stats.train.txt.png}
-    \caption{Statistical profile for epsilon}
     \label{Fig:EpsilonStats}
+  }
+  \caption{Statistical profiles.}
 \end{figure}
+}
+
 \CommentOut{
 We say that an input row $r_i$ is \textbf{\emph{covered}} by a subset of leaves $L' \subseteq L$ of a tree $T$, if the leaf $l$ reached by 
 walking $T$ for row $r_i$ is in $L'$. We show how different models (and even different trees within the same model) behave differently 
@@ -63,14 +70,16 @@ This means that a small fraction of leaves are very likely. On the other hand, f
 figure \ref{Fig:EpsilonStats} shows that a trees need a much larger fraction of their leaves to cover a significant fraction of the test input.
 This means that most trees in the epsilon model are not leaf biased.
 One other observation we make is that most models have some leaf biased trees while the rest of the trees have equally likely leaves.
-\TODO{AP Maybe define a term for trees with roughly equally likely leaves?} We design the probability based tiling algorithm to take advantage of this property 
+\TODO{AP Maybe define a term for trees with roughly equally likely leaves?} We design the probability-based tiling algorithm to take advantage of this property 
 of decision tree ensembles. 
 }
+
+\CommentOut{
 \subsubsection{The Optimization Problem}
 
 %We assume that we are given the probabilities of each leaf node of the decision tree (these can easily be computed using the training data). For every leaf $l \in L$, we %are given the probability $p_l$ that the leaf $l$ is reached. 
 
-Observe that the latency of one tree walk is proportional to the number of tiles that need to be evaluated to reach the leaf. It is easy to see that for a leaf biased tree, basic tilling does not optimize for this objective, it considers all leafs to be equally likely. 
+Observe that the latency of one tree walk is proportional to the number of tiles that need to be evaluated to reach the leaf. It is easy to see that for a leaf biased tree, basic tilling does not optimize for this objective, it considers all leaves to be equally likely. 
  
 The goal of probablistic tiling is to minimize the average inference latency, or equivalently the minimize the expected number of tiles that are evaluated to compute one tree prediction. More formally, the problem is to find a \emph{valid} (as defined in Section~\ref{sec:ValidTiling}) tiling $\mathcal{T}$ such that the following objective is minimized.
 \[
@@ -80,10 +89,10 @@ where the minimization is over all valid tilings $\mathcal{T}$ of the tree $\Tre
 
 The above optimization problem can be solved optimally using dynamic programming. 
 We leave this out in the interest of space. 
-Instead, we use the simple greedy algorithm listed in algorithm \ref{Alg:GreedyTilingAlgo} to construct a valid tiling given the node probabilities\footnote{Probabilites for internal nodes can be computed from probablities for leafs by summing up the probabilities of all leafs that belong to the sub-tree rooted at the internal node. Leaf probabilities are collected during training.}.
+Instead, we use the simple greedy algorithm listed in algorithm \ref{Alg:GreedyTilingAlgo} to construct a valid tiling given the node probabilities\footnote{Probabilites for internal nodes can be computed from probablities for leaves by summing up the probabilities of all leaves that belong to the sub-tree rooted at the internal node. Leaf probabilities are collected during training.}.
 The algorithm starts at the root and greedily keeps adding the most probable legal node to the current tile until the maximum tile size is reached.
 Subsequently, the tiling procedure is recursively performed on all nodes that are destinations for edges going out of the constructed tile.
-
+}
 % \subsubsection{Dynamic Programming Formulation}
 
 
@@ -109,9 +118,10 @@ Subsequently, the tiling procedure is recursively performed on all nodes that ar
 
 % Intuitively, it seems like the following greedy algorithm also gives the optimal tiling. The algorithm starts at the root and greedily keeps adding the most probable node to the current tile until the maximum tile size is reached.
 \begin{algorithm}
-    \caption{Greedy Probability Based Tree Tiling}
+    \caption{Greedy probability-based tree tiling.}
     \label{Alg:GreedyTilingAlgo}
-    \begin{algorithmic}
+    \small{
+    \begin{algorithmic}[1]
         \Procedure{TileTree}{$\Tree = (V, E, r)$, $n_t$} 
             \If {$r \in L_{\Tree}$}
                 \State \textbf{return} $\{ r \}$
@@ -131,7 +141,20 @@ Subsequently, the tiling procedure is recursively performed on all nodes that ar
             \State \textbf{return} $Tiles$
         \EndProcedure
     \end{algorithmic}
+    }
 \end{algorithm}
+
+The goal of probability-based tiling is to minimize the average inference latency, or equivalently to minimize the expected
+number of tiles that are evaluated to compute one tree prediction
+We present a simple greedy heuristic algorithm (Algorithm~\ref{Alg:GreedyTilingAlgo}) to construct a valid tiling given
+the node probabilities\footnote{Probabilities for internal nodes can be computed from probabilities for leaves by summing
+up the probabilities of all leaves that belong to the sub-tree rooted at the internal node. Leaf probabilities are collected
+during training.}. The algorithm starts at the root and greedily keeps adding the most probable legal node to the current
+tile until the maximum tile size is reached. Subsequently, the tiling procedure is recursively performed on all nodes 
+that are destinations for edges going out of the constructed tile. 
+In the algorithm, these edges are denoted by $Out(Tile)$ and the subtree rooted at a node $v$ is denoted by $S_v$.
+It is easy to see that the tiling constructed by Algorithm \ref{Alg:GreedyTilingAlgo} is valid.
+
 
 % Talk about problems with increasing number of tile shapes and only performing such tiling on skewed trees
 \CommentOut{
@@ -139,11 +162,11 @@ When we tried to apply algorithm \ref{Alg:GreedyTilingAlgo} on all trees in our 
 that even minor variations in probability caused the tiling algorithm to generate a large 
 number of tile shapes. This in turn caused a loss in performance because the large size of the 
 lookup table needed (section \ref{sec:LookupTable}) caused increased L1 cache misses. In order to 
-alleviate this, we only perform probability based tiling on trees that are leaf biased.
+alleviate this, we only perform probability-based tiling on trees that are leaf biased.
 }
-We find probability based tiling is only beneficial for leaf biased trees\footnote{Turns out that for trees that are not leaf biased, probability based tiling produces many more tile shapes (see Section~\ref{sec:tileShapes}) which direclty impacts the cost of \op{getChildTile} making it more expensive than basic tiling.}.  Recall that   
-a tree to be leaf biased if a small fraction of leaves, say $\alpha$, can cover a large fraction of training inputs, say $\beta$.
-We only perform probability based tiling on trees with thresholds $\alpha=0.05$ and $\beta=0.9$ and fall back to basic tiling otherwise. 
 
-
-
+As  probability-based tiling is only beneficial for leaf-biased trees,
+%\footnote{Turns out that for trees that are not leaf biased, probability-based tiling produces many more tile shapes (see Section~\ref{sec:tileShapes}) which direclty impacts the cost of \op{getChildTile} making it more expensive than basic tiling.}.
+%% Recall that a tree to be leaf biased if a small fraction of leaves, say $\alpha$, can cover a large fraction of training inputs, say $\beta$.
+we  perform probability-based tiling on trees only when a small fraction ($\alpha$) of leaves cover a large part ($\beta$) of the training inputs.
+% In our experiments we set $\alpha=0.075$ and $\beta=0.9$ and fall back to basic tiling otherwise. 

@@ -1,0 +1,49 @@
+%\section{Optimizations}
+\section{Optimizations on High-level IR}
+\label{Sec:HIR}
+This section describes tree tiling and tree reordering, two optimizations performed at the highest 
+level of abstraction. Recall that at this level the \op{predictForest} operator is abstractly
+represented by a set of decision trees. 
+
+%\TODO{This section needs a better name!}
+\input{tiling}
+\input{looporder}
+\input{treeorder}
+\input{MIR}
+
+\section{Optimizations on Low-level IR}
+\label{Sec:LIR}
+\input{vectorization}
+
+% \section{Putting it all together}
+% Sections~\ref{Sec:HIR} to \ref{Sec:LIR} present various composable optimizations different combinations 
+% of which may be needed for different models on different targets. Some of these optimizations like 
+% tiling and tree walk interleaving are parameterized to control how aggressively they are applied. 
+% In order to find the best combination of optimizations and parameters, several configurations were explored
+% for each benchmark. The grid of optimizations explored is listed in Table~\ref{Tab:Optimizations}. 
+% \begin{table}[htbp]
+%   \small{
+%   \begin{tabularx}{\linewidth}{l l}
+%    \toprule
+%    \textbf{Optimization} & \textbf{Configurations}\\
+%    \midrule
+%    \multirow{2}{*}{\texttt{Loop order}} &  One tree at a time\\
+%                        &  One row at a time\\
+%    \midrule
+%    \texttt{Tile size} & 1, 2, 4, 8 \\
+%    \midrule
+%    \multirow{2}{*}{\texttt{Tiling type}} & Basic tiling\\
+%    & Probability-based tiling \\
+%    \midrule
+%    \texttt{Tree padding and unrolling} & Yes, No \\
+%    \midrule
+%    \texttt{Tree walk interleaving} & 2, 4, 8 \\
+%    \bottomrule
+%   \end{tabularx}
+%   \vskip 5pt
+%   \caption{\label{Tab:Optimizations}Space of optimizations explored.}
+%   }
+% \end{table}
+% In the current implementation, we exhaustively explore the grid of optimizations for each 
+% model that is compiled. We intend to build an auto-tuner to search over the optimization 
+% space more efficiently. 

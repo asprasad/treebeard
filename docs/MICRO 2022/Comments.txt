@@ -1,0 +1,27 @@
+- Check that speedup numbers are consistent
+- Add tiles equal size invariant 
+- Just naming it is fine -- parallel.for will confuse those familiar with MLIR as well. You can just say OpenMP parallelization support provided by existing MLIR dialects.
+- The lines defining "valid tiling" should be better ordered and connected with the preceding lines in the para.
+
+- [Done] Algo 1: can you add line numbers?
+- [Done] We could minimize the use of colors and fading though in Fig 1.
+- [Done] queue.pop -> q.dequeue
+- [Done] queue.push -> q.enqueue
+- [Done] if you are enqueuing multiple things at once, use braces around them for clarity.
+- [Done] The colors in Fig 5/6 don't appear to be legible in the latest copy. 
+- [Done] Consider avoiding the footnote at 3.5 unless you want to additional special attention to it
+- [Done] Related work last para: I think this para is great to have but is missing the concluding sentence that can make it really strong. In its current form, it's just a long list of works in other domains. You may want to conclude that by saying that similar frameworks do not exist for decision tree ensembles and is a step in that direction unlocking more opportunities for the future as well. Some space can be saved here if needed by condensing those lines on other dense linear algebra/FFT works.
+- [Done] We can give a subsection numbering to "Conditions for Efficient Tiling" -- this paragraph by the way doesn't seem to have to do with any tiling efficiency but just validity?
+- [Done] Fix the prob tiling graphs (title, make each line a different style, maybe remove 1.0)
+- [Done] Fix the overview figure -- 
+- [Reject] As V doesn't have a subscript, just use L instead of L_\tau for leaves?
+- Unrolling and Peeling names are inconsistent. Overview figure and sections
+- Minor suggestion: In the abstract, I have a preference to switch the last two lines. A speedup over XGBoost and TreeLite will be valued higher by reviewers first followed by the speedups over our own baseline version: since the baseline version itself is not published -- so logically it can come later.
+FIGURES
+- Fix the speedups wrt XGBoost and Treelite in the abstract and intro
+- "16 cores" in the caption would be confusing. I know we say in the first para of Section 6, they are logical. But it would be good instead put (8 cores with 2x hyperthreading) or 8x2.
+- Use a hyphen between Probability and based wherever it's used as an adjective
+- getChildNode-->getChildTile
+- It'll be good to have a summary para that serves as a lead-in into a section -- to let the reader know what to expect in that section (and sometimes a lead-out too). We can add these as we progress though. Currently, new pieces start abruptly.
+- [Reject] Connectedness -> Connectivity ?
+- SECTION NAMES - optimization sections have weird names

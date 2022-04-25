@@ -1,0 +1,13 @@
+\subsection{Loop Rewriting}
+\label{Sec:LoopReordering}
+\Treebeard{} supports a wide range of loop rewrites in the process of 
+lowering from the high level IR to the mid level IR. \Treebeard{} 
+supports fissing and permuting of the loop nest 
+over the tree, input row pairs. Figure~\ref{Fig:Overview} shows the specific
+case of permuting loops. Two versions of MIR generated for two different 
+loop orders are shown -- ``one tree at a time'' that walks one tree for 
+all input rows before moving to the next tree and ``one row at a time'' that
+walks all trees for an input row before moving to the next row. The 
+structure of the loop nest to be generated in MIR is decided at the HIR level and 
+communicated to the lowering pass through attributes (as mention in 
+section~\ref{Sec:Overview}).
