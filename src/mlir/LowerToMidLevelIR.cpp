@@ -4,7 +4,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -44,11 +44,11 @@ void InsertPrintMemrefOp(
     auto index = rewriter.create<arith::ConstantIndexOp>(location, i);
     auto ithValue = rewriter.create<memref::LoadOp>(location, elementType, memref, static_cast<Value>(index));
     if (kind == 0)  { // Integer
-      auto i64Value = rewriter.create<arith::IndexCastOp>(location, ithValue, rewriter.getI64Type());
+      auto i64Value = rewriter.create<arith::ExtSIOp>(location, rewriter.getI64Type(), static_cast<Value>(ithValue));
       vectorValues.push_back(i64Value);
     }
     else {
-      auto doubleValue = rewriter.create<arith::ExtFOp>(location, ithValue, rewriter.getF64Type());
+      auto doubleValue = rewriter.create<arith::ExtFOp>(location, rewriter.getF64Type(), static_cast<Value>(ithValue));
       vectorValues.push_back(doubleValue);
     }
   }
@@ -375,9 +375,9 @@ struct PredictForestOpLowering: public ConversionPattern {
         auto predTransform = forestAttribute.GetDecisionForest().GetPredictionTransformation();
         Value transformedValue;
         if (predTransform == decisionforest::PredictionTransformation::kIdentity)
-          transformedValue = static_cast<Value>(treeLoop.results()[0]);
+          transformedValue = static_cast<Value>(treeLoop.getResults()[0]);
         else if (predTransform == decisionforest::PredictionTransformation::kSigmoid) {
-          transformedValue = GenSigmoid(rewriter, static_cast<Value>(treeLoop.results()[0]), location);
+          transformedValue = GenSigmoid(rewriter, static_cast<Value>(treeLoop.getResults()[0]), location);
         }
         else if (predTransform == decisionforest::PredictionTransformation::kSoftMax) {
           assert(state.isMultiClass);
@@ -985,22 +985,23 @@ struct PredictForestOpLowering: public ConversionPattern {
 
 };
 
-struct HighLevelIRToMidLevelIRLoweringPass: public PassWrapper<HighLevelIRToMidLevelIRLoweringPass, FunctionPass> {
+struct HighLevelIRToMidLevelIRLoweringPass: public PassWrapper<HighLevelIRToMidLevelIRLoweringPass, OperationPass<mlir::func::FuncOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect>();
+    registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect>();
   }
-  void runOnFunction() final {
+  void runOnOperation() final {
     ConversionTarget target(getContext());
 
-    target.addLegalDialect<memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect, 
-                           decisionforest::DecisionForestDialect, math::MathDialect, arith::ArithmeticDialect>();
+    target.addLegalDialect<memref::MemRefDialect, scf::SCFDialect, 
+                           decisionforest::DecisionForestDialect, math::MathDialect,
+                           arith::ArithmeticDialect, func::FuncDialect>();
 
     target.addIllegalOp<decisionforest::PredictForestOp>();
 
     RewritePatternSet patterns(&getContext());
     patterns.add<PredictForestOpLowering>(&getContext());
 
-    if (failed(applyPartialConversion(getFunction(), target, std::move(patterns))))
+    if (failed(applyPartialConversion(getOperation(), target, std::move(patterns))))
         signalPassFailure();
   }
 };
@@ -1017,7 +1018,7 @@ void AddWalkDecisionTreeOpLoweringPass(mlir::OpPassManager &optPM);
 void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext& context, mlir::ModuleOp module) {
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
-  mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
+  mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
   optPM.addPass(std::make_unique<HighLevelIRToMidLevelIRLoweringPass>());
   AddWalkDecisionTreeOpLoweringPass(optPM);
 

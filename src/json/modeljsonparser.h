@@ -15,7 +15,8 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Verifier.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "llvm/ADT/STLExtras.h"
 
 using json = nlohmann::json;
@@ -135,12 +136,12 @@ protected:
         auto resultType = GetFunctionResultType();
         return m_builder.getFunctionType({argType, resultType}, resultType);
     }
-    mlir::FuncOp GetFunctionPrototype() {
+    mlir::func::FuncOp GetFunctionPrototype() {
         auto location = m_builder.getUnknownLoc();
         auto functionType = GetFunctionType();
         // TODO the function name needs to be an input or derived from the input
         // return mlir::FuncOp::create(location, std::string("Prediction_Function"), functionType);
-        return m_builder.create<mlir::FuncOp>(location, std::string("Prediction_Function"), functionType, m_builder.getStringAttr("public"));
+        return m_builder.create<mlir::func::FuncOp>(location, std::string("Prediction_Function"), functionType, m_builder.getStringAttr("public"));
     }
     virtual mlir::decisionforest::TreeEnsembleType GetEnsembleType() {
         // All trees have the default tiling to start with.
@@ -204,7 +205,7 @@ public:
         if (m_statsProfileCSV != "")
             TreeBeard::Profile::ReadProbabilityProfile(*m_forest, m_statsProfileCSV);
         
-        mlir::FuncOp function(GetFunctionPrototype());
+        mlir::func::FuncOp function(GetFunctionPrototype());
         if (!function)
             return nullptr;
 
@@ -227,7 +228,7 @@ public:
             static_cast<mlir::Value>(entryBlock.getArguments()[0]),
             entryBlock.getArguments()[1], scheduleAttribute);
 
-        m_builder.create<mlir::ReturnOp>(m_builder.getUnknownLoc(), static_cast<mlir::Value>(predictOp));
+        m_builder.create<mlir::func::ReturnOp>(m_builder.getUnknownLoc(), static_cast<mlir::Value>(predictOp));
         if (failed(mlir::verify(m_module))) {
             m_module.emitError("Module verification error");
             return nullptr;

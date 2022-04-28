@@ -5,7 +5,8 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 
@@ -80,10 +81,10 @@ struct IndexToNodeOpLowering : public ConversionPattern {
   }
 };
 
-struct ConvertNodeTypeToIndexTypePass : public PassWrapper<ConvertNodeTypeToIndexTypePass, FunctionPass> {
+struct ConvertNodeTypeToIndexTypePass : public PassWrapper<ConvertNodeTypeToIndexTypePass, OperationPass<mlir::func::FuncOp>> {
   
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, tensor::TensorDialect, StandardOpsDialect, scf::SCFDialect>();
+    registry.insert<AffineDialect, memref::MemRefDialect, tensor::TensorDialect, scf::SCFDialect>();
   }
   
   void VisitOp(Operation* op, OpBuilder& builder) {
@@ -98,7 +99,7 @@ struct ConvertNodeTypeToIndexTypePass : public PassWrapper<ConvertNodeTypeToInde
             }
 
             for (auto index : indexArgInsertionIndices){
-                auto newArgument = block.insertArgument(index, builder.getIndexType());
+                auto newArgument = block.insertArgument(index, builder.getIndexType(), op->getLoc());
                 auto oldArgument = block.getArgument(index+1);
                 assert(oldArgument.getType().isa<decisionforest::NodeType>());
                 oldArgument.replaceAllUsesWith(newArgument);
@@ -132,15 +133,16 @@ struct ConvertNodeTypeToIndexTypePass : public PassWrapper<ConvertNodeTypeToInde
 
   void AddIndexArgumentsForAllBlocks() {
       OpBuilder builder(&getContext());
-      auto func = this->getFunction();
+      auto func = this->getOperation();
       VisitOp(func, builder);
   }
 
-  void runOnFunction() final {
+  void runOnOperation() final {
     ConversionTarget target(getContext());
 
-    target.addLegalDialect<AffineDialect, memref::MemRefDialect, tensor::TensorDialect, StandardOpsDialect, 
-                           scf::SCFDialect, decisionforest::DecisionForestDialect, math::MathDialect, arith::ArithmeticDialect>();
+    target.addLegalDialect<AffineDialect, memref::MemRefDialect, tensor::TensorDialect, 
+                           scf::SCFDialect, decisionforest::DecisionForestDialect,
+                           math::MathDialect, arith::ArithmeticDialect, func::FuncDialect>();
 
     target.addIllegalOp<decisionforest::EnsembleConstantOp,
                         decisionforest::GetTreeFromEnsembleOp,
@@ -158,7 +160,7 @@ struct ConvertNodeTypeToIndexTypePass : public PassWrapper<ConvertNodeTypeToInde
     patterns.add<NodeToIndexOpLowering,
                  IndexToNodeOpLowering>(&getContext());
 
-    if (failed(applyPartialConversion(getFunction(), target, std::move(patterns))))
+    if (failed(applyPartialConversion(getOperation(), target, std::move(patterns))))
         signalPassFailure();
   }
 };
@@ -172,7 +174,7 @@ void ConvertNodeTypeToIndexType(mlir::MLIRContext& context, mlir::ModuleOp modul
   // llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
-  mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
+  mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
   optPM.addPass(std::make_unique<ConvertNodeTypeToIndexTypePass>());
 
   if (mlir::failed(pm.run(module))) {

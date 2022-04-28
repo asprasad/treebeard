@@ -344,11 +344,6 @@ TiledTree* DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexTy
   return m_tiledTree.get();
 }
 
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::~DecisionTree() {
-  // delete m_tiledTree;
-}
-
 } // decisionforest
 } // mlir
 #endif // _TILEDTREE_H_

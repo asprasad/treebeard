@@ -5,10 +5,11 @@
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
-#include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
+#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Conversion/SCFToOpenMP/SCFToOpenMP.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
@@ -20,7 +21,8 @@
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -322,7 +324,7 @@ struct GetModelMemrefSizeOpLowering : public ConversionPattern {
 struct DecisionForestToLLVMLoweringPass : public PassWrapper<DecisionForestToLLVMLoweringPass, OperationPass<ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect, memref::MemRefDialect, 
-                    StandardOpsDialect, arith::ArithmeticDialect, vector::VectorDialect>();
+                    arith::ArithmeticDialect, vector::VectorDialect>();
   }
   void runOnOperation() final;
 };
@@ -370,10 +372,10 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
 
   RewritePatternSet patterns(&getContext());
   populateAffineToStdConversionPatterns(patterns);
-  populateLoopToStdConversionPatterns(patterns);
+  populateSCFToControlFlowConversionPatterns(patterns);
   populateMemRefToLLVMConversionPatterns(typeConverter, patterns);
-  populateStdToLLVMFuncOpConversionPattern(typeConverter, patterns);
-  populateStdToLLVMConversionPatterns(typeConverter, patterns);
+  cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
+  populateFuncToLLVMConversionPatterns(typeConverter, patterns);
   populateVectorToLLVMConversionPatterns(typeConverter, patterns, false);
   vector::populateVectorBroadcastLoweringPatterns(patterns);
   populateMathToLLVMConversionPatterns(typeConverter, patterns);
@@ -401,7 +403,7 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
 struct DecisionForestToLLVMLoweringPass : public PassWrapper<DecisionForestToLLVMLoweringPass, OperationPass<ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect, memref::MemRefDialect, 
-                    StandardOpsDialect, arith::ArithmeticDialect, vector::VectorDialect, omp::OpenMPDialect>();
+                    arith::ArithmeticDialect, vector::VectorDialect, omp::OpenMPDialect>();
   }
   void runOnOperation() final;
 };
@@ -493,7 +495,7 @@ void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module) {
   // llvm::DebugFlag = false;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
-  // mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
+  // mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
   pm.addPass(std::make_unique<DecisionForestToLLVMLoweringPass>());
   pm.addPass(createReconcileUnrealizedCastsPass());
   
@@ -506,7 +508,7 @@ void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module) {
   // llvm::DebugFlag = false;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
-  // mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
+  // mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
   pm.addPass(createConvertSCFToOpenMPPass());
   pm.addPass(createLowerToCFGPass());
   pm.addPass(createConvertOpenMPToLLVMPass());
@@ -610,7 +612,7 @@ int dumpLLVMIRToFile(mlir::ModuleOp module, const std::string& filename) {
 // void LowerTensorTypes(mlir::MLIRContext& context, mlir::ModuleOp module) {
 //   // Lower from high-level IR to mid-level IR
 //   mlir::PassManager pm(&context);
-//   // mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
+//   // mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
 //   // Partial bufferization passes.
 //   pm.addPass(createTensorConstantBufferizePass());
 //   pm.addNestedPass<FuncOp>(createSCFBufferizePass());

@@ -2,9 +2,8 @@
 
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Pass/Pass.h"
@@ -61,7 +60,7 @@ struct PrintTreePredictionOpLowering: public ConversionPattern {
       auto sextOp = rewriter.create<LLVM::SExtOp>(op->getLoc(), rewriter.getI64Type(), treeIndex);
       treeIndex = static_cast<Value>(sextOp);
     }
-    rewriter.create<CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>({ prediction, treeIndex }));
+    rewriter.create<func::CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>({ prediction, treeIndex }));
     rewriter.eraseOp(op);
     return mlir::success();
   }
@@ -94,7 +93,7 @@ struct PrintTreeNodeOpLowering: public ConversionPattern {
       auto sextOp = rewriter.create<LLVM::SExtOp>(op->getLoc(), rewriter.getI64Type(), nodeIndex);
       nodeIndex = static_cast<Value>(sextOp);
     }
-    rewriter.create<CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>({ nodeIndex }));
+    rewriter.create<func::CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>({ nodeIndex }));
     rewriter.eraseOp(op);
     return mlir::success();
   }
@@ -138,7 +137,7 @@ struct PrintComparisonOpLowering: public ConversionPattern {
       auto sextOp = rewriter.create<LLVM::SExtOp>(op->getLoc(), rewriter.getI64Type(), nodeIndex);
       nodeIndex = static_cast<Value>(sextOp);
     }
-    rewriter.create<CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>({ feature, threshold, nodeIndex }));
+    rewriter.create<func::CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>({ feature, threshold, nodeIndex }));
     rewriter.eraseOp(op);
     return mlir::success();
   }
@@ -205,7 +204,7 @@ struct PrintTreeToDOTFileOpLowering: public ConversionPattern {
     auto printFunctionRef = getOrInsertPrintTreeNode(rewriter, parentModule, alignedPtrType);
 
     // int64_t PrintTreeToDOTFile(TreeTileType *treeBuf, int64_t length, int64_t treeIndex, int64_t tileSize)
-    rewriter.create<CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>({ elementPtr, extractMemrefLength, indexVal, tileSizeConst }));
+    rewriter.create<func::CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>({ elementPtr, extractMemrefLength, indexVal, tileSizeConst }));
     rewriter.eraseOp(op);
     return mlir::success();
   }
@@ -278,12 +277,12 @@ struct PrintInputRowOpLowering: public ConversionPattern {
     if (alignedPtrType.getElementType().isF64()) {
       auto printFunctionRef = getOrInsertPrintRow(rewriter, parentModule);
       // int64_t PrintInputRow(double *treeBuf, int64_t length, int64_t rowIndex)
-      rewriter.create<CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>({ elementPtr, extractMemrefLength, indexVal }));
+      rewriter.create<func::CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>({ elementPtr, extractMemrefLength, indexVal }));
     }
     else if (alignedPtrType.getElementType().isF32()) {
       auto printFunctionRef = getOrInsertPrintRowFloat(rewriter, parentModule);
       // int64_t PrintInputRow_Float(float *treeBuf, int64_t length, int64_t rowIndex)
-      rewriter.create<CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>({ elementPtr, extractMemrefLength, indexVal }));
+      rewriter.create<func::CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>({ elementPtr, extractMemrefLength, indexVal }));
     }
     else {
       assert (false && "Unsupported type");
@@ -315,7 +314,7 @@ struct PrintIsLeafOpLowering: public ConversionPattern {
     assert (operands.size() == 3);
     ModuleOp parentModule = op->getParentOfType<ModuleOp>();
     auto printFunctionRef = getOrInsertPrintIsLeaf(rewriter, parentModule);
-    rewriter.create<CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>{operands[0], operands[1], operands[2]});
+    rewriter.create<func::CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), ArrayRef<Value>{operands[0], operands[1], operands[2]});
     rewriter.eraseOp(op);
     return mlir::success();
   }
@@ -343,7 +342,7 @@ struct PrintVectorOpLowering: public ConversionPattern {
     // assert (operands.size() == 3);
     ModuleOp parentModule = op->getParentOfType<ModuleOp>();
     auto printFunctionRef = getOrInsertPrintVector(rewriter, parentModule);
-    rewriter.create<CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), operands);
+    rewriter.create<func::CallOp>(op->getLoc(), printFunctionRef, rewriter.getI64Type(), operands);
     rewriter.eraseOp(op);
     return mlir::success();
   }
@@ -384,7 +383,7 @@ void InsertPrintElementAddressIfNeeded(ConversionPatternRewriter& rewriter, Loca
     auto castedBufferPtr = rewriter.create<LLVM::BitcastOp>(location, llvmI32PtrTy, bufferPtr);
     auto castedElemPtr = rewriter.create<LLVM::BitcastOp>(location, llvmI32PtrTy, elemPtr);
 
-    rewriter.create<CallOp>(location, printFunctionRef, rewriter.getI64Type(), ValueRange{castedBufferPtr, indexVal, actualIndex, elemIndex, castedElemPtr});
+    rewriter.create<func::CallOp>(location, printFunctionRef, rewriter.getI64Type(), ValueRange{castedBufferPtr, indexVal, actualIndex, elemIndex, castedElemPtr});
 }
 
 } // decisionforest

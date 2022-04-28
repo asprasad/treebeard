@@ -106,7 +106,7 @@ def UnrollLoopAttr : Attr<
 
 //-------   Operations   ----------------------
 
-class DecisionForest_Op<string mnemonic, list<OpTrait> traits = []> : 
+class DecisionForest_Op<string mnemonic, list<Trait> traits = []> : 
   Op<DecisionForestDialect, mnemonic, traits>;
 
 

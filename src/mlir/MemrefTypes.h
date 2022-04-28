@@ -11,7 +11,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
-#include "mlir/Dialect/Vector/VectorOps.h"
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 
 namespace mlir
 {

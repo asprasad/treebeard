@@ -6,7 +6,8 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 
@@ -275,13 +276,13 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     SaveAndRestoreInsertionPoint saveAndRestoreEntryPoint(rewriter);
     auto getMemrefFuncType = rewriter.getFunctionType(TypeRange({}), memrefType);
     std::string funcName = "Get_" + globalName;
-    NamedAttribute visibilityAttribute{module.sym_visibilityAttrName(), rewriter.getStringAttr("public")};
-    auto getGlobalMemrefFunc = FuncOp::create(location, funcName, getMemrefFuncType, ArrayRef<NamedAttribute>(visibilityAttribute));
+    NamedAttribute visibilityAttribute{module.getSymVisibilityAttrName(), rewriter.getStringAttr("public")};
+    auto getGlobalMemrefFunc = mlir::func::FuncOp::create(location, funcName, getMemrefFuncType, ArrayRef<NamedAttribute>(visibilityAttribute));
     auto &entryBlock = *getGlobalMemrefFunc.addEntryBlock();
     rewriter.setInsertionPointToStart(&entryBlock);
 
     auto getGlobalOffsets = rewriter.create<memref::GetGlobalOp>(location, memrefType, globalName);
-    rewriter.create<mlir::ReturnOp>(location, static_cast<Value>(getGlobalOffsets));
+    rewriter.create<mlir::func::ReturnOp>(location, static_cast<Value>(getGlobalOffsets));
 
     module.push_back(getGlobalMemrefFunc);
   }
@@ -297,8 +298,8 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     auto tileShapeIDArgType = MemRefType::get(memrefType.getShape(), modelMemrefElementType.getTileShapeType());
     auto getMemrefFuncType = rewriter.getFunctionType(TypeRange{thresholdArgType, indexArgType, tileShapeIDArgType}, rewriter.getI32Type());
     std::string funcName = "Init_" + globalName;
-    NamedAttribute visibilityAttribute{module.sym_visibilityAttrName(), rewriter.getStringAttr("public")};
-    auto initModelMemrefFunc = FuncOp::create(location, funcName, getMemrefFuncType, ArrayRef<NamedAttribute>(visibilityAttribute));
+    NamedAttribute visibilityAttribute{module.getSymVisibilityAttrName(), rewriter.getStringAttr("public")};
+    auto initModelMemrefFunc = mlir::func::FuncOp::create(location, funcName, getMemrefFuncType, ArrayRef<NamedAttribute>(visibilityAttribute));
     auto &entryBlock = *initModelMemrefFunc.addEntryBlock();
     rewriter.setInsertionPointToStart(&entryBlock);
 
@@ -343,7 +344,7 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     rewriter.setInsertionPointAfter(forLoop);
     
     auto modelSize = rewriter.create<decisionforest::GetModelMemrefSizeOp>(location, rewriter.getI32Type(), getGlobalMemref, lenIndexConst);
-    rewriter.create<mlir::ReturnOp>(location, static_cast<Value>(modelSize));
+    rewriter.create<mlir::func::ReturnOp>(location, static_cast<Value>(modelSize));
     module.push_back(initModelMemrefFunc);
   }
 
@@ -582,8 +583,8 @@ Value ReduceComparisonResultVectorToInt(Value comparisonResult, int32_t tileSize
   }
 
   auto leftShift = rewriter.create<arith::ShLIOp>(location, i32VectorType, comparisonExtended, shiftVector);
-  auto kind = rewriter.getStringAttr("add");
-  auto sum = rewriter.create<vector::ReductionOp>(location, rewriter.getI32Type(), kind, static_cast<Value>(leftShift), ValueRange{ });
+  auto kind = vector::CombiningKind::ADD;
+  auto sum = rewriter.create<vector::ReductionOp>(location, kind, static_cast<Value>(leftShift));
   auto index = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(sum));
   return index;
 }
@@ -593,7 +594,7 @@ Value ReduceComparisonResultVectorToInt_Bitcast(Value comparisonResult, int32_t 
   auto bitcastOp = rewriter.create<vector::BitCastOp>(location, bitcastVectorType, comparisonResult);
   auto zeroConst = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI32Type());
   auto integerResult = rewriter.create<vector::ExtractElementOp>(location, static_cast<Value>(bitcastOp), static_cast<Value>(zeroConst));
-  auto zeroExtend = rewriter.create<arith::ExtUIOp>(location, integerResult, rewriter.getI64Type()); 
+  auto zeroExtend = rewriter.create<arith::ExtUIOp>(location, rewriter.getI64Type(), static_cast<Value>(integerResult)); 
   auto index = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(zeroExtend));
   return index;
 }
@@ -871,11 +872,11 @@ struct GetLeafValueOpLowering : public ConversionPattern {
   }
 };
 
-struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLoweringPass, FunctionPass> {
+struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLoweringPass, OperationPass<mlir::func::FuncOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect>();
+    registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect>();
   }
-  void runOnFunction() final {
+  void runOnOperation() final {
     // [BUG!!] TODO Since MLIR runs this pass multi-threaded, if multiple passes access these globals, they need to be protected!
     
     // Clear the global maps that store the mappings for the ensemble constants
@@ -884,9 +885,9 @@ struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLowe
 
     ConversionTarget target(getContext());
 
-    target.addLegalDialect<AffineDialect, memref::MemRefDialect, StandardOpsDialect, 
+    target.addLegalDialect<AffineDialect, memref::MemRefDialect, 
                            scf::SCFDialect, decisionforest::DecisionForestDialect, vector::VectorDialect,
-                           math::MathDialect, arith::ArithmeticDialect>();
+                           math::MathDialect, arith::ArithmeticDialect, func::FuncDialect>();
 
     target.addIllegalOp<decisionforest::EnsembleConstantOp,
                         decisionforest::GetTreeFromEnsembleOp,
@@ -905,7 +906,7 @@ struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLowe
     else
       decisionforest::PopulateLowerToArrayRepresentationPatterns(patterns);
       
-    if (failed(applyPartialConversion(getFunction(), target, std::move(patterns))))
+    if (failed(applyPartialConversion(getOperation(), target, std::move(patterns))))
         signalPassFailure();
   }
 };
@@ -930,7 +931,7 @@ void PopulateLowerToArrayRepresentationPatterns(RewritePatternSet& patterns) {
 void LowerEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module) {
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
-  mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
+  mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
   optPM.addPass(std::make_unique<MidLevelIRToMemrefLoweringPass>());
 
   if (mlir::failed(pm.run(module))) {

@@ -342,7 +342,8 @@ llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> InferenceRunner::CreateEx
 #endif
   // Create an MLIR execution engine. The execution engine eagerly JIT-compiles
   // the module.
-  auto maybeEngine = mlir::ExecutionEngine::create(module, /*llvmModuleBuilder=*/nullptr, optPipeline, llvm::None, executionEngineLibs);
+  mlir::ExecutionEngineOptions options{nullptr, {}, llvm::None, executionEngineLibs};
+  auto maybeEngine = mlir::ExecutionEngine::create(module, options);
   assert(maybeEngine && "failed to construct an execution engine");
   return maybeEngine;
 }
