@@ -7,11 +7,11 @@ An optimizing compiler for decision tree ensemble inference.
 3. Open a terminal and change directory into <path-to-llvm-repo>/llvm-project/mlir/examples/tree-heavy.
 ```bash    
     mkdir build && cd build
-    bash ../scripts/gen.sh [cmake path] [mlir build directory name] 
+    bash ../scripts/gen.sh [-b "cmake path"] [-m "mlir build directory name"][-c "Debug|Release"] 
     # Eg : bash ../scripts/gen.sh /snap/bin/cmake build (if your mlir build is in a directory called "build")
     cmake --build .
 ```
-4. The "cmake path" and "mlir build directory name" are optional. If cmake path is not specified above, the "cmake" binary in the path is used. The default mlir build directory name is "build".
+4. All command line arguments to gen.sh are optional. If cmake path is not specified above, the "cmake" binary in the path is used. The default mlir build directory name is "build". The default configuration is "Debug".
 
 # MLIR Version
 The current version of Treebeard is tested with the following LLVM commit:
@@ -32,3 +32,6 @@ Date:   Thu Apr 28 09:40:30 2022 +0800
     
     Differential Revision: https://reviews.llvm.org/D124225
 ```
+
+# Python API
+Building Treebeard will generate a library <build_folder>/lib/libtreebeard-runtime.so.*. Copy this file into <Treebeard_Root>/src/python/libtreebeard-runtime.so . Now run <Treebeard_Root>/test/python/run_python_tests.py and verify that tests pass. See the file run_python_tests.py for an example of how the Treebeard API is imported.
