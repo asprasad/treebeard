@@ -5,7 +5,8 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 
@@ -214,13 +215,13 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     SaveAndRestoreInsertionPoint saveAndRestoreEntryPoint(rewriter);
     auto getMemrefFuncType = rewriter.getFunctionType(TypeRange({}), memrefType);
     std::string funcName = "Get_" + globalName;
-    NamedAttribute visibilityAttribute{module.sym_visibilityAttrName(), rewriter.getStringAttr("public")};
-    auto getGlobalMemrefFunc = FuncOp::create(location, funcName, getMemrefFuncType, ArrayRef<NamedAttribute>(visibilityAttribute));
+    NamedAttribute visibilityAttribute{module.getSymVisibilityAttrName(), rewriter.getStringAttr("public")};
+    auto getGlobalMemrefFunc = mlir::func::FuncOp::create(location, funcName, getMemrefFuncType, ArrayRef<NamedAttribute>(visibilityAttribute));
     auto &entryBlock = *getGlobalMemrefFunc.addEntryBlock();
     rewriter.setInsertionPointToStart(&entryBlock);
 
     auto getGlobalOffsets = rewriter.create<memref::GetGlobalOp>(location, memrefType, globalName);
-    rewriter.create<mlir::ReturnOp>(location, static_cast<Value>(getGlobalOffsets));
+    rewriter.create<mlir::func::ReturnOp>(location, static_cast<Value>(getGlobalOffsets));
 
     module.push_back(getGlobalMemrefFunc);
   }
@@ -250,8 +251,8 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
                                                              childrenIndexArgType},
                                                     rewriter.getI32Type());
     std::string funcName = "Init_" + globalName;
-    NamedAttribute visibilityAttribute{module.sym_visibilityAttrName(), rewriter.getStringAttr("public")};
-    auto initModelMemrefFunc = FuncOp::create(location, funcName, initMemrefFuncType, ArrayRef<NamedAttribute>(visibilityAttribute));
+    NamedAttribute visibilityAttribute{module.getSymVisibilityAttrName(), rewriter.getStringAttr("public")};
+    auto initModelMemrefFunc = mlir::func::FuncOp::create(location, funcName, initMemrefFuncType, ArrayRef<NamedAttribute>(visibilityAttribute));
     auto &entryBlock = *initModelMemrefFunc.addEntryBlock();
     rewriter.setInsertionPointToStart(&entryBlock);
 
@@ -313,7 +314,7 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     rewriter.setInsertionPointAfter(forLoop);
     
     auto modelSize = rewriter.create<decisionforest::GetModelMemrefSizeOp>(location, rewriter.getI32Type(), getGlobalMemref, lenIndexConst);
-    rewriter.create<mlir::ReturnOp>(location, static_cast<Value>(modelSize));
+    rewriter.create<mlir::func::ReturnOp>(location, static_cast<Value>(modelSize));
     module.push_back(initModelMemrefFunc);
   }
 
@@ -782,8 +783,8 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     }
 
     auto leftShift = rewriter.create<arith::ShLIOp>(location, i32VectorType, comparisonExtended, shiftVector);
-    auto kind = rewriter.getStringAttr("add");
-    auto sum = rewriter.create<vector::ReductionOp>(location, rewriter.getI32Type(), kind, static_cast<Value>(leftShift), ValueRange{ });
+    auto kind = vector::CombiningKind::ADD;
+    auto sum = rewriter.create<vector::ReductionOp>(location, kind, static_cast<Value>(leftShift));
     auto index = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(sum));
     return index;
   }
@@ -793,7 +794,7 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
     auto bitcastOp = rewriter.create<vector::BitCastOp>(location, bitcastVectorType, comparisonResult);
     auto zeroConst = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI32Type());
     auto integerResult = rewriter.create<vector::ExtractElementOp>(location, static_cast<Value>(bitcastOp), static_cast<Value>(zeroConst));
-    auto zeroExtend = rewriter.create<arith::ExtUIOp>(location, integerResult, rewriter.getI64Type()); 
+    auto zeroExtend = rewriter.create<arith::ExtUIOp>(location, rewriter.getI64Type(), integerResult); 
     auto index = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(zeroExtend));
     return index;
   }

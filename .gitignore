@@ -1,4 +1,4 @@
-build/
+build*/
 debug/
 release/
 runtime_test_binaries/

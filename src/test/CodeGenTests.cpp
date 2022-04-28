@@ -9,7 +9,8 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Verifier.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "llvm/ADT/STLExtras.h"
 
@@ -43,7 +44,7 @@ bool Test_LoadTileThresholdOp_DoubleInt32_TileSize1(TestArgs_t& args) {
   auto outputMemrefType = MemRefType::get(shape, builder.getF64Type());
   auto functionType = builder.getFunctionType({inputMemrefType, outputMemrefType}, builder.getI32Type());
 
-  auto func = builder.create<FuncOp>(location, std::string("TestFunction"), functionType, builder.getStringAttr("public"));
+  auto func = builder.create<mlir::func::FuncOp>(location, std::string("TestFunction"), functionType, builder.getStringAttr("public"));
   auto &entryBlock = *(func.addEntryBlock());
   builder.setInsertionPointToStart(&entryBlock);
 
@@ -63,7 +64,7 @@ bool Test_LoadTileThresholdOp_DoubleInt32_TileSize1(TestArgs_t& args) {
 
   builder.setInsertionPointAfter(batchLoop);
   auto retVal = builder.create<arith::ConstantIntOp>(location, 0, builder.getI32Type());
-  builder.create<mlir::ReturnOp>(location, static_cast<Value>(retVal));
+  builder.create<mlir::func::ReturnOp>(location, static_cast<Value>(retVal));
 
   module.push_back(func);
   // module.dump();
@@ -111,7 +112,7 @@ bool Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1(TestArgs_t& args) {
   auto outputMemrefType = MemRefType::get(shape, builder.getI32Type());
   auto functionType = builder.getFunctionType({inputMemrefType, outputMemrefType}, builder.getI32Type());
 
-  auto func = builder.create<FuncOp>(location, std::string("TestFunction"), functionType, builder.getStringAttr("public"));
+  auto func = builder.create<mlir::func::FuncOp>(location, std::string("TestFunction"), functionType, builder.getStringAttr("public"));
   auto &entryBlock = *(func.addEntryBlock());
   builder.setInsertionPointToStart(&entryBlock);
 
@@ -131,7 +132,7 @@ bool Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1(TestArgs_t& args) {
 
   builder.setInsertionPointAfter(batchLoop);
   auto retVal = builder.create<mlir::arith::ConstantIntOp>(location, 0, builder.getI32Type());
-  builder.create<mlir::ReturnOp>(location, static_cast<Value>(retVal));
+  builder.create<mlir::func::ReturnOp>(location, static_cast<Value>(retVal));
 
   module.push_back(func);
   // module.dump();
@@ -181,7 +182,7 @@ bool Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args) {
   auto outputMemrefType = MemRefType::get(outputShape, builder.getF64Type());
   auto functionType = builder.getFunctionType({inputMemrefType, outputMemrefType}, builder.getI32Type());
 
-  auto func = builder.create<FuncOp>(location, std::string("TestFunction"), functionType, builder.getStringAttr("public"));
+  auto func = builder.create<mlir::func::FuncOp>(location, std::string("TestFunction"), functionType, builder.getStringAttr("public"));
   auto &entryBlock = *(func.addEntryBlock());
   builder.setInsertionPointToStart(&entryBlock);
 
@@ -205,7 +206,7 @@ bool Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args) {
 
   builder.setInsertionPointAfter(batchLoop);
   auto retVal = builder.create<mlir::arith::ConstantIntOp>(location, 0, builder.getI32Type());
-  builder.create<mlir::ReturnOp>(location, static_cast<Value>(retVal));
+  builder.create<mlir::func::ReturnOp>(location, static_cast<Value>(retVal));
 
   module.push_back(func);
   // module.dump();
@@ -255,7 +256,7 @@ bool Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1(TestArgs_t& arg
   auto outputMemrefType = MemRefType::get(outputShape, builder.getI32Type());
   auto functionType = builder.getFunctionType({inputMemrefType, outputMemrefType}, builder.getI32Type());
 
-  auto func = builder.create<FuncOp>(location, std::string("TestFunction"), functionType, builder.getStringAttr("public"));
+  auto func = builder.create<mlir::func::FuncOp>(location, std::string("TestFunction"), functionType, builder.getStringAttr("public"));
   auto &entryBlock = *(func.addEntryBlock());
   builder.setInsertionPointToStart(&entryBlock);
 
@@ -279,7 +280,7 @@ bool Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1(TestArgs_t& arg
 
   builder.setInsertionPointAfter(batchLoop);
   auto retVal = builder.create<mlir::arith::ConstantIntOp>(location, 0, builder.getI32Type());
-  builder.create<mlir::ReturnOp>(location, static_cast<Value>(retVal));
+  builder.create<mlir::func::ReturnOp>(location, static_cast<Value>(retVal));
 
   module.push_back(func);
   // module.dump();
@@ -391,7 +392,7 @@ public:
     auto tileShapeIDMemrefType = MemRefType::get(shape, tileShapeType);
     auto functionType = builder.getFunctionType({inputMemrefType, outputMemrefType, featureIndexMemrefType, tileShapeIDMemrefType}, builder.getI32Type());
 
-    auto func = builder.create<FuncOp>(location, std::string("Get_ModelValues"), functionType, builder.getStringAttr("public"));
+    auto func = builder.create<mlir::func::FuncOp>(location, std::string("Get_ModelValues"), functionType, builder.getStringAttr("public"));
     auto &entryBlock = *(func.addEntryBlock());
     builder.setInsertionPointToStart(&entryBlock);
 
@@ -431,7 +432,7 @@ public:
     builder.create<memref::StoreOp>(location, static_cast<Value>(tileShape), static_cast<Value>(tileShapeMemref), i);
     builder.setInsertionPointAfter(batchLoop);
     auto retVal = builder.create<mlir::arith::ConstantIntOp>(location, 0, builder.getI32Type());
-    builder.create<mlir::ReturnOp>(location, static_cast<Value>(retVal));
+    builder.create<mlir::func::ReturnOp>(location, static_cast<Value>(retVal));
 
     this->m_module.push_back(func);
   }

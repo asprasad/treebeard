@@ -7,7 +7,8 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 
@@ -128,17 +129,17 @@ struct ReorderEnsembleConstants : public RewritePattern {
 
 };
 
-struct ReorderTreesByDepthPass : public PassWrapper<ReorderTreesByDepthPass, FunctionPass> {
+struct ReorderTreesByDepthPass : public PassWrapper<ReorderTreesByDepthPass, OperationPass<mlir::func::FuncOp>> {
   ReorderTreesByDepthPass() 
   { }
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect, math::MathDialect>();
+    registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect, math::MathDialect>();
   }
-  void runOnFunction() final {
+  void runOnOperation() final {
     RewritePatternSet patterns(&getContext());
     patterns.add<ReorderEnsembleConstants>(&getContext());
 
-    if (failed(applyPatternsAndFoldGreedily(getFunction(), std::move(patterns))))
+    if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
         signalPassFailure();
   }
 };
@@ -329,20 +330,20 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
 
 };
 
-struct SplitTreeLoopByDepth : public PassWrapper<SplitTreeLoopByDepth, FunctionPass> {
+struct SplitTreeLoopByDepth : public PassWrapper<SplitTreeLoopByDepth, OperationPass<mlir::func::FuncOp>> {
   int32_t m_pipelineSize;
   int32_t m_numCores;
   SplitTreeLoopByDepth(int32_t pipelineSize, int32_t numCores) 
   :m_pipelineSize(pipelineSize), m_numCores(numCores)
   { }
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect, math::MathDialect>();
+    registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect, math::MathDialect>();
   }
-  void runOnFunction() final {
+  void runOnOperation() final {
     RewritePatternSet patterns(&getContext());
     patterns.add<SplitTreeLoopsByTreeDepthPattern>(&getContext(), m_pipelineSize, m_numCores);
 
-    if (failed(applyPatternsAndFoldGreedily(getFunction(), std::move(patterns))))
+    if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
         signalPassFailure();
   }
 };
@@ -355,7 +356,7 @@ namespace decisionforest
 {
 void DoReorderTreesByDepth(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t pipelineSize, int32_t numCores) {
   mlir::PassManager pm(&context);
-  mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
+  mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
   optPM.addPass(std::make_unique<ReorderTreesByDepthPass>());
   // TODO pipelineSize needs to be added to CompilerOptions
   optPM.addPass(std::make_unique<SplitTreeLoopByDepth>(pipelineSize, numCores));

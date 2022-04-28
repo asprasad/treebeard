@@ -18,7 +18,8 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Verifier.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "llvm/ADT/STLExtras.h"
 
 #include "CompileUtils.h"
@@ -152,13 +153,13 @@ mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& cont
 
 void InitializeMLIRContext(mlir::MLIRContext& context) {
   context.getOrLoadDialect<mlir::decisionforest::DecisionForestDialect>();
-  context.getOrLoadDialect<mlir::StandardOpsDialect>();
   context.getOrLoadDialect<mlir::scf::SCFDialect>();
   context.getOrLoadDialect<mlir::memref::MemRefDialect>();
   context.getOrLoadDialect<mlir::vector::VectorDialect>();
   context.getOrLoadDialect<mlir::math::MathDialect>();
   context.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
   context.getOrLoadDialect<mlir::omp::OpenMPDialect>();
+  context.getOrLoadDialect<mlir::func::FuncDialect>();
 }
 
 void ConvertXGBoostJSONToLLVMIR(const std::string&modelJsonPath, const std::string& llvmIRFilePath, const std::string& modelGlobalsJSONPath,

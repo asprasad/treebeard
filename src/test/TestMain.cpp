@@ -7,6 +7,7 @@
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "xgboostparser.h"
 #include "TiledTree.h"
 
@@ -1410,8 +1411,11 @@ TestDescriptor testList[] = {
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
-  
+  TEST_LIST_ENTRY(Test_TileSize8_CovType_4Pipelined_TestInputs),
+
+  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
   TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth),
   TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_MakeLeavesSameDepth),
   TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_MakeLeavesSameDepth),
@@ -1419,39 +1423,6 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_MakeLeavesSameDepth),
   TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_MakeLeavesSameDepth),
   TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth),
-  TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Covtype_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Letters_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_WalkPeeling_BalancedTree_TileSize2),
-  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
-  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4),
-  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
-  TEST_LIST_ENTRY(Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
-  TEST_LIST_ENTRY(Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Year),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Letters),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Epsilon),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Higgs),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_AirlineOHE),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Covtype),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Airline),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Abalone),
-
-  // TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
-  // TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4),
-  // TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
-  // TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth),
-  // TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_MakeLeavesSameDepth),
-  // TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_MakeLeavesSameDepth),
-  // TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_MakeLeavesSameDepth),
-  // TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_MakeLeavesSameDepth),
-  // TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_MakeLeavesSameDepth),
-  // TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth),
   
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_EqualDepth_TileSize8),
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_EqualDepth_TileSize8),
@@ -1558,6 +1529,7 @@ bool RunTest(TestDescriptor test, TestArgs_t& args) {
 }
 
 void RunTests() {
+  // llvm::DebugFlag = true;
  	bool overallPass = true;
 
   std::cout << "Running Treebeard Tests " << std::endl << std::endl;
@@ -1567,12 +1539,12 @@ void RunTests() {
     mlir::MLIRContext context;
     context.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
     context.getOrLoadDialect<mlir::decisionforest::DecisionForestDialect>();
-    context.getOrLoadDialect<mlir::StandardOpsDialect>();
     context.getOrLoadDialect<mlir::scf::SCFDialect>();
     context.getOrLoadDialect<mlir::memref::MemRefDialect>();
     context.getOrLoadDialect<mlir::vector::VectorDialect>();
     context.getOrLoadDialect<mlir::math::MathDialect>();
     context.getOrLoadDialect<mlir::omp::OpenMPDialect>();
+    context.getOrLoadDialect<mlir::func::FuncDialect>();
     TestArgs_t args = { context };
     
     // Disable sparse code generation by default
