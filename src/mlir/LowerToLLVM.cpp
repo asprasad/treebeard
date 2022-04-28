@@ -454,8 +454,8 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
   // populateAffineToStdConversionPatterns(patterns);
   // populateLoopToStdConversionPatterns(patterns);
   populateMemRefToLLVMConversionPatterns(typeConverter, patterns);
-  populateStdToLLVMFuncOpConversionPattern(typeConverter, patterns);
-  populateStdToLLVMConversionPatterns(typeConverter, patterns);
+  cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
+  populateFuncToLLVMConversionPatterns(typeConverter, patterns);
   populateVectorToLLVMConversionPatterns(typeConverter, patterns, false);
   vector::populateVectorBroadcastLoweringPatterns(patterns);
   populateMathToLLVMConversionPatterns(typeConverter, patterns);
@@ -509,11 +509,10 @@ void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module) {
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
   // mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
+  pm.addPass(createConvertSCFToCFPass());
   pm.addPass(createConvertSCFToOpenMPPass());
-  pm.addPass(createLowerToCFGPass());
   pm.addPass(createConvertOpenMPToLLVMPass());
   pm.addPass(std::make_unique<DecisionForestToLLVMLoweringPass>());
-
   pm.addPass(createReconcileUnrealizedCastsPass());
   
   if (mlir::failed(pm.run(module))) {
