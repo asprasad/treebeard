@@ -28,6 +28,14 @@ void SetInsertDebugHelpers(int argc, char *argv[]) {
     }
 }
 
+void SetPerfNotificationListener(int argc, char *argv[]) {
+  for (int32_t i=0 ; i<argc ; ++i)
+    if (std::string(argv[i]).find(std::string("--enablePerfNotificationListener")) != std::string::npos) {
+      mlir::decisionforest::EnablePerfNotificationListener = true;
+      return;
+    }
+}
+
 void SetInsertPrintVectors(int argc, char *argv[]) {
   for (int32_t i=0 ; i<argc ; ++i)
     if (std::string(argv[i]).find(std::string("--printVec")) != std::string::npos) {
@@ -321,6 +329,8 @@ bool ComputeProbabilityProfileIfNeeded(int argc, char *argv[]) {
 int main(int argc, char *argv[]) {
   SetInsertDebugHelpers(argc, argv);
   SetInsertPrintVectors(argc, argv);
+  SetPerfNotificationListener(argc, argv);
+  
   if (RunGenerationIfNeeded(argc, argv))
     return 0;
   else if (RunXGBoostBenchmarksIfNeeded(argc, argv))

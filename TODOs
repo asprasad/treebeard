@@ -1,3 +1,16 @@
+* Make interfaces for mem rep and code gen extensible
+* Make extensibility a concept in scheduling lang
+* Make the command line interface take a JSON for the configuration (so scripts don't break everytime)
+* Schedule exploration
+* Pipelining for general case
+* SIMD for multiple walks
+* AMD specific opts -- gather etc
+* GPU code gen
+* Loop Parallelization
+* Loop Tiling
+* LightGBM
+* Document compile times
+
 Python API
     - [Done] Expose reordering, pipeling, parallelism, stats CSV path
     - [Done] Expose common schedules

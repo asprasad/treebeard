@@ -8,7 +8,7 @@ An optimizing compiler for decision tree ensemble inference.
 ```bash    
     mkdir build && cd build
     bash ../scripts/gen.sh [-b "cmake path"] [-m "mlir build directory name"][-c "Debug|Release"] 
-    # Eg : bash ../scripts/gen.sh /snap/bin/cmake build (if your mlir build is in a directory called "build")
+    # Eg : bash ../scripts/gen.sh -b /snap/bin/cmake -m build (if your mlir build is in a directory called "build")
     cmake --build .
 ```
 4. All command line arguments to gen.sh are optional. If cmake path is not specified above, the "cmake" binary in the path is used. The default mlir build directory name is "build". The default configuration is "Debug".
@@ -35,3 +35,30 @@ Date:   Thu Apr 28 09:40:30 2022 +0800
 
 # Python API
 Building Treebeard will generate a library <build_folder>/lib/libtreebeard-runtime.so.*. Copy this file into <Treebeard_Root>/src/python/libtreebeard-runtime.so . Now run <Treebeard_Root>/test/python/run_python_tests.py and verify that tests pass. See the file run_python_tests.py for an example of how the Treebeard API is imported.
+
+# Profiling Generated Code with VTune
+
+Firstly, build MLIR with LLVM_USE_INTEL_JITEVENTS enabled. Add the following option to the cmake configuration command while building MLIR.
+```bash
+-DLLVM_USE_INTEL_JITEVENTS=1
+```
+You may need to fix some build errors in LLVM when you do this. In the commit referenced above, you will need to add the following line to IntelJITEventListener.cpp.
+```C++
+#include "llvm/Object/ELFObjectFile.h"
+```
+Build Treebeard (as described above), linking it to the build of MLIR with LLVM_USE_INTEL_JITEVENTS=1.
+
+Set the following environment variables in the shell where you will run the Treebeard executable and in the shell from which you will launch VTune.
+```bash
+export ENABLE_JIT_PROFILING=1
+export INTEL_LIBITTNOTIFY64=/opt/intel/oneapi/vtune/latest/lib64/runtime/libittnotify_collector.so
+export INTEL_JIT_PROFILER64=/opt/intel/oneapi/vtune/latest/lib64/runtime/libittnotify_collector.so
+```
+The paths above are the default VTune installation paths. These maybe different if you've installed VTune in a different directory. Consider adding these variables to your .bashrc file.
+
+Run the Treebeard executable with JIT profiler events enabled.
+```bash
+./tree-heavy --xgboostBench --enablePerfNotificationListener
+```
+
+TODO : You will need to modify the benchmark code to run only the test you want to profile.
