@@ -26,7 +26,6 @@ struct CompilerOptions {
   TilingType tilingType=TilingType::kUniform;
   bool makeAllLeavesSameDepth=false;
   bool reorderTreesByDepth=false;
-  int32_t unrollFactor = -1;
   int32_t pipelineSize = -1;
 
   mlir::decisionforest::ScheduleManipulator *scheduleManipulator=nullptr;
@@ -43,8 +42,8 @@ struct CompilerOptions {
     tileShapeBitWidth(tileShapeWidth), childIndexBitWidth(childIndexWidth), tilingType(tileType), makeAllLeavesSameDepth(makeLeavesSameDepth),
     reorderTreesByDepth(reorderTrees), scheduleManipulator(scheduleManip)
   { }
+  CompilerOptions(const std::string& configJSONFilePath);
 
-  void SetUnrollFactor(int32_t unrollFactor) { this->unrollFactor = unrollFactor; }
   void SetPipelineSize(int32_t pipelineSize) { this->pipelineSize = pipelineSize; }
 };
 

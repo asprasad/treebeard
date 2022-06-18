@@ -81,7 +81,7 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
     }
   if (!dumpLLVMToFile)
     return false;
-  std::string jsonFile, llvmIRFile, modelGlobalsJSONFile;
+  std::string jsonFile, llvmIRFile, modelGlobalsJSONFile, compilerConfigJSONFile;
   int32_t thresholdTypeWidth=32, returnTypeWidth=32, featureIndexTypeWidth=16, tileShapeBitWidth=16, childIndexBitWidth=16;
   int32_t nodeIndexTypeWidth=32, inputElementTypeWidth=32, batchSize=4, tileSize=1;
   bool invertLoops = false, isReturnTypeFloat=true;
@@ -102,6 +102,11 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
       assert ((i+1) < argc);
       assert (modelGlobalsJSONFile == "");
       modelGlobalsJSONFile = argv[i+1];
+      i += 2;
+    }
+    else if (ContainsString(argv[i], "-compilerConfigJSON")) {
+      assert ((i+1) < argc);
+      compilerConfigJSONFile = argv[i+1];
       i += 2;
     }
     else if (ContainsString(argv[i], "--sparse")) {
@@ -149,10 +154,17 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
   assert (jsonFile != "" && llvmIRFile != "");
   mlir::decisionforest::ScheduleManipulationFunctionWrapper scheduleManipulator(mlir::decisionforest::OneTreeAtATimeSchedule);
   // TreeBeard::test::ScheduleManipulationFunctionWrapper scheduleManipulator(TreeBeard::test::TileTreeDimensionSchedule<10>);
-  TreeBeard::CompilerOptions options(thresholdTypeWidth, returnTypeWidth, isReturnTypeFloat, featureIndexTypeWidth,
-                                     nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, 
-                                     TreeBeard::TilingType::kUniform, false, false, invertLoops ? &scheduleManipulator : nullptr);
-  TreeBeard::ConvertXGBoostJSONToLLVMIR(jsonFile, llvmIRFile, modelGlobalsJSONFile, options);
+  
+  if (compilerConfigJSONFile != "") {
+    TreeBeard::CompilerOptions options(compilerConfigJSONFile);
+    TreeBeard::ConvertXGBoostJSONToLLVMIR(jsonFile, llvmIRFile, modelGlobalsJSONFile, options);
+  }
+  else {
+    TreeBeard::CompilerOptions options(thresholdTypeWidth, returnTypeWidth, isReturnTypeFloat, featureIndexTypeWidth,
+                                       nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, 
+                                       TreeBeard::TilingType::kUniform, false, false, invertLoops ? &scheduleManipulator : nullptr);
+    TreeBeard::ConvertXGBoostJSONToLLVMIR(jsonFile, llvmIRFile, modelGlobalsJSONFile, options);
+  }
   return true;
 }
 
