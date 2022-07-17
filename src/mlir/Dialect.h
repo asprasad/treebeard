@@ -28,8 +28,12 @@ class LLVMTypeConverter;
 
 namespace decisionforest
 {
+// Debugging and profiling configuration
 extern bool InsertDebugHelpers;
 extern bool PrintVectors;
+extern bool EnablePerfNotificationListener;
+
+// Compiler configuration
 extern bool UseBitcastForComparisonOutcome;
 extern bool UseSparseTreeRepresentation;
 extern bool OptimizedSparseRepresentation;

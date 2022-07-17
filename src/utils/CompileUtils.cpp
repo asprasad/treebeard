@@ -26,6 +26,9 @@
 #include "ExecutionHelpers.h"
 #include "TestUtilsCommon.h"
 #include "Logger.h"
+#include "json.hpp"
+
+using json = nlohmann::json;
 
 namespace TreeBeard
 {
@@ -232,5 +235,50 @@ void RunInferenceUsingSO(const std::string&modelJsonPath, const std::string& soP
   TreeBeard::Logging::Log("Execution time (us) : "  +  std::to_string(time));
 }
 
+template<typename T>
+void SetFieldFromJSONIfPresent(json& configJSON, const std::string& key, T& field) {
+  if (configJSON.contains(key)) {
+    field = configJSON[key].get<T>();
+  }
+}
+
+void SetTilingTypeFromConfigJSON(json& configJSON, TreeBeard::TilingType& field) {
+  if (configJSON.contains("tilingType")) {
+    auto tilingTypeStr = configJSON["tilingType"].get<std::string>();
+    if (tilingTypeStr == "Uniform")
+      field = TilingType::kUniform;
+    else if (tilingTypeStr == "Probability")
+      field = TilingType::kProbabilistic;
+    else if (tilingTypeStr == "Hybrid")
+      field = TilingType::kHybrid;
+    else
+      assert (false && "Invalid tiling type");
+  }
+}
+
+CompilerOptions::CompilerOptions(const std::string& configJSONFilePath) 
+  :CompilerOptions()
+{
+  std::ifstream fin(configJSONFilePath);
+  json configJSON;
+  fin >> configJSON;
+  
+  SetFieldFromJSONIfPresent(configJSON, "batchSize", batchSize);
+  SetFieldFromJSONIfPresent(configJSON, "tileSize", tileSize);
+  SetFieldFromJSONIfPresent(configJSON, "thresholdTypeWidth", thresholdTypeWidth);
+  SetFieldFromJSONIfPresent(configJSON, "returnTypeWidth", returnTypeWidth);
+  SetFieldFromJSONIfPresent(configJSON, "returnTypeFloatType", returnTypeFloatType);
+  SetFieldFromJSONIfPresent(configJSON, "featureIndexTypeWidth", featureIndexTypeWidth);
+  SetFieldFromJSONIfPresent(configJSON, "nodeIndexTypeWidth", nodeIndexTypeWidth);
+  SetFieldFromJSONIfPresent(configJSON, "inputElementTypeWidth", inputElementTypeWidth);
+  SetFieldFromJSONIfPresent(configJSON, "tileShapeBitWidth", tileShapeBitWidth);
+  SetFieldFromJSONIfPresent(configJSON, "childIndexBitWidth", childIndexBitWidth);
+  SetTilingTypeFromConfigJSON(configJSON, tilingType);
+  SetFieldFromJSONIfPresent(configJSON, "makeAllLeavesSameDepth", makeAllLeavesSameDepth);
+  SetFieldFromJSONIfPresent(configJSON, "reorderTreesByDepth", reorderTreesByDepth);
+  SetFieldFromJSONIfPresent(configJSON, "pipelineSize", pipelineSize);
+  SetFieldFromJSONIfPresent(configJSON, "statsProfileCSVPath", statsProfileCSVPath);
+  SetFieldFromJSONIfPresent(configJSON, "numberOfCores", numberOfCores);
+}
 
 } // TreeBeard

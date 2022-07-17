@@ -12,6 +12,8 @@ using namespace mlir::decisionforest;
 
 bool mlir::decisionforest::InsertDebugHelpers = false;
 bool mlir::decisionforest::PrintVectors = false;
+bool mlir::decisionforest::EnablePerfNotificationListener = false;
+
 bool mlir::decisionforest::UseBitcastForComparisonOutcome = true;
 bool mlir::decisionforest::UseSparseTreeRepresentation = false;
 bool mlir::decisionforest::OptimizedSparseRepresentation = true;
