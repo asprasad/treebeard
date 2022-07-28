@@ -33,7 +33,7 @@ Treebeard is an optimizing compiler for decision tree ensemble inference. Please
         . setupPythonEnv.sh
         conda activate treebeard
         ```
-3. **[Functionality Tests]** Use the following steps to run functionality tests. Run these steps in the same shell as above.
+3. **[Functionality Tests]** Use the following steps to run functionality tests. Run these steps in the same shell as above. Running these will print a pass/fail result on the console. All of these tests should pass after the previous steps have been completed successfully. Please raise a github issue if any of these tests fail.
     1. To run python tests, execute the following commands.
         ```bash
         cd <treebeard_home>/test/python
@@ -49,7 +49,7 @@ Treebeard is an optimizing compiler for decision tree ensemble inference. Please
         cd <treebeard_home>/build/bin
         ./treebeard
         ```
-4. **[Performance Tests]** To run the comparison with XGBoost and Treelite, run the following commands.
+4. **[Performance Tests]** To run the comparison with XGBoost and Treelite, run the following commands. This will print a table in CSV format to stdout containing the per sample inference times (in seconds) for Treebeard, XGBoost and Treelite and the speedup of Treebeard relative to XGBoost and Treelite. 
     ```bash
     cd <treebeard_home>/test/python
     python treebeard_serial_benchmarks.py
