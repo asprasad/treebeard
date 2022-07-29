@@ -19,7 +19,9 @@ import xgboost as xgb
 
 num_repeats = 1000
 run_parallel = True
-num_cores = 16
+# Treelite complains if we specify a number higher than the number of cores.
+# So just limiting the number of cores in case machine has fewer than 16. 
+num_cores = min(16, os.cpu_count())
 
 def RunSingleTest_XGBoost(modelJSONPath, csvPath) -> float:
   booster = xgb.Booster(model_file=modelJSONPath)
