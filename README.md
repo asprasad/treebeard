@@ -25,7 +25,7 @@ Treebeard is an optimizing compiler for decision tree ensemble inference. Please
         ```bash
         cd <treebeard_home>/scripts
         . createCondaEnvironment.sh
-        . setupPythonEnv.h
+        . setupPythonEnv.sh
         ```
     4.  The script createCondaEnvironment.sh should only be run once as it creates a new conda environment.
     To setup Treebeard's python support in a new shell (after the previous step has been performed once), run the following.
