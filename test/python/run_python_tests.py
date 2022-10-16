@@ -78,6 +78,34 @@ def RunPipeliningTests():
   assert RunTestOnSingleModelTestInputsJIT("letters", invertLoopsTileSize8MulticlassOptions, "one-tree-pipeline8-sparse", numpy.int8)
   assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", invertLoopsTileSize8Options, "one-tree-pipeline8-sparse")
 
+def RunParallelTests():
+  batchSize = 200
+  num_cores = 4
+  tile_size = 8
+  pipeline_width = 8
+  invertLoopsTileSize8Options = treebeard.CompilerOptions(batchSize, tile_size)
+  invertLoopsTileSize8Options.SetPipelineWidth(pipeline_width)
+  invertLoopsTileSize8Options.SetReorderTreesByDepth(True)
+  invertLoopsTileSize8Options.SetMakeAllLeavesSameDepth(1)
+  invertLoopsTileSize8Options.SetNumberOfCores(num_cores)
+
+  invertLoopsTileSize8MulticlassOptions = treebeard.CompilerOptions(batchSize, tile_size)
+  invertLoopsTileSize8MulticlassOptions.SetReturnTypeWidth(8)
+  invertLoopsTileSize8MulticlassOptions.SetReturnTypeIsFloatType(False)
+  invertLoopsTileSize8MulticlassOptions.SetPipelineWidth(pipeline_width)
+  invertLoopsTileSize8MulticlassOptions.SetReorderTreesByDepth(True)
+  invertLoopsTileSize8MulticlassOptions.SetMakeAllLeavesSameDepth(1)
+  invertLoopsTileSize8MulticlassOptions.SetNumberOfCores(num_cores)
+
+  assert RunTestOnSingleModelTestInputsJIT("abalone", invertLoopsTileSize8Options, "one-tree-par-4cores")
+  assert RunTestOnSingleModelTestInputsJIT("airline", invertLoopsTileSize8Options, "one-tree-par-4cores")
+  assert RunTestOnSingleModelTestInputsJIT("airline-ohe", invertLoopsTileSize8Options, "one-tree-par-4cores")
+  assert RunTestOnSingleModelTestInputsJIT("covtype", invertLoopsTileSize8MulticlassOptions, "one-tree-par-4cores", numpy.int8)
+  assert RunTestOnSingleModelTestInputsJIT("epsilon", invertLoopsTileSize8Options, "one-tree-par-4cores")
+  assert RunTestOnSingleModelTestInputsJIT("higgs", invertLoopsTileSize8Options, "one-tree-par-4cores")
+  assert RunTestOnSingleModelTestInputsJIT("letters", invertLoopsTileSize8MulticlassOptions, "one-tree-par-4cores", numpy.int8)
+  assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", invertLoopsTileSize8Options, "one-tree-par-4cores")
+
 defaultTileSize8Options = treebeard.CompilerOptions(200, 8)
 defaultTileSize8MulticlassOptions = treebeard.CompilerOptions(200, 8)
 defaultTileSize8MulticlassOptions.SetReturnTypeWidth(8)
@@ -137,6 +165,7 @@ assert RunTestOnSingleModelTestInputsJIT("letters", SetStatsProfileCSVPath(probT
 assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", SetStatsProfileCSVPath(probTilingOptions, "year_prediction_msd"), "default-probtiling-sparse")
 
 RunPipeliningTests()
+RunParallelTests()
 
 treebeard.SetEnableSparseRepresentation(0)
 

@@ -23,12 +23,9 @@ std::string GetDebugSOPath() {
   return debugSOPath;
 }
 
-std::string GetLibompSOPath(const std::string& llvmBuildDir) { 
-  char treebeardDir[PATH_MAX];
-  strncpy(treebeardDir, TREEBEARD_SRC_DIR, PATH_MAX);
-  char *llvmPath = dirname(dirname(dirname(treebeardDir)));
-  std::string libompPath = std::string(llvmPath) + "/" + llvmBuildDir + "/lib/libomp.so";
-  return libompPath;
+bool FileExists(const std::string& filename) {
+  std::ifstream fin(filename);
+  return fin.good();
 }
 
 }
@@ -141,25 +138,15 @@ int32_t InferenceRunnerBase::ResolveTileShapeType() {
 
 template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType, typename ChildIndexType>
 int32_t InferenceRunnerBase::CallInitMethod() {
-  using LeafBitMaskType = int16_t;
-
   std::vector<ThresholdType> thresholds;
   std::vector<FeatureIndexType> featureIndices;
   std::vector<TileShapeType> tileShapeIDs;
-  std::vector<ChildIndexType> childIndices, leafIndices;
-  std::vector<LeafBitMaskType> leafBitMasks;
+  std::vector<ChildIndexType> childIndices;
 
   if (!decisionforest::UseSparseTreeRepresentation)
     mlir::decisionforest::ForestJSONReader::GetInstance().GetModelValues(m_tileSize, m_thresholdSize, m_featureIndexSize, thresholds, featureIndices, tileShapeIDs);
-  else if (decisionforest::RemoveExtraHopInSparseRepresentation) {
-    assert (decisionforest::UseSparseTreeRepresentation);
-    mlir::decisionforest::ForestJSONReader::GetInstance().GetModelValues(m_tileSize, m_thresholdSize, m_featureIndexSize, 
-                                                                         thresholds, featureIndices, tileShapeIDs, leafBitMasks,
-                                                                         childIndices, leafIndices);
-  }
   else {
     assert (decisionforest::UseSparseTreeRepresentation);
-    assert (!decisionforest::RemoveExtraHopInSparseRepresentation);
     mlir::decisionforest::ForestJSONReader::GetInstance().GetModelValues(m_tileSize, m_thresholdSize, m_featureIndexSize, 
                                                                          thresholds, featureIndices, tileShapeIDs, childIndices);
   }
@@ -178,25 +165,8 @@ int32_t InferenceRunnerBase::CallInitMethod() {
                 featureIndexMemref.bufferPtr, featureIndexMemref.alignedPtr, featureIndexMemref.offset, featureIndexMemref.lengths[0], featureIndexMemref.strides[0],
                 tileShapeIDMemref.bufferPtr, tileShapeIDMemref.alignedPtr, tileShapeIDMemref.offset, tileShapeIDMemref.lengths[0], tileShapeIDMemref.strides[0]);
   }
-  else if (decisionforest::UseSparseTreeRepresentation && decisionforest::RemoveExtraHopInSparseRepresentation) {
-    Memref<ChildIndexType, 1> childIndexMemref{childIndices.data(), childIndices.data(), 0, {(int64_t)childIndices.size()}, 1};
-    Memref<ChildIndexType, 1> leafIndexMemref{leafIndices.data(), leafIndices.data(), 0, {(int64_t)leafIndices.size()}, 1};
-    Memref<LeafBitMaskType, 1> leafBitMaskMemref{ leafBitMasks.data(), leafBitMasks.data(), 0, {(int64_t)leafBitMasks.size()}, 1};
-    typedef int32_t (*InitModelPtr_t)(ThresholdType*, ThresholdType*, int64_t, int64_t, int64_t, FeatureIndexType*, FeatureIndexType*, int64_t, int64_t, int64_t,
-                                      TileShapeType*, TileShapeType*, int64_t, int64_t, int64_t, ChildIndexType*, ChildIndexType*, int64_t, int64_t, int64_t,
-                                      ChildIndexType*, ChildIndexType*, int64_t, int64_t, int64_t, LeafBitMaskType*, LeafBitMaskType*, int64_t, int64_t, int64_t);
-    auto initModelPtr = reinterpret_cast<InitModelPtr_t>(GetFunctionAddress("Init_model"));
-
-    returnValue = initModelPtr(thresholdsMemref.bufferPtr, thresholdsMemref.alignedPtr, thresholdsMemref.offset, thresholdsMemref.lengths[0], thresholdsMemref.strides[0],
-                featureIndexMemref.bufferPtr, featureIndexMemref.alignedPtr, featureIndexMemref.offset, featureIndexMemref.lengths[0], featureIndexMemref.strides[0],
-                tileShapeIDMemref.bufferPtr, tileShapeIDMemref.alignedPtr, tileShapeIDMemref.offset, tileShapeIDMemref.lengths[0], tileShapeIDMemref.strides[0],
-                childIndexMemref.bufferPtr, childIndexMemref.alignedPtr, childIndexMemref.offset, childIndexMemref.lengths[0], childIndexMemref.strides[0],
-                leafIndexMemref.bufferPtr, leafIndexMemref.alignedPtr, leafIndexMemref.offset, leafIndexMemref.lengths[0], leafIndexMemref.strides[0],
-                leafBitMaskMemref.bufferPtr, leafBitMaskMemref.alignedPtr, leafBitMaskMemref.offset, leafBitMaskMemref.lengths[0], leafBitMaskMemref.strides[0]);
-  }
   else {
     assert (decisionforest::UseSparseTreeRepresentation);
-    assert (!decisionforest::RemoveExtraHopInSparseRepresentation);
     Memref<ChildIndexType, 1> childIndexMemref{childIndices.data(), childIndices.data(), 0, {(int64_t)childIndices.size()}, 1};
     typedef int32_t (*InitModelPtr_t)(ThresholdType*, ThresholdType*, int64_t, int64_t, int64_t, FeatureIndexType*, FeatureIndexType*, int64_t, int64_t, int64_t,
                                       TileShapeType*, TileShapeType*, int64_t, int64_t, int64_t, ChildIndexType*, ChildIndexType*, int64_t, int64_t, int64_t);
@@ -338,20 +308,24 @@ llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> InferenceRunner::CreateEx
   // Libraries that we'll pass to the ExecutionEngine for loading.
   SmallVector<StringRef, 4> executionEngineLibs;
 
-  std::string debugSOPath, libompSOPath;
+  std::string debugSOPath;
   if (decisionforest::InsertDebugHelpers) {
     debugSOPath = GetDebugSOPath();
     // std::cout << "Calculated debug SO path : " << debugSOPath << std::endl;
     executionEngineLibs.push_back(debugSOPath.data());
   }
 #ifdef OMP_SUPPORT
-  libompSOPath = GetLibompSOPath("build");
-  executionEngineLibs.push_back(libompSOPath.data());
-  // executionEngineLibs.push_back("/usr/lib/llvm-10/lib/libomp.so");
+  std::string libompPath = std::string(LLVM_LIB_DIR) + std::string("lib/libomp.so");
+  if (!FileExists(libompPath)) {
+    libompPath = "/usr/lib/llvm-10/lib/libomp.so";
+  }
+  executionEngineLibs.push_back(libompPath);
 #endif
   // Create an MLIR execution engine. The execution engine eagerly JIT-compiles
   // the module.
-  auto maybeEngine = mlir::ExecutionEngine::create(module, /*llvmModuleBuilder=*/nullptr, optPipeline, llvm::None, executionEngineLibs);
+  mlir::ExecutionEngineOptions options{nullptr, {}, llvm::None, executionEngineLibs};
+  options.enablePerfNotificationListener = EnablePerfNotificationListener;
+  auto maybeEngine = mlir::ExecutionEngine::create(module, options);
   assert(maybeEngine && "failed to construct an execution engine");
   return maybeEngine;
 }

@@ -29,6 +29,7 @@ add_dependencies(treebeard DecisionForestGen)
 llvm_update_compile_flags(treebeard)
 target_link_libraries(treebeard PRIVATE ${LIBS})
 add_definitions(-DTREEBEARD_SRC_DIR="${CMAKE_SOURCE_DIR}")
+add_definitions(-DLLVM_LIB_DIR="${LLVM_BUILD_DIRECTORY}")
 mlir_check_all_link_libraries(treebeard)
 
 add_subdirectory(runtime)

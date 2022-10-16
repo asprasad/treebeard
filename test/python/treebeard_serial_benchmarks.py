@@ -17,14 +17,15 @@ treebeard_repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(filepath)))
 import treebeard
 import xgboost as xgb
 
-num_repeats = 200
+num_repeats = 50
 run_parallel = False
+num_tiles = 4
 
 def RunSingleTest_XGBoost(modelJSONPath, csvPath) -> float:
   booster = xgb.Booster(model_file=modelJSONPath)
   data_df = pandas.read_csv(csvPath, header=None)
   full_test_array = numpy.array(data_df, order='C') 
-
+  full_test_array = numpy.tile(full_test_array, (num_tiles, 1))
   num_batches = int(math.floor(full_test_array.shape[0]/batchSize))
   numRows = int(math.floor(full_test_array.shape[0]/batchSize) * batchSize)
   if not run_parallel:
@@ -52,7 +53,7 @@ def RunTestOnSingleModelTestInputs_XGBoost(modelName : str) -> None:
 def RunSingleTestJIT_Multibatch(modelJSONPath, csvPath, options, returnType) -> float:
   data_df = pandas.read_csv(csvPath, header=None)
   data = numpy.array(data_df, order='C') # numpy.genfromtxt(csvPath, ',')
-
+  data = numpy.tile(data, (num_tiles, 1))
   inferenceRunner = treebeard.TreebeardInferenceRunner.FromModelFile(modelJSONPath, "", options)
   batch_size = inferenceRunner.batchSize
   num_batches = int(math.floor(data.shape[0]/inferenceRunner.batchSize))
@@ -98,7 +99,7 @@ def RunSingleTest_Treelite(modelJSONPath, csvPath, modelName) -> float:
 
   data_df = pandas.read_csv(csvPath, header=None)
   full_test_array = numpy.array(data_df, order='C')
-
+  full_test_array = numpy.tile(full_test_array, (num_tiles, 1))
   num_batches = int(math.floor(full_test_array.shape[0]/batchSize))
   numRows = int(math.floor(full_test_array.shape[0]/batchSize) * batchSize)
 

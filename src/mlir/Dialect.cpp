@@ -12,12 +12,11 @@ using namespace mlir::decisionforest;
 
 bool mlir::decisionforest::InsertDebugHelpers = false;
 bool mlir::decisionforest::PrintVectors = false;
+bool mlir::decisionforest::EnablePerfNotificationListener = false;
+
 bool mlir::decisionforest::UseBitcastForComparisonOutcome = true;
 bool mlir::decisionforest::UseSparseTreeRepresentation = false;
-bool mlir::decisionforest::OptimizedSparseRepresentation = true;
-bool mlir::decisionforest::RemoveExtraHopInSparseRepresentation = false;
 bool mlir::decisionforest::PeeledCodeGenForProbabiltyBasedTiling = false;
-bool mlir::decisionforest::HasParallelLoop = false;
 
 void TreeTypeStorage::print(mlir::DialectAsmPrinter &printer) {
     printer << "TreeType(returnType:" << m_resultType << ", tileSize:" << m_tileSize 

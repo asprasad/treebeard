@@ -53,7 +53,6 @@ public:
             return leftChild == INVALID_NODE_INDEX && rightChild == INVALID_NODE_INDEX;
         }
     };
-    ~DecisionTree();
     void SetNumberOfFeatures(size_t numFeatures) { m_numFeatures = numFeatures; }
     void SetTreeScalingFactor(ThresholdType scale) { m_scale = scale; }
 

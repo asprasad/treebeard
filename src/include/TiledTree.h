@@ -204,9 +204,6 @@ public:
 
     void GetSparseSerialization(std::vector<double>& thresholds, std::vector<int32_t>& featureIndices, 
                                 std::vector<int32_t>& tileShapeIDs, std::vector<int32_t>& childIndices, std::vector<double>& leaves);
-    void GetSparseSerialization(std::vector<double>& thresholds, std::vector<int32_t>& featureIndices, std::vector<int32_t>& leafBitMasks,
-                                std::vector<int32_t>& tileShapeIDs, std::vector<int32_t>& childIndices, std::vector<int32_t>& leafIndices,
-                                std::vector<double>& leaves);
     void GetSparseSerializationPeeled(std::vector<double>& thresholds, std::vector<int32_t>& featureIndices, 
                                       std::vector<int32_t>& tileShapeIDs, std::vector<int32_t>& childIndices,
                                       std::vector<double>& leaves);
@@ -342,11 +339,6 @@ TiledTree* DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexTy
   if (m_tiledTree.get() == nullptr)
     m_tiledTree = std::make_shared<TiledTree>(*this);
   return m_tiledTree.get();
-}
-
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::~DecisionTree() {
-  // delete m_tiledTree;
 }
 
 } // decisionforest

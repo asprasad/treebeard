@@ -9,7 +9,8 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Verifier.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "llvm/ADT/STLExtras.h"
 
@@ -20,6 +21,8 @@
 #include "ForestTestUtils.h"
 #include "CompileUtils.h"
 #include "TiledTree.h"
+#include "ModelSerializers.h"
+#include "Representations.h"
 
 using namespace mlir;
 using namespace mlir::decisionforest;
@@ -130,7 +133,7 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
   mlir::decisionforest::DoHybridTiling(args.context, module, options.tileSize, options.tileShapeBitWidth);
   mlir::decisionforest::DoReorderTreesByDepth(args.context, module, -1);
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module);
+  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), decisionforest::ConstructRepresentation());
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
   mlir::decisionforest::LowerToLLVM(args.context, module);
@@ -261,7 +264,7 @@ bool TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int
   mlir::decisionforest::DoHybridTiling(args.context, module, options.tileSize, options.tileShapeBitWidth);
   mlir::decisionforest::DoReorderTreesByDepth(args.context, module, -1);
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module);
+  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), decisionforest::ConstructRepresentation());
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
   mlir::decisionforest::LowerToLLVM(args.context, module);

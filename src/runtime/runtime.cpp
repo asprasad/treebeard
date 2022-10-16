@@ -5,6 +5,8 @@
 #include "CompileUtils.h"
 #include "xgboostparser.h"
 #include "schedule.h"
+#include "ModelSerializers.h"
+#include "Representations.h"
 
 // ===-------------------------------------------------------------=== //
 // Execution API
@@ -123,7 +125,10 @@ extern "C" void Set_tilingType(intptr_t options, int32_t val) {
 extern "C" void GenerateLLVMIRForXGBoostModel(const char* modelJSONPath, const char* llvmIRFilePath,
                                               const char* modelGlobalsJSONPath, intptr_t options) {
   TreeBeard::CompilerOptions *optionsPtr = reinterpret_cast<TreeBeard::CompilerOptions*>(options);
-  TreeBeard::ConvertXGBoostJSONToLLVMIR(modelJSONPath, llvmIRFilePath, modelGlobalsJSONPath, *optionsPtr);
+  TreeBeard::TreebeardContext tbContext{modelJSONPath, modelGlobalsJSONPath, *optionsPtr, 
+                                        mlir::decisionforest::ConstructRepresentation(),
+                                        mlir::decisionforest::ConstructModelSerializer()};
+  TreeBeard::ConvertXGBoostJSONToLLVMIR(tbContext, llvmIRFilePath);
 }
 
 extern "C" intptr_t CreateInferenceRunner(const char* modelJSONPath, const char* profileCSVPath,
@@ -132,7 +137,10 @@ extern "C" intptr_t CreateInferenceRunner(const char* modelJSONPath, const char*
   auto modelGlobalsJSONPath = TreeBeard::XGBoostJSONParser<>::ModelGlobalJSONFilePathFromJSONFilePath(modelJSONPath);
   mlir::MLIRContext context;
   TreeBeard::InitializeMLIRContext(context); 
-  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON(context, modelJSONPath, modelGlobalsJSONPath, *optionsPtr);
+  TreeBeard::TreebeardContext tbContext{modelJSONPath, modelGlobalsJSONPath, *optionsPtr, 
+                                        mlir::decisionforest::ConstructRepresentation(),
+                                        mlir::decisionforest::ConstructModelSerializer()};
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON(context, tbContext);
   auto inferenceRunner = new mlir::decisionforest::InferenceRunner(modelGlobalsJSONPath, module, 
                                                                    optionsPtr->tileSize, optionsPtr->thresholdTypeWidth,
                                                                    optionsPtr->featureIndexTypeWidth);

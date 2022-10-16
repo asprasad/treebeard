@@ -4,18 +4,14 @@
 #include "TreeTilingUtils.h"
 #include "TiledTree.h"
 #include "schedule.h"
+#include "LIRLoweringHelpers.h"
+
+using namespace mlir::decisionforest::helpers;
 
 namespace mlir
 {
 namespace decisionforest
 {
-    Value CreateZeroVectorIndexConst(ConversionPatternRewriter &rewriter, Location location, int32_t tileSize) {
-        Value zeroConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
-        auto vectorType = VectorType::get(tileSize, rewriter.getIndexType());
-        auto vectorValue = rewriter.create<vector::BroadcastOp>(location, vectorType, zeroConst);
-        return vectorValue;
-    }
-
     Value ReduceComparisonResultVectorToInt(Value comparisonResult, int32_t tileSize, ConversionPatternRewriter &rewriter, Location location) {
         auto i32VectorType = VectorType::get(tileSize, rewriter.getI32Type());
         auto comparisonExtended = rewriter.create<arith::ExtUIOp>(location, i32VectorType, comparisonResult);
@@ -29,36 +25,24 @@ namespace decisionforest
         }
 
         auto leftShift = rewriter.create<arith::ShLIOp>(location, i32VectorType, comparisonExtended, shiftVector);
-        auto kind = rewriter.getStringAttr("add");
-        auto sum = rewriter.create<vector::ReductionOp>(location, rewriter.getI32Type(), kind, static_cast<Value>(leftShift), ValueRange{ });
+        auto kind = vector::CombiningKind::ADD;
+        auto sum = rewriter.create<vector::ReductionOp>(location, kind, static_cast<Value>(leftShift));
         auto index = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(sum));
         return index;
     }
 
     Value ReduceComparisonResultVectorToInt_Bitcast(Value comparisonResult, int32_t tileSize, ConversionPatternRewriter &rewriter, Location location) {
-    auto bitcastVectorType = VectorType::get(1, rewriter.getIntegerType(tileSize));
-    auto bitcastOp = rewriter.create<vector::BitCastOp>(location, bitcastVectorType, comparisonResult);
-    auto zeroConst = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI32Type());
-    auto integerResult = rewriter.create<vector::ExtractElementOp>(location, static_cast<Value>(bitcastOp), static_cast<Value>(zeroConst));
-    auto zeroExtend = rewriter.create<arith::ExtUIOp>(location, integerResult, rewriter.getI64Type()); 
-    auto index = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(zeroExtend));
-    return index;
+      auto bitcastVectorType = VectorType::get(1, rewriter.getIntegerType(tileSize));
+      auto bitcastOp = rewriter.create<vector::BitCastOp>(location, bitcastVectorType, comparisonResult);
+      auto zeroConst = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI32Type());
+      auto integerResult = rewriter.create<vector::ExtractElementOp>(location, static_cast<Value>(bitcastOp), static_cast<Value>(zeroConst));
+      auto zeroExtend = rewriter.create<arith::ExtUIOp>(location, rewriter.getI64Type(), integerResult); 
+      auto index = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(zeroExtend));
+      return index;
     }
 
-    void InsertPrintVectorOp(ConversionPatternRewriter &rewriter, Location location, int32_t kind, int32_t bitWidth, int32_t tileSize, Value vectorValue) {
-        auto tileSizeConst = rewriter.create<arith::ConstantIntOp>(location, tileSize, rewriter.getI32Type());
-        auto kindConst = rewriter.create<arith::ConstantIntOp>(location, kind, rewriter.getI32Type());
-        auto bitWidthConst = rewriter.create<arith::ConstantIntOp>(location, bitWidth, rewriter.getI32Type());
-        std::vector<Value> vectorValues;
-        for (int32_t i=0; i<tileSize ; ++i) {
-            auto iConst = rewriter.create<arith::ConstantIntOp>(location, int64_t(i), rewriter.getI32Type());
-            auto ithValue = rewriter.create<vector::ExtractElementOp>(location, vectorValue, iConst);
-            vectorValues.push_back(ithValue);
-        }
-        rewriter.create<decisionforest::PrintVectorOp>(location, kindConst, bitWidthConst, tileSizeConst, ValueRange(vectorValues));
-    }
-
-    ScalarTraverseTileCodeGenerator:: ScalarTraverseTileCodeGenerator(Value treeMemref, Value rowMemref, Value node, Type resultType, Representation representation) {
+    ScalarTraverseTileCodeGenerator:: ScalarTraverseTileCodeGenerator(Value treeMemref, Value rowMemref, Value node, 
+                                                                      Type resultType, std::shared_ptr<IRepresentation> representation) {
       m_treeMemref = treeMemref;
       m_rowMemref = rowMemref;
       m_treeMemrefType = treeMemref.getType().cast<MemRefType>();
@@ -91,10 +75,7 @@ namespace decisionforest
           {
             m_loadFeatureIndexOp = rewriter.create<decisionforest::LoadTileFeatureIndicesOp>(location, featureIndexType, m_treeMemref, static_cast<Value>(m_nodeIndex));
 
-            if (m_representation == kSparse) {
-              // Load the child index
-              m_loadChildIndex = rewriter.create<decisionforest::LoadChildIndexOp>(location, treeTileType.getChildIndexType(), m_treeMemref, static_cast<Value>(m_nodeIndex));
-            }
+            m_extraLoads = m_representation->GenerateExtraLoads(location, rewriter, m_treeMemref, m_nodeIndex, treeTileType);
             m_state = kLoadFeature;
           }
           break;
@@ -128,28 +109,9 @@ namespace decisionforest
           break;
         case kNextNode:
           {
-            Value newIndex;
-            if (m_representation == kArray){
-              // index = 2*index + 1 + result
-              auto oneConstant = rewriter.create<arith::ConstantIndexOp>(location, 1);
-              auto twoConstant = rewriter.create<arith::ConstantIndexOp>(location, 2);
-              auto twoTimesIndex = rewriter.create<arith::MulIOp>(location, rewriter.getIndexType(), static_cast<Value>(m_nodeIndex), static_cast<Value>(twoConstant));
-              auto twoTimesIndexPlus1 = rewriter.create<arith::AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(twoTimesIndex), static_cast<Value>(oneConstant));
-              auto comparisonResultIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(m_comparisonUnsigned));
-              newIndex = rewriter.create<arith::AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(twoTimesIndexPlus1), static_cast<Value>(comparisonResultIndex));
-            }
-            else if (m_representation == kSparse) {
-              assert(m_loadChildIndex && "ChildIndex should not be empty");
+            auto comparisonResultIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(m_comparisonUnsigned));
+            Value newIndex = m_representation->GenerateMoveToChild(location, rewriter, m_nodeIndex, comparisonResultIndex, 1, m_extraLoads);
 
-              auto childIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(m_loadChildIndex));
-              // index = childIndex + result
-              auto comparisonResultIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(m_comparisonUnsigned));
-              newIndex = rewriter.create<arith::AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(childIndex), static_cast<Value>(comparisonResultIndex));
-            }
-            else {
-              assert(false && "Invalid representation!");
-            }
-            
             // node = indexToNode(index)
             m_result = rewriter.create<decisionforest::IndexToNodeOp>(location, m_resultType, m_treeMemref, static_cast<Value>(newIndex));
             
@@ -173,7 +135,9 @@ namespace decisionforest
       return results;
     }
 
-    VectorTraverseTileCodeGenerator::VectorTraverseTileCodeGenerator(Value tree, Value treeMemref, Value rowMemref, Value node, Type resultType, Representation representation, std::function<Value(Value)> getLutFunc) {
+    VectorTraverseTileCodeGenerator::VectorTraverseTileCodeGenerator(Value tree, Value treeMemref, Value rowMemref, Value node, 
+                                                                     Type resultType, std::shared_ptr<IRepresentation> representation, 
+                                                                     std::function<Value(Value)> getLutFunc) {
       m_tree = tree;
       m_treeMemref = treeMemref;
       m_rowMemref = rowMemref;
@@ -240,27 +204,12 @@ namespace decisionforest
             auto loadTileShapeOp = rewriter.create<decisionforest::LoadTileShapeOp>(location, m_tileShapeType, m_treeMemref, static_cast<Value>(m_nodeIndex));
             m_loadTileShapeIndexOp = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadTileShapeOp));
 
-            m_state = m_representation == kSparse ? kLoadChildIndex : kLoadFeature;
+            m_state = kLoadChildIndex;
           }
           break;
         case kLoadChildIndex:
           {
-            assert(m_representation == kSparse && "Representation should be sparse");
-            if (decisionforest::RemoveExtraHopInSparseRepresentation) {
-              // Load both the child and 
-              auto childIndicesVectorType = VectorType::get({ 2 }, m_treeTileType.getChildIndexType());
-              auto loadChildandLeafIndexOp = rewriter.create<decisionforest::LoadChildAndLeafIndexOp>(location, childIndicesVectorType, m_treeMemref, static_cast<Value>(m_nodeIndex));
-              auto indexVectorType = VectorType::get({ 2 }, rewriter.getIndexType());
-              m_childIndex = rewriter.create<arith::IndexCastOp>(location, indexVectorType, static_cast<Value>(loadChildandLeafIndexOp));
-              
-              auto loadLeafBitMask = rewriter.create<decisionforest::LoadLeafBitMaskOp>(location, m_treeTileType.getLeafBitMaskType(), m_treeMemref, static_cast<Value>(m_nodeIndex));
-              m_leafBitMask = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadLeafBitMask));
-            }
-            else {
-              // Load the child index
-              auto loadChildIndexOp = rewriter.create<decisionforest::LoadChildIndexOp>(location, m_treeTileType.getChildIndexType(), m_treeMemref, static_cast<Value>(m_nodeIndex));
-              m_childIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadChildIndexOp));
-            }
+            m_extraLoads = m_representation->GenerateExtraLoads(location, rewriter, m_treeMemref, m_nodeIndex, m_treeTileType);
             m_state = kLoadFeature;
           }
           break;
@@ -336,59 +285,7 @@ namespace decisionforest
             auto childIndexInt = rewriter.create<memref::LoadOp>(location, lutValue, ValueRange{m_loadTileShapeIndexOp, m_comparisonIndex});
             auto childIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(childIndexInt));
 
-            Value newIndex;
-            if (m_representation == kArray) {
-              auto oneConstant = rewriter.create<arith::ConstantIndexOp>(location, 1);
-              auto tileSizeConstant = rewriter.create<arith::ConstantIndexOp>(location, m_tileSize+1);
-              auto tileSizeTimesIndex = rewriter.create<arith::MulIOp>(location, rewriter.getIndexType(), static_cast<Value>(m_nodeIndex), static_cast<Value>(tileSizeConstant));
-              auto tileSizeTimesIndexPlus1 = rewriter.create<arith::AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(tileSizeTimesIndex), static_cast<Value>(oneConstant));
-              
-              newIndex = rewriter.create<arith::AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(tileSizeTimesIndexPlus1), static_cast<Value>(childIndex));
-            }
-            else if (m_representation == kSparse) {
-              if (decisionforest::RemoveExtraHopInSparseRepresentation) {
-                // Shift so that the bit of leafBitMask corresponding to the 
-                auto shift = rewriter.create<arith::ShRUIOp>(location, m_leafBitMask.getType(), m_leafBitMask, childIndex);
-
-                // Add child index to the child and leaf index vector
-                auto childIndexVectorValue = rewriter.create<vector::BroadcastOp>(location, m_childIndex.getType(), childIndex);
-                auto potentialNewIndices = rewriter.create<arith::AddIOp>(location, m_childIndex, childIndexVectorValue);
-
-                // Find the value of the bit
-                auto oneIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 1);
-                auto bitValue = rewriter.create<arith::AndIOp>(location, rewriter.getIndexType(), shift, oneIndexConst);
-
-                // Extract the right index
-                newIndex = rewriter.create<vector::ExtractElementOp>(location, potentialNewIndices, bitValue);
-
-                if (decisionforest::InsertDebugHelpers) {
-                  // (is leaf bit, lutLookup result, new index)
-                  auto zeroVector = CreateZeroVectorIndexConst(rewriter, location, 3);
-                  auto zeroConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
-                  auto elem0Set = rewriter.create<vector::InsertElementOp>(location, bitValue, zeroVector, zeroConst);
-                  auto oneConst = rewriter.create<arith::ConstantIndexOp>(location, 1);
-                  auto elem1Set = rewriter.create<vector::InsertElementOp>(location, childIndex, elem0Set, oneConst);
-                  auto twoConst = rewriter.create<arith::ConstantIndexOp>(location, 2);
-                  auto elem2Set = rewriter.create<vector::InsertElementOp>(location, newIndex, elem1Set, twoConst);
-                  InsertPrintVectorOp(rewriter, location, 1, 64, 3, elem2Set);
-                }    
-              }
-              else {
-                newIndex = rewriter.create<arith::AddIOp>(location, rewriter.getIndexType(), static_cast<Value>(m_childIndex), static_cast<Value> (childIndex));
-
-                if (decisionforest::InsertDebugHelpers) {
-                  // (child base index, lutLookup result, new index)
-                  auto zeroVector = CreateZeroVectorIndexConst(rewriter, location, 3);
-                  auto zeroConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
-                  auto elem0Set = rewriter.create<vector::InsertElementOp>(location, childIndex, zeroVector, zeroConst);
-                  auto oneConst = rewriter.create<arith::ConstantIndexOp>(location, 1);
-                  auto elem1Set = rewriter.create<vector::InsertElementOp>(location, childIndex, elem0Set, oneConst);
-                  auto twoConst = rewriter.create<arith::ConstantIndexOp>(location, 2);
-                  auto elem2Set = rewriter.create<vector::InsertElementOp>(location, newIndex, elem1Set, twoConst);
-                  InsertPrintVectorOp(rewriter, location, 1, 64, 3, elem2Set);
-                }
-              }
-            }
+            Value newIndex = m_representation->GenerateMoveToChild(location, rewriter, m_nodeIndex, childIndex, m_tileSize, m_extraLoads);
             
             // node = indexToNode(index)
             m_result = rewriter.create<decisionforest::IndexToNodeOp>(location, m_resultType, m_treeMemref, static_cast<Value>(newIndex));

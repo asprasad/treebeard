@@ -4,7 +4,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -39,12 +39,12 @@ struct WalkDecisionTreeOpLowering: public ConversionPattern {
     auto node = rewriter.create<decisionforest::GetRootOp>(location, nodeType, tree);
 
     scf::WhileOp whileLoop = rewriter.create<scf::WhileOp>(location, nodeType, static_cast<Value>(node));
-    Block *before = rewriter.createBlock(&whileLoop.before(), {}, nodeType, location);
-    Block *after = rewriter.createBlock(&whileLoop.after(), {}, nodeType, location);
+    Block *before = rewriter.createBlock(&whileLoop.getBefore(), {}, nodeType, location);
+    Block *after = rewriter.createBlock(&whileLoop.getAfter(), {}, nodeType, location);
 
     // Create the 'do' part for the condition.
     {
-        rewriter.setInsertionPointToStart(&whileLoop.before().front());
+        rewriter.setInsertionPointToStart(&whileLoop.getBefore().front());
         auto node = before->getArguments()[0];
         auto isLeaf = rewriter.create<decisionforest::IsLeafOp>(location, rewriter.getI1Type(), tree, node);
         auto falseConstant = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI1Type());
@@ -53,7 +53,7 @@ struct WalkDecisionTreeOpLowering: public ConversionPattern {
     }
     // Create the loop body
     {
-        rewriter.setInsertionPointToStart(&whileLoop.after().front());
+        rewriter.setInsertionPointToStart(&whileLoop.getAfter().front());
         auto node = after->getArguments()[0];
         
         auto traverseTile = rewriter.create<decisionforest::TraverseTreeTileOp>(
@@ -66,7 +66,7 @@ struct WalkDecisionTreeOpLowering: public ConversionPattern {
         rewriter.create<scf::YieldOp>(location, static_cast<Value>(traverseTile));
     }
     rewriter.setInsertionPointAfter(whileLoop);
-    auto treePrediction = rewriter.create<decisionforest::GetLeafValueOp>(location, treeType.getThresholdType(), tree, whileLoop.results()[0]);
+    auto treePrediction = rewriter.create<decisionforest::GetLeafValueOp>(location, treeType.getThresholdType(), tree, whileLoop.getResults()[0]);
     rewriter.replaceOp(op, static_cast<Value>(treePrediction));
 
     return mlir::success();
@@ -130,12 +130,13 @@ struct PipelinedWalkDecisionTreeOpLowering: public ConversionPattern {
     }
     else { 
       scf::WhileOp whileLoop = rewriter.create<scf::WhileOp>(location, nodeTypes, nodes);
-      Block *before = rewriter.createBlock(&whileLoop.before(), {}, nodeTypes);
-      Block *after = rewriter.createBlock(&whileLoop.after(), {}, nodeTypes);
+      std::vector<mlir::Location> locations(nodeTypes.size(), location);
+      Block *before = rewriter.createBlock(&whileLoop.getBefore(), {}, nodeTypes, locations);
+      Block *after = rewriter.createBlock(&whileLoop.getAfter(), {}, nodeTypes, locations);
 
       // Create the 'do' part for the condition.
       {
-          rewriter.setInsertionPointToStart(&whileLoop.before().front());
+          rewriter.setInsertionPointToStart(&whileLoop.getBefore().front());
           auto nodeArgs = before->getArguments();
 
           assert(trees.size() == nodeArgs.size() && "Number of arguments should be the same as number of trees.");
@@ -161,7 +162,7 @@ struct PipelinedWalkDecisionTreeOpLowering: public ConversionPattern {
       }
       // Create the loop body
       {
-          rewriter.setInsertionPointToStart(&whileLoop.after().front());
+          rewriter.setInsertionPointToStart(&whileLoop.getAfter().front());
           auto nodeArgs = after->getArguments();
           
           auto traverseTile = rewriter.create<decisionforest::InterleavedTraverseTreeTileOp>(
@@ -177,7 +178,7 @@ struct PipelinedWalkDecisionTreeOpLowering: public ConversionPattern {
 
       for (size_t i = 0; i < trees.size(); i++) {
         auto treeType = trees[i].getType().cast<mlir::decisionforest::TreeType>();
-        auto treePrediction = rewriter.create<decisionforest::GetLeafValueOp>(location, treeType.getThresholdType(), trees[i], whileLoop.results()[i]);
+        auto treePrediction = rewriter.create<decisionforest::GetLeafValueOp>(location, treeType.getThresholdType(), trees[i], whileLoop.getResults()[i]);
         predictions.push_back(treePrediction);
       }
     }
@@ -235,12 +236,12 @@ struct WalkDecisionTreePeeledOpLowering: public ConversionPattern {
       rewriter.setInsertionPointToStart(ifElse.elseBlock());
     }
     scf::WhileOp whileLoop = rewriter.create<scf::WhileOp>(location, nodeType, static_cast<Value>(node));
-    Block *before = rewriter.createBlock(&whileLoop.before(), {}, nodeType, location);
-    Block *after = rewriter.createBlock(&whileLoop.after(), {}, nodeType, location);
+    Block *before = rewriter.createBlock(&whileLoop.getBefore(), {}, nodeType, location);
+    Block *after = rewriter.createBlock(&whileLoop.getAfter(), {}, nodeType, location);
 
     // Create the 'do' part for the condition.
     {
-        rewriter.setInsertionPointToStart(&whileLoop.before().front());
+        rewriter.setInsertionPointToStart(&whileLoop.getBefore().front());
         auto node = before->getArguments()[0];
         auto isLeaf = rewriter.create<decisionforest::IsLeafOp>(location, rewriter.getI1Type(), tree, node);
         auto falseConstant = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI1Type());
@@ -249,7 +250,7 @@ struct WalkDecisionTreePeeledOpLowering: public ConversionPattern {
     }
     // Create the loop body
     {
-        rewriter.setInsertionPointToStart(&whileLoop.after().front());
+        rewriter.setInsertionPointToStart(&whileLoop.getAfter().front());
         auto node = after->getArguments()[0];
         
         auto traverseTile = rewriter.create<decisionforest::TraverseTreeTileOp>(
@@ -262,7 +263,7 @@ struct WalkDecisionTreePeeledOpLowering: public ConversionPattern {
         rewriter.create<scf::YieldOp>(location, static_cast<Value>(traverseTile));
     }
     rewriter.setInsertionPointAfter(whileLoop);
-    auto treePrediction = rewriter.create<decisionforest::GetLeafValueOp>(location, treeType.getThresholdType(), tree, whileLoop.results()[0]);
+    auto treePrediction = rewriter.create<decisionforest::GetLeafValueOp>(location, treeType.getThresholdType(), tree, whileLoop.getResults()[0]);
     rewriter.create<scf::YieldOp>(location, static_cast<Value>(treePrediction));
     rewriter.replaceOp(op, walkResult);
 
@@ -270,16 +271,16 @@ struct WalkDecisionTreePeeledOpLowering: public ConversionPattern {
   }
 };
 
-struct WalkDecisionTreeOpLoweringPass: public PassWrapper<WalkDecisionTreeOpLoweringPass, FunctionPass> {
+struct WalkDecisionTreeOpLoweringPass: public PassWrapper<WalkDecisionTreeOpLoweringPass, OperationPass<mlir::func::FuncOp>> {
   
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<StandardOpsDialect, scf::SCFDialect>();
+    registry.insert<scf::SCFDialect>();
   }
 
-  void runOnFunction() final {
+  void runOnOperation() final {
     ConversionTarget target(getContext());
 
-    target.addLegalDialect<memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect, 
+    target.addLegalDialect<memref::MemRefDialect, scf::SCFDialect, 
                            decisionforest::DecisionForestDialect, math::MathDialect, arith::ArithmeticDialect>();
     target.addIllegalOp<decisionforest::WalkDecisionTreeOp, decisionforest::WalkDecisionTreePeeledOp>();
 
@@ -287,28 +288,28 @@ struct WalkDecisionTreeOpLoweringPass: public PassWrapper<WalkDecisionTreeOpLowe
     patterns.add<WalkDecisionTreeOpLowering>(&getContext());
     patterns.add<WalkDecisionTreePeeledOpLowering>(&getContext());
 
-    if (failed(applyPartialConversion(getFunction(), target, std::move(patterns))))
+    if (failed(applyPartialConversion(getOperation(), target, std::move(patterns))))
         signalPassFailure();
   }
 };
 
-struct PipelinedWalkDecisionTreeOpLoweringPass: public PassWrapper<PipelinedWalkDecisionTreeOpLoweringPass, FunctionPass> {
+struct PipelinedWalkDecisionTreeOpLoweringPass: public PassWrapper<PipelinedWalkDecisionTreeOpLoweringPass, OperationPass<mlir::func::FuncOp>> {
   
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<StandardOpsDialect, scf::SCFDialect>();
+    registry.insert<scf::SCFDialect>();
   }
 
-  void runOnFunction() final {
+  void runOnOperation() final {
     ConversionTarget target(getContext());
 
-    target.addLegalDialect<memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect, 
+    target.addLegalDialect<memref::MemRefDialect, scf::SCFDialect, 
                            decisionforest::DecisionForestDialect, math::MathDialect, arith::ArithmeticDialect>();
     target.addIllegalOp<decisionforest::PipelinedWalkDecisionTreeOp>();
 
     RewritePatternSet patterns(&getContext());
     patterns.add<PipelinedWalkDecisionTreeOpLowering>(&getContext());
 
-    if (failed(applyPartialConversion(getFunction(), target, std::move(patterns))))
+    if (failed(applyPartialConversion(getOperation(), target, std::move(patterns))))
         signalPassFailure();
   }
 };

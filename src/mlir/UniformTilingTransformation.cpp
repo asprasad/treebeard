@@ -7,7 +7,8 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 
@@ -117,7 +118,7 @@ struct TileEnsembleAttribute : public RewritePattern {
   }
 };
 
-struct UniformTilingPass : public PassWrapper<UniformTilingPass, FunctionPass> {
+struct UniformTilingPass : public PassWrapper<UniformTilingPass, OperationPass<mlir::func::FuncOp>> {
   int32_t m_tileSize;
   int32_t m_tileShapeBitWidth;
   bool m_makeAllLeavesSameDepth;
@@ -125,14 +126,14 @@ struct UniformTilingPass : public PassWrapper<UniformTilingPass, FunctionPass> {
     : m_tileSize(tileSize), m_tileShapeBitWidth(tileShapeBitWidth), m_makeAllLeavesSameDepth(makeAllLeavesSameDepth)
   { }
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect, math::MathDialect>();
+    registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect, math::MathDialect>();
   }
-  void runOnFunction() final {
+  void runOnOperation() final {
     RewritePatternSet patterns(&getContext());
     auto tileShapeType = IntegerType::get(&getContext(), m_tileShapeBitWidth);
     patterns.add<TileEnsembleAttribute>(&getContext(), m_tileSize, tileShapeType, m_makeAllLeavesSameDepth);
 
-    if (failed(applyPatternsAndFoldGreedily(getFunction(), std::move(patterns))))
+    if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
         signalPassFailure();
   }
 };
@@ -144,7 +145,7 @@ namespace decisionforest
 {
 void DoUniformTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth, bool makeAllLeavesSameDepth) {
   mlir::PassManager pm(&context);
-  mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
+  mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
   optPM.addPass(std::make_unique<UniformTilingPass>(tileSize, tileShapeBitWidth, makeAllLeavesSameDepth));
 
   if (mlir::failed(pm.run(module))) {

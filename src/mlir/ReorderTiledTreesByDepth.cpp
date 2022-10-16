@@ -7,7 +7,8 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 
@@ -128,17 +129,17 @@ struct ReorderEnsembleConstants : public RewritePattern {
 
 };
 
-struct ReorderTreesByDepthPass : public PassWrapper<ReorderTreesByDepthPass, FunctionPass> {
+struct ReorderTreesByDepthPass : public PassWrapper<ReorderTreesByDepthPass, OperationPass<mlir::func::FuncOp>> {
   ReorderTreesByDepthPass() 
   { }
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect, math::MathDialect>();
+    registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect, math::MathDialect>();
   }
-  void runOnFunction() final {
+  void runOnOperation() final {
     RewritePatternSet patterns(&getContext());
     patterns.add<ReorderEnsembleConstants>(&getContext());
 
-    if (failed(applyPatternsAndFoldGreedily(getFunction(), std::move(patterns))))
+    if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
         signalPassFailure();
   }
 };
@@ -154,21 +155,22 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
 
   void SplitTreeLoopForProbAndUniformTiling(decisionforest::Schedule* schedule, decisionforest::DecisionForest<>& forest,
                                             decisionforest::IndexVariable* &probTreeIndex, decisionforest::IndexVariable* &probBatchIndex,
-                                            decisionforest::IndexVariable* &unifTreeIndex, decisionforest::IndexVariable* &unifBatchIndex) const {
+                                            decisionforest::IndexVariable* &unifTreeIndex, decisionforest::IndexVariable* &unifBatchIndex,
+                                            decisionforest::IndexVariable* currentTreeIndex, decisionforest::IndexVariable* currentBatchIndex) const {
     // TODO What if there are no uniformly tiled trees?
     assert (forest.NumTrees() > 0);
     if (!forest.GetTree(0).GetTiledTree()->IsProbabilisticallyTiled()) {
       // There are no probabilistically tiled trees
       probTreeIndex = probBatchIndex = nullptr;
-      unifBatchIndex = &schedule->GetBatchIndex();
-      unifTreeIndex = &schedule->GetTreeIndex();
+      unifBatchIndex = currentBatchIndex;
+      unifTreeIndex = currentTreeIndex;
       return;
     }
     else if (forest.GetTrees().back()->GetTiledTree()->IsProbabilisticallyTiled()) {
       // All trees are probabilistically tiled
       unifTreeIndex = unifBatchIndex = nullptr;
-      probBatchIndex = &schedule->GetBatchIndex();
-      probTreeIndex = &schedule->GetTreeIndex();
+      probBatchIndex = currentBatchIndex;
+      probTreeIndex = currentTreeIndex;
       return;
     }
     int32_t splitPoint = 0;
@@ -182,8 +184,8 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
     probTreeIndex = &schedule->NewIndexVariable("probTreeIndex");
     unifTreeIndex = &schedule->NewIndexVariable("unifTreeIndex");
     decisionforest::Schedule::IndexVariableMapType indexMap;
-    schedule->Split(schedule->GetTreeIndex(), *probTreeIndex, *unifTreeIndex, splitPoint, indexMap);
-    auto mapIter = indexMap.find(&schedule->GetBatchIndex());
+    schedule->Split(*currentTreeIndex, *probTreeIndex, *unifTreeIndex, splitPoint, indexMap);
+    auto mapIter = indexMap.find(currentBatchIndex);
     assert (mapIter != indexMap.end());
     probBatchIndex = mapIter->second.first;
     unifBatchIndex = mapIter->second.second;
@@ -317,7 +319,7 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
     schedule->Reorder({&treeIndex, batchIndexPtr});
     decisionforest::IndexVariable* probTreeIndex=nullptr, *probBatchIndex=nullptr;
     decisionforest::IndexVariable* unifTreeIndex=nullptr, *unifBatchIndex=nullptr;
-    SplitTreeLoopForProbAndUniformTiling(schedule, forest, probTreeIndex, probBatchIndex, unifTreeIndex, unifBatchIndex);
+    SplitTreeLoopForProbAndUniformTiling(schedule, forest, probTreeIndex, probBatchIndex, unifTreeIndex, unifBatchIndex, &treeIndex, batchIndexPtr);
     // Tile the batch loop so we can pipeline it
     // auto& b0 = schedule->NewIndexVariable("b0");
     // auto& b1 = schedule->NewIndexVariable("b1");
@@ -329,20 +331,20 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
 
 };
 
-struct SplitTreeLoopByDepth : public PassWrapper<SplitTreeLoopByDepth, FunctionPass> {
+struct SplitTreeLoopByDepth : public PassWrapper<SplitTreeLoopByDepth, OperationPass<mlir::func::FuncOp>> {
   int32_t m_pipelineSize;
   int32_t m_numCores;
   SplitTreeLoopByDepth(int32_t pipelineSize, int32_t numCores) 
   :m_pipelineSize(pipelineSize), m_numCores(numCores)
   { }
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, StandardOpsDialect, scf::SCFDialect, math::MathDialect>();
+    registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect, math::MathDialect>();
   }
-  void runOnFunction() final {
+  void runOnOperation() final {
     RewritePatternSet patterns(&getContext());
     patterns.add<SplitTreeLoopsByTreeDepthPattern>(&getContext(), m_pipelineSize, m_numCores);
 
-    if (failed(applyPatternsAndFoldGreedily(getFunction(), std::move(patterns))))
+    if (failed(applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
         signalPassFailure();
   }
 };
@@ -355,7 +357,7 @@ namespace decisionforest
 {
 void DoReorderTreesByDepth(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t pipelineSize, int32_t numCores) {
   mlir::PassManager pm(&context);
-  mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
+  mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
   optPM.addPass(std::make_unique<ReorderTreesByDepthPass>());
   // TODO pipelineSize needs to be added to CompilerOptions
   optPM.addPass(std::make_unique<SplitTreeLoopByDepth>(pipelineSize, numCores));
