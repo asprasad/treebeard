@@ -11,17 +11,14 @@ namespace decisionforest
     // TODO - Unify this with the regular traverse tile lowering.
     class InterleavedTraverseTreeTileOpLoweringHelper {
         private:
-        std::function<Value(Value)> m_getTreeMemref;
         std::function<Value(Value)> m_getLutFromTree;
-        decisionforest::Representation m_representation;
+        std::shared_ptr<decisionforest::IRepresentation> m_representation;
         
         public:
         InterleavedTraverseTreeTileOpLoweringHelper(
-            std::function<Value(Value)> getTreeMemref,
             std::function<Value(Value)> getLutFromTree,
-            decisionforest::Representation representation)
-            : m_getTreeMemref(getTreeMemref),
-              m_getLutFromTree(getLutFromTree),
+            std::shared_ptr<decisionforest::IRepresentation> representation)
+            : m_getLutFromTree(getLutFromTree),
               m_representation(representation) {}
 
         LogicalResult matchAndRewrite(Operation *op, ArrayRef<Value> operands,ConversionPatternRewriter &rewriter) const {
@@ -42,7 +39,7 @@ namespace decisionforest
                 auto node = nodes[i];
                 auto data = dataRows[i];
 
-                auto treeMemref = m_getTreeMemref(tree);
+                auto treeMemref = m_representation->GetTreeMemref(tree);
                 auto treeMemrefType = treeMemref.getType().cast<MemRefType>();
                 assert (treeMemrefType);
 

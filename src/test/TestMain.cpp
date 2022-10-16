@@ -7,11 +7,14 @@
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "xgboostparser.h"
 #include "TiledTree.h"
 
 #include "TestUtilsCommon.h"
 #include "ForestTestUtils.h"
+#include "ModelSerializers.h"
+#include "Representations.h"
 
 using namespace mlir::decisionforest;
 
@@ -372,20 +375,6 @@ bool Test_TileSize8_Higgs_TestInputs_MakeLeavesSameDepth(TestArgs_t &args);
 bool Test_TileSize8_Year_TestInputs_MakeLeavesSameDepth(TestArgs_t &args);
 bool Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth(TestArgs_t &args);
 
-// Remove extra hop tests
-bool Test_RemoveExtraHop_BalancedTree_TileSize2(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_1Tree_BatchSize4_RemoveExtraHop_TileSize8(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_2Trees_BatchSize4_RemoveExtraHop_TileSize8(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_RemoveExtraHop_TileSize8(TestArgs_t& args);
-bool Test_TileSize8_Abalone_TestInputs_RemoveExtraHop(TestArgs_t &args);
-bool Test_TileSize8_AirlineOHE_TestInputs_RemoveExtraHop(TestArgs_t &args);
-bool Test_TileSize8_Airline_TestInputs_RemoveExtraHop(TestArgs_t &args);
-bool Test_TileSize8_Bosch_TestInputs_RemoveExtraHop(TestArgs_t &args);
-bool Test_TileSize8_Epsilon_TestInputs_RemoveExtraHop(TestArgs_t &args);
-bool Test_TileSize8_Higgs_TestInputs_RemoveExtraHop(TestArgs_t &args);
-bool Test_TileSize8_Year_TestInputs_RemoveExtraHop(TestArgs_t &args);
-bool Test_TileSize8_CovType_TestInputs_RemoveExtraHop(TestArgs_t &args);
-
 bool Test_TileSize8_Abalone_TestInputs_ReorderTrees(TestArgs_t &args);
 
 // Split schedule tests
@@ -454,7 +443,7 @@ bool Test_BufferInit_RightHeavy(TestArgs_t& args) {
                                                                 mlir::decisionforest::ReductionType::kAdd, treeType);
   
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
-  mlir::decisionforest::PersistDecisionForest(forest, forestType);
+  decisionforest::ConstructModelSerializer()->Persist(forest, forestType);
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
   mlir::decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
 
@@ -474,8 +463,6 @@ bool Test_BufferInit_RightHeavy(TestArgs_t& args) {
   std::vector<int64_t> lengthVec(1, -1);
   mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthVec.data(), 1, thresholdSize, indexSize);
   Test_ASSERT(lengthVec[0] == 7);
-
-  mlir::decisionforest::ClearPersistedForest();
 
   return true;
 }
@@ -524,7 +511,7 @@ bool Test_BufferInitialization_TwoTrees(TestArgs_t& args) {
                                                                 mlir::decisionforest::ReductionType::kAdd, treeType);
   
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
-  mlir::decisionforest::PersistDecisionForest(forest, forestType);
+  decisionforest::ConstructModelSerializer()->Persist(forest, forestType);
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
   mlir::decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
 
@@ -548,8 +535,6 @@ bool Test_BufferInitialization_TwoTrees(TestArgs_t& args) {
   Test_ASSERT(lengthVec[0] == 7);
   Test_ASSERT(lengthVec[1] == 7);
 
-  mlir::decisionforest::ClearPersistedForest();
-
   return true;
 }
 
@@ -569,7 +554,7 @@ bool Test_BufferInitializationWithOneTree_LeftHeavy(TestArgs_t& args) {
                                                                 mlir::decisionforest::ReductionType::kAdd, treeType);
   
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
-  mlir::decisionforest::PersistDecisionForest(forest, forestType);
+  decisionforest::ConstructModelSerializer()->Persist(forest, forestType);
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
   mlir::decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
   
@@ -588,8 +573,6 @@ bool Test_BufferInitializationWithOneTree_LeftHeavy(TestArgs_t& args) {
   std::vector<int64_t> lengthVec(1, -1);
   mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthVec.data(), 1, 64, 32);
   Test_ASSERT(lengthVec[0] == 7);
-
-  mlir::decisionforest::ClearPersistedForest();
 
   return true;
 }
@@ -636,7 +619,7 @@ bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   // module->dump();
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   // module->dump();
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module);
+  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), decisionforest::ConstructRepresentation());
   // module->dump();
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
@@ -673,7 +656,7 @@ bool Test_ForestCodeGen_VariableBatchSize(TestArgs_t& args, ForestConstructor_t 
   // module->dump();
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   // module->dump();
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module);
+  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), decisionforest::ConstructRepresentation());
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
   mlir::decisionforest::LowerToLLVM(args.context, module);
@@ -831,7 +814,7 @@ bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t fore
   auto forestType = mlir::decisionforest::TreeEnsembleType::get(thresholdType, 1, thresholdType /*HACK type doesn't matter for this test*/,
                                                                 mlir::decisionforest::ReductionType::kAdd, treeTypes);
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
-  mlir::decisionforest::PersistDecisionForest(forest, forestType);
+  decisionforest::ConstructModelSerializer()->Persist(forest, forestType);
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
   mlir::decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
 
@@ -864,8 +847,6 @@ bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t fore
   mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthVec.data(), tileSize, thresholdSize, indexSize);
   Test_ASSERT(lengthVec[0] == numTiles);
 
-  mlir::decisionforest::ClearPersistedForest();
-  // std::cout << "**********\n";
   return true;
 }
 
@@ -917,6 +898,8 @@ bool Test_PadTiledTree_BalancedTree_TileSize2(TestArgs_t& args) {
 
   auto tiledTree = decisionTree.GetTiledTree();
   tiledTree->MakeAllLeavesSameDepth();
+  // std::string dotFile = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/tiledTree.dot";
+  // tiledTree->WriteDOTFile(dotFile);
   return CheckAllLeavesAreAtSameDepth(tiledTree);
 }
 
@@ -930,6 +913,8 @@ bool Test_PadTiledTree_BalancedTree_TileSize2_2(TestArgs_t& args) {
 
   auto tiledTree = decisionTree.GetTiledTree();
   tiledTree->MakeAllLeavesSameDepth();
+  // std::string dotFile = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/tiledTree.dot";
+  // tiledTree->WriteDOTFile(dotFile);
   return CheckAllLeavesAreAtSameDepth(tiledTree);
 }
 
@@ -943,24 +928,9 @@ bool Test_PadTiledTree_BalancedTree_TileSize3(TestArgs_t& args) {
 
   auto tiledTree = decisionTree.GetTiledTree();
   tiledTree->MakeAllLeavesSameDepth();
+  // std::string dotFile = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/tiledTree.dot";
+  // tiledTree->WriteDOTFile(dotFile);
   return CheckAllLeavesAreAtSameDepth(tiledTree);
-}
-
-bool Test_SparseSerialization_BalancedTree_TileSize2(TestArgs_t& args) {
-  decisionforest::DecisionTree<> decisionTree;
-  InitializeBalancedTree(decisionTree);
-  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 5, 3, 4 };
-  
-  decisionforest::TreeTilingDescriptor tilingDescriptor(2, 5, tileIDs, decisionforest::TilingType::kRegular);
-  decisionTree.SetTilingDescriptor(tilingDescriptor);
-
-  auto tiledTree = decisionTree.GetTiledTree();
-  
-  std::vector<double> thresholds, leaves;
-  std::vector<int32_t> featureIndices, leafBitMasks, tileShapeIDs, childIndices, leafIndices;
-
-  tiledTree->GetSparseSerialization(thresholds, featureIndices, leafBitMasks, tileShapeIDs, childIndices, leafIndices, leaves);
-  return true;
 }
 
 bool Test_SplitSchedule(TestArgs_t& args) {
@@ -978,6 +948,8 @@ bool Test_SplitSchedule(TestArgs_t& args) {
   auto& b22 = schedule.NewIndexVariable("b22");
   schedule.Split(schedule.GetBatchIndex(), b1, b2, 32, indexMap);
   schedule.Split(b2, b21, b22, 48, indexMap);
+  std::string dotFile = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/split_schedule.dot";
+  schedule.WriteToDOTFile(dotFile);
   return true;
 }
 
@@ -1004,12 +976,10 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize2),
   TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize2),
   TEST_LIST_ENTRY(Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2),
-#ifndef OMP_SUPPORT
   TEST_LIST_ENTRY(Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1),
   TEST_LIST_ENTRY(Test_LoadTileThresholdOp_DoubleInt32_TileSize1),
   TEST_LIST_ENTRY(Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1),
   TEST_LIST_ENTRY(Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1),
-#endif // OMP_SUPPORT
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4),
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize2),
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize1),
@@ -1041,7 +1011,6 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape),
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize),
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize),
-#ifndef OMP_SUPPORT
   TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy),
   TEST_LIST_ENTRY(Test_ModelInit_RightHeavy),
   TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy),
@@ -1054,7 +1023,6 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_ModelInit_Balanced_Int16TileShape),
   TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy_Int8TileShape),
   TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy_Int16TileShape),
-#endif
   TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1),
@@ -1325,19 +1293,6 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_MakeLeavesSameDepth),
   TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth),
 
-  // Remove extra hop tests
-  TEST_LIST_ENTRY(Test_RemoveExtraHop_BalancedTree_TileSize2),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_RemoveExtraHop_TileSize8),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_RemoveExtraHop_TileSize8),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_RemoveExtraHop_TileSize8),
-  TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_RemoveExtraHop),
-  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_RemoveExtraHop),
-  TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_RemoveExtraHop),
-  TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_RemoveExtraHop),
-  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_RemoveExtraHop),
-  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_RemoveExtraHop),
-  TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_RemoveExtraHop),
-    
   TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_ReorderTrees),
 
   // Split Schedule
@@ -1532,11 +1487,6 @@ TestDescriptor sanityTestList[] = {
   TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Abalone),
 
   // Remove extra hop tests
-  TEST_LIST_ENTRY(Test_SparseSerialization_BalancedTree_TileSize2),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_RemoveExtraHop_TileSize8),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_RemoveExtraHop_TileSize8),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_RemoveExtraHop_TileSize8),
-  TEST_LIST_ENTRY(Test_SparseSerialization_BalancedTree_TileSize2),
   TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
   TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Airline),
   TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_AirlineOHE),
@@ -1628,12 +1578,12 @@ void RunTestsImpl(TestDescriptor *testsToRun, size_t numberOfTests) {
     mlir::MLIRContext context;
     context.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
     context.getOrLoadDialect<mlir::decisionforest::DecisionForestDialect>();
-    context.getOrLoadDialect<mlir::StandardOpsDialect>();
     context.getOrLoadDialect<mlir::scf::SCFDialect>();
     context.getOrLoadDialect<mlir::memref::MemRefDialect>();
     context.getOrLoadDialect<mlir::vector::VectorDialect>();
     context.getOrLoadDialect<mlir::math::MathDialect>();
     context.getOrLoadDialect<mlir::omp::OpenMPDialect>();
+    context.getOrLoadDialect<mlir::func::FuncDialect>();
     TestArgs_t args = { context };
     
     // Disable sparse code generation by default

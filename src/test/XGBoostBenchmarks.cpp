@@ -14,7 +14,8 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Verifier.h"
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/SCF.h"
 #include "llvm/ADT/STLExtras.h"
 
@@ -23,6 +24,8 @@
 #include "TreeTilingDescriptor.h"
 #include "TreeTilingUtils.h"
 #include "ForestTestUtils.h"
+#include "ModelSerializers.h"
+#include "Representations.h"
 
 using namespace mlir;
 using namespace mlir::decisionforest;
@@ -80,7 +83,11 @@ double Test_CodeGenForJSON_ProbabilityBasedTiling(int64_t batchSize, const std::
     options.numberOfCores = numberOfCores;
   TreeBeard::InitializeMLIRContext(context);
   auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, ReturnType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
-  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ReturnType, FeatureIndexType, int32_t, FloatType>(context, modelJsonPath, modelGlobalsJSONFilePath, options);
+  
+  TreeBeard::TreebeardContext tbContext{modelJsonPath, modelGlobalsJSONFilePath, options, 
+                                        mlir::decisionforest::ConstructRepresentation(),
+                                        mlir::decisionforest::ConstructModelSerializer()};
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ReturnType, FeatureIndexType, int32_t, FloatType>(context, tbContext);
 
   decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, floatTypeBitWidth, sizeof(FeatureIndexType)*8);
   

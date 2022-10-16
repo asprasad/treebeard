@@ -5,10 +5,11 @@
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
-#include "mlir/Conversion/SCFToStandard/SCFToStandard.h"
+#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
+#include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Conversion/SCFToOpenMP/SCFToOpenMP.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVM.h"
-#include "mlir/Conversion/StandardToLLVM/ConvertStandardToLLVMPass.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
@@ -19,8 +20,10 @@
 #include "mlir/Dialect/SCF/SCF.h"
 #include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 
-#include "mlir/Dialect/StandardOps/IR/Ops.h"
+#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -78,7 +81,6 @@ const int32_t kThresholdElementNumberInTile = 0;
 const int32_t kFeatureIndexElementNumberInTile = 1;
 const int32_t kTileShapeElementNumberInTile = 2;
 const int32_t kChildIndexElementNumberInTile = 3;
-const int32_t kLeafBitMaskElementNumberInTile = 4;
 
 Type GenerateGetElementPtr(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter, Type elementMLIRType,
                            int64_t elementNumber, TypeConverter* typeConverter, Value& elementPtr) {
@@ -193,30 +195,6 @@ struct LoadChildIndexOpLowering : public ConversionPattern {
   }
 };
 
-struct LoadLeafBitMaskOpLowering : public ConversionPattern {
-  LoadLeafBitMaskOpLowering(LLVMTypeConverter& typeConverter) 
-  : ConversionPattern(typeConverter, mlir::decisionforest::LoadLeafBitMaskOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
-
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
-    assert(operands.size() == 2);
-    GenerateLoadStructElement(op, operands, rewriter, kLeafBitMaskElementNumberInTile, getTypeConverter());
-    return mlir::success();
-  }
-};
-
-struct LoadChildIndexAndLeafIndexOpLowering : public ConversionPattern {
-  LoadChildIndexAndLeafIndexOpLowering(LLVMTypeConverter& typeConverter) 
-  : ConversionPattern(typeConverter, mlir::decisionforest::LoadChildAndLeafIndexOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
-
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
-    assert(operands.size() == 2);
-    GenerateLoadStructElement(op, operands, rewriter, kChildIndexElementNumberInTile, getTypeConverter());
-    return mlir::success();
-  }
-};
-
 struct InitTileOpLowering : public ConversionPattern {
   InitTileOpLowering(LLVMTypeConverter& typeConverter) 
   : ConversionPattern(typeConverter, mlir::decisionforest::InitTileOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
@@ -252,28 +230,6 @@ struct InitSparseTileOpLowering : public ConversionPattern {
       GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.tileShapeID().getType(), 2, getTypeConverter(), tileOpAdaptor.tileShapeID());
     GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.childIndex().getType(), 3, getTypeConverter(), tileOpAdaptor.childIndex());
 
-    rewriter.eraseOp(op);
-    return mlir::success();
-  }
-};
-
-struct InitSparseTileWithLeafIndexOpLowering : public ConversionPattern {
-  InitSparseTileWithLeafIndexOpLowering(LLVMTypeConverter& typeConverter) 
-  : ConversionPattern(typeConverter, mlir::decisionforest::InitSparseTileWithLeafIndexOp::getOperationName(), 1 /*benefit*/, &typeConverter.getContext()) {}
-
-  LogicalResult
-  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
-    assert(operands.size() == 7);
-    decisionforest::InitSparseTileWithLeafIndexOpAdaptor tileOpAdaptor(operands);
-    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.thresholds().getType(), 0, getTypeConverter(), tileOpAdaptor.thresholds());
-    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.featureIndices().getType(), 1, getTypeConverter(), tileOpAdaptor.featureIndices());
-    auto modelMemrefType = op->getOperand(0).getType().cast<MemRefType>();
-    auto tileType = modelMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
-    assert (tileType.getTileSize() > 1);
-    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.tileShapeID().getType(), 2, getTypeConverter(), tileOpAdaptor.tileShapeID());
-    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.childAndLeafIndices().getType(), 3, getTypeConverter(), tileOpAdaptor.childAndLeafIndices());
-    // GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.leafIndex().getType(), 4, getTypeConverter(), tileOpAdaptor.leafIndex());
-    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.leafBitMask().getType(), 4, getTypeConverter(), tileOpAdaptor.leafBitMask());
     rewriter.eraseOp(op);
     return mlir::success();
   }
@@ -318,11 +274,40 @@ struct GetModelMemrefSizeOpLowering : public ConversionPattern {
   }
 };
 
+void AddTreebeardTypeConversions(MLIRContext& context, LLVMTypeConverter& typeConverter) {
+  if (decisionforest::UseSparseTreeRepresentation == false)
+  typeConverter.addConversion([&](decisionforest::TiledNumericalNodeType type) {
+                auto thresholdType = type.getThresholdFieldType();
+                auto indexType = type.getIndexFieldType();
+                if (type.getTileSize() == 1) {
+                  return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType});
+                }
+                else {
+                  auto tileShapeIDType = type.getTileShapeType();
+                  return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType});
+                }
+              });
+  else
+    typeConverter.addConversion([&](decisionforest::TiledNumericalNodeType type) {
+                auto thresholdType = type.getThresholdFieldType();
+                auto indexType = type.getIndexFieldType();
+                auto childIndexType = type.getChildIndexType();
+                auto tileShapeIDType = type.getTileShapeType();
+                if (type.getTileSize() == 1) {
+                  return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType, childIndexType});
+                }
+                else {
+                  return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType, childIndexType});
+                }
+              });
+
+}
+
 #ifndef OMP_SUPPORT
 struct DecisionForestToLLVMLoweringPass : public PassWrapper<DecisionForestToLLVMLoweringPass, OperationPass<ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect, memref::MemRefDialect, 
-                    StandardOpsDialect, arith::ArithmeticDialect, vector::VectorDialect>();
+                    arith::ArithmeticDialect, vector::VectorDialect>();
   }
   void runOnOperation() final;
 };
@@ -359,21 +344,16 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
                     return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType, childIndexType});
                   }
                   else {
-                    if (decisionforest::RemoveExtraHopInSparseRepresentation) {
-                      auto leafAndChildIndexType = VectorType::get({2}, type.getChildIndexType());
-                      return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType, leafAndChildIndexType, type.getLeafBitMaskType()});
-                    }
-                    else
-                      return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType, childIndexType});
+                    return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType, childIndexType});
                   }
                 });
 
   RewritePatternSet patterns(&getContext());
   populateAffineToStdConversionPatterns(patterns);
-  populateLoopToStdConversionPatterns(patterns);
+  populateSCFToControlFlowConversionPatterns(patterns);
   populateMemRefToLLVMConversionPatterns(typeConverter, patterns);
-  populateStdToLLVMFuncOpConversionPattern(typeConverter, patterns);
-  populateStdToLLVMConversionPatterns(typeConverter, patterns);
+  cf::populateControlFlowToLLVMConversionPatterns(typeConverter, patterns);
+  populateFuncToLLVMConversionPatterns(typeConverter, patterns);
   populateVectorToLLVMConversionPatterns(typeConverter, patterns, false);
   vector::populateVectorBroadcastLoweringPatterns(patterns);
   populateMathToLLVMConversionPatterns(typeConverter, patterns);
@@ -383,11 +363,8 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
                LoadTileThresholdOpLowering,
                LoadTileShapeOpLowering,
                LoadChildIndexOpLowering,
-               LoadLeafBitMaskOpLowering,
-               LoadChildIndexAndLeafIndexOpLowering,
                InitTileOpLowering,
                InitSparseTileOpLowering,
-               InitSparseTileWithLeafIndexOpLowering,
                GetModelMemrefSizeOpLowering>(typeConverter);
   decisionforest::populateDebugOpLoweringPatterns(patterns, typeConverter);
 
@@ -398,10 +375,11 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
 
 #else // OMP_SUPPORT
 
+// ./mlir-opt --convert-scf-to-openmp --convert-memref-to-llvm --convert-scf-to-cf --convert-openmp-to-llvm --reconcile-unrealized-casts ~/temp/omp-mlir.mlir
 struct DecisionForestToLLVMLoweringPass : public PassWrapper<DecisionForestToLLVMLoweringPass, OperationPass<ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect, memref::MemRefDialect, 
-                    StandardOpsDialect, arith::ArithmeticDialect, vector::VectorDialect, omp::OpenMPDialect>();
+                    arith::ArithmeticDialect, vector::VectorDialect, omp::OpenMPDialect>();
   }
   void runOnOperation() final;
 };
@@ -412,105 +390,81 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
   // options.useBarePtrCallConv = true;
   // options.emitCWrappers = true;
   LLVMConversionTarget target(getContext());
-  target.addLegalOp<ModuleOp>();
-  target.addLegalDialect<omp::OpenMPDialect>();
+  target.addLegalOp<ModuleOp, func::FuncOp, func::ReturnOp>();
+  target.addLegalDialect<scf::SCFDialect, omp::OpenMPDialect>();
+  target.addIllegalDialect<decisionforest::DecisionForestDialect, memref::MemRefDialect>();
+  target.addIllegalDialect<arith::ArithmeticDialect, vector::VectorDialect, math::MathDialect>();
 
   auto& context = getContext();
   LLVMTypeConverter typeConverter(&getContext(), options);
-  if (decisionforest::UseSparseTreeRepresentation == false)
-    typeConverter.addConversion([&](decisionforest::TiledNumericalNodeType type) {
-                  auto thresholdType = type.getThresholdFieldType();
-                  auto indexType = type.getIndexFieldType();
-                  if (type.getTileSize() == 1) {
-                    return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType});
-                  }
-                  else {
-                    auto tileShapeIDType = type.getTileShapeType();
-                    return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType});
-                  }
-                });
-    else
-      typeConverter.addConversion([&](decisionforest::TiledNumericalNodeType type) {
-                  auto thresholdType = type.getThresholdFieldType();
-                  auto indexType = type.getIndexFieldType();
-                  auto childIndexType = type.getChildIndexType();
-                  auto tileShapeIDType = type.getTileShapeType();
-                  if (type.getTileSize() == 1) {
-                    return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType, childIndexType});
-                  }
-                  else {
-                    if (decisionforest::RemoveExtraHopInSparseRepresentation) {
-                      auto leafAndChildIndexType = VectorType::get({2}, type.getChildIndexType());
-                      return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType, leafAndChildIndexType, type.getLeafBitMaskType()});
-                    }
-                    else
-                      return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType, childIndexType});
-                  }
-                });
-  if (decisionforest::HasParallelLoop) {
-    RewritePatternSet patterns(&getContext());
-    // populateAffineToStdConversionPatterns(patterns);
-    // populateLoopToStdConversionPatterns(patterns);
-    populateMemRefToLLVMConversionPatterns(typeConverter, patterns);
-    populateStdToLLVMFuncOpConversionPattern(typeConverter, patterns);
-    populateStdToLLVMConversionPatterns(typeConverter, patterns);
-    populateVectorToLLVMConversionPatterns(typeConverter, patterns, false);
-    vector::populateVectorBroadcastLoweringPatterns(patterns);
-    populateMathToLLVMConversionPatterns(typeConverter, patterns);
-    arith::populateArithmeticToLLVMConversionPatterns(typeConverter, patterns);
-    // populateOpenMPToLLVMConversionPatterns(typeConverter, patterns);
+  AddTreebeardTypeConversions(context, typeConverter);
 
-    patterns.add<LoadTileFeatureIndicesOpLowering,
-                LoadTileThresholdOpLowering,
-                LoadTileShapeOpLowering,
-                LoadChildIndexOpLowering,
-                LoadLeafBitMaskOpLowering,
-                LoadChildIndexAndLeafIndexOpLowering,
-                InitTileOpLowering,
-                InitSparseTileOpLowering,
-                InitSparseTileWithLeafIndexOpLowering,
-                GetModelMemrefSizeOpLowering>(typeConverter);
-    decisionforest::populateDebugOpLoweringPatterns(patterns, typeConverter);
+  RewritePatternSet patterns(&getContext());
+  populateMemRefToLLVMConversionPatterns(typeConverter, patterns);
+  populateVectorToLLVMConversionPatterns(typeConverter, patterns, false);
+  populateMathToLLVMConversionPatterns(typeConverter, patterns);
+  arith::populateArithmeticToLLVMConversionPatterns(typeConverter, patterns);
 
-    auto module = getOperation();
+  patterns.add<LoadTileFeatureIndicesOpLowering,
+               LoadTileThresholdOpLowering,
+               LoadTileShapeOpLowering,
+               LoadChildIndexOpLowering,
+               InitTileOpLowering,
+               InitSparseTileOpLowering,
+               GetModelMemrefSizeOpLowering>(typeConverter);
+  decisionforest::populateDebugOpLoweringPatterns(patterns, typeConverter);
 
-    // module->dump();    
-  
-    if (failed(applyFullConversion(module, target, std::move(patterns)))) {
-      signalPassFailure();
-      llvm::errs() << "Decision forest lowering pass failed\n";
-    }
+  auto module = getOperation();
+
+  if (failed(applyFullConversion(module, target, std::move(patterns)))) {
+    signalPassFailure();
+    llvm::errs() << "Decision forest lowering pass failed\n";
   }
-  else {
-    RewritePatternSet patterns(&getContext());
-    populateAffineToStdConversionPatterns(patterns);
-    populateLoopToStdConversionPatterns(patterns);
-    populateMemRefToLLVMConversionPatterns(typeConverter, patterns);
-    populateStdToLLVMFuncOpConversionPattern(typeConverter, patterns);
-    populateStdToLLVMConversionPatterns(typeConverter, patterns);
-    populateVectorToLLVMConversionPatterns(typeConverter, patterns, false);
-    vector::populateVectorBroadcastLoweringPatterns(patterns);
-    populateMathToLLVMConversionPatterns(typeConverter, patterns);
-    arith::populateArithmeticToLLVMConversionPatterns(typeConverter, patterns);
-
-    patterns.add<LoadTileFeatureIndicesOpLowering,
-                LoadTileThresholdOpLowering,
-                LoadTileShapeOpLowering,
-                LoadChildIndexOpLowering,
-                LoadLeafBitMaskOpLowering,
-                LoadChildIndexAndLeafIndexOpLowering,
-                InitTileOpLowering,
-                InitSparseTileOpLowering,
-                InitSparseTileWithLeafIndexOpLowering,
-                GetModelMemrefSizeOpLowering>(typeConverter);
-    decisionforest::populateDebugOpLoweringPatterns(patterns, typeConverter);
-
-    auto module = getOperation();
-    if (failed(applyFullConversion(module, target, std::move(patterns))))
-      signalPassFailure();  
-  }
+  // module->dump();    
 }
+
+struct LowerOMPToLLVMPass : public PassWrapper<LowerOMPToLLVMPass, OperationPass<ModuleOp>> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect, memref::MemRefDialect, 
+                    arith::ArithmeticDialect, vector::VectorDialect, omp::OpenMPDialect, func::FuncDialect>();
+  }
+  void runOnOperation() final {
+    LowerToLLVMOptions options(&getContext());
+    auto module = getOperation();
+    auto& context = getContext();
+
+    LLVMTypeConverter converter(&getContext(), options);
+    AddTreebeardTypeConversions(context, converter);
+    
+    // Convert to OpenMP operations with LLVM IR dialect
+    RewritePatternSet patterns(&getContext());
+    arith::populateArithmeticToLLVMConversionPatterns(converter, patterns);
+    cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
+    populateMemRefToLLVMConversionPatterns(converter, patterns);
+    populateFuncToLLVMConversionPatterns(converter, patterns);
+    populateOpenMPToLLVMConversionPatterns(converter, patterns);
+
+    LLVMConversionTarget target(getContext());
+    target.addLegalOp<omp::TerminatorOp, omp::TaskyieldOp, omp::FlushOp,
+                      omp::BarrierOp, omp::TaskwaitOp>();
+    configureOpenMPToLLVMConversionLegality(target, converter);
+    if (failed(applyPartialConversion(module, target, std::move(patterns))))
+      signalPassFailure();
+  }
+};
 #endif
+
+struct PrintModulePass : public PassWrapper<PrintModulePass, OperationPass<ModuleOp>> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect, memref::MemRefDialect, 
+                    arith::ArithmeticDialect, vector::VectorDialect, omp::OpenMPDialect>();
+  }
+  void runOnOperation() final {
+    auto module = getOperation();
+    module->dump();
+  }
+};
+
 } // end anonymous namespace
 
 namespace mlir
@@ -522,7 +476,7 @@ void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module) {
   // llvm::DebugFlag = false;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
-  // mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
+  // mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
   pm.addPass(std::make_unique<DecisionForestToLLVMLoweringPass>());
   pm.addPass(createReconcileUnrealizedCastsPass());
   
@@ -532,22 +486,16 @@ void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module) {
 }
 #else // OMP_SUPPORT
 void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module) {
-  // llvm::DebugFlag = false;
+  // llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
-  // mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
-  if (HasParallelLoop) {
-    pm.addPass(createConvertSCFToOpenMPPass());
-    pm.addPass(createLowerToCFGPass());
-    pm.addPass(createConvertOpenMPToLLVMPass());
-    pm.addPass(std::make_unique<DecisionForestToLLVMLoweringPass>());
-
-    pm.addPass(createReconcileUnrealizedCastsPass());
-  }
-  else {
-    pm.addPass(std::make_unique<DecisionForestToLLVMLoweringPass>());
-    pm.addPass(createReconcileUnrealizedCastsPass());
-  }
+  pm.addPass(std::make_unique<DecisionForestToLLVMLoweringPass>());
+  pm.addPass(createConvertSCFToOpenMPPass());
+  pm.addPass(createMemRefToLLVMPass());
+  pm.addPass(createConvertSCFToCFPass());
+  pm.addPass(std::make_unique<LowerOMPToLLVMPass>());
+  // pm.addPass(std::make_unique<PrintModulePass>());
+  pm.addPass(createReconcileUnrealizedCastsPass());
   
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to LLVM failed.\n";
@@ -645,7 +593,7 @@ int dumpLLVMIRToFile(mlir::ModuleOp module, const std::string& filename) {
 // void LowerTensorTypes(mlir::MLIRContext& context, mlir::ModuleOp module) {
 //   // Lower from high-level IR to mid-level IR
 //   mlir::PassManager pm(&context);
-//   // mlir::OpPassManager &optPM = pm.nest<mlir::FuncOp>();
+//   // mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
 //   // Partial bufferization passes.
 //   pm.addPass(createTensorConstantBufferizePass());
 //   pm.addNestedPass<FuncOp>(createSCFBufferizePass());

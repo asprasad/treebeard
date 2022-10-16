@@ -28,21 +28,23 @@ class LLVMTypeConverter;
 
 namespace decisionforest
 {
+class IModelSerializer;
+class IRepresentation;
+
+// Debugging and profiling configuration
 extern bool InsertDebugHelpers;
 extern bool PrintVectors;
+extern bool EnablePerfNotificationListener;
+
+// Compiler configuration
 extern bool UseBitcastForComparisonOutcome;
 extern bool UseSparseTreeRepresentation;
-extern bool OptimizedSparseRepresentation;
-extern bool RemoveExtraHopInSparseRepresentation;
 extern bool PeeledCodeGenForProbabiltyBasedTiling;
-
-// This bool is a hack to figure out which lowering passes to use
-extern bool HasParallelLoop;
 
 void populateDebugOpLoweringPatterns(RewritePatternSet& patterns, LLVMTypeConverter& typeConverter);
 
 void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext& context, mlir::ModuleOp module);
-void LowerEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module);
+void LowerEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module, std::shared_ptr<IModelSerializer> serializer, std::shared_ptr<IRepresentation> representation);
 void ConvertNodeTypeToIndexType(mlir::MLIRContext& context, mlir::ModuleOp module);
 void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module);
 int dumpLLVMIR(mlir::ModuleOp module, bool dumpAsm = false);

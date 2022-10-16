@@ -1,0 +1,16 @@
+{
+"batchSize":512,
+"tileSize":8,
+"tilingType":"Uniform",
+"thresholdTypeWidth":32,
+"returnTypeWidth":32,
+"returnTypeFloatType":true,
+"featureIndexTypeWidth":16,
+"nodeIndexTypeWidth":16,
+"inputElementTypeWidth":32,
+"tileShapeBitWidth":16,
+"childIndexBitWidth":16,
+"makeAllLeavesSameDepth":true,
+"reorderTreesByDepth":true,
+"pipelineSize":8
+}
