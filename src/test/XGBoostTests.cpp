@@ -20,6 +20,8 @@
 #include "TreeTilingUtils.h"
 #include "ForestTestUtils.h"
 #include "CompileUtils.h"
+#include "ModelSerializers.h"
+#include "Representations.h"
 
 using namespace mlir;
 using namespace mlir::decisionforest;
@@ -51,7 +53,11 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
 
   options.SetPipelineSize(pipelineSize);
   auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
-  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType>(args.context, modelJsonPath, modelGlobalsJSONFilePath, options);
+  
+  TreeBeard::TreebeardContext tbContext{modelJsonPath, modelGlobalsJSONFilePath, options, 
+                                        mlir::decisionforest::ConstructRepresentation(),
+                                        mlir::decisionforest::ConstructModelSerializer()};
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType>(args.context, tbContext);
 
   decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
   
@@ -2302,8 +2308,11 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
                                      TreeBeard::TilingType::kHybrid, false, false, scheduleManipulatorFunc ? &scheduleManipulator : nullptr);
 
   auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
-  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType, int32_t, FloatType>(
-                                                                     args.context, modelJsonPath, modelGlobalsJSONFilePath, options);
+
+  TreeBeard::TreebeardContext tbContext{modelJsonPath, modelGlobalsJSONFilePath, options, 
+                                        mlir::decisionforest::ConstructRepresentation(),
+                                        mlir::decisionforest::ConstructModelSerializer()};
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType, int32_t, FloatType>(args.context, tbContext);
 
   decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
   
@@ -2613,115 +2622,6 @@ bool Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth(TestArgs_t &args) {
   return Test_MultiClass_Int32ReturnType(args, modelJSONPath, tileSize, false, 16, 16, csvPath, nullptr, true);
 }
 
-// ===-------------------------------------------------------------=== //
-// Random XGBoost Remove Extra Hop Tests
-// ===-------------------------------------------------------------=== //
-
-struct SetAndResetRemoveExtraHop {
-  SetAndResetRemoveExtraHop() {
-    mlir::decisionforest::UseSparseTreeRepresentation = true;
-    mlir::decisionforest::RemoveExtraHopInSparseRepresentation = true;
-  }
-  ~SetAndResetRemoveExtraHop() {
-    mlir::decisionforest::UseSparseTreeRepresentation = false;
-    mlir::decisionforest::RemoveExtraHopInSparseRepresentation = false;
-  }
-};
-
-bool Test_RandomXGBoostJSONs_1Tree_BatchSize4_RemoveExtraHop_TileSize8(TestArgs_t& args) {
-  SetAndResetRemoveExtraHop setAndReset;
-  return Test_RandomXGBoostJSONs_1Tree_VariableBatchSize(args, 4, 8, 16, 16, false);
-}
-
-bool Test_RandomXGBoostJSONs_2Trees_BatchSize4_RemoveExtraHop_TileSize8(TestArgs_t& args) {
-  SetAndResetRemoveExtraHop setAndReset;
-  return Test_RandomXGBoostJSONs_2Trees_VariableBatchSize(args, 4, 8, 16, 16, false);
-}
-
-bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_RemoveExtraHop_TileSize8(TestArgs_t& args) {
-  SetAndResetRemoveExtraHop setAndReset;
-  return Test_RandomXGBoostJSONs_4Trees_VariableBatchSize(args, 4, 8, 16, 16, false);
-}
-
-bool Test_TileSize8_Abalone_TestInputs_RemoveExtraHop(TestArgs_t &args) {
-  SetAndResetRemoveExtraHop setAndReset;
-  auto repoPath = GetTreeBeardRepoPath();
-  auto testModelsDir = repoPath + "/xgb_models";
-  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
-  auto csvPath = modelJSONPath + ".test.sampled.csv";
-  int32_t tileSize = 8;
-  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
-}
-
-bool Test_TileSize8_AirlineOHE_TestInputs_RemoveExtraHop(TestArgs_t &args) {
-  SetAndResetRemoveExtraHop setAndReset;
-  auto repoPath = GetTreeBeardRepoPath();
-  auto testModelsDir = repoPath + "/xgb_models";
-  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
-  auto csvPath = modelJSONPath + ".test.sampled.csv";
-  int32_t tileSize = 8;
-  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, true, 16, 16, csvPath);
-}
-
-bool Test_TileSize8_Airline_TestInputs_RemoveExtraHop(TestArgs_t &args) {
-  SetAndResetRemoveExtraHop setAndReset;
-  auto repoPath = GetTreeBeardRepoPath();
-  auto testModelsDir = repoPath + "/xgb_models";
-  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
-  auto csvPath = modelJSONPath + ".test.sampled.csv";
-  int32_t tileSize = 8;
-  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
-}
-
-bool Test_TileSize8_Bosch_TestInputs_RemoveExtraHop(TestArgs_t &args) {
-  SetAndResetRemoveExtraHop setAndReset;
-  auto repoPath = GetTreeBeardRepoPath();
-  auto testModelsDir = repoPath + "/xgb_models";
-  auto modelJSONPath = testModelsDir + "/bosch_xgb_model_save.json";
-  auto csvPath = modelJSONPath + ".test.sampled.csv";
-  int32_t tileSize = 8;
-  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, true, 16, 16, csvPath);
-}
-
-bool Test_TileSize8_Epsilon_TestInputs_RemoveExtraHop(TestArgs_t &args) {
-  SetAndResetRemoveExtraHop setAndReset;
-  auto repoPath = GetTreeBeardRepoPath();
-  auto testModelsDir = repoPath + "/xgb_models";
-  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
-  auto csvPath = modelJSONPath + ".test.sampled.csv";
-  int32_t tileSize = 8;
-  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, true, 16, 16, csvPath);
-}
-
-bool Test_TileSize8_Higgs_TestInputs_RemoveExtraHop(TestArgs_t &args) {
-  SetAndResetRemoveExtraHop setAndReset;
-  auto repoPath = GetTreeBeardRepoPath();
-  auto testModelsDir = repoPath + "/xgb_models";
-  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
-  auto csvPath = modelJSONPath + ".test.sampled.csv";
-  int32_t tileSize = 8;
-  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
-}
-
-bool Test_TileSize8_Year_TestInputs_RemoveExtraHop(TestArgs_t &args) {
-  SetAndResetRemoveExtraHop setAndReset;
-  auto repoPath = GetTreeBeardRepoPath();
-  auto testModelsDir = repoPath + "/xgb_models";
-  auto modelJSONPath = testModelsDir + "/year_prediction_msd_xgb_model_save.json";
-  auto csvPath = modelJSONPath + ".test.sampled.csv";
-  int32_t tileSize = 8;
-  return Test_SingleTileSize_SingleModel_FloatOnly(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
-}
-
-bool Test_TileSize8_CovType_TestInputs_RemoveExtraHop(TestArgs_t &args) {
-  SetAndResetRemoveExtraHop setAndReset;
-  int32_t tileSize = 8;
-  auto repoPath = GetTreeBeardRepoPath();
-  auto testModelsDir = repoPath + "/xgb_models";
-  auto modelJSONPath = testModelsDir + "/covtype_xgb_model_save.json";
-  auto csvPath = modelJSONPath + ".test.sampled.csv";
-  return Test_MultiClass_Int32ReturnType(args, modelJSONPath, tileSize, false, 16, 16, csvPath);
-}
 
 bool Test_TileSize8_Abalone_TestInputs_ReorderTrees(TestArgs_t &args) {
   auto repoPath = GetTreeBeardRepoPath();

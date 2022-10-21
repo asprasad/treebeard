@@ -17,6 +17,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "Representations.h"
 
 namespace mlir
 {
@@ -76,27 +77,25 @@ namespace decisionforest
         }
     };
 
-enum Representation { kArray, kSparse };
 class ScalarTraverseTileCodeGenerator : public ICodeGeneratorStateMachine {
   private:
     enum TraverseState { kLoadThreshold, kLoadFeatureIndex, kLoadFeature, kCompare, kNextNode, kDone };
-    Representation m_representation;
+    std::shared_ptr<IRepresentation> m_representation;
     TraverseState m_state;
     Value m_treeMemref;
     Value m_rowMemref;
     Type m_resultType;
     MemRefType m_treeMemrefType;
     Value m_nodeToTraverse;
-    decisionforest::LoadChildIndexOp m_loadChildIndex;
     decisionforest::NodeToIndexOp m_nodeIndex;
     decisionforest::LoadTileThresholdsOp m_loadThresholdOp;
     decisionforest::LoadTileFeatureIndicesOp m_loadFeatureIndexOp;
     memref::LoadOp m_loadFeatureOp;
     arith::ExtUIOp m_comparisonUnsigned;
     Value m_result;
-
+    std::vector<mlir::Value> m_extraLoads;
   public:
-    ScalarTraverseTileCodeGenerator(Value treeMemref, Value rowMemref, Value node, Type resultType, Representation representation);
+    ScalarTraverseTileCodeGenerator(Value treeMemref, Value rowMemref, Value node, Type resultType, std::shared_ptr<IRepresentation> representation);
     bool EmitNext(ConversionPatternRewriter& rewriter, Location& location) override;
     std::vector<Value> GetResult() override;
 };
@@ -104,7 +103,7 @@ class ScalarTraverseTileCodeGenerator : public ICodeGeneratorStateMachine {
 class VectorTraverseTileCodeGenerator : public ICodeGeneratorStateMachine {
   private:
     enum TraverseState { kLoadThreshold, kLoadFeatureIndex, kLoadTileShape, kLoadChildIndex, kLoadFeature, kCompare, kNextNode, kDone };
-    Representation m_representation;
+    std::shared_ptr<IRepresentation> m_representation;
     TraverseState m_state;
     Value m_tree;
     Value m_treeMemref;
@@ -123,15 +122,16 @@ class VectorTraverseTileCodeGenerator : public ICodeGeneratorStateMachine {
     decisionforest::LoadTileFeatureIndicesOp m_loadFeatureIndexOp;
     arith::IndexCastOp m_loadTileShapeIndexOp;
     arith::IndexCastOp m_leafBitMask;
-    arith::IndexCastOp m_childIndex;
     vector::GatherOp m_features;
     Value m_comparisonIndex;
     Value m_result;
+    std::vector<mlir::Value> m_extraLoads;
 
     std::function<Value(Value)> m_getLutFunc;
 
   public:
-    VectorTraverseTileCodeGenerator(Value tree, Value treeMemref, Value rowMemref, Value node, Type resultType, Representation representation, std::function<Value(Value)> getLutFunc);
+    VectorTraverseTileCodeGenerator(Value tree, Value treeMemref, Value rowMemref, Value node, Type resultType, 
+                                    std::shared_ptr<IRepresentation> representation, std::function<Value(Value)> getLutFunc);
     bool EmitNext(ConversionPatternRewriter& rewriter, Location& location) override;
     std::vector<Value> GetResult() override;
     };

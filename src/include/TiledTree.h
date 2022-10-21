@@ -204,9 +204,6 @@ public:
 
     void GetSparseSerialization(std::vector<double>& thresholds, std::vector<int32_t>& featureIndices, 
                                 std::vector<int32_t>& tileShapeIDs, std::vector<int32_t>& childIndices, std::vector<double>& leaves);
-    void GetSparseSerialization(std::vector<double>& thresholds, std::vector<int32_t>& featureIndices, std::vector<int32_t>& leafBitMasks,
-                                std::vector<int32_t>& tileShapeIDs, std::vector<int32_t>& childIndices, std::vector<int32_t>& leafIndices,
-                                std::vector<double>& leaves);
     void GetSparseSerializationPeeled(std::vector<double>& thresholds, std::vector<int32_t>& featureIndices, 
                                       std::vector<int32_t>& tileShapeIDs, std::vector<int32_t>& childIndices,
                                       std::vector<double>& leaves);

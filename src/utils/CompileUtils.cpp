@@ -57,13 +57,13 @@ bool loggingEnabled = InitLoggingOptions();
 } // Logging
 
 template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-mlir::ModuleOp SpecializeInputElementType(mlir::MLIRContext& context, const std::string&modelJsonPath,
-                                          const std::string& modelGlobalsJSONPath, const CompilerOptions& options) {
+mlir::ModuleOp SpecializeInputElementType(mlir::MLIRContext& context, TreebeardContext& tbContext) {
+  auto &options = tbContext.options;
   if (options.inputElementTypeWidth == 32) {
-    return ConstructLLVMDialectModuleFromXGBoostJSON<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, float>(context, modelJsonPath, modelGlobalsJSONPath, options);
+    return ConstructLLVMDialectModuleFromXGBoostJSON<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, float>(context, tbContext);
   }
   else if (options.inputElementTypeWidth == 64) {
-    return ConstructLLVMDialectModuleFromXGBoostJSON<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, double>(context, modelJsonPath, modelGlobalsJSONPath, options);
+    return ConstructLLVMDialectModuleFromXGBoostJSON<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, double>(context, tbContext);
   }
   else {
     assert (false && "Unknown input element type");
@@ -72,19 +72,19 @@ mlir::ModuleOp SpecializeInputElementType(mlir::MLIRContext& context, const std:
 }
 
 template<typename ThresholdType, typename ReturnType, typename FeatureIndexType>
-mlir::ModuleOp SpecializeNodeIndexType(mlir::MLIRContext& context, const std::string&modelJsonPath, 
-                                       const std::string& modelGlobalsJSONPath, const CompilerOptions& options) {
+mlir::ModuleOp SpecializeNodeIndexType(mlir::MLIRContext& context, TreebeardContext& tbContext) {
+  auto& options = tbContext.options;
   if (options.nodeIndexTypeWidth == 8) {
-    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int8_t>(context, modelJsonPath, modelGlobalsJSONPath, options);
+    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int8_t>(context, tbContext);
   } 
   else if (options.nodeIndexTypeWidth == 16) {
-    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int16_t>(context, modelJsonPath, modelGlobalsJSONPath, options);
+    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int16_t>(context, tbContext);
   } 
   else if (options.nodeIndexTypeWidth == 32) {
-    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int32_t>(context, modelJsonPath, modelGlobalsJSONPath, options);
+    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int32_t>(context, tbContext);
   }
   else if (options.nodeIndexTypeWidth == 64) {
-    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int64_t>(context, modelJsonPath, modelGlobalsJSONPath, options);
+    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int64_t>(context, tbContext);
   } 
   else {
     assert (false && "Unknown feature index type");
@@ -92,21 +92,20 @@ mlir::ModuleOp SpecializeNodeIndexType(mlir::MLIRContext& context, const std::st
   return mlir::ModuleOp();
 }
 
-
 template<typename ThresholdType, typename ReturnType>
-mlir::ModuleOp SpecializeFeatureIndexType(mlir::MLIRContext& context, const std::string&modelJsonPath, 
-                                          const std::string& modelGlobalsJSONPath, const CompilerOptions& options) {
+mlir::ModuleOp SpecializeFeatureIndexType(mlir::MLIRContext& context, TreebeardContext& tbContext) {
+  auto& options = tbContext.options;
   if (options.featureIndexTypeWidth == 8) {
-    return SpecializeNodeIndexType<ThresholdType, ReturnType, int8_t>(context, modelJsonPath, modelGlobalsJSONPath, options);
+    return SpecializeNodeIndexType<ThresholdType, ReturnType, int8_t>(context, tbContext);
   } 
   else if (options.featureIndexTypeWidth == 16) {
-    return SpecializeNodeIndexType<ThresholdType, ReturnType, int16_t>(context, modelJsonPath, modelGlobalsJSONPath, options);
+    return SpecializeNodeIndexType<ThresholdType, ReturnType, int16_t>(context, tbContext);
   } 
   else if (options.featureIndexTypeWidth == 32) {
-    return SpecializeNodeIndexType<ThresholdType, ReturnType, int32_t>(context, modelJsonPath, modelGlobalsJSONPath, options);
+    return SpecializeNodeIndexType<ThresholdType, ReturnType, int32_t>(context, tbContext);
   }
   else if (options.featureIndexTypeWidth == 64) {
-    return SpecializeNodeIndexType<ThresholdType, ReturnType, int64_t>(context, modelJsonPath, modelGlobalsJSONPath, options);
+    return SpecializeNodeIndexType<ThresholdType, ReturnType, int64_t>(context, tbContext);
   } 
   else {
     assert (false && "Unknown feature index type");
@@ -115,14 +114,14 @@ mlir::ModuleOp SpecializeFeatureIndexType(mlir::MLIRContext& context, const std:
 }
 
 template<typename ThresholdType>
-mlir::ModuleOp SpecializeReturnType(mlir::MLIRContext& context, const std::string&modelJsonPath, 
-                                    const std::string& modelGlobalsJSONPath, const CompilerOptions& options) {
+mlir::ModuleOp SpecializeReturnType(mlir::MLIRContext& context, TreebeardContext& tbContext) {
+  auto& options = tbContext.options;
   if (options.returnTypeFloatType) {
     if (options.returnTypeWidth == 32) {
-      return SpecializeFeatureIndexType<ThresholdType, float>(context, modelJsonPath, modelGlobalsJSONPath, options);
+      return SpecializeFeatureIndexType<ThresholdType, float>(context, tbContext);
     }
     else if (options.returnTypeWidth == 64) {
-      return SpecializeFeatureIndexType<ThresholdType, double>(context, modelJsonPath, modelGlobalsJSONPath, options);
+      return SpecializeFeatureIndexType<ThresholdType, double>(context, tbContext);
     } 
     else {
       assert (false && "Unknown return type");
@@ -130,7 +129,7 @@ mlir::ModuleOp SpecializeReturnType(mlir::MLIRContext& context, const std::strin
   }
   else {
     if (options.returnTypeWidth == 8) {
-      return SpecializeFeatureIndexType<ThresholdType, int8_t>(context, modelJsonPath, modelGlobalsJSONPath, options);
+      return SpecializeFeatureIndexType<ThresholdType, int8_t>(context, tbContext);
     }
     else {
       assert (false && "Unknown return type");
@@ -140,13 +139,13 @@ mlir::ModuleOp SpecializeReturnType(mlir::MLIRContext& context, const std::strin
 }
 
 
-mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, const std::string&modelJsonPath, 
-                                                         const std::string& modelGlobalsJSONPath, const CompilerOptions& options) {
+mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, TreebeardContext& tbContext) {
+  auto& options = tbContext.options;
   if (options.thresholdTypeWidth == 32) {
-    return SpecializeReturnType<float>(context, modelJsonPath, modelGlobalsJSONPath, options);
+    return SpecializeReturnType<float>(context, tbContext);
   }
   else if (options.thresholdTypeWidth == 64) {
-    return SpecializeReturnType<double>(context, modelJsonPath, modelGlobalsJSONPath, options);
+    return SpecializeReturnType<double>(context, tbContext);
   }
   else {
     assert (false && "Unknown threshold type");
@@ -165,11 +164,10 @@ void InitializeMLIRContext(mlir::MLIRContext& context) {
   context.getOrLoadDialect<mlir::func::FuncDialect>();
 }
 
-void ConvertXGBoostJSONToLLVMIR(const std::string&modelJsonPath, const std::string& llvmIRFilePath, const std::string& modelGlobalsJSONPath,
-                                const CompilerOptions& options) {
+void ConvertXGBoostJSONToLLVMIR(TreebeardContext& tbContext, const std::string& llvmIRFilePath) {
   mlir::MLIRContext context;
   InitializeMLIRContext(context);
-  auto module = ConstructLLVMDialectModuleFromXGBoostJSON(context, modelJsonPath, modelGlobalsJSONPath, options);
+  auto module = ConstructLLVMDialectModuleFromXGBoostJSON(context, tbContext);
   mlir::decisionforest::dumpLLVMIRToFile(module, llvmIRFilePath);
 }
 

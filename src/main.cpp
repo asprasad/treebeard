@@ -6,6 +6,8 @@
 #include "TestUtilsCommon.h"
 #include "CompileUtils.h"
 #include "StatsUtils.h"
+#include "ModelSerializers.h"
+#include "Representations.h"
 
 namespace TreeBeard
 {
@@ -44,21 +46,28 @@ void SetInsertPrintVectors(int argc, char *argv[]) {
     }
 }
 
-bool RunGenerationIfNeeded(int argc, char *argv[]) {
+bool RunXGBoostBenchmarksIfNeeded(int argc, char *argv[]) {
   for (int32_t i=0 ; i<argc ; ++i)
-    if (std::string(argv[i]).find(std::string("--genJSONs")) != std::string::npos) {
-      std::string modelsDir = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/xgb_models/test/Random_4Tree";
-      std::cout << "Generating random models into directory : " << modelsDir << std::endl;
-      TreeBeard::test::GenerateRandomModelJSONs(modelsDir, 25, 4, 20, -10.0, 10.0, 10);
+    if (std::string(argv[i]).find(std::string("--xgboostBench")) != std::string::npos) {
+      TreeBeard::test::RunXGBoostBenchmarks();
       return true;
     }
   return false;
 }
 
-bool RunXGBoostBenchmarksIfNeeded(int argc, char *argv[]) {
+bool RunXGBoostParallelBenchmarksIfNeeded(int argc, char *argv[]) {
   for (int32_t i=0 ; i<argc ; ++i)
-    if (std::string(argv[i]).find(std::string("--xgboostBench")) != std::string::npos) {
-      TreeBeard::test::RunXGBoostBenchmarks();
+    if (std::string(argv[i]).find(std::string("--xgboostParallelBench")) != std::string::npos) {
+      TreeBeard::test::RunXGBoostParallelBenchmarks();
+      return true;
+    }
+  return false;
+}
+
+bool RunSanityTestsIfNeeded(int argc, char *argv[]) {
+  for (int32_t i=0 ; i<argc ; ++i)
+    if (std::string(argv[i]).find(std::string("--sanityTests")) != std::string::npos) {
+      TreeBeard::test::RunSanityTests();
       return true;
     }
   return false;
@@ -157,13 +166,19 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
   
   if (compilerConfigJSONFile != "") {
     TreeBeard::CompilerOptions options(compilerConfigJSONFile);
-    TreeBeard::ConvertXGBoostJSONToLLVMIR(jsonFile, llvmIRFile, modelGlobalsJSONFile, options);
+    TreeBeard::TreebeardContext tbContext{jsonFile, modelGlobalsJSONFile, options, 
+                                          mlir::decisionforest::ConstructRepresentation(),
+                                          mlir::decisionforest::ConstructModelSerializer()};
+    TreeBeard::ConvertXGBoostJSONToLLVMIR(tbContext, llvmIRFile);
   }
   else {
     TreeBeard::CompilerOptions options(thresholdTypeWidth, returnTypeWidth, isReturnTypeFloat, featureIndexTypeWidth,
                                        nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, 
                                        TreeBeard::TilingType::kUniform, false, false, invertLoops ? &scheduleManipulator : nullptr);
-    TreeBeard::ConvertXGBoostJSONToLLVMIR(jsonFile, llvmIRFile, modelGlobalsJSONFile, options);
+    TreeBeard::TreebeardContext tbContext{jsonFile, modelGlobalsJSONFile, options, 
+                                          mlir::decisionforest::ConstructRepresentation(),
+                                          mlir::decisionforest::ConstructModelSerializer()};
+    TreeBeard::ConvertXGBoostJSONToLLVMIR(tbContext, llvmIRFile);
   }
   return true;
 }
@@ -342,10 +357,11 @@ int main(int argc, char *argv[]) {
   SetInsertDebugHelpers(argc, argv);
   SetInsertPrintVectors(argc, argv);
   SetPerfNotificationListener(argc, argv);
-  
-  if (RunGenerationIfNeeded(argc, argv))
+  if (RunSanityTestsIfNeeded(argc, argv))
     return 0;
   else if (RunXGBoostBenchmarksIfNeeded(argc, argv))
+    return 0;
+  else if (RunXGBoostParallelBenchmarksIfNeeded(argc, argv))
     return 0;
   else if (DumpLLVMIfNeeded(argc, argv))
     return 0;

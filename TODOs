@@ -1,3 +1,26 @@
+* Add a Treebeard context to store all configuration
+    - Update the python API!
+* Make interfaces for mem rep and code gen extensible
+    - LowerEnsembleToMemrefs 
+        - Object that abstracts 
+            - Serialization of the model
+            - what globals to insert
+            - How to initialize these
+            - All the specific code generation 
+                - GetLeafValueOpLowering
+                - GetTreeOpLowering              
+                - IsLeafOpLowering
+                - GetTreeClassIdOpLowering
+                    - Needs to completely offload code gen to object
+                - GetRootOpLowering
+                    - No change?
+                - InterleavedTraverseTreeTileOpLowering
+                - TraverseTreeTileOpLowering
+                    - Moving to children (TraverseTile)
+    - LowerToLLVM
+        - Type translations
+        - Lowering for Load*
+* Unify the serialization of probability based tiling and the normal sparse tiling        
 * Make interfaces for mem rep and code gen extensible
 * Make extensibility a concept in scheduling lang
 * Make the command line interface take a JSON for the configuration (so scripts don't break everytime)
@@ -6,7 +29,7 @@
 * SIMD for multiple walks
 * AMD specific opts -- gather etc
 * GPU code gen
-* Loop Parallelization
+* Loop Parallelization -- Support more non-trivial forms of parallelization. Can we do some experiments to figure out if there are benefits?
 * Loop Tiling
 * LightGBM
 * Document compile times
@@ -16,7 +39,6 @@ Python API
     - [Done] Expose common schedules
     - Expose PeelProbabilisticWalk
 Fix the tiling for parallelization
-
 
 MAJOR HOLES
 1. LightGBM support, random forest support

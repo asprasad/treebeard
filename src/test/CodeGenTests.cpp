@@ -20,6 +20,8 @@
 #include "TreeTilingUtils.h"
 #include "ForestTestUtils.h"
 #include "TiledTree.h"
+#include "ModelSerializers.h"
+#include "Representations.h"
 
 using namespace mlir;
 using namespace mlir::decisionforest;
@@ -467,7 +469,7 @@ bool Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(TestArgs_t& args, Fore
     scheduleManipulator(irGenerator.GetSchedule());
   decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   // module->dump();
-  decisionforest::LowerEnsembleToMemrefs(args.context, module);
+  decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), decisionforest::ConstructRepresentation());
   decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
   decisionforest::LowerToLLVM(args.context, module);
@@ -728,7 +730,7 @@ bool Test_ModelInitialization(TestArgs_t& args, ForestConstructor_t forestConstr
   auto module = irGenerator.GetEvaluationFunction();
 
   decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
-  decisionforest::LowerEnsembleToMemrefs(args.context, module);
+  decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), decisionforest::ConstructRepresentation());
   decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   irGenerator.AddThresholdGetter();  
   // module->dump();
@@ -1150,7 +1152,7 @@ bool Test_UniformTiling_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   decisionforest::DoUniformTiling(args.context, module, tileSize, tileShapeBitWidth, makeAllLeavesSameDepth);
   decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   // module->dump();
-  decisionforest::LowerEnsembleToMemrefs(args.context, module);
+  decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), decisionforest::ConstructRepresentation());
   decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
   decisionforest::LowerToLLVM(args.context, module);
@@ -1265,32 +1267,6 @@ bool Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1_Int16TileShape(TestArgs_t
 
 bool Test_UniformTiling_Balanced_BatchSize1_EqualDepth(TestArgs_t &args) {
   return Test_UniformTiling_BatchSize1_AllTypes(args, AddBalancedTree<DoubleInt32Tile>, 32, true);
-}
-
-// 
-
-struct SetAndResetRemoveExtraHop {
-  SetAndResetRemoveExtraHop() {
-    decisionforest::UseSparseTreeRepresentation = true;
-    decisionforest::RemoveExtraHopInSparseRepresentation = true;
-  }
-  ~SetAndResetRemoveExtraHop() {
-    decisionforest::UseSparseTreeRepresentation = false;
-    decisionforest::RemoveExtraHopInSparseRepresentation = false;
-  }
-};
-
-bool Test_RemoveExtraHop_BalancedTree_TileSize2(TestArgs_t& args) {
-  SetAndResetRemoveExtraHop setAndResetRemoveExtraHop;
-  auto forestConstructor = AddBalancedTree<DoubleInt32Tile>;
-  std::vector<int32_t> tileIDs_TileSize2 = { 0, 0, 1, 2, 5, 3, 4 };
-  int32_t childIndexBitWidth = 16;
-
-  using FPType = float;
-  using IntType = int32_t;
-  Test_ASSERT((Test_TiledCodeGeneration_SingleTreeModels_BatchSize1<FPType, FPType, IntType, IntType, FPType>(args, forestConstructor, 2, 
-                                                                                                              {tileIDs_TileSize2}, childIndexBitWidth)));
-  return true;
 }
 
 bool Test_WalkPeeling_BalancedTree_TileSize2(TestArgs_t& args) {

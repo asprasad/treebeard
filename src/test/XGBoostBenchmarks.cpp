@@ -24,6 +24,8 @@
 #include "TreeTilingDescriptor.h"
 #include "TreeTilingUtils.h"
 #include "ForestTestUtils.h"
+#include "ModelSerializers.h"
+#include "Representations.h"
 
 using namespace mlir;
 using namespace mlir::decisionforest;
@@ -81,7 +83,11 @@ double Test_CodeGenForJSON_ProbabilityBasedTiling(int64_t batchSize, const std::
     options.numberOfCores = numberOfCores;
   TreeBeard::InitializeMLIRContext(context);
   auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, ReturnType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
-  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ReturnType, FeatureIndexType, int32_t, FloatType>(context, modelJsonPath, modelGlobalsJSONFilePath, options);
+  
+  TreeBeard::TreebeardContext tbContext{modelJsonPath, modelGlobalsJSONFilePath, options, 
+                                        mlir::decisionforest::ConstructRepresentation(),
+                                        mlir::decisionforest::ConstructModelSerializer()};
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ReturnType, FeatureIndexType, int32_t, FloatType>(context, tbContext);
 
   decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, floatTypeBitWidth, sizeof(FeatureIndexType)*8);
   
@@ -148,7 +154,6 @@ void RunBenchmark_SingleConfig(mlir::decisionforest::ScheduleManipulator *schedu
   std::cout << ", " << RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize>("abalone", scheduleManipulator, probTiling, numCores, pipelineSize, BatchSize) << std::flush;
   std::cout << ", " << RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize>("airline", scheduleManipulator, probTiling, numCores, pipelineSize, BatchSize) << std::flush;
   std::cout << ", " << RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize>("airline-ohe", scheduleManipulator, probTiling, numCores, pipelineSize, BatchSize) << std::flush;
-  // // RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize, BatchSize>("bosch", scheduleManipulato std::flush;
   std::cout << ", " << RunSingleBenchmark_SingleConfig<FPType, int8_t, TileSize>("covtype", scheduleManipulator, probTiling, numCores, pipelineSize, BatchSize) << std::flush;
   std::cout << ", " << RunSingleBenchmark_SingleConfig<FPType, FPType, TileSize>("epsilon", scheduleManipulator, probTiling, numCores, pipelineSize, BatchSize) << std::flush;
   std::cout << ", " << RunSingleBenchmark_SingleConfig<FPType, int8_t, TileSize>("letters", scheduleManipulator, probTiling, numCores, pipelineSize, BatchSize) << std::flush;
@@ -216,14 +221,6 @@ void RunProbabilisticOneTreeAtATimeSchedule_RemoveExtraHop_XGBoostBenchmarks(int
   decisionforest::PeeledCodeGenForProbabiltyBasedTiling = false;
 }
 
-void RunOneTreeAtATimeParallelScheduleXGBoostBenchmarks(int32_t batchSize) {
-  RunAllBenchmarks(nullptr, batchSize, false, "array-one_tree-par", true);
-  
-  decisionforest::UseSparseTreeRepresentation = true;
-  RunAllBenchmarks(nullptr, batchSize, false, "sparse-one_tree-par", true);
-  decisionforest::UseSparseTreeRepresentation = false;
-}
-
 void RunPipeliningBenchmarks(int32_t batchSize) {
   RunAllPipelinedBenchmarks(batchSize, "array-pipelined_sched");
   
@@ -255,14 +252,18 @@ void RunBenchmarksOverDifferentNumCores(int32_t batchSize) {
 void RunXGBoostBenchmarks() {
   std::vector<int32_t> batchSizes{64, 128, 256, 512, 1024, 2000};
   for (auto batchSize : batchSizes) {
-    // RunDefaultScheduleXGBoostBenchmarks(batchSize);
-    // RunOneTreeAtATimeScheduleXGBoostBenchmarks(batchSize);
-    // RunProbabilisticOneTreeAtATimeScheduleXGBoostBenchmarks();
-    // RunProbabilisticOneTreeAtATimeSchedule_RemoveExtraHop_XGBoostBenchmarks(batchSize);
-    // RunOneTreeAtATimeParallelScheduleXGBoostBenchmarks(batchSize);
-    // RunPipeliningBenchmarks(batchSize);
-    RunParallelPipeliningBenchmarks(batchSize, 16);
+    RunOneTreeAtATimeScheduleXGBoostBenchmarks(batchSize);
+    RunProbabilisticOneTreeAtATimeSchedule_RemoveExtraHop_XGBoostBenchmarks(batchSize);
+    RunPipeliningBenchmarks(batchSize);
+    // RunParallelPipeliningBenchmarks(batchSize, 16);
     // RunBenchmarksOverDifferentNumCores(batchSize);
+  }
+}
+
+void RunXGBoostParallelBenchmarks() {
+  std::vector<int32_t> batchSizes{64, 128, 256, 512, 1024, 2000};
+  for (auto batchSize : batchSizes) {
+    RunParallelPipeliningBenchmarks(batchSize, 16 /*numCores*/);
   }
 }
 

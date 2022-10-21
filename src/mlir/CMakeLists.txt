@@ -1,9 +1,8 @@
-target_sources(tree-heavy 
+target_sources(treebeard 
 PRIVATE 
 Dialect.cpp
 LowerToMidLevelIR.cpp
 LowerEnsembleToMemrefs.cpp
-LowerSparseEnsembleToMemrefs.cpp
 ConvertNodeTypeToIndexType.cpp
 LowerToLLVM.cpp
 ExecutionHelpers.cpp
@@ -12,14 +11,15 @@ UniformTilingTransformation.cpp
 WalkDecisionTreeLoweringPass.cpp
 ProbabilityBasedTilingTransform.cpp
 CodeGenStateMachine.cpp
-ReorderTiledTreesByDepth.cpp)
+ReorderTiledTreesByDepth.cpp
+ModelSerializers.cpp
+Representations.cpp)
 
 target_sources(treebeard-runtime 
 PRIVATE
 Dialect.cpp
 LowerToMidLevelIR.cpp
 LowerEnsembleToMemrefs.cpp
-LowerSparseEnsembleToMemrefs.cpp
 ConvertNodeTypeToIndexType.cpp
 LowerToLLVM.cpp
 ExecutionHelpers.cpp
@@ -28,4 +28,6 @@ UniformTilingTransformation.cpp
 WalkDecisionTreeLoweringPass.cpp
 ProbabilityBasedTilingTransform.cpp
 CodeGenStateMachine.cpp
-ReorderTiledTreesByDepth.cpp)
+ReorderTiledTreesByDepth.cpp
+ModelSerializers.cpp
+Representations.cpp)

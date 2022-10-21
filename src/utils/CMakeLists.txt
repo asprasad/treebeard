@@ -1,4 +1,4 @@
-target_sources(tree-heavy 
+target_sources(treebeard 
 PRIVATE 
 TreeTilingDescriptor.cpp
 TreeTilingUtils.cpp

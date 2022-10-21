@@ -13,6 +13,8 @@
 
 #include "TestUtilsCommon.h"
 #include "ForestTestUtils.h"
+#include "ModelSerializers.h"
+#include "Representations.h"
 
 using namespace mlir::decisionforest;
 
@@ -373,20 +375,6 @@ bool Test_TileSize8_Higgs_TestInputs_MakeLeavesSameDepth(TestArgs_t &args);
 bool Test_TileSize8_Year_TestInputs_MakeLeavesSameDepth(TestArgs_t &args);
 bool Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth(TestArgs_t &args);
 
-// Remove extra hop tests
-bool Test_RemoveExtraHop_BalancedTree_TileSize2(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_1Tree_BatchSize4_RemoveExtraHop_TileSize8(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_2Trees_BatchSize4_RemoveExtraHop_TileSize8(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_RemoveExtraHop_TileSize8(TestArgs_t& args);
-bool Test_TileSize8_Abalone_TestInputs_RemoveExtraHop(TestArgs_t &args);
-bool Test_TileSize8_AirlineOHE_TestInputs_RemoveExtraHop(TestArgs_t &args);
-bool Test_TileSize8_Airline_TestInputs_RemoveExtraHop(TestArgs_t &args);
-bool Test_TileSize8_Bosch_TestInputs_RemoveExtraHop(TestArgs_t &args);
-bool Test_TileSize8_Epsilon_TestInputs_RemoveExtraHop(TestArgs_t &args);
-bool Test_TileSize8_Higgs_TestInputs_RemoveExtraHop(TestArgs_t &args);
-bool Test_TileSize8_Year_TestInputs_RemoveExtraHop(TestArgs_t &args);
-bool Test_TileSize8_CovType_TestInputs_RemoveExtraHop(TestArgs_t &args);
-
 bool Test_TileSize8_Abalone_TestInputs_ReorderTrees(TestArgs_t &args);
 
 // Split schedule tests
@@ -455,7 +443,7 @@ bool Test_BufferInit_RightHeavy(TestArgs_t& args) {
                                                                 mlir::decisionforest::ReductionType::kAdd, treeType);
   
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
-  mlir::decisionforest::PersistDecisionForest(forest, forestType);
+  decisionforest::ConstructModelSerializer()->Persist(forest, forestType);
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
   mlir::decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
 
@@ -475,8 +463,6 @@ bool Test_BufferInit_RightHeavy(TestArgs_t& args) {
   std::vector<int64_t> lengthVec(1, -1);
   mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthVec.data(), 1, thresholdSize, indexSize);
   Test_ASSERT(lengthVec[0] == 7);
-
-  mlir::decisionforest::ClearPersistedForest();
 
   return true;
 }
@@ -525,7 +511,7 @@ bool Test_BufferInitialization_TwoTrees(TestArgs_t& args) {
                                                                 mlir::decisionforest::ReductionType::kAdd, treeType);
   
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
-  mlir::decisionforest::PersistDecisionForest(forest, forestType);
+  decisionforest::ConstructModelSerializer()->Persist(forest, forestType);
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
   mlir::decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
 
@@ -549,8 +535,6 @@ bool Test_BufferInitialization_TwoTrees(TestArgs_t& args) {
   Test_ASSERT(lengthVec[0] == 7);
   Test_ASSERT(lengthVec[1] == 7);
 
-  mlir::decisionforest::ClearPersistedForest();
-
   return true;
 }
 
@@ -570,7 +554,7 @@ bool Test_BufferInitializationWithOneTree_LeftHeavy(TestArgs_t& args) {
                                                                 mlir::decisionforest::ReductionType::kAdd, treeType);
   
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
-  mlir::decisionforest::PersistDecisionForest(forest, forestType);
+  decisionforest::ConstructModelSerializer()->Persist(forest, forestType);
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
   mlir::decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
   
@@ -589,8 +573,6 @@ bool Test_BufferInitializationWithOneTree_LeftHeavy(TestArgs_t& args) {
   std::vector<int64_t> lengthVec(1, -1);
   mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthVec.data(), 1, 64, 32);
   Test_ASSERT(lengthVec[0] == 7);
-
-  mlir::decisionforest::ClearPersistedForest();
 
   return true;
 }
@@ -637,7 +619,7 @@ bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   // module->dump();
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   // module->dump();
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module);
+  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), decisionforest::ConstructRepresentation());
   // module->dump();
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
@@ -674,7 +656,7 @@ bool Test_ForestCodeGen_VariableBatchSize(TestArgs_t& args, ForestConstructor_t 
   // module->dump();
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   // module->dump();
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module);
+  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), decisionforest::ConstructRepresentation());
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
   mlir::decisionforest::LowerToLLVM(args.context, module);
@@ -832,7 +814,7 @@ bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t fore
   auto forestType = mlir::decisionforest::TreeEnsembleType::get(thresholdType, 1, thresholdType /*HACK type doesn't matter for this test*/,
                                                                 mlir::decisionforest::ReductionType::kAdd, treeTypes);
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
-  mlir::decisionforest::PersistDecisionForest(forest, forestType);
+  decisionforest::ConstructModelSerializer()->Persist(forest, forestType);
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
   mlir::decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
 
@@ -865,8 +847,6 @@ bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t fore
   mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthVec.data(), tileSize, thresholdSize, indexSize);
   Test_ASSERT(lengthVec[0] == numTiles);
 
-  mlir::decisionforest::ClearPersistedForest();
-  // std::cout << "**********\n";
   return true;
 }
 
@@ -953,25 +933,6 @@ bool Test_PadTiledTree_BalancedTree_TileSize3(TestArgs_t& args) {
   return CheckAllLeavesAreAtSameDepth(tiledTree);
 }
 
-bool Test_SparseSerialization_BalancedTree_TileSize2(TestArgs_t& args) {
-  decisionforest::DecisionTree<> decisionTree;
-  InitializeBalancedTree(decisionTree);
-  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 5, 3, 4 };
-  
-  decisionforest::TreeTilingDescriptor tilingDescriptor(2, 5, tileIDs, decisionforest::TilingType::kRegular);
-  decisionTree.SetTilingDescriptor(tilingDescriptor);
-
-  auto tiledTree = decisionTree.GetTiledTree();
-  std::string dotFile = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/tiledTree.dot";
-  tiledTree->WriteDOTFile(dotFile);
-  
-  std::vector<double> thresholds, leaves;
-  std::vector<int32_t> featureIndices, leafBitMasks, tileShapeIDs, childIndices, leafIndices;
-
-  tiledTree->GetSparseSerialization(thresholds, featureIndices, leafBitMasks, tileShapeIDs, childIndices, leafIndices, leaves);
-  return true;
-}
-
 bool Test_SplitSchedule(TestArgs_t& args) {
   mlir::decisionforest::Schedule schedule(64, 1000);
   auto& t1 = schedule.NewIndexVariable("t1");
@@ -1015,12 +976,10 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize2),
   TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize2),
   TEST_LIST_ENTRY(Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2),
-#ifndef OMP_SUPPORT
   TEST_LIST_ENTRY(Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1),
   TEST_LIST_ENTRY(Test_LoadTileThresholdOp_DoubleInt32_TileSize1),
   TEST_LIST_ENTRY(Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1),
   TEST_LIST_ENTRY(Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1),
-#endif // OMP_SUPPORT
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4),
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize2),
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize1),
@@ -1052,7 +1011,6 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape),
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize),
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize),
-#ifndef OMP_SUPPORT
   TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy),
   TEST_LIST_ENTRY(Test_ModelInit_RightHeavy),
   TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy),
@@ -1065,7 +1023,6 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_ModelInit_Balanced_Int16TileShape),
   TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy_Int8TileShape),
   TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy_Int16TileShape),
-#endif
   TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1),
@@ -1336,19 +1293,6 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_MakeLeavesSameDepth),
   TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth),
 
-  // Remove extra hop tests
-  TEST_LIST_ENTRY(Test_RemoveExtraHop_BalancedTree_TileSize2),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_RemoveExtraHop_TileSize8),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_RemoveExtraHop_TileSize8),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_RemoveExtraHop_TileSize8),
-  TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_RemoveExtraHop),
-  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_RemoveExtraHop),
-  TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_RemoveExtraHop),
-  TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_RemoveExtraHop),
-  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_RemoveExtraHop),
-  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_RemoveExtraHop),
-  TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_RemoveExtraHop),
-    
   TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_ReorderTrees),
 
   // Split Schedule
@@ -1411,11 +1355,8 @@ TestDescriptor testList[] = {
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_TileSize8_CovType_4Pipelined_TestInputs),
-
-  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
-  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4),
-  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
+  
   TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth),
   TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_MakeLeavesSameDepth),
   TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_MakeLeavesSameDepth),
@@ -1423,6 +1364,39 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_MakeLeavesSameDepth),
   TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_MakeLeavesSameDepth),
   TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth),
+  TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Covtype_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Letters_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_WalkPeeling_BalancedTree_TileSize2),
+  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Year),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Letters),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Epsilon),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Higgs),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_AirlineOHE),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Covtype),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Airline),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Abalone),
+
+  // TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
+  // TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4),
+  // TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
+  // TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth),
+  // TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_MakeLeavesSameDepth),
+  // TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_MakeLeavesSameDepth),
+  // TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_MakeLeavesSameDepth),
+  // TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_MakeLeavesSameDepth),
+  // TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_MakeLeavesSameDepth),
+  // TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth),
   
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_EqualDepth_TileSize8),
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_EqualDepth_TileSize8),
@@ -1483,8 +1457,74 @@ TestDescriptor testList[] = {
 };
 #endif // RUN_ALL_TESTS
 
-const size_t numTests = sizeof(testList) / sizeof(testList[0]);
+TestDescriptor sanityTestList[] = {
+  TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth),
+  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_MakeLeavesSameDepth),
+  TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_MakeLeavesSameDepth),
+  TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_MakeLeavesSameDepth),
+  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_MakeLeavesSameDepth),
+  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_MakeLeavesSameDepth),
+  TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth),
+  TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Covtype_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_ParallelBatch),
+  TEST_LIST_ENTRY(Test_WalkPeeling_BalancedTree_TileSize2),
+  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Year),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Epsilon),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Higgs),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_AirlineOHE),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Covtype),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Airline),
+  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Abalone),
 
+  // Remove extra hop tests
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Airline),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_AirlineOHE),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Epsilon),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Higgs),
+  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Year),
+  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs),
+  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs),
+  TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4),
+  TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
+  TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape),
+  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape),
+  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize1_I32ChildIdx),
+  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize1_I32ChildIdx),
+  TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize2_I32ChildIdx),
+  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize2_I32ChildIdx),
+  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx),
+  TEST_LIST_ENTRY(Test_TileSize8_Airline),
+  TEST_LIST_ENTRY(Test_TileSize8_Bosch),
+  TEST_LIST_ENTRY(Test_TileSize8_Epsilon),
+  TEST_LIST_ENTRY(Test_TileSize8_Higgs),
+  TEST_LIST_ENTRY(Test_TileSize8_Year),
+  TEST_LIST_ENTRY(Test_TileSize3_Abalone),
+  TEST_LIST_ENTRY(Test_TileSize4_Abalone),
+  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize8_TileSize2_4Pipelined),
+  TEST_LIST_ENTRY(Test_SparseTileSize8_4Pipelined_Bosch),
+  TEST_LIST_ENTRY(Test_TileSize8_Abalone_4Pipelined_TestInputs),
+};
+
+const size_t numTests = sizeof(testList) / sizeof(testList[0]);
+const size_t numSanityTests = sizeof(sanityTestList) / sizeof(sanityTestList[0]);
 // void PrintExceptionInfo(std::exception_ptr eptr) {
 // 	try {
 // 		if (eptr) {
@@ -1528,14 +1568,13 @@ bool RunTest(TestDescriptor test, TestArgs_t& args) {
 	return pass;
 }
 
-void RunTests() {
-  // llvm::DebugFlag = true;
+void RunTestsImpl(TestDescriptor *testsToRun, size_t numberOfTests) {
  	bool overallPass = true;
 
   std::cout << "Running Treebeard Tests " << std::endl << std::endl;
   int32_t numPassed = 0;
   std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-  for (size_t i = 0; i < numTests; ++i) {
+  for (size_t i = 0; i < numberOfTests; ++i) {
     mlir::MLIRContext context;
     context.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
     context.getOrLoadDialect<mlir::decisionforest::DecisionForestDialect>();
@@ -1551,16 +1590,24 @@ void RunTests() {
     decisionforest::UseSparseTreeRepresentation = false;
     mlir::decisionforest::ForestJSONReader::GetInstance().SetChildIndexBitWidth(-1);
     
-    bool pass = RunTest(testList[i], args);
+    bool pass = RunTest(testsToRun[i], args);
     numPassed += pass ? 1 : 0;
     overallPass = overallPass && pass;
   }
   std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
   auto totalTime = std::chrono::duration_cast<std::chrono::seconds>(end - begin).count();
 
-  std::cout << std::endl << boldBlue << underline << numPassed << "/" << numTests << reset << white << " tests passed.";
+  std::cout << std::endl << boldBlue << underline << numPassed << "/" << numberOfTests << reset << white << " tests passed.";
   std::cout << underline << (overallPass ? boldGreen + "\nTest Suite Passed." : boldRed + "\nTest Suite Failed.") << reset;
   std::cout << std::endl <<"Total time taken : " << totalTime << " seconds." << std::endl << std::endl;
+}
+
+void RunTests() {
+  RunTestsImpl(testList, numTests);
+}
+
+void RunSanityTests() {
+  RunTestsImpl(sanityTestList, numSanityTests);
 }
 
 } // test

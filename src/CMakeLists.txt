@@ -22,14 +22,15 @@ set(LIBS
         #MLIRLinalgTransforms
         MLIROpenMPToLLVMIRTranslation
         )
-add_llvm_executable(tree-heavy
+add_llvm_executable(treebeard
         main.cpp)
-add_dependencies(tree-heavy DecisionForestGen)
+add_dependencies(treebeard DecisionForestGen)
 
-llvm_update_compile_flags(tree-heavy)
-target_link_libraries(tree-heavy PRIVATE ${LIBS})
-
-mlir_check_all_link_libraries(tree-heavy)
+llvm_update_compile_flags(treebeard)
+target_link_libraries(treebeard PRIVATE ${LIBS})
+add_definitions(-DTREEBEARD_SRC_DIR="${CMAKE_SOURCE_DIR}")
+add_definitions(-DLLVM_LIB_DIR="${LLVM_BUILD_DIRECTORY}")
+mlir_check_all_link_libraries(treebeard)
 
 add_subdirectory(runtime)
 add_subdirectory(include)
