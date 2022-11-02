@@ -31,7 +31,7 @@ This document gives an overview of Treebeard's GPU support.
   * In-memory representation of model
     * Should we implement FIL/Tahoe's representations?
   * Model reductions correctly (?)
-  * ```C++
+  ```C++
     for (r0=0 ; r0<batchSize ; r0+=threadBlockSize) { // Thread blocks
       for (r1=0 ; r1<threadBlockSize ; r1++) { // Threads
         // Body of this loop is the code executed by each thread
