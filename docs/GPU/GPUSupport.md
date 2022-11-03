@@ -1,6 +1,6 @@
-# Treebeard Model Representations
+# Notes on Treebeard GPU Support
 
-This document gives an overview of Treebeard's GPU support.
+This document contains notes about Treebeard's GPU support.
 
 ## Implementation Options in Generated GPU Code
 
@@ -94,3 +94,26 @@ This document gives an overview of Treebeard's GPU support.
   * Reduction needs to be modeled when single row is processed across threads
 * Interleaving within a thread
 * Strategies that need global reductions
+
+# Tahoe Implementation Strategies
+
+* __Direct Method__ 
+  * Each thread processes one row
+  * Reduction is done in registers
+  * Everything is read from global memory
+* __Shared Data__
+  * Row is in shared memory and tree in global memory
+  * Each thread block walks over all trees for a single row (each thread walks a different tree for the same row)
+  * Threads accumulate partial results
+  * Finally, there is a thread block wide reduction in shared memory (in the same kernel)
+* __Shared Forest__
+  * Entire model is loaded into shared memory
+  * Rows are loaded from global memory
+  * One thread performs full inference for one row (so reduction is in a register)
+* __Shared Partial Forest__
+  * Part of model is loaded into shared memory
+  * Row is read from global memory
+  * One thread walks all trees in shared memory for a single row (partial results are reduced in a register)
+  * Reduction across partial results is performed in global memory (as separate kernels)
+
+__Question__ Can the implementation options listed above cover the variants that Tahoe implements? How would each of these be represented in our dialect?
