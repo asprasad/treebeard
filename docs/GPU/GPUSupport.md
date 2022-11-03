@@ -24,7 +24,7 @@ This document contains notes about Treebeard's GPU support.
   * Reductions in global memory vs shared memory vs registers
 * In-memory representation of the model
 
-# Implementation Plan
+## Implementation Plan
 
 * Implement end-to-end code generation for the simple strategy of one thread processing a single row completely reading everything from global memory
   * Correctly tile loop nests so that loops can be mapped to thread blocks and threads
@@ -95,7 +95,7 @@ This document contains notes about Treebeard's GPU support.
 * Interleaving within a thread
 * Strategies that need global reductions
 
-# Tahoe Implementation Strategies
+## Tahoe Implementation Strategies
 
 * __Direct Method__ 
   * Each thread processes one row
@@ -116,4 +116,27 @@ This document contains notes about Treebeard's GPU support.
   * One thread walks all trees in shared memory for a single row (partial results are reduced in a register)
   * Reduction across partial results is performed in global memory (as separate kernels)
 
-__Question__ Can the implementation options listed above cover the variants that Tahoe implements? How would each of these be represented in our dialect?
+## Implementation Details
+
+* __Mid-level IR__ 
+  * We do not currently model reduction explicitly and just directly generate direct accumulation either into a memref or a value. This needs to change.
+    * Non-issue for first stage of implementation where we will only have reduction within a thread.
+  * Map outer loops to thread blocks and threads. All other loops should stay the same. 
+  * Lowering of WalkDecisionTree and InterleavedWalkDecisionTree may need to change for GPU execution. (Mostly to handle shared memory. Anything else?)
+  * 
+* __Low-level IR__
+  * Probably need to rewrite the representations and lowering to LLVM
+* __Representation__
+  * How would we support something like the interleaved format used by FIL?
+    * Not needed for first stage of implementation
+* __Initialization for Prediction__
+  * Should we be generating the functions to initialize model buffers in GPU memory? This would be better than handwriting in CUDA so we can support AMD GPUs automatically. 
+
+## Question
+* Can the implementation options listed above cover the variants that Tahoe implements?
+* How would each of these be represented in our dialect? What extensions are needed and what can be reused?
+* Are all these extremely fixed strategies? Why do we need a compiler? What do we expect to change across GPUs or models?
+  * Depths of trees
+  * What features to load
+  * Loop tiling -- size of shared memory and what goes into shared memory
+  * Tree tile size (?)
