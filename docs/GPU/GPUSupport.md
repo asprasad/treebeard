@@ -45,6 +45,46 @@ This document gives an overview of Treebeard's GPU support.
     ```
 * Support tree tiling for simple case above
   * Multiple tiles in the same warp
+  ```C++
+  for (r0=0 ; r0<batchSize ; r0+=threadBlockSize) { // Thread blocks
+    for (r1=0 ; r1<threadBlockSize ; r1++) { // Threads
+      // 1. Body of this loop is the code executed by each thread.
+      // 2. Each set of N_tile threads cooperate to walk as many (row, tree) 
+      // pairs and each thread accumulates its corresponding row's prediction.
+      pred = 0.0;
+      for (int t=0 ; t<numberOfTrees ; ++t) {
+        // One pointer for every thread. We're walking N_tile 
+        // (row, tree) pairs in parallel
+        __shared__ int nodePtrs[threadBlock.size]; 
+        // Comparison outcomes
+        __shared__ bool outcomes[N_tile][N_tile];
+        for (int th=0 ; th<N_tile ; ++th) {
+          // N_tile threads cooperate to compute predicates for
+          // N_tile rows.
+          auto nodePtr = nodePtrs[th];
+          // Leaf checks can be avoided if we unroll the walk
+          // Since all threads are walking the same tree, code can be specialized
+          // by fissing the loop over the trees
+          if (nodePtr == LEAF_PTR) continue;
+          auto threshold = LoadThreshold(t, threadIdx, nodePtr);
+          auto featureIdx = LoadFeatureIndex(t, threadIdx, nodePtr);
+          auto feature = rows[r0+r1][featureIdx];
+          auto result = feature < threshold;
+          outcomes[th][threadIdx] = result;
+          // TODO Do we really need to synchronize here since there is no divergence?
+          __syncthreads();
+        }
+        auto nodePtr = nodePtrs[threadIdx];
+        if (nodePtr == LEAF_PTR)
+          pred += GetLeafValue(nodePtr, t);
+        else
+          // Use LUT to move to next tile
+          nodePtrs[threadIdx] = MoveToNextTile(nodePtr, outcomes, t);
+      }
+      predictions[r0+r1] = pred;
+    }
+  }
+  ```
 * Promote rows to shared memory
   * Model cooperative load correctly
   * Model which features need to be loaded (?)
