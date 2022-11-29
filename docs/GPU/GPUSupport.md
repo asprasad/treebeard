@@ -117,20 +117,20 @@ This document contains notes about Treebeard's GPU support.
   * Reduction across partial results is performed in global memory (as separate kernels)
 
 ## Implementation Details
-
+* __High-level IR__
+  * No changes should be needed
 * __Mid-level IR__ 
   * We do not currently model reduction explicitly and just directly generate direct accumulation either into a memref or a value. This needs to change.
     * Non-issue for first stage of implementation where we will only have reduction within a thread.
   * Map outer loops to thread blocks and threads. All other loops should stay the same. 
   * Lowering of WalkDecisionTree and InterleavedWalkDecisionTree may need to change for GPU execution. (Mostly to handle shared memory. Anything else?)
-  * 
 * __Low-level IR__
-  * Probably need to rewrite the representations and lowering to LLVM
+  * Probably need to rewrite the representations and lowering to LLVM (may not be needed for first stage)
 * __Representation__
   * How would we support something like the interleaved format used by FIL?
     * Not needed for first stage of implementation
 * __Initialization for Prediction__
-  * Should we be generating the functions to initialize model buffers in GPU memory? This would be better than handwriting in CUDA so we can support AMD GPUs automatically. 
+  * Should we be generating the functions to initialize model buffers in GPU memory? This would be better than handwriting in CUDA so we can support AMD GPUs automatically.
 
 ## Question
 * Can the implementation options listed above cover the variants that Tahoe implements?
