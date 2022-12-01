@@ -79,16 +79,6 @@ Value getLUT;
 
 namespace {
 
-void ClearGlobalMaps() {
-  ensembleConstantToMemrefsMap.clear();
-  getTreeOperationMap.clear();
-}
-
-void ClearSparseGlobalMaps() {
-  sparseEnsembleConstantToMemrefsMap.clear();
-  sparseGetTreeOperationMap.clear();
-}
-
 struct EnsembleConstantOpLowering: public ConversionPattern {
   std::shared_ptr<decisionforest::IModelSerializer> m_serializer;
   std::shared_ptr<decisionforest::IRepresentation> m_representation;
@@ -433,11 +423,9 @@ struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLowe
     registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect>();
   }
   void runOnOperation() final {
-    // [BUG!!] TODO Since MLIR runs this pass multi-threaded, if multiple passes access these globals, they need to be protected!
-    
-    // Clear the global maps that store the mappings for the ensemble constants
-    ClearGlobalMaps();
-    ClearSparseGlobalMaps();
+    // [BUG!!] TODO Since MLIR runs this pass multi-threaded, if multiple passes access 
+    // the representation object need to be protected!
+    m_representation->InitRepresentation();
 
     ConversionTarget target(getContext());
 

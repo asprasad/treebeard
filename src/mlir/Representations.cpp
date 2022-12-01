@@ -13,16 +13,6 @@
 
 using namespace mlir::decisionforest::helpers;
 
-// Maps an ensemble constant operation to a model memref and an offsets memref
-std::map<mlir::Operation*, EnsembleConstantLoweringInfo> ensembleConstantToMemrefsMap;
-// Maps a GetTree operation to a memref that represents the tree once the ensemble constant has been replaced
-std::map<mlir::Operation*, mlir::Value> getTreeOperationMap;
-
-// Maps an ensemble constant operation to a model memref and an offsets memref
-std::map<mlir::Operation*, SparseEnsembleConstantLoweringInfo> sparseEnsembleConstantToMemrefsMap;
-// Maps a GetTree operation to a memref that represents the tree once the ensemble constant has been replaced
-std::map<mlir::Operation*, GetTreeLoweringInfo> sparseGetTreeOperationMap;
-
 namespace mlir
 {
 namespace decisionforest
@@ -30,6 +20,11 @@ namespace decisionforest
 // ===---------------------------------------------------=== //
 // Array based representation
 // ===---------------------------------------------------=== //
+
+void ArrayBasedRepresentation::InitRepresentation() {
+  ensembleConstantToMemrefsMap.clear();
+  getTreeOperationMap.clear();
+}
 
 mlir::LogicalResult ArrayBasedRepresentation::GenerateModelGlobals(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter,
                                                     std::shared_ptr<decisionforest::IModelSerializer> serializer) {
@@ -90,7 +85,7 @@ mlir::LogicalResult ArrayBasedRepresentation::GenerateModelGlobals(Operation *op
     return mlir::success();
 }
 
-GlobalMemrefTypes ArrayBasedRepresentation::AddGlobalMemrefs(
+ArrayBasedRepresentation::GlobalMemrefTypes ArrayBasedRepresentation::AddGlobalMemrefs(
   mlir::ModuleOp module,
   mlir::decisionforest::EnsembleConstantOp& ensembleConstOp,
   ConversionPatternRewriter &rewriter,
@@ -336,6 +331,11 @@ mlir::Value ArrayBasedRepresentation::GenerateIsLeafTileOp(ConversionPatternRewr
 // ===---------------------------------------------------=== //
 // Sparse representation
 // ===---------------------------------------------------=== //
+
+void SparseRepresentation::InitRepresentation() {
+  sparseEnsembleConstantToMemrefsMap.clear();
+  sparseGetTreeOperationMap.clear();
+}
 
 mlir::LogicalResult SparseRepresentation::GenerateModelGlobals(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter,
                                                                std::shared_ptr<decisionforest::IModelSerializer> m_serializer) {

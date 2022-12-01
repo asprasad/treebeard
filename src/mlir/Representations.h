@@ -6,62 +6,6 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "TreebeardContext.h"
 
-
-struct EnsembleConstantLoweringInfo {
-  mlir::Value modelGlobal;
-  mlir::Value offsetGlobal;
-  mlir::Value lengthGlobal;
-  mlir::Value lutGlobal;
-  mlir::Value classInfoGlobal;
-
-  mlir::Type modelGlobalType;
-  mlir::Type offsetGlobaltype;
-  mlir::Type lengthGlobalType;
-  mlir::Type lutGlobalType;
-  mlir::Type classInfoType;
-};
-
-typedef struct Memrefs {
-  mlir::Type model;
-  mlir::Type offset;
-  mlir::Type classInfo;
-} GlobalMemrefTypes;
-
-// Maps an ensemble constant operation to a model memref and an offsets memref
-extern std::map<mlir::Operation*, EnsembleConstantLoweringInfo> ensembleConstantToMemrefsMap;
-// Maps a GetTree operation to a memref that represents the tree once the ensemble constant has been replaced
-extern std::map<mlir::Operation*, mlir::Value> getTreeOperationMap;
-
-struct SparseEnsembleConstantLoweringInfo {
-  mlir::Value modelGlobal;
-  mlir::Value offsetGlobal;
-  mlir::Value lengthGlobal;
-  mlir::Value lutGlobal;
-  mlir::Value leavesGlobal;
-  mlir::Value leavesOffsetGlobal;
-  mlir::Value leavesLengthGlobal;
-  mlir::Value classInfoGlobal;
-
-  mlir::Type modelGlobalType;
-  mlir::Type offsetGlobaltype;
-  mlir::Type lengthGlobalType;
-  mlir::Type lutGlobalType;
-  mlir::Type leavesGlobalType;
-  mlir::Type classInfoType;
-};
-
-// Maps an ensemble constant operation to a model memref and an offsets memref
-extern std::map<mlir::Operation*, SparseEnsembleConstantLoweringInfo> sparseEnsembleConstantToMemrefsMap;
-
-struct GetTreeLoweringInfo {
-  mlir::Value treeMemref;
-  mlir::Value leavesMemref;
-};
-
-// Maps a GetTree operation to a memref that represents the tree once the ensemble constant has been replaced
-extern std::map<mlir::Operation*, GetTreeLoweringInfo> sparseGetTreeOperationMap;
-
-
 namespace mlir
 {
 namespace decisionforest
@@ -70,6 +14,7 @@ namespace decisionforest
 class IRepresentation {
 public:
   virtual ~IRepresentation() { }
+  virtual void InitRepresentation()=0;
   virtual mlir::LogicalResult GenerateModelGlobals(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter,
                                                    std::shared_ptr<decisionforest::IModelSerializer> m_serializer) = 0;
   virtual mlir::Value GetTreeMemref(mlir::Value treeValue) = 0;
@@ -86,10 +31,31 @@ public:
 
 
 class ArrayBasedRepresentation : public IRepresentation {
-public:
-  virtual ~ArrayBasedRepresentation() { }
-  mlir::LogicalResult GenerateModelGlobals(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter,
-                                           std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override;
+  typedef struct Memrefs {
+    mlir::Type model;
+    mlir::Type offset;
+    mlir::Type classInfo;
+  } GlobalMemrefTypes;
+
+  struct EnsembleConstantLoweringInfo {
+    mlir::Value modelGlobal;
+    mlir::Value offsetGlobal;
+    mlir::Value lengthGlobal;
+    mlir::Value lutGlobal;
+    mlir::Value classInfoGlobal;
+
+    mlir::Type modelGlobalType;
+    mlir::Type offsetGlobaltype;
+    mlir::Type lengthGlobalType;
+    mlir::Type lutGlobalType;
+    mlir::Type classInfoType;
+  };
+
+  // Maps an ensemble constant operation to a model memref and an offsets memref
+  std::map<mlir::Operation*, EnsembleConstantLoweringInfo> ensembleConstantToMemrefsMap;
+  // Maps a GetTree operation to a memref that represents the tree once the ensemble constant has been replaced
+  std::map<mlir::Operation*, mlir::Value> getTreeOperationMap;
+
   GlobalMemrefTypes AddGlobalMemrefs(
     mlir::ModuleOp module,
     mlir::decisionforest::EnsembleConstantOp& ensembleConstOp,
@@ -103,6 +69,13 @@ public:
 
   void AddModelMemrefInitFunction(mlir::ModuleOp module, std::string globalName, MemRefType memrefType, 
                                   ConversionPatternRewriter &rewriter, Location location);
+
+public:
+  virtual ~ArrayBasedRepresentation() { }
+  void InitRepresentation() override;
+  mlir::LogicalResult GenerateModelGlobals(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter,
+                                           std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override;
+
   mlir::Value GetTreeMemref(mlir::Value treeValue) override;
   std::vector<mlir::Value> GenerateExtraLoads(mlir::Location location, ConversionPatternRewriter &rewriter, mlir::Value treeMemref, 
                                               mlir::Value nodeIndex, mlir::Type treeTileType) override { return std::vector<mlir::Value>(); }
@@ -117,8 +90,37 @@ public:
 };
 
 class SparseRepresentation : public IRepresentation {
+  struct SparseEnsembleConstantLoweringInfo {
+    mlir::Value modelGlobal;
+    mlir::Value offsetGlobal;
+    mlir::Value lengthGlobal;
+    mlir::Value lutGlobal;
+    mlir::Value leavesGlobal;
+    mlir::Value leavesOffsetGlobal;
+    mlir::Value leavesLengthGlobal;
+    mlir::Value classInfoGlobal;
+
+    mlir::Type modelGlobalType;
+    mlir::Type offsetGlobaltype;
+    mlir::Type lengthGlobalType;
+    mlir::Type lutGlobalType;
+    mlir::Type leavesGlobalType;
+    mlir::Type classInfoType;
+  };
+
+  struct GetTreeLoweringInfo {
+    mlir::Value treeMemref;
+    mlir::Value leavesMemref;
+  };
+
+  // Maps an ensemble constant operation to a model memref and an offsets memref
+  std::map<mlir::Operation*, SparseEnsembleConstantLoweringInfo> sparseEnsembleConstantToMemrefsMap;
+  // Maps a GetTree operation to a memref that represents the tree once the ensemble constant has been replaced
+  std::map<mlir::Operation*, GetTreeLoweringInfo> sparseGetTreeOperationMap;
+
 public:
   virtual ~SparseRepresentation() { }
+  void InitRepresentation() override;
   mlir::LogicalResult GenerateModelGlobals(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter,
                                            std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override;
   std::tuple<Type, Type, Type, Type> AddGlobalMemrefs(mlir::ModuleOp module, mlir::decisionforest::EnsembleConstantOp& ensembleConstOp,

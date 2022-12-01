@@ -1,3 +1,11 @@
+* GPU Support
+    - Use schedule to specify which loops correspond to which GPU constructs (grid, threadblock etc)
+    - [Q] If we want to use a common mid-level IR, how do we convey to the final lowering which loops correspond to which GPU constructs?
+        - Should we just assume the outer 3 loops are for grid, the next 3 loops are for thread blocks? We could insert dummy loops if user doesn't specify everything.
+        - Use attributes on the loops (setAttr)
+    - Lowering from mid-level to low-level needs to take into account the fact that we are compiling to GPUs
+
+
 * Add a Treebeard context to store all configuration
     - Update the python API!
 * Make interfaces for mem rep and code gen extensible
