@@ -10,6 +10,7 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Dialect/GPU/ParallelLoopMapper.h"
 
 using namespace mlir;
 
@@ -927,7 +928,89 @@ struct PredictForestOpLowering: public ConversionPattern {
     }
     rewriter.setInsertionPointAfter(loopOp);
   }    
+
+  void GenerateBoundsConstants(ConversionPatternRewriter &rewriter, Location location,
+                              std::list<const decisionforest::IndexVariable*> indexVariables,
+                              std::vector<Value>& start, std::vector<Value>& stop, std::vector<Value>& step) const {
+    for (auto indexVarPtr: indexVariables) {
+      auto& indexVar = *indexVarPtr;
+
+      auto range = indexVar.GetRange();
+      auto stopConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_stop); 
+      auto startConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_start);
+      auto stepConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_step);
+      start.push_back(startConst);
+      stop.push_back(stopConst);
+      step.push_back(stepConst);
+    }
+  }
+
+  std::tuple<scf::ParallelOp, scf::ParallelOp> GenerateParallelLoopsForGridAndThreadblock(ConversionPatternRewriter &rewriter, Location location,
+                                                             std::list<const decisionforest::IndexVariable*> gridIndexVariables,
+                                                             std::list<const decisionforest::IndexVariable*> blockIndexVariables) const {
+    // TODO this is a hack to get around an MLIR bug. We're generating all bounds constants outside
+    // the two parallel fors that we're generating. 
+    std::vector<Value> gridStart, gridStop, gridStep;
+    std::vector<Value> blockStart, blockStop, blockStep;
+    GenerateBoundsConstants(rewriter, location, gridIndexVariables, gridStart, gridStop, gridStep);
+    GenerateBoundsConstants(rewriter, location, blockIndexVariables, blockStart, blockStop, blockStep);
+    auto gridLoop = rewriter.create<scf::ParallelOp>(location, ValueRange(gridStart), ValueRange(gridStop), ValueRange(gridStep));
+    rewriter.setInsertionPointToStart(gridLoop.getBody());
+    auto blockLoop = rewriter.create<scf::ParallelOp>(location, ValueRange(blockStart), ValueRange(blockStop), ValueRange(blockStep));
+    rewriter.setInsertionPointToStart(blockLoop.getBody());
+    return std::make_tuple(gridLoop, blockLoop);
+  }
+
+  void AddLoopInductionVariablesToIndexVariableLists(scf::ParallelOp parallelLoop, std::list<Value>& batchIndices, std::list<Value>& treeIndices,
+                                                     std::list<const decisionforest::IndexVariable*>& scheduleIndexVariables) const {
+    auto iter = scheduleIndexVariables.begin();
+    auto parallelLoopInductionVars = parallelLoop.getInductionVars();
+    for (size_t i=0; i<scheduleIndexVariables.size() ; ++i) {
+      auto& indexVar = **iter;
+      if (indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kBatch)
+        batchIndices.push_back(parallelLoopInductionVars[i]);
+      else if (indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kTree)
+        treeIndices.push_back(parallelLoopInductionVars[i]);
+      else
+        assert (false && "Unknown index variable type!");
+    }
+  }
   
+  void GenerateGPUParallelLoops(ConversionPatternRewriter &rewriter, Location location, const decisionforest::IndexVariable& indexVar, 
+                                std::list<Value> batchIndices, std::list<Value> treeIndices, PredictOpLoweringState& state) const {
+    // Gather all the grid index variables
+    std::list<const decisionforest::IndexVariable*> gridIndexVariables, blockIndexVariables;
+
+    auto currIndexVar = &indexVar;
+    while (currIndexVar->GetGPUDimension().construct == decisionforest::IndexVariable::GPUConstruct::Grid) {
+      gridIndexVariables.push_back(currIndexVar);
+      assert (currIndexVar->GetContainedLoops().size() == 1); // A GPU loop that represents a grid dimension must have a perfectly nested loop
+      currIndexVar = currIndexVar->GetContainedLoops().front();
+    }
+    
+    // The loop contained immediately inside the grid loops should be a block loop
+    assert (currIndexVar->GetGPUDimension().construct == decisionforest::IndexVariable::GPUConstruct::ThreadBlock);
+    while (currIndexVar->GetGPUDimension().construct == decisionforest::IndexVariable::GPUConstruct::ThreadBlock) {
+      blockIndexVariables.push_back(currIndexVar);
+      currIndexVar = currIndexVar->GetContainedLoops().front();
+    }
+
+    auto loops = GenerateParallelLoopsForGridAndThreadblock(rewriter, location, gridIndexVariables, blockIndexVariables);
+    auto gridLoop = std::get<0>(loops);
+    auto blockLoop = std::get<1>(loops);
+
+    AddLoopInductionVariablesToIndexVariableLists(gridLoop, batchIndices, treeIndices, gridIndexVariables);
+    AddLoopInductionVariablesToIndexVariableLists(blockLoop, batchIndices, treeIndices, blockIndexVariables);
+
+    // Since we crossed over from the last thread block loop, go back up so we're 
+    // pointing to the actual last loop we've generated
+    currIndexVar = currIndexVar->GetContainingLoop();
+    for (auto nestedIndexVar : currIndexVar->GetContainedLoops()) {
+      GenerateLoop(rewriter, location, *nestedIndexVar, batchIndices, treeIndices, state);
+    }
+    rewriter.setInsertionPointAfter(gridLoop);
+  }    
+
   void GenerateLoop(
     ConversionPatternRewriter &rewriter,
     Location location,
@@ -942,10 +1025,17 @@ struct PredictForestOpLowering: public ConversionPattern {
 
     // Generate all the nested loops
     if (indexVar.GetContainedLoops().empty()) {
+      // GPU loops should always contain some nested loops
+      assert (indexVar.GetGPUDimension().construct == decisionforest::IndexVariable::GPUConstruct::None);
       GenerateLeafLoop(rewriter, location, indexVar, batchIndices, treeIndices, state);
     }
     else {
-      if (indexVar.Unroll()) {
+      // TODO The GPU part should move to the highest level function (LowerPredictForestOp_Schedule)
+      // because we can't have any inner loops be marked GPU loops
+      if (indexVar.GetGPUDimension().construct != decisionforest::IndexVariable::GPUConstruct::None) {
+        GenerateGPUParallelLoops(rewriter, location, indexVar, batchIndices, treeIndices, state);
+      }
+      else if (indexVar.Unroll()) {
         GenerateUnrolledLoop(rewriter, location, indexVar, batchIndices, treeIndices, state);
       }
       else {

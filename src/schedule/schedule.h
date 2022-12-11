@@ -81,10 +81,17 @@ class IndexVariable : public IndexDerivationTreeNode {
   friend class Schedule;
 public:
   enum class IndexVariableType { kBatch, kTree, kUnknown };
+  enum class GPUConstruct { Grid, ThreadBlock, None };
+  enum class Dimension { X, Y, Z };
+
   struct IndexRange {
     int32_t m_start = -1;
     int32_t m_stop = -1;
     int32_t m_step = 0;
+  };
+  struct GPUDimension {
+    GPUConstruct construct;
+    Dimension dimension;
   };
 protected:
   std::string m_name;
@@ -92,6 +99,8 @@ protected:
   IndexVariable* m_containingLoop;
   std::vector<IndexVariable*> m_containedLoops;
   IndexVariableType m_type = IndexVariableType::kUnknown; 
+  GPUConstruct m_gpuConstruct = GPUConstruct::None;
+  Dimension m_dimension = Dimension::X;
 
   // Fields for the index modifier tree
   IndexModifier *m_parentModifier; // The modifier that resulted in this index variable
@@ -135,6 +144,15 @@ public:
   IndexModifier* GetParentModifier() const { return m_parentModifier; }
   IndexModifier* GetIndexModifier() const { return m_modifier; }
   IndexVariableType GetType() const { return m_type; }
+
+  // GPU Support
+  void SetGPUDimension(GPUConstruct construct, Dimension dimension) {
+    m_gpuConstruct = construct;
+    m_dimension = dimension;
+  }
+  GPUDimension GetGPUDimension() const {
+    return GPUDimension{m_gpuConstruct, m_dimension};
+  }
 };
 
 class Schedule {
