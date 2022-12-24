@@ -31,6 +31,7 @@ public:
 
 
 class ArrayBasedRepresentation : public IRepresentation {
+protected:
   typedef struct Memrefs {
     mlir::Type model;
     mlir::Type offset;

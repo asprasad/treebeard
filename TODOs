@@ -4,6 +4,17 @@
         - Should we just assume the outer 3 loops are for grid, the next 3 loops are for thread blocks? We could insert dummy loops if user doesn't specify everything.
         - Use attributes on the loops (setAttr)
     - Lowering from mid-level to low-level needs to take into account the fact that we are compiling to GPUs
+        - Add a new representation for GPU. We need further refactoring of this part of the code!
+            - How do we insert the model memrefs?
+                - [Option 1]
+                    - The init function creates the required memrefs and returns them to the host code
+                    - These memrefs are passed to the prediction function
+                - [Option 2] ??
+                - We can't use globals because they can't be resized
+            
+            - Each Init function will return a GPU memref that it allocates and initializes in device memory
+            - The PredictForest method will take additional parameters (all the memrefs that were globals earlier)
+            - Most of the lowering part should be the same. 
 
 
 * Add a Treebeard context to store all configuration
