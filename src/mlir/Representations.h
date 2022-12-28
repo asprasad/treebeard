@@ -42,13 +42,11 @@ protected:
     mlir::Value modelGlobal;
     mlir::Value offsetGlobal;
     mlir::Value lengthGlobal;
-    mlir::Value lutGlobal;
     mlir::Value classInfoGlobal;
 
     mlir::Type modelGlobalType;
     mlir::Type offsetGlobaltype;
     mlir::Type lengthGlobalType;
-    mlir::Type lutGlobalType;
     mlir::Type classInfoType;
   };
 
@@ -57,6 +55,9 @@ protected:
   // Maps a GetTree operation to a memref that represents the tree once the ensemble constant has been replaced
   std::map<mlir::Operation*, mlir::Value> getTreeOperationMap;
 
+  void GenModelMemrefInitFunctionBody(MemRefType memrefType, Value memrefValue,
+                                      ConversionPatternRewriter &rewriter, Location location, Value tileIndex,
+                                      Value thresholdMemref, Value indexMemref, Value tileShapeIdMemref);
   GlobalMemrefTypes AddGlobalMemrefs(
     mlir::ModuleOp module,
     mlir::decisionforest::EnsembleConstantOp& ensembleConstOp,

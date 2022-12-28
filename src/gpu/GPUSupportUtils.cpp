@@ -48,7 +48,6 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
       auto location = func.getLoc();
       // Add the required transfers here
       mlir::OpBuilder builder(func.getContext());
-      auto& entryBlock = func.front();
       func.walk([&](gpu::LaunchOp launchOp){
         builder.setInsertionPoint(launchOp.getOperation());
       });
@@ -69,8 +68,8 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
           auto insertPoint = builder.saveInsertionPoint();
           builder.setInsertionPoint(op);
           auto waitBeforeReturn = builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{});
-          auto outputTransfer = builder.create<gpu::MemcpyOp>(location, waitBeforeReturn.asyncToken().getType(), ValueRange{waitBeforeReturn.asyncToken()}, 
-                                                              static_cast<Value>(func.getArgument(1)), outputAlloc.memref());
+          /*auto outputTransfer = */ builder.create<gpu::MemcpyOp>(location, waitBeforeReturn.asyncToken().getType(), ValueRange{waitBeforeReturn.asyncToken()}, 
+                                                                   static_cast<Value>(func.getArgument(1)), outputAlloc.memref());
           builder.setInsertionPoint(insertPoint.getBlock(), insertPoint.getPoint());                                                              
         }
       }
