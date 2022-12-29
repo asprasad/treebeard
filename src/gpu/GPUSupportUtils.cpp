@@ -8,6 +8,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/ParallelLoopMapper.h"
 #include "mlir/Dialect/GPU/GPUDialect.h"
+#include "mlir/Dialect/GPU/Passes.h"
 #include "GPUSupportUtils.h"
 
 using namespace mlir;
@@ -103,6 +104,15 @@ void ConvertParallelLoopsToGPU(mlir::MLIRContext& context, mlir::ModuleOp module
   // Insert required GPU allocations and transfers to and from the gpu memory.
   // Replace the uses of the function arguments with the new gpu allocations.
   AddGPUAllocationsAndTransfers(module);
+}
+
+void OutlineGPUKernels(mlir::MLIRContext& context, mlir::ModuleOp module) {
+  mlir::PassManager pm(&context);
+  pm.addPass(createGpuKernelOutliningPass());
+
+  if (mlir::failed(pm.run(module))) {
+    llvm::errs() << "Lowering to mid level IR failed.\n";
+  }
 }
 
 } // decisionforest
