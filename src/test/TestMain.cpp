@@ -15,6 +15,7 @@
 #include "ForestTestUtils.h"
 #include "ModelSerializers.h"
 #include "Representations.h"
+#include "GPUSupportUtils.h"
 
 using namespace mlir::decisionforest;
 
@@ -953,6 +954,47 @@ bool Test_SplitSchedule(TestArgs_t& args) {
   return true;
 }
 
+void GPUBasicSchedule(decisionforest::Schedule* schedule, int32_t gridXSize) {
+  auto& batchIndex = schedule->GetBatchIndex();
+  auto& gridIndex = schedule->NewIndexVariable("gridX");
+  auto& blockIndex = schedule->NewIndexVariable("blockX");
+  
+  schedule->Tile(batchIndex, gridIndex, blockIndex, gridXSize);
+  gridIndex.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::Grid, decisionforest::IndexVariable::Dimension::X);
+  blockIndex.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::ThreadBlock, decisionforest::IndexVariable::Dimension::X);
+}
+
+bool Test_BasicGPUCodeGeneration(TestArgs_t& args) {
+  FixedTreeIRConstructor<> irConstructor(args.context, 32, AddLeftHeavyTree<DoubleInt32Tile>);
+  irConstructor.Parse();
+  // If sparse representation is turned on, then child index bit width should be passed
+  // assert (!mlir::decisionforest::UseSparseTreeRepresentation || childIndexBitWidth!=1 );
+  irConstructor.SetChildIndexBitWidth(1);
+  auto module = irConstructor.GetEvaluationFunction();
+
+  auto schedule = irConstructor.GetSchedule();
+  GPUBasicSchedule(schedule, 4);
+
+  // module->dump();
+  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  // module->dump();
+
+  mlir::decisionforest::GreedilyMapParallelLoopsToGPU(module);
+  // module->dump();
+
+  mlir::decisionforest::ConvertParallelLoopsToGPU(args.context, module);
+  // module->dump();
+
+  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(),
+                                               decisionforest::RepresentationFactory::GetRepresentation("gpu-array"));
+  
+  mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+
+  module->dump();                                        
+
+  return true;
+}
+
 #define RUN_ALL_TESTS
 
 #ifdef RUN_ALL_TESTS
@@ -1355,41 +1397,9 @@ TestDescriptor testList[] = {
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
+  TEST_LIST_ENTRY(Test_BasicGPUCodeGeneration),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
   
-  TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth),
-  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_MakeLeavesSameDepth),
-  TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_MakeLeavesSameDepth),
-  TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_MakeLeavesSameDepth),
-  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_MakeLeavesSameDepth),
-  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_MakeLeavesSameDepth),
-  TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth),
-  TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Covtype_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Letters_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_WalkPeeling_BalancedTree_TileSize2),
-  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
-  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4),
-  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
-  TEST_LIST_ENTRY(Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
-  TEST_LIST_ENTRY(Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Year),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Letters),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Epsilon),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Higgs),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_AirlineOHE),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Covtype),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Airline),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Abalone),
-
-  // TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
-  // TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4),
-  // TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
   // TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth),
   // TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_MakeLeavesSameDepth),
   // TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_MakeLeavesSameDepth),
@@ -1397,63 +1407,96 @@ TestDescriptor testList[] = {
   // TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_MakeLeavesSameDepth),
   // TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_MakeLeavesSameDepth),
   // TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth),
-  
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_EqualDepth_TileSize8),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_EqualDepth_TileSize8),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_EqualDepth_TileSize8),
+  // TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_ParallelBatch),
+  // TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_ParallelBatch),
+  // TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_ParallelBatch),
+  // TEST_LIST_ENTRY(Test_TileSize8_Covtype_TestInputs_ParallelBatch),
+  // TEST_LIST_ENTRY(Test_TileSize8_Letters_TestInputs_ParallelBatch),
+  // TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_ParallelBatch),
+  // TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_ParallelBatch),
+  // TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_ParallelBatch),
+  // TEST_LIST_ENTRY(Test_WalkPeeling_BalancedTree_TileSize2),
+  // TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
+  // TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4),
+  // TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
+  // TEST_LIST_ENTRY(Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
+  // TEST_LIST_ENTRY(Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
+  // TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Year),
+  // TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Letters),
+  // TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Epsilon),
+  // TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Higgs),
+  // TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_AirlineOHE),
+  // TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Covtype),
+  // TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Airline),
+  // TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Abalone),
 
-  // Remove extra hop tests
-  TEST_LIST_ENTRY(Test_RemoveExtraHop_BalancedTree_TileSize2),
-  TEST_LIST_ENTRY(Test_SparseSerialization_BalancedTree_TileSize2),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_RemoveExtraHop_TileSize8),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_RemoveExtraHop_TileSize8),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_RemoveExtraHop_TileSize8),
-  TEST_LIST_ENTRY(Test_SparseSerialization_BalancedTree_TileSize2),
-  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Airline),
-  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_AirlineOHE),
-  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Epsilon),
-  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Higgs),
-  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Year),
-  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
-  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Airline),
-  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_AirlineOHE),
-  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Epsilon),
-  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Higgs),
-  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Year),
-  TEST_LIST_ENTRY(Test_CovtypeStatGenerationAndReading),
-  TEST_LIST_ENTRY(Test_EpsilonStatGenerationAndReading),
-  TEST_LIST_ENTRY(Test_HiggsStatGenerationAndReading),
-  TEST_LIST_ENTRY(Test_YearStatGenerationAndReading),
-  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs),
-  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs),
-  TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4),
-  TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
-  TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
-  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape),
-  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape),
-  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize),
-  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1),
-  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize),
-  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1),
-  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape),
-  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape),
-  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize1_I32ChildIdx),
-  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize1_I32ChildIdx),
-  TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize2_I32ChildIdx),
-  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize2_I32ChildIdx),
-  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx),
-  TEST_LIST_ENTRY(Test_TileSize8_Airline),
-  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE),
-  TEST_LIST_ENTRY(Test_TileSize8_Bosch),
-  TEST_LIST_ENTRY(Test_TileSize8_Epsilon),
-  TEST_LIST_ENTRY(Test_TileSize8_Higgs),
-  TEST_LIST_ENTRY(Test_TileSize8_Year),
-  TEST_LIST_ENTRY(Test_TileSize3_Abalone),
-  TEST_LIST_ENTRY(Test_TileSize4_Abalone),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize8_TileSize2_4Pipelined),
-  TEST_LIST_ENTRY(Test_TileSize4_Letters_3Pipelined_Int8Type),
-  TEST_LIST_ENTRY(Test_SparseTileSize8_4Pipelined_Bosch),
-  TEST_LIST_ENTRY(Test_TileSize8_Abalone_4Pipelined_TestInputs),
+  // // TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
+  // // TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4),
+  // // TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
+  // // TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth),
+  // // TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_MakeLeavesSameDepth),
+  // // TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_MakeLeavesSameDepth),
+  // // TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_MakeLeavesSameDepth),
+  // // TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_MakeLeavesSameDepth),
+  // // TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_MakeLeavesSameDepth),
+  // // TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth),
+  
+  // TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_EqualDepth_TileSize8),
+  // TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_EqualDepth_TileSize8),
+  // TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_EqualDepth_TileSize8),
+
+  // // Remove extra hop tests
+  // TEST_LIST_ENTRY(Test_RemoveExtraHop_BalancedTree_TileSize2),
+  // TEST_LIST_ENTRY(Test_SparseSerialization_BalancedTree_TileSize2),
+  // TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_RemoveExtraHop_TileSize8),
+  // TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_RemoveExtraHop_TileSize8),
+  // TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_RemoveExtraHop_TileSize8),
+  // TEST_LIST_ENTRY(Test_SparseSerialization_BalancedTree_TileSize2),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Airline),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_AirlineOHE),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Epsilon),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Higgs),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Year),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Airline),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_AirlineOHE),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Epsilon),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Higgs),
+  // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Year),
+  // TEST_LIST_ENTRY(Test_CovtypeStatGenerationAndReading),
+  // TEST_LIST_ENTRY(Test_EpsilonStatGenerationAndReading),
+  // TEST_LIST_ENTRY(Test_HiggsStatGenerationAndReading),
+  // TEST_LIST_ENTRY(Test_YearStatGenerationAndReading),
+  // TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs),
+  // TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs),
+  // TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4),
+  // TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
+  // TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
+  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape),
+  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape),
+  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize),
+  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1),
+  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize),
+  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1),
+  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape),
+  // TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape),
+  // TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize1_I32ChildIdx),
+  // TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize1_I32ChildIdx),
+  // TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize2_I32ChildIdx),
+  // TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize2_I32ChildIdx),
+  // TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx),
+  // TEST_LIST_ENTRY(Test_TileSize8_Airline),
+  // TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE),
+  // TEST_LIST_ENTRY(Test_TileSize8_Bosch),
+  // TEST_LIST_ENTRY(Test_TileSize8_Epsilon),
+  // TEST_LIST_ENTRY(Test_TileSize8_Higgs),
+  // TEST_LIST_ENTRY(Test_TileSize8_Year),
+  // TEST_LIST_ENTRY(Test_TileSize3_Abalone),
+  // TEST_LIST_ENTRY(Test_TileSize4_Abalone),
+  // TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize8_TileSize2_4Pipelined),
+  // TEST_LIST_ENTRY(Test_TileSize4_Letters_3Pipelined_Int8Type),
+  // TEST_LIST_ENTRY(Test_SparseTileSize8_4Pipelined_Bosch),
+  // TEST_LIST_ENTRY(Test_TileSize8_Abalone_4Pipelined_TestInputs),
 };
 #endif // RUN_ALL_TESTS
 

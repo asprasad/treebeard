@@ -47,7 +47,7 @@ inline void InsertPrintVectorOp(ConversionPatternRewriter &rewriter, Location lo
   rewriter.create<decisionforest::PrintVectorOp>(location, kindConst, bitWidthConst, tileSizeConst, ValueRange(vectorValues));
 }
 
-inline Value CreateZeroVectorFPConst(ConversionPatternRewriter &rewriter, Location location, Type fpType, int32_t tileSize) {
+inline Value CreateZeroVectorFPConst(mlir::OpBuilder &rewriter, Location location, Type fpType, int32_t tileSize) {
   Value zeroConst;
   auto vectorType = VectorType::get(tileSize, fpType);
   if (fpType.isa<mlir::Float64Type>())
@@ -60,7 +60,7 @@ inline Value CreateZeroVectorFPConst(ConversionPatternRewriter &rewriter, Locati
   return vectorValue;
 }
 
-inline Value CreateZeroVectorIntConst(ConversionPatternRewriter &rewriter, Location location, Type intType, int32_t tileSize) {
+inline Value CreateZeroVectorIntConst(mlir::OpBuilder &rewriter, Location location, Type intType, int32_t tileSize) {
   Value zeroConst = rewriter.create<arith::ConstantIntOp>(location, 0, intType);
   auto vectorType = VectorType::get(tileSize, intType);
   auto vectorValue = rewriter.create<vector::BroadcastOp>(location, vectorType, zeroConst);

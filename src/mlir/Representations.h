@@ -56,7 +56,7 @@ protected:
   std::map<mlir::Operation*, mlir::Value> getTreeOperationMap;
 
   void GenModelMemrefInitFunctionBody(MemRefType memrefType, Value memrefValue,
-                                      ConversionPatternRewriter &rewriter, Location location, Value tileIndex,
+                                      mlir::OpBuilder &rewriter, Location location, Value tileIndex,
                                       Value thresholdMemref, Value indexMemref, Value tileShapeIdMemref);
   GlobalMemrefTypes AddGlobalMemrefs(
     mlir::ModuleOp module,

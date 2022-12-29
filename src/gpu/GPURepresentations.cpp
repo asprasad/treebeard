@@ -38,7 +38,7 @@ void GPUArrayBasedRepresentation::GenerateSimpleInitializer(const std::string& f
 void GPUArrayBasedRepresentation::GenerateModelMemrefInitializer(const std::string& funcName, ConversionPatternRewriter &rewriter, Location location, 
                                                                  ModuleOp module, MemRefType memrefType) {
   assert (memrefType.getShape().size() == 1);
-  SaveAndRestoreInsertionPoint saveAndRestoreEntryPoint(rewriter);
+  // SaveAndRestoreInsertionPoint saveAndRestoreEntryPoint(rewriter);
   auto modelMemrefElementType = memrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
   int32_t tileSize = modelMemrefElementType.getTileSize();
   auto thresholdArgType = MemRefType::get({ memrefType.getShape()[0] * tileSize }, modelMemrefElementType.getThresholdElementType());
@@ -51,6 +51,7 @@ void GPUArrayBasedRepresentation::GenerateModelMemrefInitializer(const std::stri
   // rewriter.setInsertionPointToStart(&entryBlock);
   mlir::OpBuilder builder(initModelMemrefFunc.getContext());
   builder.setInsertionPointToStart(&entryBlock);
+  // auto& builder = rewriter;
 
   // Allocate the model memref
   auto waitOp = builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{});
@@ -81,8 +82,7 @@ void GPUArrayBasedRepresentation::GenerateModelMemrefInitializer(const std::stri
 
   builder.setInsertionPointToStart(&gpuLaunch.body().front());
   
-  // Generate the body of the launch op
-  // auto numThreadsPerBlockConst = builder.create<arith::ConstantIndexOp>(location, numThreadsPerBlock);
+  // // Generate the body of the launch op
   auto memrefLengthConst = builder.create<arith::ConstantIndexOp>(location, memrefType.getShape()[0]);
   auto firstThreadNum = builder.create<arith::MulIOp>(location, gpuLaunch.blockSizeX(), gpuLaunch.getBlockIds().x);
   auto elementIndex = builder.create<arith::AddIOp>(location, firstThreadNum, gpuLaunch.getThreadIds().x);
@@ -90,11 +90,11 @@ void GPUArrayBasedRepresentation::GenerateModelMemrefInitializer(const std::stri
   auto ifInBounds = builder.create<scf::IfOp>(location, inBoundsCondition, false);
   {
     // Generate the initialization code
-    auto ifInsertionPoint = ifInBounds.getThenBodyBuilder().saveInsertionPoint();
-    rewriter.setInsertionPoint(ifInsertionPoint.getBlock(), ifInsertionPoint.getPoint());
-    this->GenModelMemrefInitFunctionBody(memrefType, alloc.memref(), rewriter, location, elementIndex, 
-                                         alloc.memref(), allocFeatureIndices.memref(), allocTileShapeIds.memref());
+    auto thenBuilder = ifInBounds.getThenBodyBuilder();
+    this->GenModelMemrefInitFunctionBody(memrefType, alloc.memref(), thenBuilder, location, elementIndex, 
+                                         allocThresholds.memref(), allocFeatureIndices.memref(), allocTileShapeIds.memref());
   }
+  builder.create<gpu::TerminatorOp>(location);
   // Wait and return 
   builder.setInsertionPointAfter(gpuLaunch); 
   /*auto waitBeforeReturn =*/ builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{});
@@ -150,11 +150,11 @@ mlir::LogicalResult GPUArrayBasedRepresentation::GenerateModelGlobals(Operation 
   m_classInfoMemrefArgIndex = func.getNumArguments() - 1;
 
   m_modelMemref = func.getArgument(m_modelMemrefArgIndex);
-
+  
+  GenerateModelMemrefInitializer("Init_Model", rewriter, location, module, modelMemrefType);
   GenerateSimpleInitializer("Init_Offsets", rewriter, location, module, offsetMemrefType);
   GenerateSimpleInitializer("Init_Lengths", rewriter, location, module, offsetMemrefType);
   GenerateSimpleInitializer("Init_ClassIds", rewriter, location, module, classInfoMemrefType);
-  GenerateModelMemrefInitializer("Init_Model", rewriter, location, module, modelMemrefType);
 
   EnsembleConstantLoweringInfo info 
   {

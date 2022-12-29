@@ -145,39 +145,39 @@ ArrayBasedRepresentation::GlobalMemrefTypes ArrayBasedRepresentation::AddGlobalM
 }
 
 void ArrayBasedRepresentation::GenModelMemrefInitFunctionBody(MemRefType memrefType, Value getGlobalMemref,
-                                                              ConversionPatternRewriter &rewriter, Location location, Value tileIndex,
+                                                              mlir::OpBuilder &builder, Location location, Value tileIndex,
                                                               Value thresholdMemref, Value indexMemref, Value tileShapeIdMemref) {
   auto modelMemrefElementType = memrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
   int32_t tileSize = modelMemrefElementType.getTileSize();
 
   // index = tileSize * tileIndex
-  auto tileSizeConst = rewriter.create<arith::ConstantIndexOp>(location, tileSize);
-  auto tileSizeTimesi = rewriter.create<arith::MulIOp>(location, tileIndex, tileSizeConst);
+  auto tileSizeConst = builder.create<arith::ConstantIndexOp>(location, tileSize);
+  auto tileSizeTimesi = builder.create<arith::MulIOp>(location, tileIndex, tileSizeConst);
   
   if (tileSize > 1) {
-    auto thresholdVec = CreateZeroVectorFPConst(rewriter, location, modelMemrefElementType.getThresholdElementType(), tileSize);
-    auto indexVec = CreateZeroVectorIntConst(rewriter, location, modelMemrefElementType.getIndexElementType(), tileSize);
+    auto thresholdVec = CreateZeroVectorFPConst(builder, location, modelMemrefElementType.getThresholdElementType(), tileSize);
+    auto indexVec = CreateZeroVectorIntConst(builder, location, modelMemrefElementType.getIndexElementType(), tileSize);
 
     // Load from index to index + (tileSize - 1) into a vector
     for (int32_t j = 0 ; j<tileSize ; ++j) {
-      auto offset = rewriter.create<arith::ConstantIndexOp>(location, j);
-      auto index =  rewriter.create<arith::AddIOp>(location, tileSizeTimesi, offset);
-      auto thresholdVal = rewriter.create<memref::LoadOp>(location, thresholdMemref, static_cast<Value>(index));
-      auto jConst = rewriter.create<arith::ConstantIntOp>(location, j, rewriter.getI32Type());
-      thresholdVec = rewriter.create<vector::InsertElementOp>(location, thresholdVal, thresholdVec, jConst);
-      auto indexVal = rewriter.create<memref::LoadOp>(location, indexMemref, static_cast<Value>(index));
-      indexVec = rewriter.create<vector::InsertElementOp>(location, indexVal, indexVec, jConst);
+      auto offset = builder.create<arith::ConstantIndexOp>(location, j);
+      auto index =  builder.create<arith::AddIOp>(location, tileSizeTimesi, offset);
+      auto thresholdVal = builder.create<memref::LoadOp>(location, thresholdMemref, static_cast<Value>(index));
+      auto jConst = builder.create<arith::ConstantIntOp>(location, j, builder.getI32Type());
+      thresholdVec = builder.create<vector::InsertElementOp>(location, thresholdVal, thresholdVec, jConst);
+      auto indexVal = builder.create<memref::LoadOp>(location, indexMemref, static_cast<Value>(index));
+      indexVec = builder.create<vector::InsertElementOp>(location, indexVal, indexVec, jConst);
     }
-    auto tileShapeID = rewriter.create<memref::LoadOp>(location, tileShapeIdMemref, tileIndex);
-    rewriter.create<decisionforest::InitTileOp>(location, getGlobalMemref, tileIndex, thresholdVec, indexVec, tileShapeID);
+    auto tileShapeID = builder.create<memref::LoadOp>(location, tileShapeIdMemref, tileIndex);
+    builder.create<decisionforest::InitTileOp>(location, getGlobalMemref, tileIndex, thresholdVec, indexVec, tileShapeID);
   }
   else {
     // Load from index to index + (tileSize - 1) into a vector
-    auto thresholdVal = rewriter.create<memref::LoadOp>(location, thresholdMemref, static_cast<Value>(tileIndex));
-    auto indexVal = rewriter.create<memref::LoadOp>(location, indexMemref, static_cast<Value>(tileIndex));
+    auto thresholdVal = builder.create<memref::LoadOp>(location, thresholdMemref, static_cast<Value>(tileIndex));
+    auto indexVal = builder.create<memref::LoadOp>(location, indexMemref, static_cast<Value>(tileIndex));
     // TODO check how tileShapeID vector is created when tileSize = 1
-    auto tileShapeID = rewriter.create<arith::ConstantIntOp>(location, 0, rewriter.getI32Type());
-    rewriter.create<decisionforest::InitTileOp>(location, getGlobalMemref, tileIndex, thresholdVal, indexVal, tileShapeID);
+    auto tileShapeID = builder.create<arith::ConstantIntOp>(location, 0, builder.getI32Type());
+    builder.create<decisionforest::InitTileOp>(location, getGlobalMemref, tileIndex, thresholdVal, indexVal, tileShapeID);
   }
 }
 
