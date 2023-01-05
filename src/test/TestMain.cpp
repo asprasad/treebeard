@@ -8,6 +8,7 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/GPUDialect.h"
 #include "xgboostparser.h"
 #include "TiledTree.h"
 
@@ -990,6 +991,9 @@ bool Test_BasicGPUCodeGeneration(TestArgs_t& args) {
   
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
 
+  mlir::decisionforest::LowerGPUToLLVM(args.context, module);
+  // mlir::decisionforest::OutlineGPUKernels(args.context, module);
+  // mlir::decisionforest::LowerToLLVM(args.context, module);
   module->dump();                                        
 
   return true;
@@ -1627,6 +1631,7 @@ void RunTestsImpl(TestDescriptor *testsToRun, size_t numberOfTests) {
     context.getOrLoadDialect<mlir::math::MathDialect>();
     context.getOrLoadDialect<mlir::omp::OpenMPDialect>();
     context.getOrLoadDialect<mlir::func::FuncDialect>();
+    context.getOrLoadDialect<mlir::gpu::GPUDialect>();
     TestArgs_t args = { context };
     
     // Disable sparse code generation by default

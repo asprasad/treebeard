@@ -12,7 +12,7 @@ namespace decisionforest
 void GreedilyMapParallelLoopsToGPU(mlir::ModuleOp module);
 void ConvertParallelLoopsToGPU(mlir::MLIRContext& context, mlir::ModuleOp module);
 void OutlineGPUKernels(mlir::MLIRContext& context, mlir::ModuleOp module);
-
+void LowerGPUToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module);
 } // decisiontree
 } // mlir
 
