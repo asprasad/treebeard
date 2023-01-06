@@ -4,11 +4,11 @@
 #include "TreeTilingUtils.h"
 #include "ExecutionHelpers.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/GPU/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "xgboostparser.h"
 #include "TiledTree.h"
 
@@ -1401,7 +1401,7 @@ TestDescriptor testList[] = {
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_BasicGPUCodeGeneration),
+  TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize1),
   // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
   
   // TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth),
@@ -1623,7 +1623,7 @@ void RunTestsImpl(TestDescriptor *testsToRun, size_t numberOfTests) {
   std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
   for (size_t i = 0; i < numberOfTests; ++i) {
     mlir::MLIRContext context;
-    context.getOrLoadDialect<mlir::arith::ArithmeticDialect>();
+    context.getOrLoadDialect<mlir::arith::ArithDialect>();
     context.getOrLoadDialect<mlir::decisionforest::DecisionForestDialect>();
     context.getOrLoadDialect<mlir::scf::SCFDialect>();
     context.getOrLoadDialect<mlir::memref::MemRefDialect>();

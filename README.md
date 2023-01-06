@@ -16,21 +16,15 @@ An optimizing compiler for decision tree ensemble inference.
 # MLIR Version
 The current version of Treebeard is tested with the following LLVM commit:
 ```
-commit b6b8d34554a4d85ec064463b54a27e073c42beeb (HEAD -> main, origin/main, origin/HEAD)
-Author: Peixin-Qiao <qiaopeixin@huawei.com>
-Date:   Thu Apr 28 09:40:30 2022 +0800
+commit a698790c51ec2804c3a7ba4c59438e7816690ea2 (HEAD -> main, origin/main, origin/HEAD)
+Author: Noah Goldstein <goldstein.w.n@gmail.com>
+Date:   Fri Jan 6 14:08:25 2023 +0800
 
-    [flang] Add lowering stubs for OpenMP/OpenACC declarative constructs
+    [X86] Add additional tests to no-shift.ll
     
-    This patch provides the basic infrastructure for lowering declarative
-    constructs for OpenMP and OpenACC.
+    Reviewed By: pengfei
     
-    This is part of the upstreaming effort from the fir-dev branch in [1].
-    [1] https://github.com/flang-compiler/f18-llvm-project
-    
-    Reviewed By: kiranchandramohan, shraiysh, clementval
-    
-    Differential Revision: https://reviews.llvm.org/D124225
+    Differential Revision: https://reviews.llvm.org/D141076
 ```
 
 # Python API

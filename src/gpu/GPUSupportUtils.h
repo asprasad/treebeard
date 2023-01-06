@@ -1,7 +1,7 @@
 #ifndef _GPUSUPPORTUTILS_H_
 #define _GPUSUPPORTUTILS_H_
 
-#include "mlir/Dialect/GPU/ParallelLoopMapper.h"
+#include "mlir/Dialect/GPU/Transforms/ParallelLoopMapper.h"
 #include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
 
 namespace mlir

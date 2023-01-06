@@ -6,9 +6,9 @@
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/GPU/ParallelLoopMapper.h"
-#include "mlir/Dialect/GPU/GPUDialect.h"
-#include "mlir/Dialect/GPU/Passes.h"
+#include "mlir/Dialect/GPU/Transforms/ParallelLoopMapper.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "GPUSupportUtils.h"
 
 using namespace mlir;
@@ -54,12 +54,13 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
       });
       
       auto waitOp = builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{});
-      auto inputAlloc = builder.create<gpu::AllocOp>(location, func.getArgument(0).getType(), waitOp.asyncToken().getType(), ValueRange{waitOp.asyncToken()}, ValueRange{}, ValueRange{});
-      auto inputTransfer = builder.create<gpu::MemcpyOp>(location, inputAlloc.asyncToken().getType(), ValueRange{inputAlloc.asyncToken()}, 
-                                                         inputAlloc.memref(), static_cast<Value>(func.getArgument(0)));
+      auto inputAlloc = builder.create<gpu::AllocOp>(location, func.getArgument(0).getType(), waitOp.getAsyncToken().getType(), 
+                                                     ValueRange{waitOp.getAsyncToken()}, ValueRange{}, ValueRange{});
+      auto inputTransfer = builder.create<gpu::MemcpyOp>(location, inputAlloc.getAsyncToken().getType(), ValueRange{inputAlloc.getAsyncToken()}, 
+                                                         inputAlloc.getMemref(), static_cast<Value>(func.getArgument(0)));
 
-      auto outputAlloc = builder.create<gpu::AllocOp>(location, func.getArgument(1).getType(), inputTransfer.asyncToken().getType(), 
-                                                      ValueRange{inputTransfer.asyncToken()}, ValueRange{}, ValueRange{});
+      auto outputAlloc = builder.create<gpu::AllocOp>(location, func.getArgument(1).getType(), inputTransfer.getAsyncToken().getType(), 
+                                                      ValueRange{inputTransfer.getAsyncToken()}, ValueRange{}, ValueRange{});
 
       // Find the return statement and add a tranfer before it
       auto& region = func.getRegion();
@@ -69,13 +70,13 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
           auto insertPoint = builder.saveInsertionPoint();
           builder.setInsertionPoint(op);
           auto waitBeforeReturn = builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{});
-          /*auto outputTransfer = */ builder.create<gpu::MemcpyOp>(location, waitBeforeReturn.asyncToken().getType(), ValueRange{waitBeforeReturn.asyncToken()}, 
-                                                                   static_cast<Value>(func.getArgument(1)), outputAlloc.memref());
+          /*auto outputTransfer = */ builder.create<gpu::MemcpyOp>(location, waitBeforeReturn.getAsyncToken().getType(), ValueRange{waitBeforeReturn.getAsyncToken()}, 
+                                                                   static_cast<Value>(func.getArgument(1)), outputAlloc.getMemref());
           builder.setInsertionPoint(insertPoint.getBlock(), insertPoint.getPoint());                                                              
         }
       }
       
-      ReplaceArgumentUsesWithGPUMemref(func, inputAlloc.memref(), outputAlloc.memref());
+      ReplaceArgumentUsesWithGPUMemref(func, inputAlloc.getMemref(), outputAlloc.getMemref());
     }
     return mlir::WalkResult::advance();
   });
@@ -89,8 +90,13 @@ namespace decisionforest
 {
 
 void GreedilyMapParallelLoopsToGPU(mlir::ModuleOp module) {
-  for (Region &region : module->getRegions())
-    greedilyMapParallelSCFToGPU(region);
+  mlir::PassManager pm(module.getContext());
+  mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
+  optPM.addPass(createGpuMapParallelLoopsPass());
+
+  if (mlir::failed(pm.run(module))) {
+    llvm::errs() << "Lowering to mid level IR failed.\n";
+  }
 }
 
 void ConvertParallelLoopsToGPU(mlir::MLIRContext& context, mlir::ModuleOp module) {

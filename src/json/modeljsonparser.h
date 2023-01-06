@@ -15,7 +15,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Verifier.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "llvm/ADT/STLExtras.h"
 
@@ -141,7 +141,9 @@ protected:
         auto functionType = GetFunctionType();
         // TODO the function name needs to be an input or derived from the input
         // return mlir::FuncOp::create(location, std::string("Prediction_Function"), functionType);
-        return m_builder.create<mlir::func::FuncOp>(location, std::string("Prediction_Function"), functionType, m_builder.getStringAttr("public"));
+        auto predictionFunction = m_builder.create<mlir::func::FuncOp>(location, std::string("Prediction_Function"), functionType);
+        predictionFunction.setPublic();
+        return predictionFunction;
     }
     virtual mlir::decisionforest::TreeEnsembleType GetEnsembleType() {
         // All trees have the default tiling to start with.

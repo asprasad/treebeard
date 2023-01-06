@@ -1,5 +1,6 @@
 #ifndef _DIALECT_H_
 #define _DIALECT_H_
+#include <optional>
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"

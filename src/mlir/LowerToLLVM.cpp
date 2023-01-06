@@ -10,21 +10,20 @@
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Conversion/SCFToOpenMP/SCFToOpenMP.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
-#include "mlir/Conversion/ArithmeticToLLVM/ArithmeticToLLVM.h"
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
-#include "mlir/Dialect/GPU/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "Dialect.h"
 
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
@@ -103,10 +102,10 @@ Type GenerateGetElementPtr(Operation *op, ArrayRef<Value> operands, ConversionPa
 
   // Extract the memref's aligned pointer
   auto extractMemrefBufferPointer = rewriter.create<LLVM::ExtractValueOp>(location, alignedPtrType, operands[kTreeMemrefOperandNum],
-                                                                          rewriter.getI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
+                                                                          rewriter.getDenseI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
 
   auto extractMemrefOffset = rewriter.create<LLVM::ExtractValueOp>(location, indexType, operands[kTreeMemrefOperandNum],
-                                                                   rewriter.getI64ArrayAttr(kOffsetIndexInMemrefStruct));
+                                                                   rewriter.getDenseI64ArrayAttr(kOffsetIndexInMemrefStruct));
 
   auto actualIndex = rewriter.create<LLVM::AddOp>(location, indexType, static_cast<Value>(extractMemrefOffset), static_cast<Value>(indexVal));
 
@@ -205,12 +204,12 @@ struct InitTileOpLowering : public ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     assert(operands.size() == 5);
     decisionforest::InitTileOpAdaptor tileOpAdaptor(operands);
-    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.thresholds().getType(), 0, getTypeConverter(), tileOpAdaptor.thresholds());
-    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.featureIndices().getType(), 1, getTypeConverter(), tileOpAdaptor.featureIndices());
+    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.getThresholds().getType(), 0, getTypeConverter(), tileOpAdaptor.getThresholds());
+    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.getFeatureIndices().getType(), 1, getTypeConverter(), tileOpAdaptor.getFeatureIndices());
     auto modelMemrefType = op->getOperand(0).getType().cast<MemRefType>();
     auto tileType = modelMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
     if (tileType.getTileSize() > 1)
-      GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.tileShapeID().getType(), 2, getTypeConverter(), tileOpAdaptor.tileShapeID());
+      GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.getTileShapeID().getType(), 2, getTypeConverter(), tileOpAdaptor.getTileShapeID());
     rewriter.eraseOp(op);
     return mlir::success();
   }
@@ -224,13 +223,13 @@ struct InitSparseTileOpLowering : public ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     assert(operands.size() == 6);
     decisionforest::InitSparseTileOpAdaptor tileOpAdaptor(operands);
-    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.thresholds().getType(), 0, getTypeConverter(), tileOpAdaptor.thresholds());
-    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.featureIndices().getType(), 1, getTypeConverter(), tileOpAdaptor.featureIndices());
+    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.getThresholds().getType(), 0, getTypeConverter(), tileOpAdaptor.getThresholds());
+    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.getFeatureIndices().getType(), 1, getTypeConverter(), tileOpAdaptor.getFeatureIndices());
     auto modelMemrefType = op->getOperand(0).getType().cast<MemRefType>();
     auto tileType = modelMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
     if (tileType.getTileSize() > 1)
-      GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.tileShapeID().getType(), 2, getTypeConverter(), tileOpAdaptor.tileShapeID());
-    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.childIndex().getType(), 3, getTypeConverter(), tileOpAdaptor.childIndex());
+      GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.getTileShapeID().getType(), 2, getTypeConverter(), tileOpAdaptor.getTileShapeID());
+    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.getChildIndex().getType(), 3, getTypeConverter(), tileOpAdaptor.getChildIndex());
 
     rewriter.eraseOp(op);
     return mlir::success();
@@ -257,10 +256,10 @@ struct GetModelMemrefSizeOpLowering : public ConversionPattern {
     
     // Extract the memref's aligned pointer
     auto extractMemrefBufferPointer = rewriter.create<LLVM::ExtractValueOp>(location, alignedPtrType, operands[kTreeMemrefOperandNum],
-                                                                            rewriter.getI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
+                                                                            rewriter.getDenseI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
 
     auto extractMemrefOffset = rewriter.create<LLVM::ExtractValueOp>(location, indexType, operands[kTreeMemrefOperandNum],
-                                                                    rewriter.getI64ArrayAttr(kOffsetIndexInMemrefStruct));
+                                                                    rewriter.getDenseI64ArrayAttr(kOffsetIndexInMemrefStruct));
 
     auto actualIndex = rewriter.create<LLVM::AddOp>(location, indexType, static_cast<Value>(extractMemrefOffset), static_cast<Value>(indexVal));
 
@@ -280,7 +279,7 @@ struct GetModelMemrefSizeOpLowering : public ConversionPattern {
 struct DecisionForestToLLVMLoweringPass : public PassWrapper<DecisionForestToLLVMLoweringPass, OperationPass<ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect, memref::MemRefDialect, 
-                    arith::ArithmeticDialect, vector::VectorDialect>();
+                    arith::ArithDialect, vector::VectorDialect>();
   }
   void runOnOperation() final;
 };
@@ -352,7 +351,7 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
 struct DecisionForestToLLVMLoweringPass : public PassWrapper<DecisionForestToLLVMLoweringPass, OperationPass<ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect, memref::MemRefDialect, 
-                    arith::ArithmeticDialect, vector::VectorDialect, omp::OpenMPDialect>();
+                    arith::ArithDialect, vector::VectorDialect, omp::OpenMPDialect>();
   }
   void runOnOperation() final;
 };
@@ -365,9 +364,9 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
   LLVMConversionTarget target(getContext());
   target.addLegalOp<ModuleOp, func::FuncOp, func::ReturnOp>();
   target.addLegalDialect<scf::SCFDialect, omp::OpenMPDialect>();
-  target.addLegalDialect<gpu::GPUDialect, NVVM::NVVMDialect>();
+  // target.addLegalDialect<gpu::GPUDialect, NVVM::NVVMDialect>();
   target.addIllegalDialect<decisionforest::DecisionForestDialect, memref::MemRefDialect>();
-  target.addIllegalDialect<arith::ArithmeticDialect, vector::VectorDialect, math::MathDialect>();
+  target.addIllegalDialect<arith::ArithDialect, vector::VectorDialect, math::MathDialect>();
 
   auto& context = getContext();
   LLVMTypeConverter typeConverter(&getContext(), options);
@@ -377,7 +376,7 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
   populateMemRefToLLVMConversionPatterns(typeConverter, patterns);
   populateVectorToLLVMConversionPatterns(typeConverter, patterns, false);
   populateMathToLLVMConversionPatterns(typeConverter, patterns);
-  arith::populateArithmeticToLLVMConversionPatterns(typeConverter, patterns);
+  arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
 
   patterns.add<LoadTileFeatureIndicesOpLowering,
                LoadTileThresholdOpLowering,
@@ -390,17 +389,17 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
 
   auto module = getOperation();
 
-  if (failed(applyFullConversion(module, target, std::move(patterns)))) {
+  if (failed(applyPartialConversion(module, target, std::move(patterns)))) {
     signalPassFailure();
     llvm::errs() << "Decision forest lowering pass failed\n";
   }
-  // module->dump();    
+  module->dump();    
 }
 
 struct LowerOMPToLLVMPass : public PassWrapper<LowerOMPToLLVMPass, OperationPass<ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect, memref::MemRefDialect, 
-                    arith::ArithmeticDialect, vector::VectorDialect, omp::OpenMPDialect, func::FuncDialect>();
+                    arith::ArithDialect, vector::VectorDialect, omp::OpenMPDialect, func::FuncDialect>();
   }
   void runOnOperation() final {
     LowerToLLVMOptions options(&getContext());
@@ -412,7 +411,7 @@ struct LowerOMPToLLVMPass : public PassWrapper<LowerOMPToLLVMPass, OperationPass
     
     // Convert to OpenMP operations with LLVM IR dialect
     RewritePatternSet patterns(&getContext());
-    arith::populateArithmeticToLLVMConversionPatterns(converter, patterns);
+    arith::populateArithToLLVMConversionPatterns(converter, patterns);
     cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
     populateMemRefToLLVMConversionPatterns(converter, patterns);
     populateFuncToLLVMConversionPatterns(converter, patterns);
@@ -432,7 +431,7 @@ struct LowerOMPToLLVMPass : public PassWrapper<LowerOMPToLLVMPass, OperationPass
 struct PrintModulePass : public PassWrapper<PrintModulePass, OperationPass<ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect, memref::MemRefDialect, 
-                    arith::ArithmeticDialect, vector::VectorDialect, omp::OpenMPDialect>();
+                    arith::ArithDialect, vector::VectorDialect, omp::OpenMPDialect>();
   }
   void runOnOperation() final {
     auto module = getOperation();
@@ -516,11 +515,11 @@ void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module) {
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
   pm.addPass(std::make_unique<DecisionForestToLLVMLoweringPass>());
+  // pm.addPass(std::make_unique<PrintModulePass>());
   pm.addPass(createConvertSCFToOpenMPPass());
-  pm.addPass(createMemRefToLLVMPass());
+  pm.addPass(createMemRefToLLVMConversionPass());
   pm.addPass(createConvertSCFToCFPass());
   pm.addPass(std::make_unique<LowerOMPToLLVMPass>());
-  // pm.addPass(std::make_unique<PrintModulePass>());
   pm.addPass(createReconcileUnrealizedCastsPass());
   
   if (mlir::failed(pm.run(module))) {

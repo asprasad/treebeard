@@ -26,9 +26,9 @@ namespace decisionforest
             if (!traverseTileOp)
                 return mlir::failure();
             
-            auto trees = traverseTileOp.trees();
-            auto nodes = traverseTileOp.nodes();
-            auto dataRows = traverseTileOp.data();
+            auto trees = traverseTileOp.getTrees();
+            auto nodes = traverseTileOp.getNodes();
+            auto dataRows = traverseTileOp.getData();
 
             assert(nodes.size() == trees.size());
             assert(trees.size() == dataRows.size());

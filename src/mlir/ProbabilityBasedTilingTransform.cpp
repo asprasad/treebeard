@@ -1,14 +1,14 @@
 // Implementation of a transformation to tile all trees in a forest based on edge probabilities. 
 // The tile needs to be constant across trees.
-
+#include <optional>
 #include "Dialect.h"
 // #include "Passes.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 
 #include "mlir/Transforms/DialectConversion.h"
@@ -46,7 +46,7 @@ struct TileEnsembleAttribute : public RewritePattern {
     if (!predictForestOp)
          return mlir::failure();
 
-    auto forestAttribute = predictForestOp.ensemble();
+    auto forestAttribute = predictForestOp.getEnsemble();
     auto forest = forestAttribute.GetDecisionForest();
     auto forestType = forestAttribute.getType().cast<decisionforest::TreeEnsembleType>();
     auto tilingDescriptor = forest.GetTree(0).TilingDescriptor();
@@ -88,8 +88,8 @@ struct TileEnsembleAttribute : public RewritePattern {
 
     auto newForestAttribute = decisionforest::DecisionForestAttribute::get(newForestType, forest);
     auto tiledPredictForestOp = rewriter.create<decisionforest::PredictForestOp>(op->getLoc(), predictForestOp.getResult().getType(), 
-                                                                                 newForestAttribute, predictForestOp.data(), 
-                                                                                 predictForestOp.result(), predictForestOp.schedule());
+                                                                                 newForestAttribute, predictForestOp.getData(), 
+                                                                                 predictForestOp.getResult(), predictForestOp.getSchedule());
 
     rewriter.replaceOp(op, static_cast<Value>(tiledPredictForestOp));
     return mlir::success();

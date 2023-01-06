@@ -3,9 +3,9 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Pass/Pass.h"
@@ -84,9 +84,9 @@ struct PipelinedWalkDecisionTreeOpLowering: public ConversionPattern {
     if (!walkTreeOp)
         return mlir::failure();
 
-    auto trees = walkTreeOp.trees();
-    auto dataRows = walkTreeOp.dataRows();
-    auto unrollLoopAttr = walkTreeOp.UnrollLoopAttr();
+    auto trees = walkTreeOp.getTrees();
+    auto dataRows = walkTreeOp.getDataRows();
+    auto unrollLoopAttr = walkTreeOp.getUnrollLoopAttr();
     assert(trees.size() == dataRows.size());
 
     auto location = op->getLoc();
@@ -201,7 +201,7 @@ struct WalkDecisionTreePeeledOpLowering: public ConversionPattern {
 
     auto tree = operands[0];
     auto inputRow = operands[1];
-    auto iterationsToPeelAttr = walkTreeOp.iterationsToPeelAttr();
+    auto iterationsToPeelAttr = walkTreeOp.getIterationsToPeelAttr();
     auto iterationsToPeel = iterationsToPeelAttr.getValue().getSExtValue();
 
     auto location = op->getLoc();
@@ -281,7 +281,7 @@ struct WalkDecisionTreeOpLoweringPass: public PassWrapper<WalkDecisionTreeOpLowe
     ConversionTarget target(getContext());
 
     target.addLegalDialect<memref::MemRefDialect, scf::SCFDialect, 
-                           decisionforest::DecisionForestDialect, math::MathDialect, arith::ArithmeticDialect>();
+                           decisionforest::DecisionForestDialect, math::MathDialect, arith::ArithDialect>();
     target.addIllegalOp<decisionforest::WalkDecisionTreeOp, decisionforest::WalkDecisionTreePeeledOp>();
 
     RewritePatternSet patterns(&getContext());
@@ -303,7 +303,7 @@ struct PipelinedWalkDecisionTreeOpLoweringPass: public PassWrapper<PipelinedWalk
     ConversionTarget target(getContext());
 
     target.addLegalDialect<memref::MemRefDialect, scf::SCFDialect, 
-                           decisionforest::DecisionForestDialect, math::MathDialect, arith::ArithmeticDialect>();
+                           decisionforest::DecisionForestDialect, math::MathDialect, arith::ArithDialect>();
     target.addIllegalOp<decisionforest::PipelinedWalkDecisionTreeOp>();
 
     RewritePatternSet patterns(&getContext());

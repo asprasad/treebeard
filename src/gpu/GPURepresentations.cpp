@@ -1,7 +1,7 @@
 #include "Dialect.h"
 #include "OpLoweringUtils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/GPU/GPUDialect.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/BlockAndValueMapping.h"
 #include "GPURepresentations.h"
 #include "LIRLoweringHelpers.h"
@@ -26,11 +26,11 @@ void GPUArrayBasedRepresentation::GenerateSimpleInitializer(const std::string& f
   mlir::OpBuilder builder(initFunc.getContext());
   builder.setInsertionPointToStart(&entryBlock);
   auto waitOp = builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{});
-  auto alloc = builder.create<gpu::AllocOp>(location, memrefType, waitOp.asyncToken().getType(), ValueRange{waitOp.asyncToken()}, ValueRange{}, ValueRange{});
-  auto transfer = builder.create<gpu::MemcpyOp>(location, alloc.asyncToken().getType(), ValueRange{alloc.asyncToken()}, 
-                                                      alloc.memref(), static_cast<Value>(initFunc.getArgument(0)));
+  auto alloc = builder.create<gpu::AllocOp>(location, memrefType, waitOp.getAsyncToken().getType(), ValueRange{waitOp.getAsyncToken()}, ValueRange{}, ValueRange{});
+  auto transfer = builder.create<gpu::MemcpyOp>(location, alloc.getAsyncToken().getType(), ValueRange{alloc.getAsyncToken()}, 
+                                                      alloc.getMemref(), static_cast<Value>(initFunc.getArgument(0)));
   /*auto waitBeforeReturn =*/ builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{transfer.getAsyncToken()});
-  builder.create<mlir::func::ReturnOp>(location, static_cast<Value>(alloc.memref()));
+  builder.create<mlir::func::ReturnOp>(location, static_cast<Value>(alloc.getMemref()));
   module.push_back(initFunc);
   // rewriter.setInsertionPoint(insertPoint.getBlock(), insertPoint.getPoint());
 }
@@ -55,22 +55,22 @@ void GPUArrayBasedRepresentation::GenerateModelMemrefInitializer(const std::stri
 
   // Allocate the model memref
   auto waitOp = builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{});
-  auto alloc = builder.create<gpu::AllocOp>(location, memrefType, waitOp.asyncToken().getType(), ValueRange{waitOp.asyncToken()}, ValueRange{}, ValueRange{});
+  auto alloc = builder.create<gpu::AllocOp>(location, memrefType, waitOp.getAsyncToken().getType(), ValueRange{waitOp.getAsyncToken()}, ValueRange{}, ValueRange{});
 
-  auto asyncTokenType = alloc.asyncToken().getType();
+  auto asyncTokenType = alloc.getAsyncToken().getType();
   // Allocate and transfer all the arguments
-  auto allocThresholds = builder.create<gpu::AllocOp>(location, thresholdArgType, asyncTokenType, ValueRange{alloc.asyncToken()}, ValueRange{}, ValueRange{});
-  auto transferThresholds = builder.create<gpu::MemcpyOp>(location, asyncTokenType, ValueRange{allocThresholds.asyncToken()}, 
-                                                      allocThresholds.memref(), static_cast<Value>(initModelMemrefFunc.getArgument(0)));
+  auto allocThresholds = builder.create<gpu::AllocOp>(location, thresholdArgType, asyncTokenType, ValueRange{alloc.getAsyncToken()}, ValueRange{}, ValueRange{});
+  auto transferThresholds = builder.create<gpu::MemcpyOp>(location, asyncTokenType, ValueRange{allocThresholds.getAsyncToken()}, 
+                                                      allocThresholds.getMemref(), static_cast<Value>(initModelMemrefFunc.getArgument(0)));
 
-  auto allocFeatureIndices = builder.create<gpu::AllocOp>(location, indexArgType, asyncTokenType, ValueRange{transferThresholds.asyncToken()}, ValueRange{}, ValueRange{});
-  auto transferFeatureIndices = builder.create<gpu::MemcpyOp>(location, asyncTokenType, ValueRange{allocFeatureIndices.asyncToken()}, 
-                                                      allocFeatureIndices.memref(), static_cast<Value>(initModelMemrefFunc.getArgument(1)));
+  auto allocFeatureIndices = builder.create<gpu::AllocOp>(location, indexArgType, asyncTokenType, ValueRange{transferThresholds.getAsyncToken()}, ValueRange{}, ValueRange{});
+  auto transferFeatureIndices = builder.create<gpu::MemcpyOp>(location, asyncTokenType, ValueRange{allocFeatureIndices.getAsyncToken()}, 
+                                                      allocFeatureIndices.getMemref(), static_cast<Value>(initModelMemrefFunc.getArgument(1)));
 
-  auto allocTileShapeIds = builder.create<gpu::AllocOp>(location, tileShapeIDArgType, asyncTokenType, ValueRange{transferFeatureIndices.asyncToken()}, 
+  auto allocTileShapeIds = builder.create<gpu::AllocOp>(location, tileShapeIDArgType, asyncTokenType, ValueRange{transferFeatureIndices.getAsyncToken()}, 
                                                         ValueRange{}, ValueRange{});
-  auto transferTileShapeIds = builder.create<gpu::MemcpyOp>(location, asyncTokenType, ValueRange{allocTileShapeIds.asyncToken()}, 
-                                                      allocTileShapeIds.memref(), static_cast<Value>(initModelMemrefFunc.getArgument(2)));
+  auto transferTileShapeIds = builder.create<gpu::MemcpyOp>(location, asyncTokenType, ValueRange{allocTileShapeIds.getAsyncToken()}, 
+                                                      allocTileShapeIds.getMemref(), static_cast<Value>(initModelMemrefFunc.getArgument(2)));
 
   // Create the gpu.launch op
   auto oneIndexConst = builder.create<arith::ConstantIndexOp>(location, 1);
@@ -78,27 +78,27 @@ void GPUArrayBasedRepresentation::GenerateModelMemrefInitializer(const std::stri
   int32_t numBlocks = std::ceil((double)memrefType.getShape()[0]/numThreadsPerBlock);
   auto numThreadBlocksConst = builder.create<arith::ConstantIndexOp>(location, numBlocks);
   auto gpuLaunch = builder.create<gpu::LaunchOp>(location, numThreadBlocksConst, oneIndexConst, oneIndexConst, numThreadBlocksConst, oneIndexConst, oneIndexConst,
-                                                nullptr, asyncTokenType, transferTileShapeIds.asyncToken());
+                                                nullptr, asyncTokenType, transferTileShapeIds.getAsyncToken());
 
-  builder.setInsertionPointToStart(&gpuLaunch.body().front());
+  builder.setInsertionPointToStart(&gpuLaunch.getBody().front());
   
   // // Generate the body of the launch op
   auto memrefLengthConst = builder.create<arith::ConstantIndexOp>(location, memrefType.getShape()[0]);
-  auto firstThreadNum = builder.create<arith::MulIOp>(location, gpuLaunch.blockSizeX(), gpuLaunch.getBlockIds().x);
+  auto firstThreadNum = builder.create<arith::MulIOp>(location, gpuLaunch.getBlockSizeX(), gpuLaunch.getBlockIds().x);
   auto elementIndex = builder.create<arith::AddIOp>(location, firstThreadNum, gpuLaunch.getThreadIds().x);
   auto inBoundsCondition = builder.create<arith::CmpIOp>(location, arith::CmpIPredicate::slt, elementIndex, memrefLengthConst);
   auto ifInBounds = builder.create<scf::IfOp>(location, inBoundsCondition, false);
   {
     // Generate the initialization code
     auto thenBuilder = ifInBounds.getThenBodyBuilder();
-    this->GenModelMemrefInitFunctionBody(memrefType, alloc.memref(), thenBuilder, location, elementIndex, 
-                                         allocThresholds.memref(), allocFeatureIndices.memref(), allocTileShapeIds.memref());
+    this->GenModelMemrefInitFunctionBody(memrefType, alloc.getMemref(), thenBuilder, location, elementIndex, 
+                                         allocThresholds.getMemref(), allocFeatureIndices.getMemref(), allocTileShapeIds.getMemref());
   }
   builder.create<gpu::TerminatorOp>(location);
   // Wait and return 
   builder.setInsertionPointAfter(gpuLaunch); 
   /*auto waitBeforeReturn =*/ builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{});
-  builder.create<mlir::func::ReturnOp>(location, static_cast<Value>(alloc.memref()));
+  builder.create<mlir::func::ReturnOp>(location, static_cast<Value>(alloc.getMemref()));
   module.push_back(initModelMemrefFunc);
 }
 
@@ -112,7 +112,7 @@ mlir::LogicalResult GPUArrayBasedRepresentation::GenerateModelGlobals(Operation 
   auto func = op->getParentOfType<func::FuncOp>();
   assert (func);
 
-  mlir::decisionforest::DecisionForestAttribute forestAttribute = ensembleConstOp.forest();
+  mlir::decisionforest::DecisionForestAttribute forestAttribute = ensembleConstOp.getForest();
   mlir::decisionforest::DecisionForest<>& forest = forestAttribute.GetDecisionForest();
   auto forestType = ensembleConstOp.getResult().getType().cast<decisionforest::TreeEnsembleType>();
   assert (forestType.doAllTreesHaveSameTileSize()); // There is still an assumption here that all trees have the same tile size

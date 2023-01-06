@@ -1,9 +1,8 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 
 #include "Representations.h"
@@ -91,7 +90,7 @@ ArrayBasedRepresentation::GlobalMemrefTypes ArrayBasedRepresentation::AddGlobalM
   const std::string& lengthMemrefName,
   const std::string& treeInfo,
   std::shared_ptr<decisionforest::IModelSerializer> serializer) {
-  mlir::decisionforest::DecisionForestAttribute forestAttribute = ensembleConstOp.forest();
+  mlir::decisionforest::DecisionForestAttribute forestAttribute = ensembleConstOp.getForest();
   mlir::decisionforest::DecisionForest<>& forest = forestAttribute.GetDecisionForest();
 
   SaveAndRestoreInsertionPoint saveAndRestoreInsertPoint(rewriter);
@@ -399,7 +398,7 @@ std::tuple<Type, Type, Type, Type> SparseRepresentation::AddGlobalMemrefs(mlir::
                                         const std::string& leavesMemrefName, const std::string& leavesLengthMemrefName,
                                         const std::string& leavesOffsetMemrefName, const std::string& treeInfo,
                                         std::shared_ptr<IModelSerializer> serializer) {
-  mlir::decisionforest::DecisionForestAttribute forestAttribute = ensembleConstOp.forest();
+  mlir::decisionforest::DecisionForestAttribute forestAttribute = ensembleConstOp.getForest();
   mlir::decisionforest::DecisionForest<>& forest = forestAttribute.GetDecisionForest();
 
   SaveAndRestoreInsertionPoint saveAndRestoreInsertPoint(rewriter);

@@ -19,13 +19,13 @@ namespace detail
 struct DecisionTreeAttrStorage : public ::mlir::AttributeStorage
 {
     DecisionTreeAttrStorage(::mlir::Type type, const DecisionForest<>& forest, int64_t index)
-      : ::mlir::AttributeStorage(type), m_forest(forest), m_index(index) { }
+      : m_type(type), m_forest(forest), m_index(index) { }
 
     /// The hash key is a tuple of the parameter types.
     using KeyTy = std::tuple<::mlir::Type, DecisionForest<>, int64_t>;
 
     bool operator==(const KeyTy &tblgenKey) const {
-        if (!(getType() == std::get<0>(tblgenKey)))
+        if (!(m_type == std::get<0>(tblgenKey)))
             return false;
         if (!(m_forest == std::get<1>(tblgenKey)))
             return false;
@@ -50,6 +50,7 @@ struct DecisionTreeAttrStorage : public ::mlir::AttributeStorage
         return new (allocator.allocate<DecisionTreeAttrStorage>())
                     DecisionTreeAttrStorage(type, forest, index);
     }
+    ::mlir::Type m_type;
     DecisionForest<> m_forest;
     int64_t m_index;
 };
@@ -58,13 +59,13 @@ struct DecisionTreeAttrStorage : public ::mlir::AttributeStorage
 struct DecisionForestAttrStorage : public ::mlir::AttributeStorage
 {
     DecisionForestAttrStorage(::mlir::Type type, const DecisionForest<>& forest)
-      : ::mlir::AttributeStorage(type), m_forest(forest) { }
+      : m_type(type), m_forest(forest) { }
 
     /// The hash key is a tuple of the parameter types.
     using KeyTy = std::tuple<::mlir::Type, DecisionForest<>>;
 
     bool operator==(const KeyTy &tblgenKey) const {
-        if (!(getType() == std::get<0>(tblgenKey)))
+        if (!(m_type == std::get<0>(tblgenKey)))
             return false;
         if (!(m_forest == std::get<1>(tblgenKey)))
             return false;
@@ -86,6 +87,7 @@ struct DecisionForestAttrStorage : public ::mlir::AttributeStorage
       return new (allocator.allocate<DecisionForestAttrStorage>())
           DecisionForestAttrStorage(type, forest);
     }
+    ::mlir::Type m_type;
     DecisionForest<> m_forest;
 };
 
@@ -109,7 +111,7 @@ public:
         int64_t index = getImpl()->m_index;
         auto& tree = getImpl()->m_forest.GetTree(index);
         std::string treeStr = tree.PrintToString();
-        os << "Tree = ( " << treeStr << ") treeType = (" << getImpl()->getType() << ")";
+        os << "Tree = ( " << treeStr << ") treeType = (" << getImpl()->m_type << ")";
     }
 
 };
@@ -129,13 +131,16 @@ public:
     }
     void Print(::mlir::DialectAsmPrinter &os) {
         std::string forestStr = getImpl()->m_forest.PrintToString();
-        auto ensembleMLIRType = getImpl()->getType();
+        auto ensembleMLIRType = getImpl()->m_type;
         mlir::decisionforest::TreeEnsembleType ensembleType = ensembleMLIRType.cast<mlir::decisionforest::TreeEnsembleType>();
         os << "Forest = ( " << forestStr << " ) forestType = (" << ensembleType << ")";
     }
     DecisionForest<>& GetDecisionForest() {
         return getImpl()->m_forest;
     }
+    mlir::Type getType() const {
+        return getImpl()->m_type;
+     }
 };
 
 }

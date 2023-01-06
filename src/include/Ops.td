@@ -18,7 +18,7 @@ def DecisionForestDialect : Dialect {
   let name = "decisionforest";
   let cppNamespace = "::mlir::decisionforest";
   let summary = "A high-level dialect to specify and optimize decision trees";
-
+  let useDefaultTypePrinterParser = 1;
   let extraClassDeclaration = [{
     Attribute parseAttribute(DialectAsmParser &parser,
                              Type type) const override;
@@ -130,20 +130,20 @@ def PredictForestOp : DecisionForest_Op<"predict_ensemble"> {
     // Just returns its result argument after filling in the results
     let results = (outs ReturnType);
 
-    let extraClassDeclaration = [{
-      int32_t getBatchSize() { 
+    // let extraClassDeclaration = [{
+    //   int32_t getBatchSize() { 
        
-        if (data().getType().isa<mlir::RankedTensorType>()) {
-          auto tensorReturnType = data().getType().cast<mlir::RankedTensorType>();
-          return tensorReturnType.getShape()[0];
-        }
-        else if (data().getType().isa<mlir::MemRefType>()) {
-          auto memrefReturnType = data().getType().cast<mlir::MemRefType>();
-          return memrefReturnType.getShape()[0];
-        }
-        return 1;
-      }
-    }];
+    //     if (data().getType().isa<mlir::RankedTensorType>()) {
+    //       auto tensorReturnType = data().getType().cast<mlir::RankedTensorType>();
+    //       return tensorReturnType.getShape()[0];
+    //     }
+    //     else if (data().getType().isa<mlir::MemRefType>()) {
+    //       auto memrefReturnType = data().getType().cast<mlir::MemRefType>();
+    //       return memrefReturnType.getShape()[0];
+    //     }
+    //     return 1;
+    //   }
+    // }];
 }
 
 def WalkDecisionTreeOp : DecisionForest_Op<"walk_decision_tree"> {
@@ -184,7 +184,7 @@ def FeatureIndexType : AnyTypeOf<[I8, I16, I32, I64]>;
 def TileShapeType : AnyTypeOf<[I8, I16, I32, I64]>;
 def ChildIndexType : AnyTypeOf<[I8, I16, I32, I64]>;
 
-def TreeConstantOp : DecisionForest_Op<"tree", [NoSideEffect]> {
+def TreeConstantOp : DecisionForest_Op<"tree", [Pure]> {
   let summary = "Tree constant operation";
   let description = "Represents a constant whose value is a single tree in the forest. Takes no arguments and gives a tree value out.";
 
@@ -193,7 +193,7 @@ def TreeConstantOp : DecisionForest_Op<"tree", [NoSideEffect]> {
   let results = (outs TreeType);
 }
 
-def EnsembleConstantOp : DecisionForest_Op<"ensemble", [NoSideEffect]> {
+def EnsembleConstantOp : DecisionForest_Op<"ensemble", [Pure]> {
   let summary = "Ensemble constant operation";
   let description = "Represents a constant whose value is the full forest. Takes no arguments and gives an ensemble value out.";
   let arguments = (ins DecisionForestAttr:$forest);
@@ -201,7 +201,7 @@ def EnsembleConstantOp : DecisionForest_Op<"ensemble", [NoSideEffect]> {
   let results = (outs TreeEnsembleType);
 }
 
-def GetTreeFromEnsembleOp : DecisionForest_Op<"getTree", [NoSideEffect]> {
+def GetTreeFromEnsembleOp : DecisionForest_Op<"getTree", [Pure]> {
   let summary = "Get single tree from the forest.";
   let description = "Index the forest and get a single tree. Takes two arguments -- an ensemble and an integer and returns a tree value.";
   let arguments = (ins TreeEnsembleType:$forest, Index:$treeIndex);
@@ -209,7 +209,7 @@ def GetTreeFromEnsembleOp : DecisionForest_Op<"getTree", [NoSideEffect]> {
   let results = (outs TreeType);
 }
 
-def GetTreeClassIdOp : DecisionForest_Op<"getTreeClassId", [NoSideEffect]> {
+def GetTreeClassIdOp : DecisionForest_Op<"getTreeClassId", [Pure]> {
   let summary = "Get tree class from ensemble.";
   let description = "Index the forest and get the class Id of the tree at that index. Takes two arguments -- an ensemble and an integer and returns a tree value.";
   let arguments = (ins TreeEnsembleType:$forest, Index:$treeIndex);
@@ -217,7 +217,7 @@ def GetTreeClassIdOp : DecisionForest_Op<"getTreeClassId", [NoSideEffect]> {
   let results = (outs ClassIdValueType);
 }
 
-def GetRootOp : DecisionForest_Op<"getRoot", [NoSideEffect]> {
+def GetRootOp : DecisionForest_Op<"getRoot", [Pure]> {
   let summary = "Get the root of a tree from the forest.";
   let description = "Get the root of the tree passed as an argument. Takes one argument -- a tree and returns a Node value.";
   let arguments = (ins TreeType:$tree);
@@ -226,7 +226,7 @@ def GetRootOp : DecisionForest_Op<"getRoot", [NoSideEffect]> {
 }
 
 // TODO the argument node type needs to be parameterized
-def IsLeafOp : DecisionForest_Op<"isLeaf", [NoSideEffect]> {
+def IsLeafOp : DecisionForest_Op<"isLeaf", [Pure]> {
   let summary = "Check if the node passed as argument is a leaf.";
   let description = "Check if the node passed as argument is a leaf.";
   let arguments = (ins TreeType:$tree, NodeType:$node);
@@ -234,7 +234,7 @@ def IsLeafOp : DecisionForest_Op<"isLeaf", [NoSideEffect]> {
   let results = (outs I1);
 }
 
-def IsLeafTileOp : DecisionForest_Op<"isLeafTile", [NoSideEffect]> {
+def IsLeafTileOp : DecisionForest_Op<"isLeafTile", [Pure]> {
   let summary = "Check if the node passed as argument is a leaf tile.";
   let description = "Check if the node passed as argument is a leaf tile.";
   let arguments = (ins TreeType:$tree, NodeType:$node);
@@ -242,7 +242,7 @@ def IsLeafTileOp : DecisionForest_Op<"isLeafTile", [NoSideEffect]> {
   let results = (outs I1);
 }
 
-def GetLeafValueOp : DecisionForest_Op<"getLeafValue", [NoSideEffect]> {
+def GetLeafValueOp : DecisionForest_Op<"getLeafValue", [Pure]> {
   let summary = "Get value of passed leaf node.";
   let description = "Get value of passed leaf node.";
   let arguments = (ins TreeType:$tree, NodeType:$node);
@@ -250,7 +250,7 @@ def GetLeafValueOp : DecisionForest_Op<"getLeafValue", [NoSideEffect]> {
   let results = (outs LeafNodeValueType);
 }
 
-def GetLeafTileValueOp : DecisionForest_Op<"getLeafTileValue", [NoSideEffect]> {
+def GetLeafTileValueOp : DecisionForest_Op<"getLeafTileValue", [Pure]> {
   let summary = "Get value of passed leaf node.";
   let description = "Get value of passed leaf node.";
   let arguments = (ins TreeType:$tree, NodeType:$node);
@@ -258,7 +258,7 @@ def GetLeafTileValueOp : DecisionForest_Op<"getLeafTileValue", [NoSideEffect]> {
   let results = (outs LeafNodeValueType);
 }
 
-def TraverseTreeTileOp : DecisionForest_Op<"traverseTreeTile", [NoSideEffect]> {
+def TraverseTreeTileOp : DecisionForest_Op<"traverseTreeTile", [Pure]> {
   let summary = "Traverse one tile of tree.";
   let description = "Traverse one tile of the tree passed as argument starting from the node passed as argument. Returns the resultant node.";
   let arguments = (ins TreeType:$tree, NodeType:$node, InputDataType:$data);
@@ -266,7 +266,7 @@ def TraverseTreeTileOp : DecisionForest_Op<"traverseTreeTile", [NoSideEffect]> {
   let results = (outs NodeType);
 }
 
-def InterleavedTraverseTreeTileOp : DecisionForest_Op<"interleavedTraverseTileOp", [NoSideEffect, SameVariadicOperandSize]> {
+def InterleavedTraverseTreeTileOp : DecisionForest_Op<"interleavedTraverseTileOp", [Pure, SameVariadicOperandSize]> {
   let summary = "Traverse each <node, data> pair for the list of pairs that are passed in.";
   let description = "Traverse each element wise <node, data> from individual input arguments that are passed in.";
   let arguments = (ins Variadic<TreeType>:$trees, Variadic<NodeType>:$nodes, Variadic<InputDataType>:$data);
@@ -274,7 +274,7 @@ def InterleavedTraverseTreeTileOp : DecisionForest_Op<"interleavedTraverseTileOp
   let results = (outs Variadic<NodeType>);
 }
 
-def TraverseTileOfConstTreeOp : DecisionForest_Op<"traverseTileOfConstTree", [NoSideEffect]> {
+def TraverseTileOfConstTreeOp : DecisionForest_Op<"traverseTileOfConstTree", [Pure]> {
   let summary = "Traverse one tile of a constant tree.";
   let description = "Traverse one tile of a constant tree stored as an attribute starting from the node passed as argument. Returns the resultant node.";
   let arguments = (ins DecisionTreeAttr:$tree, NodeType:$node, InputDataType:$data);
@@ -286,7 +286,7 @@ def TiledNumericalNodeMemRef  : MemRefOf<[TiledNumericalNodeType]>;
 def TileOfThresholdTypes : AnyTypeOf<[ThresholdValueType, VectorOf<[ThresholdValueType]>]>;
 def TileOfFeatureIndices : AnyTypeOf<[FeatureIndexType, VectorOf<[FeatureIndexType]>]>;
 
-def LoadTileThresholdsOp : DecisionForest_Op<"loadTileThresholds", [NoSideEffect]> {
+def LoadTileThresholdsOp : DecisionForest_Op<"loadTileThresholds", [Pure]> {
   let summary = "Load the thresholds from a tree tile.";
   let description = "Load all the thresholds from a tile in a tree memref. Takes a memref and an index into the memref and returns a vector of floating point values.";
   let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex);
@@ -294,7 +294,7 @@ def LoadTileThresholdsOp : DecisionForest_Op<"loadTileThresholds", [NoSideEffect
   let results = (outs TileOfThresholdTypes);
 }
 
-def LoadTileFeatureIndicesOp : DecisionForest_Op<"loadTileFeatureIndices", [NoSideEffect]> {
+def LoadTileFeatureIndicesOp : DecisionForest_Op<"loadTileFeatureIndices", [Pure]> {
   let summary = "Load the feature indices from a tree tile.";
   let description = "Load all the feature indices from a tile in a tree memref. Takes a memref and an index into the memref and returns a vector of floating point values.";
   let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex);
@@ -302,7 +302,7 @@ def LoadTileFeatureIndicesOp : DecisionForest_Op<"loadTileFeatureIndices", [NoSi
   let results = (outs TileOfFeatureIndices);
 }
 
-def LoadTileShapeOp : DecisionForest_Op<"loadTileShape", [NoSideEffect]> {
+def LoadTileShapeOp : DecisionForest_Op<"loadTileShape", [Pure]> {
   let summary = "Load the shape of a tree tile.";
   let description = "Load the shape ID from a tile in a tree memref. Takes a memref and an index into the memref and returns an integer.";
   let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex);
@@ -310,7 +310,7 @@ def LoadTileShapeOp : DecisionForest_Op<"loadTileShape", [NoSideEffect]> {
   let results = (outs TileShapeType);
 }
 
-def LoadChildIndexOp : DecisionForest_Op<"loadChildIndex", [NoSideEffect]> {
+def LoadChildIndexOp : DecisionForest_Op<"loadChildIndex", [Pure]> {
   let summary = "Load the child index of a tree tile.";
   let description = "Load the child index from a tile in a tree memref. Takes a memref and an index into the memref and returns an integer.";
   let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex);
@@ -339,7 +339,7 @@ def InitSparseTileOp : DecisionForest_Op<"initSparseTile"> {
                        ChildIndexType:$childIndex);
 }
 
-def IndexToNodeOp : DecisionForest_Op<"indexToNode", [NoSideEffect]> {
+def IndexToNodeOp : DecisionForest_Op<"indexToNode", [Pure]> {
   let summary = "Casts an index into a tree memref into a node type.";
   let description = "Casts an index into a tree memref into a node type. This is a hack so that we don't have to change any block arguments while lowering.";
   let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex);
@@ -347,7 +347,7 @@ def IndexToNodeOp : DecisionForest_Op<"indexToNode", [NoSideEffect]> {
   let results = (outs NodeType);
 }
 
-def NodeToIndexOp : DecisionForest_Op<"nodeToIndex", [NoSideEffect]> {
+def NodeToIndexOp : DecisionForest_Op<"nodeToIndex", [Pure]> {
   let summary = "Casts a node into an index into a tree memref.";
   let description = "Casts a node into an index into a tree memref. This is a hack so that we don't have to change too any block arguments while lowering.";
   let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, NodeType:$node);
@@ -355,7 +355,7 @@ def NodeToIndexOp : DecisionForest_Op<"nodeToIndex", [NoSideEffect]> {
   let results = (outs Index);
 }
 
-def GetModelMemrefSizeOp : DecisionForest_Op<"getModelMemrefSizeOp", [NoSideEffect]> {
+def GetModelMemrefSizeOp : DecisionForest_Op<"getModelMemrefSizeOp", [Pure]> {
   let summary = "Gets the size (in bytes) of the argument model memref.";
   let description = "Gets the size (in bytes) of the argument model memref. Takes into account the actual size of the tile on the target to which we are compiling.";
   let arguments = (ins TiledNumericalNodeMemRef:$modelMemref, Index:$length);
@@ -367,7 +367,7 @@ def GetModelMemrefSizeOp : DecisionForest_Op<"getModelMemrefSizeOp", [NoSideEffe
 //     string myStr = "";
 // }
 
-// def NumericalNodeConstantOp : NodeConstantOp<"numerical", [NoSideEffect]> {
+// def NumericalNodeConstantOp : NodeConstantOp<"numerical", [Pure]> {
 //   let arguments = (ins F64ElementsAttr:$threshold, I32ElementsAttr:$featureIndex, NodeType:$left, NodeType:$right);
 //   let results = (outs NumericalNodeType);
 //   let myStr = "abc";
@@ -377,7 +377,7 @@ def GetModelMemrefSizeOp : DecisionForest_Op<"getModelMemrefSizeOp", [NoSideEffe
 //   
 // }
 
-// def LeafNodeConstantOp : NodeConstantOp<"numerical", [NoSideEffect]> {
+// def LeafNodeConstantOp : NodeConstantOp<"numerical", [Pure]> {
 //   let arguments = (ins F64ElementsAttr:$value);
 //   let results = (outs LeafNodeType);
 // }

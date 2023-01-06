@@ -3,14 +3,14 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Dialect/GPU/ParallelLoopMapper.h"
+#include "mlir/Dialect/GPU/Transforms/ParallelLoopMapper.h"
 
 using namespace mlir;
 
@@ -151,7 +151,7 @@ struct PredictForestOpLowering: public ConversionPattern {
     state.resultMemref = operands[1];
 
     // Create the decision tree constant
-    auto forestAttribute = forestOp.ensemble(); // Get the ensemble attribute
+    auto forestAttribute = forestOp.getEnsemble(); // Get the ensemble attribute
     auto forestType = forestAttribute.getType().cast<mlir::decisionforest::TreeEnsembleType>();
     state.forestConst = rewriter.create<mlir::decisionforest::EnsembleConstantOp>(location, forestType, forestAttribute);
 
@@ -216,7 +216,7 @@ struct PredictForestOpLowering: public ConversionPattern {
         location,
         treeClassElementType,
         static_cast<Value>(treeClassesMemref),
-        ValueRange({state.zeroIndexConst, state.zeroIndexConst}));
+        ValueRange(llvm::ArrayRef<Value>{state.zeroIndexConst, state.zeroIndexConst}));
 
       auto maxClassLoop = rewriter.create<scf::ForOp>(
         location,
@@ -232,7 +232,7 @@ struct PredictForestOpLowering: public ConversionPattern {
         location,
         treeClassElementType,
         static_cast<Value>(treeClassesMemref),
-        ValueRange({state.zeroIndexConst, k}));
+        ValueRange(llvm::ArrayRef<Value>{state.zeroIndexConst, k}));
       
       auto maxValue = maxClassLoop.getLoopBody().getArgument(1);
       auto maxIndex = maxClassLoop.getLoopBody().getArgument(2);
@@ -292,7 +292,7 @@ struct PredictForestOpLowering: public ConversionPattern {
         // std::vector<Value> values(batchSize, static_cast<Value>(floatConstZero));
 
         // Create the decision tree constant
-        auto forestAttribute = forestOp.ensemble(); // Get the ensemble attribute
+        auto forestAttribute = forestOp.getEnsemble(); // Get the ensemble attribute
         auto forestType = forestAttribute.getType().cast<mlir::decisionforest::TreeEnsembleType>();
         
         auto batchLoop = rewriter.create<scf::ForOp>(location, state.zeroIndexConst, state.batchSizeConst, state.oneIndexConst/*, static_cast<Value>(memrefResult)*/);
@@ -423,7 +423,7 @@ struct PredictForestOpLowering: public ConversionPattern {
             location,
             static_cast<Value>(state.initialValueConst),
             static_cast<Value>(row),
-            ValueRange({state.zeroIndexConst, j}));
+            ValueRange(llvm::ArrayRef<Value>{state.zeroIndexConst, j}));
           rewriter.setInsertionPointAfter(innerLoop);
         }
       }
@@ -499,7 +499,7 @@ struct PredictForestOpLowering: public ConversionPattern {
         location,
         state.treeClassesMemrefType.getElementType(),
         batchTreeClassMemref,
-        ValueRange({state.zeroIndexConst, classIdIndex}));
+        ValueRange(llvm::ArrayRef<Value>{state.zeroIndexConst, classIdIndex}));
       
       auto accumulatedValue = rewriter.create<arith::AddFOp>(location, state.dataMemrefType.getElementType(), currentValue, result);
       rewriter.create<memref::StoreOp>(location, static_cast<Value>(accumulatedValue), batchTreeClassMemref, ValueRange({state.zeroIndexConst, classIdIndex}));
@@ -1058,7 +1058,7 @@ struct PredictForestOpLowering: public ConversionPattern {
     InitializeResultMemref(rewriter, location, state);
     InitializeTreeClassWeightsMemref(rewriter, location, state);
 
-    auto scheduleAttribute = forestOp.schedule();
+    auto scheduleAttribute = forestOp.getSchedule();
     auto& schedule = *scheduleAttribute.GetSchedule();
 
     // Generate the loop nest
@@ -1068,7 +1068,7 @@ struct PredictForestOpLowering: public ConversionPattern {
       GenerateLoop(rewriter, location, *index, std::list<Value>{}, std::list<Value>{}, state);
 
     // Generate the transformations to compute final prediction (sigmoid etc)
-    TransformResultMemref(rewriter, location, forestOp.ensemble().GetDecisionForest().GetPredictionTransformation(), state);
+    TransformResultMemref(rewriter, location, forestOp.getEnsemble().GetDecisionForest().GetPredictionTransformation(), state);
     rewriter.replaceOp(op, static_cast<Value>(state.resultMemref));
     return mlir::success();
   }
@@ -1084,7 +1084,7 @@ struct HighLevelIRToMidLevelIRLoweringPass: public PassWrapper<HighLevelIRToMidL
 
     target.addLegalDialect<memref::MemRefDialect, scf::SCFDialect, 
                            decisionforest::DecisionForestDialect, math::MathDialect,
-                           arith::ArithmeticDialect, func::FuncDialect>();
+                           arith::ArithDialect, func::FuncDialect>();
 
     target.addIllegalOp<decisionforest::PredictForestOp>();
 

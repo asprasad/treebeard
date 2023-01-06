@@ -7,9 +7,9 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 
 #include "mlir/Transforms/DialectConversion.h"
@@ -75,7 +75,7 @@ struct ReorderEnsembleConstants : public RewritePattern {
     if (!predictOp)
          return mlir::failure();
 
-    auto forestAttribute = predictOp.ensemble();
+    auto forestAttribute = predictOp.getEnsemble();
     auto forest = forestAttribute.GetDecisionForest();
     auto forestType = forestAttribute.getType().cast<decisionforest::TreeEnsembleType>();
     auto tilingDescriptor = forest.GetTree(0).TilingDescriptor();
@@ -121,8 +121,8 @@ struct ReorderEnsembleConstants : public RewritePattern {
 
     auto newForestAttribute = decisionforest::DecisionForestAttribute::get(forestType, forest);
     auto reorderedPredictForestOp = rewriter.create<decisionforest::PredictForestOp>(op->getLoc(), predictOp.getResult().getType(), 
-                                                                                 newForestAttribute, predictOp.data(), 
-                                                                                 predictOp.result(), predictOp.schedule());
+                                                                                 newForestAttribute, predictOp.getData(), 
+                                                                                 predictOp.getResult(), predictOp.getSchedule());
     rewriter.replaceOp(op, static_cast<Value>(reorderedPredictForestOp));
     return mlir::success();
   }
@@ -292,9 +292,9 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
     if (!predictOp)
          return mlir::failure();
 
-    auto scheduleAttribute = predictOp.schedule();
+    auto scheduleAttribute = predictOp.getSchedule();
     auto schedule = scheduleAttribute.GetSchedule();
-    auto forestAttribute = predictOp.ensemble();
+    auto forestAttribute = predictOp.getEnsemble();
     auto& forest = forestAttribute.GetDecisionForest();
     
     // Don't match if we've already modified the schedule on this op. Prevents
