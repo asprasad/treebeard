@@ -12,9 +12,11 @@
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
+#include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -22,6 +24,9 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+
+#include "mlir/Dialect/MemRef/Transforms/Passes.h"
+
 #include "Dialect.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -36,9 +41,6 @@
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
-
-#include "mlir/Dialect/Math/IR/Math.h"
-#include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
@@ -55,12 +57,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/MemoryBuffer.h"
-
-// #include "mlir/Dialect/StandardOps/Transforms/Passes.h"
-// #include "mlir/Dialect/SCF/Passes.h"
-// #include "mlir/Dialect/Tensor/Transforms/Passes.h"
-// #include "mlir/Transforms/Passes.h"
-// #include "mlir/Dialect/Linalg/Passes.h"
 
 using namespace mlir;
 
@@ -373,6 +369,7 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
   decisionforest::AddTreebeardTypeConversions(context, typeConverter);
 
   RewritePatternSet patterns(&getContext());
+  populateAffineToStdConversionPatterns(patterns);
   populateMemRefToLLVMConversionPatterns(typeConverter, patterns);
   populateVectorToLLVMConversionPatterns(typeConverter, patterns, false);
   populateMathToLLVMConversionPatterns(typeConverter, patterns);
@@ -393,7 +390,7 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
     signalPassFailure();
     llvm::errs() << "Decision forest lowering pass failed\n";
   }
-  module->dump();    
+  // module->dump();    
 }
 
 struct LowerOMPToLLVMPass : public PassWrapper<LowerOMPToLLVMPass, OperationPass<ModuleOp>> {
@@ -512,10 +509,11 @@ void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module) {
 #else // OMP_SUPPORT
 void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module) {
   // llvm::DebugFlag = true;
-  // Lower from high-level IR to mid-level IR
+  // Lower from low-level IR to LLVM IR
   mlir::PassManager pm(&context);
-  pm.addPass(std::make_unique<DecisionForestToLLVMLoweringPass>());
+  pm.addPass(memref::createExpandStridedMetadataPass());
   // pm.addPass(std::make_unique<PrintModulePass>());
+  pm.addPass(std::make_unique<DecisionForestToLLVMLoweringPass>());
   pm.addPass(createConvertSCFToOpenMPPass());
   pm.addPass(createMemRefToLLVMConversionPass());
   pm.addPass(createConvertSCFToCFPass());
