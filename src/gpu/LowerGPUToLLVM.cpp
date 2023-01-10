@@ -25,6 +25,7 @@
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
+#include "mlir/Dialect/MemRef/Transforms/Passes.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -266,28 +267,46 @@ void GpuToLLVMConversionPass::runOnOperation() {
     signalPassFailure();
 }
 
-}
+struct PrintModulePass : public PassWrapper<PrintModulePass, OperationPass<ModuleOp>> {
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect, memref::MemRefDialect, 
+                    arith::ArithDialect, vector::VectorDialect, omp::OpenMPDialect>();
+  }
+  void runOnOperation() final {
+    auto module = getOperation();
+    module->dump();
+  }
+};
+
+} // namespace
 
 namespace mlir
 {
 namespace decisionforest
 {
 void LowerGPUToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module) {
+  // Initialize LLVM NVPTX backend.
+  LLVMInitializeNVPTXTarget();
+  LLVMInitializeNVPTXTargetInfo();
+  LLVMInitializeNVPTXTargetMC();
+  LLVMInitializeNVPTXAsmPrinter();
+
   // llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
   // pm.addPass(createConvertSCFToCFPass());
   pm.addPass(createGpuKernelOutliningPass());
+  pm.addPass(memref::createExpandStridedMetadataPass());
   // pm.addPass(createMemRefToLLVMPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
   pm.addNestedPass<gpu::GPUModuleOp>(std::make_unique<LowerGpuOpsToNVVMOpsPass>());
-  // pm.addNestedPass<gpu::GPUModuleOp>(createGpuToC)
-  // pm.addPass(createConvertSCFToCFPass());
   // pm.addPass(std::make_unique<LowerOMPToLLVMPass>());
-  // // pm.addPass(std::make_unique<PrintModulePass>());
   pm.addPass(createReconcileUnrealizedCastsPass());
+  pm.addNestedPass<gpu::GPUModuleOp>(createGpuSerializeToCubinPass("nvptx64-nvidia-cuda", "sm_35", "+ptx60"));
+  pm.addPass(createConvertSCFToCFPass());
   pm.addPass(std::make_unique<GpuToLLVMConversionPass>());
   pm.addPass(createReconcileUnrealizedCastsPass());
+  pm.addPass(std::make_unique<PrintModulePass>());
   
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to LLVM failed.\n";
