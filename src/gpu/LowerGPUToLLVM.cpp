@@ -306,7 +306,7 @@ void LowerGPUToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module) {
   pm.addPass(createConvertSCFToCFPass());
   pm.addPass(std::make_unique<GpuToLLVMConversionPass>());
   pm.addPass(createReconcileUnrealizedCastsPass());
-  pm.addPass(std::make_unique<PrintModulePass>());
+  // pm.addPass(std::make_unique<PrintModulePass>());
   
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to LLVM failed.\n";

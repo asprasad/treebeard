@@ -16,15 +16,17 @@ An optimizing compiler for decision tree ensemble inference.
 # MLIR Version
 The current version of Treebeard is tested with the following LLVM commit:
 ```
-commit a698790c51ec2804c3a7ba4c59438e7816690ea2 (HEAD -> main, origin/main, origin/HEAD)
-Author: Noah Goldstein <goldstein.w.n@gmail.com>
-Date:   Fri Jan 6 14:08:25 2023 +0800
+commit bc21af6a43db45bf0d0192afab0a079ecf400aa2 (HEAD -> main, origin/main, origin/HEAD)
+Author: Mark de Wever <koraq@xs4all.nl>
+Date:   Sat Dec 24 13:33:21 2022 +0100
 
-    [X86] Add additional tests to no-shift.ll
+    [NFC][libc++][test] Improves code reuse.
     
-    Reviewed By: pengfei
+    This applies D140115 to the new tuple tests.
     
-    Differential Revision: https://reviews.llvm.org/D141076
+    Reviewed By: #libc, ldionne
+    
+    Differential Revision: https://reviews.llvm.org/D140650
 ```
 
 # Python API
