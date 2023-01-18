@@ -2,10 +2,12 @@ target_sources(treebeard
 PRIVATE 
 GPUSupportUtils.cpp
 GPURepresentations.cpp
-LowerGPUToLLVM.cpp)
+LowerGPUToLLVM.cpp
+GPUExecutionHelper.cpp)
 
 target_sources(treebeard-runtime 
 PRIVATE
 GPUSupportUtils.cpp
 GPURepresentations.cpp
-LowerGPUToLLVM.cpp)
+LowerGPUToLLVM.cpp
+GPUExecutionHelper.cpp)

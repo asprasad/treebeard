@@ -66,19 +66,25 @@ void GPUArrayBasedRepresentation::GenerateModelMemrefInitializer(const std::stri
   auto allocFeatureIndices = builder.create<gpu::AllocOp>(location, indexArgType, asyncTokenType, ValueRange{transferThresholds.getAsyncToken()}, ValueRange{}, ValueRange{});
   auto transferFeatureIndices = builder.create<gpu::MemcpyOp>(location, asyncTokenType, ValueRange{allocFeatureIndices.getAsyncToken()}, 
                                                       allocFeatureIndices.getMemref(), static_cast<Value>(initModelMemrefFunc.getArgument(1)));
-
-  auto allocTileShapeIds = builder.create<gpu::AllocOp>(location, tileShapeIDArgType, asyncTokenType, ValueRange{transferFeatureIndices.getAsyncToken()}, 
-                                                        ValueRange{}, ValueRange{});
-  auto transferTileShapeIds = builder.create<gpu::MemcpyOp>(location, asyncTokenType, ValueRange{allocTileShapeIds.getAsyncToken()}, 
-                                                      allocTileShapeIds.getMemref(), static_cast<Value>(initModelMemrefFunc.getArgument(2)));
+  
+  mlir::gpu::AllocOp allocTileShapeIds;
+  mlir::gpu::MemcpyOp transferTileShapeIds;
+  if (tileSize != 1) {
+    allocTileShapeIds = builder.create<gpu::AllocOp>(location, tileShapeIDArgType, asyncTokenType, ValueRange{transferFeatureIndices.getAsyncToken()}, 
+                                                     ValueRange{}, ValueRange{});
+    transferTileShapeIds = builder.create<gpu::MemcpyOp>(location, asyncTokenType, ValueRange{allocTileShapeIds.getAsyncToken()}, 
+                                                        allocTileShapeIds.getMemref(), static_cast<Value>(initModelMemrefFunc.getArgument(2)));
+  }
 
   // Create the gpu.launch op
   auto oneIndexConst = builder.create<arith::ConstantIndexOp>(location, 1);
   int32_t numThreadsPerBlock = 32;
   int32_t numBlocks = std::ceil((double)memrefType.getShape()[0]/numThreadsPerBlock);
   auto numThreadBlocksConst = builder.create<arith::ConstantIndexOp>(location, numBlocks);
-  auto gpuLaunch = builder.create<gpu::LaunchOp>(location, numThreadBlocksConst, oneIndexConst, oneIndexConst, numThreadBlocksConst, oneIndexConst, oneIndexConst,
-                                                nullptr, asyncTokenType, transferTileShapeIds.getAsyncToken());
+  auto gpuLaunch = builder.create<gpu::LaunchOp>(location, numThreadBlocksConst, oneIndexConst, oneIndexConst, 
+                                                numThreadBlocksConst, oneIndexConst, oneIndexConst,
+                                                nullptr, asyncTokenType, 
+                                                tileSize!=1 ? transferTileShapeIds.getAsyncToken():transferFeatureIndices.getAsyncToken());
 
   builder.setInsertionPointToStart(&gpuLaunch.getBody().front());
   
@@ -92,7 +98,8 @@ void GPUArrayBasedRepresentation::GenerateModelMemrefInitializer(const std::stri
     // Generate the initialization code
     auto thenBuilder = ifInBounds.getThenBodyBuilder();
     this->GenModelMemrefInitFunctionBody(memrefType, alloc.getMemref(), thenBuilder, location, elementIndex, 
-                                         allocThresholds.getMemref(), allocFeatureIndices.getMemref(), allocTileShapeIds.getMemref());
+                                         allocThresholds.getMemref(), allocFeatureIndices.getMemref(), 
+                                         tileSize!=1?allocTileShapeIds.getMemref():Value());
   }
   builder.create<gpu::TerminatorOp>(location);
   // Wait and return 
