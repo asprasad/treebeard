@@ -81,8 +81,9 @@ void GPUArrayBasedRepresentation::GenerateModelMemrefInitializer(const std::stri
   int32_t numThreadsPerBlock = 32;
   int32_t numBlocks = std::ceil((double)memrefType.getShape()[0]/numThreadsPerBlock);
   auto numThreadBlocksConst = builder.create<arith::ConstantIndexOp>(location, numBlocks);
+  auto numThreadsPerBlockConst = builder.create<arith::ConstantIndexOp>(location, numThreadsPerBlock);
   auto gpuLaunch = builder.create<gpu::LaunchOp>(location, numThreadBlocksConst, oneIndexConst, oneIndexConst, 
-                                                numThreadBlocksConst, oneIndexConst, oneIndexConst,
+                                                numThreadsPerBlockConst, oneIndexConst, oneIndexConst,
                                                 nullptr, asyncTokenType, 
                                                 tileSize!=1 ? transferTileShapeIds.getAsyncToken():transferFeatureIndices.getAsyncToken());
 

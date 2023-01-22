@@ -17,6 +17,7 @@
 #include "ModelSerializers.h"
 #include "Representations.h"
 #include "GPUSupportUtils.h"
+#include "GPUExecutionHelper.h"
 
 using namespace mlir::decisionforest;
 
@@ -421,6 +422,30 @@ bool Test_PeeledHybridProbabilisticTiling_TileSize8_Letters(TestArgs_t &args);
 bool Test_PeeledHybridProbabilisticTiling_TileSize8_Epsilon(TestArgs_t &args);
 bool Test_PeeledHybridProbabilisticTiling_TileSize8_Higgs(TestArgs_t &args);
 bool Test_PeeledHybridProbabilisticTiling_TileSize8_Year(TestArgs_t &args);
+
+// GPU model initialization tests
+bool Test_GPUModelInit_LeftHeavy_Scalar_DoubleInt(TestArgs_t& args);
+bool Test_GPUModelInit_RightHeavy_Scalar_DoubleInt(TestArgs_t& args);
+bool Test_GPUModelInit_Balanced_Scalar_DoubleInt(TestArgs_t& args);
+bool Test_GPUModelInit_LeftAndRightHeavy_Scalar_DoubleInt(TestArgs_t& args);
+bool Test_GPUModelInit_LeftHeavy_Scalar_FloatInt(TestArgs_t& args);
+bool Test_GPUModelInit_RightHeavy_Scalar_FloatInt(TestArgs_t& args);
+bool Test_GPUModelInit_Balanced_Scalar_FloatInt(TestArgs_t& args);
+bool Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt(TestArgs_t& args);
+bool Test_GPUModelInit_LeftHeavy_Scalar_FloatInt16(TestArgs_t& args);
+bool Test_GPUModelInit_RightHeavy_Scalar_FloatInt16(TestArgs_t& args);
+bool Test_GPUModelInit_Balanced_Scalar_FloatInt16(TestArgs_t& args);
+bool Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt16(TestArgs_t& args);
+
+// GPU basic code generation tests
+bool Test_GPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32(TestArgs_t& args);
+bool Test_GPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32(TestArgs_t& args);
+bool Test_GPUCodeGeneration_Balanced_DoubleInt32_BatchSize32(TestArgs_t& args);
+bool Test_GPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32(TestArgs_t& args);
+bool Test_GPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32(TestArgs_t& args);
+bool Test_GPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32(TestArgs_t& args);
+bool Test_GPUCodeGeneration_Balanced_FloatInt16_BatchSize32(TestArgs_t& args);
+bool Test_GPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32(TestArgs_t& args);
 
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
@@ -955,50 +980,6 @@ bool Test_SplitSchedule(TestArgs_t& args) {
   return true;
 }
 
-void GPUBasicSchedule(decisionforest::Schedule* schedule, int32_t gridXSize) {
-  auto& batchIndex = schedule->GetBatchIndex();
-  auto& gridIndex = schedule->NewIndexVariable("gridX");
-  auto& blockIndex = schedule->NewIndexVariable("blockX");
-  
-  schedule->Tile(batchIndex, gridIndex, blockIndex, gridXSize);
-  gridIndex.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::Grid, decisionforest::IndexVariable::Dimension::X);
-  blockIndex.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::ThreadBlock, decisionforest::IndexVariable::Dimension::X);
-}
-
-bool Test_BasicGPUCodeGeneration(TestArgs_t& args) {
-  FixedTreeIRConstructor<> irConstructor(args.context, 32, AddLeftHeavyTree<DoubleInt32Tile>);
-  irConstructor.Parse();
-  // If sparse representation is turned on, then child index bit width should be passed
-  // assert (!mlir::decisionforest::UseSparseTreeRepresentation || childIndexBitWidth!=1 );
-  irConstructor.SetChildIndexBitWidth(1);
-  auto module = irConstructor.GetEvaluationFunction();
-
-  auto schedule = irConstructor.GetSchedule();
-  GPUBasicSchedule(schedule, 4);
-
-  // module->dump();
-  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
-  // module->dump();
-
-  mlir::decisionforest::GreedilyMapParallelLoopsToGPU(module);
-  // module->dump();
-
-  mlir::decisionforest::ConvertParallelLoopsToGPU(args.context, module);
-  // module->dump();
-
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(),
-                                               decisionforest::RepresentationFactory::GetRepresentation("gpu-array"));
-  
-  mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
-
-  mlir::decisionforest::LowerGPUToLLVM(args.context, module);
-  // mlir::decisionforest::OutlineGPUKernels(args.context, module);
-  // mlir::decisionforest::LowerToLLVM(args.context, module);
-  module->dump();                                        
-
-  return true;
-}
-
 #define RUN_ALL_TESTS
 
 #ifdef RUN_ALL_TESTS
@@ -1396,12 +1377,54 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Covtype),
   TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Airline),
   TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Abalone),
+
+  // Basic Scalar GPU Tests
+  TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
+  TEST_LIST_ENTRY(Test_GPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
+  TEST_LIST_ENTRY(Test_GPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
+  TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
+  TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32),
+  TEST_LIST_ENTRY(Test_GPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32),
+  TEST_LIST_ENTRY(Test_GPUCodeGeneration_Balanced_FloatInt16_BatchSize32),
+  TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32),
+  TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_DoubleInt),
+  TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_DoubleInt),
+  TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_DoubleInt),
+  TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_DoubleInt),
+  TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_FloatInt),
+  TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_FloatInt),
+  TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_FloatInt),
+  TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt),
+  TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_FloatInt16),
+  TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_FloatInt16),
+  TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_FloatInt16),
+  TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt16),
 };
 
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
+  TEST_LIST_ENTRY(Test_GPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
+  TEST_LIST_ENTRY(Test_GPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
+  TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
+  TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32),
+  TEST_LIST_ENTRY(Test_GPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32),
+  TEST_LIST_ENTRY(Test_GPUCodeGeneration_Balanced_FloatInt16_BatchSize32),
+  TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32),
+  TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_DoubleInt),
+  TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_DoubleInt),
+  TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_DoubleInt),
+  TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_DoubleInt),
+  TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_FloatInt),
+  TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_FloatInt),
+  TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_FloatInt),
+  TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt),
+  TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_FloatInt16),
+  TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_FloatInt16),
+  TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_FloatInt16),
+  TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt16),
+
   // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
   
   // TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth),

@@ -113,7 +113,6 @@ struct PredictForestOpLowering: public ConversionPattern {
         if (memrefType.getShape().size() != 2) // We can currently only deal with 2D memrefs as inputs
             return mlir::failure();
         batchSize = memrefType.getShape()[0]; // The number of rows in our input memref is the batchsize
-        // return LowerPredictForestOp_Batch(op, forestOp, operands, rewriter, memrefType, batchSize);
         return LowerPredictForestOp_Schedule(op, forestOp, operands, rewriter, memrefType, batchSize);  
     }
     else
@@ -274,126 +273,6 @@ struct PredictForestOpLowering: public ConversionPattern {
       return rewriter.create<arith::IndexCastOp>(location, state.treeType.getResultType(), static_cast<Value>(maxClassLoop.getResult(1)));
   }
 
-  LogicalResult
-  LowerPredictForestOp_Batch(Operation *op, mlir::decisionforest::PredictForestOp forestOp, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter, 
-                            mlir::MemRefType dataMemrefType, int64_t batchSize) const
-  {
-        auto location = op->getLoc();
-        assert (dataMemrefType.getElementType().isa<mlir::FloatType>());
-
-        PredictOpLoweringState state;
-        InitPredictOpLoweringState(rewriter, location, state, forestOp, operands, dataMemrefType, batchSize);
-        InitializeTreeClassWeightsMemref(rewriter, location, state);
-        // auto resultMemrefType = convertTensorToMemRef(resultTensorType);
-        // auto allocOp = rewriter.create<memref::AllocOp>(location, resultMemrefType);
-
-        auto dataElementType = state.dataMemrefType.getElementType();
-        // auto floatConstZero = rewriter.create<ConstantFloatOp>(location, llvm::APFloat(0.0), resultMemrefType.getElementType().cast<mlir::FloatType>());
-        // std::vector<Value> values(batchSize, static_cast<Value>(floatConstZero));
-
-        // Create the decision tree constant
-        auto forestAttribute = forestOp.getEnsemble(); // Get the ensemble attribute
-        auto forestType = forestAttribute.getType().cast<mlir::decisionforest::TreeEnsembleType>();
-        
-        auto batchLoop = rewriter.create<scf::ForOp>(location, state.zeroIndexConst, state.batchSizeConst, state.oneIndexConst/*, static_cast<Value>(memrefResult)*/);
-        
-        rewriter.setInsertionPointToStart(batchLoop.getBody());
-        auto i = batchLoop.getInductionVar();
-
-        // Extract the slice of the input tensor for the current iteration -- row i
-        auto rowType = getRowTypeFromArgumentType(dataMemrefType);
-        auto zeroIndexAttr = rewriter.getIndexAttr(0);
-        auto oneIndexAttr = rewriter.getIndexAttr(1);
-        auto rowSizeAttr = rewriter.getIndexAttr(rowType.getShape()[0]);
-        auto row = rewriter.create<memref::SubViewOp>(location, static_cast<Value>(state.data), ArrayRef<OpFoldResult>({i, zeroIndexAttr}),
-                                                      ArrayRef<OpFoldResult>({oneIndexAttr, rowSizeAttr}), ArrayRef<OpFoldResult>({oneIndexAttr, oneIndexAttr}));
-        if (decisionforest::InsertDebugHelpers) {
-          rewriter.create<decisionforest::PrintInputRowOp>(location, row, i);
-        }
-
-        // Create a for loop over the trees
-        auto resultElementType = state.resultMemrefType.getElementType();
-        int64_t numTrees = static_cast<int64_t>(forestType.getNumberOfTrees());
-        auto ensembleSizeConst = rewriter.create<arith::ConstantIndexOp>(location, numTrees); 
-        
-        Value initialValueConst;
-        double_t initialValueValue = forestAttribute.GetDecisionForest().GetInitialOffset();
-
-        if (dataElementType.isa<mlir::Float64Type>())
-          initialValueConst = rewriter.create<arith::ConstantFloatOp>(location, llvm::APFloat(initialValueValue), dataElementType.cast<FloatType>());
-        else if(dataElementType.isa<mlir::Float32Type>())
-          initialValueConst = rewriter.create<arith::ConstantFloatOp>(location, llvm::APFloat((float)initialValueValue), dataElementType.cast<FloatType>());
-        else
-          assert(false && "Unsupported floating point type");
-        // auto oneIndexConst2 = rewriter.create<ConstantIndexOp>(location, 1);
-        auto treeLoopArgs = state.isMultiClass ? ValueRange({}) : ValueRange({initialValueConst});
-      
-        auto treeLoop = rewriter.create<scf::ForOp>(
-          location,
-          state.zeroIndexConst,
-          ensembleSizeConst,
-          state.oneIndexConst,
-          treeLoopArgs);
-        
-        rewriter.setInsertionPointToStart(treeLoop.getBody());
-        auto j = treeLoop.getInductionVar();
-
-        // TODO The forest shouldn't contain the tree type because each tree may have a different type, 
-        // but the tree type should have more information -- tiling for example. We need to construct 
-        // the default tiling here.
-        assert (forestType.doAllTreesHaveSameTileSize());
-        auto tree = rewriter.create<decisionforest::GetTreeFromEnsembleOp>(location, state.treeType, state.forestConst, j);
-
-        
-        // Create the while loop to walk the tree
-        auto walkOp = rewriter.create<decisionforest::WalkDecisionTreeOp>(location, state.treeType.getThresholdType(), tree, row);
-        // rewriter.create<memref::StoreOp>(location, TypeRange({ }), static_cast<Value>(treePrediction), memrefResult, j);
-        // result[i]
-        
-        // auto readResultOfi = rewriter.create<memref::LoadOp>(location, resultElementType, memrefResult, i);
-        // Accumulate the tree prediction
-        
-        if (state.isMultiClass) {
-          GenerateMultiClassAccumulate(rewriter, location, static_cast<Value>(walkOp), i, j, state);
-            // rewriter.create<scf::YieldOp>(location, static_cast<Value>(accumulatedValue));
-        }
-        else {
-            assert(forestType.getReductionType() == decisionforest::ReductionType::kAdd);
-            auto accumulatedValue = rewriter.create<arith::AddFOp>(location, resultElementType, treeLoop.getBody()->getArguments()[1], walkOp);
-
-            if (mlir::decisionforest::InsertDebugHelpers) {
-              Value treePred = walkOp;
-              if (!walkOp.getResult().getType().isF64())
-                treePred = rewriter.create<arith::ExtFOp>(location, rewriter.getF64Type(), walkOp.getResult());
-              rewriter.create<decisionforest::PrintTreePredictionOp>(location, treePred, j);
-            }
-            // auto updatedResultTensor = rewriter.create<tensor::InsertOp>(location, resultMemrefType, accumulatedValue, treeLoop.getBody()->getArguments()[1], i);
-            rewriter.create<scf::YieldOp>(location, static_cast<Value>(accumulatedValue));
-        }
-
-        rewriter.setInsertionPointAfter(treeLoop);
-        // result[i] = Accumulated value
-        auto predTransform = forestAttribute.GetDecisionForest().GetPredictionTransformation();
-        Value transformedValue;
-        if (predTransform == decisionforest::PredictionTransformation::kIdentity)
-          transformedValue = static_cast<Value>(treeLoop.getResults()[0]);
-        else if (predTransform == decisionforest::PredictionTransformation::kSigmoid) {
-          transformedValue = GenSigmoid(rewriter, static_cast<Value>(treeLoop.getResults()[0]), location);
-        }
-        else if (predTransform == decisionforest::PredictionTransformation::kSoftMax) {
-          assert(state.isMultiClass);
-          transformedValue = GenArgMax(rewriter, location, state, i);
-        }
-        else {
-          assert (false && "Unsupported prediction transformation type");
-        }
-        rewriter.create<memref::StoreOp>(location, TypeRange({ }), transformedValue, state.resultMemref, i);
-        // rewriter.create<scf::YieldOp>(location); //, static_cast<Value>(treeLoop.results()[0]));S
-
-        rewriter.replaceOp(op, static_cast<Value>(state.resultMemref));
-        return mlir::success();
-  }
-
   Value CreateFPConstant(ConversionPatternRewriter &rewriter, Location location, Type type, double value) const {
     Value constValue;
     if (type.isa<mlir::Float64Type>())
@@ -524,6 +403,8 @@ struct PredictForestOpLowering: public ConversionPattern {
       walkOp = rewriter.create<decisionforest::WalkDecisionTreePeeledOp>(location, treeType.getThresholdType(), tree, row, peelItersAttrib);
     }
     else {
+      // auto indexConst = rewriter.create<arith::ConstantIndexOp>(location, (int64_t)1);
+      // walkOp = rewriter.create<memref::LoadOp>()
       walkOp = rewriter.create<decisionforest::WalkDecisionTreeOp>(location, treeType.getThresholdType(), tree, row);
     }
     GenerateMultiClassAccumulate(rewriter, location, static_cast<Value>(walkOp), rowIndex, treeIndex, state);
@@ -767,6 +648,7 @@ struct PredictForestOpLowering: public ConversionPattern {
     }
     else {
       walkOp = rewriter.create<decisionforest::WalkDecisionTreeOp>(location, treeType.getThresholdType(), tree, row);
+      // walkOp = rewriter.create<arith::ConstantFloatOp>(location, APFloat((double)0), treeType.getThresholdType().cast<FloatType>());
     }
     
     GenerateMultiClassAccumulate(rewriter, location, static_cast<Value>(walkOp), rowIndex, treeIndex, state);

@@ -1,0 +1,354 @@
+#include <vector>
+#include <sstream>
+#include <chrono>
+#include "TreeTilingUtils.h"
+#include "ExecutionHelpers.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "llvm/ADT/STLExtras.h"
+#include "xgboostparser.h"
+#include "TiledTree.h"
+
+#include "TestUtilsCommon.h"
+#include "ForestTestUtils.h"
+#include "ModelSerializers.h"
+#include "Representations.h"
+#include "GPUSupportUtils.h"
+#include "GPUExecutionHelper.h"
+
+using namespace mlir;
+
+namespace TreeBeard
+{
+namespace test
+{
+
+class GPUInferenceRunnerForTest : public InferenceRunnerForTestTemplate<decisionforest::GPUInferenceRunner> {
+public:
+  using InferenceRunnerForTestTemplate<decisionforest::GPUInferenceRunner>::InferenceRunnerForTestTemplate;
+  decisionforest::ModelMemrefType GetModelMemref() { return this->m_modelMemref; }
+};
+
+// ===---------------------------------------------------=== //
+// GPU Model Initialization Tests
+// ===---------------------------------------------------=== //
+
+void AddGPUModelMemrefGetter_Scalar(mlir::ModuleOp module) {
+  // Get the tiled node type from the model memref type by finding the Init_Model method
+  MemRefType modelMemrefType;
+  module.walk([&](mlir::func::FuncOp func) {
+    if (func.getName() == "Init_Model")
+      modelMemrefType = func.getResultTypes()[0].cast<mlir::MemRefType>();
+  });
+  decisionforest::TiledNumericalNodeType tileType = modelMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
+  auto thresholdMemrefType = MemRefType::get(modelMemrefType.getShape()[0], tileType.getThresholdElementType());
+  auto featureIndexMemrefType = MemRefType::get(modelMemrefType.getShape()[0], tileType.getIndexElementType());
+  auto getModelFunctionType = FunctionType::get(tileType.getContext(), 
+                                                TypeRange{modelMemrefType, thresholdMemrefType, featureIndexMemrefType},
+                                                TypeRange{IntegerType::get(tileType.getContext(), 32)});
+
+  auto location = module.getLoc();
+  auto getModelFunc = func::FuncOp::create(location, "GetModelValues", getModelFunctionType);
+  getModelFunc.setPublic();
+
+  auto entryBlock = getModelFunc.addEntryBlock();
+  mlir::OpBuilder builder(getModelFunc.getContext());
+  builder.setInsertionPointToStart(entryBlock);
+
+  // 1. Allocate the threshold and feature index buffers on the GPU
+  // 2. Launch kernel to copy model values to these buffers
+  // 3. Copy results in to the argument memrefs
+
+  auto waitOp = builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{});
+  auto allocThreshold = builder.create<gpu::AllocOp>(location, thresholdMemrefType, 
+                                                     waitOp.getAsyncToken().getType(),
+                                                     ValueRange{waitOp.getAsyncToken()}, 
+                                                     ValueRange{}, ValueRange{});
+  auto allocIndices = builder.create<gpu::AllocOp>(location, featureIndexMemrefType, 
+                                                   waitOp.getAsyncToken().getType(),
+                                                   ValueRange{allocThreshold.getAsyncToken()}, 
+                                                   ValueRange{}, ValueRange{});                                                     
+
+  auto oneIndexConst = builder.create<arith::ConstantIndexOp>(location, 1);
+  int32_t numThreadsPerBlock = 32;
+  int32_t numBlocks = std::ceil((double)modelMemrefType.getShape()[0]/numThreadsPerBlock);
+  auto numThreadBlocksConst = builder.create<arith::ConstantIndexOp>(location, numBlocks);
+  auto numThreadsPerBlockConst = builder.create<arith::ConstantIndexOp>(location, numThreadsPerBlock);
+  auto gpuLaunch = builder.create<gpu::LaunchOp>(location, numThreadBlocksConst, oneIndexConst, oneIndexConst, 
+                                                numThreadsPerBlockConst, oneIndexConst, oneIndexConst,
+                                                nullptr, waitOp.getAsyncToken().getType(), 
+                                                allocIndices.getAsyncToken());
+
+  builder.setInsertionPointToStart(&gpuLaunch.getBody().front());
+  
+  // // Generate the body of the launch op
+  auto memrefLengthConst = builder.create<arith::ConstantIndexOp>(location, modelMemrefType.getShape()[0]);
+  auto firstThreadNum = builder.create<arith::MulIOp>(location, gpuLaunch.getBlockSizeX(), gpuLaunch.getBlockIds().x);
+  auto elementIndex = builder.create<arith::AddIOp>(location, firstThreadNum, gpuLaunch.getThreadIds().x);
+  auto inBoundsCondition = builder.create<arith::CmpIOp>(location, arith::CmpIPredicate::slt, elementIndex, memrefLengthConst);
+  auto ifInBounds = builder.create<scf::IfOp>(location, inBoundsCondition, false);
+  {
+    // Generate the initialization code
+    auto thenBuilder = ifInBounds.getThenBodyBuilder();
+    auto loadThreshold = thenBuilder.create<decisionforest::LoadTileThresholdsOp>(location, tileType.getThresholdElementType(), 
+                                                                                  getModelFunc.getArgument(0), elementIndex);
+    auto loadIndex = thenBuilder.create<decisionforest::LoadTileFeatureIndicesOp>(location, tileType.getIndexElementType(), 
+                                                                                  getModelFunc.getArgument(0), elementIndex);
+    /*auto writeThreshold =*/ thenBuilder.create<memref::StoreOp>(location, static_cast<Value>(loadThreshold),
+                                                                  allocThreshold.getMemref(), static_cast<Value>(elementIndex));
+    /*auto writeIndex =*/ thenBuilder.create<memref::StoreOp>(location, static_cast<Value>(loadIndex), 
+                                                              allocIndices.getMemref(), static_cast<Value>(elementIndex));
+  }
+  builder.create<gpu::TerminatorOp>(location);
+  builder.setInsertionPointAfter(gpuLaunch); 
+
+  // Transfer back the offsets and the thresholds
+  auto transferThresholds = builder.create<gpu::MemcpyOp>(location, gpuLaunch.getAsyncToken().getType(),  
+                                                          ValueRange{gpuLaunch.getAsyncToken()}, getModelFunc.getArgument(1), 
+                                                          allocThreshold.getMemref());
+
+  auto transferIndices = builder.create<gpu::MemcpyOp>(location, transferThresholds.getAsyncToken().getType(), 
+                                                       ValueRange{transferThresholds.getAsyncToken()}, getModelFunc.getArgument(2), 
+                                                       allocIndices.getMemref());
+
+  // Wait and return 
+  /*auto waitBeforeReturn =*/ builder.create<gpu::WaitOp>(location, transferIndices.getAsyncToken().getType(), transferIndices.getAsyncToken());
+  auto returnVal = builder.create<arith::ConstantIntOp>(location, 42 /*value*/, 32 /*width*/);
+  builder.create<func::ReturnOp>(location, static_cast<Value>(returnVal));
+
+  module.push_back(getModelFunc);
+}
+
+void GPUBasicSchedule(decisionforest::Schedule* schedule, int32_t gridXSize) {
+  auto& batchIndex = schedule->GetBatchIndex();
+  auto& gridIndex = schedule->NewIndexVariable("gridX");
+  auto& blockIndex = schedule->NewIndexVariable("blockX");
+  
+  schedule->Tile(batchIndex, gridIndex, blockIndex, gridXSize);
+  gridIndex.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::Grid, decisionforest::IndexVariable::Dimension::X);
+  blockIndex.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::ThreadBlock, decisionforest::IndexVariable::Dimension::X);
+}
+
+template <typename ThresholdType, typename IndexType>
+bool CheckGPUModelInitialization_Scalar(TestArgs_t& args, ForestConstructor_t forestConstructor) {
+  // Batch size and the exact number of inputs per thread do not affect the model 
+  // initialization. So just hard coding those.
+  const int32_t batchSize = 32;
+  FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType, ThresholdType> 
+                         irConstructor(args.context, batchSize, forestConstructor);
+  irConstructor.Parse();
+  irConstructor.SetChildIndexBitWidth(1);
+  auto module = irConstructor.GetEvaluationFunction();
+
+  auto schedule = irConstructor.GetSchedule();
+  GPUBasicSchedule(schedule, 4);
+
+  // module->dump();
+  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  // module->dump();
+
+  mlir::decisionforest::GreedilyMapParallelLoopsToGPU(module);
+  // module->dump();
+
+  mlir::decisionforest::ConvertParallelLoopsToGPU(args.context, module);
+  // module->dump();
+
+  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(),
+                                               decisionforest::RepresentationFactory::GetRepresentation("gpu-array"));
+  
+  mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  AddGPUModelMemrefGetter_Scalar(module);
+  // module->dump();
+
+  mlir::decisionforest::LowerGPUToLLVM(args.context, module);
+  // module->dump();
+
+  GPUInferenceRunnerForTest inferenceRunner(irConstructor.GetModelGlobalsJSONFilePath(), 
+                                            module,
+                                            1,
+                                            sizeof(ThresholdType)*8,
+                                            sizeof(IndexType)*8);
+  
+  // TODO this is a hack. We are kind of breaking the abstraction to get hold of
+  // information that would otherwise be hard to get.
+  auto numModelElements = decisionforest::ForestJSONReader::GetInstance().GetTotalNumberOfTiles();
+  std::vector<ThresholdType> actualThresholds;
+  std::vector<IndexType> actualFeatureIndices, actualTileShapes;
+  decisionforest::ForestJSONReader::GetInstance().GetModelValues(1 /*tileSize*/,
+                                                                 sizeof(ThresholdType)*8,
+                                                                 sizeof(IndexType)*8,
+                                                                 actualThresholds,
+                                                                 actualFeatureIndices,
+                                                                 actualTileShapes);
+
+  std::vector<ThresholdType> thresholds(numModelElements, -42);
+  std::vector<IndexType> featureIndices(numModelElements, -42);
+
+  auto thresholdMemref = VectorToMemref(thresholds);
+  auto featureIndicesMemref = VectorToMemref(featureIndices);
+  auto modelMemref = inferenceRunner.GetModelMemref();
+
+  int32_t retVal = -1;
+  // Get the threshold values from the model memref
+  std::vector<void*> funcArgs = { &modelMemref.bufferPtr, &modelMemref.alignedPtr, &modelMemref.offset, &modelMemref.lengths[0], &modelMemref.strides[0],
+                              &thresholdMemref.bufferPtr, &thresholdMemref.alignedPtr, &thresholdMemref.offset, &thresholdMemref.lengths[0], &thresholdMemref.strides[0],
+                              &featureIndicesMemref.bufferPtr, &featureIndicesMemref.alignedPtr, &featureIndicesMemref.offset, &featureIndicesMemref.lengths[0], &featureIndicesMemref.strides[0],
+                              &retVal };
+
+  inferenceRunner.ExecuteFunction("GetModelValues", funcArgs);
+
+  auto thresholdZip = llvm::zip(thresholds, actualThresholds);
+  for (auto thresholdTuple: thresholdZip) {
+    // Test_ASSERT(FPEqual(std::get<0>(thresholdTuple), std::get<1>(thresholdTuple)));
+    Test_ASSERT(std::get<0>(thresholdTuple) == std::get<1>(thresholdTuple));
+  }
+  auto featureIndexZip = llvm::zip(featureIndices, actualFeatureIndices);
+  for (auto indexTuple : featureIndexZip) {
+    Test_ASSERT(std::get<0>(indexTuple) == std::get<1>(indexTuple));
+  }
+  return true;
+}
+
+bool Test_GPUModelInit_LeftHeavy_Scalar_DoubleInt(TestArgs_t& args) {
+  return CheckGPUModelInitialization_Scalar<double, int32_t>(args, AddLeftHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_RightHeavy_Scalar_DoubleInt(TestArgs_t& args) {
+  return CheckGPUModelInitialization_Scalar<double, int32_t>(args, AddRightHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_Balanced_Scalar_DoubleInt(TestArgs_t& args) {
+  return CheckGPUModelInitialization_Scalar<double, int32_t>(args, AddBalancedTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_LeftAndRightHeavy_Scalar_DoubleInt(TestArgs_t& args) {
+  return CheckGPUModelInitialization_Scalar<double, int32_t>(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_LeftHeavy_Scalar_FloatInt(TestArgs_t& args) {
+  return CheckGPUModelInitialization_Scalar<float, int32_t>(args, AddLeftHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_RightHeavy_Scalar_FloatInt(TestArgs_t& args) {
+  return CheckGPUModelInitialization_Scalar<float, int32_t>(args, AddRightHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_Balanced_Scalar_FloatInt(TestArgs_t& args) {
+  return CheckGPUModelInitialization_Scalar<float, int32_t>(args, AddBalancedTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt(TestArgs_t& args) {
+  return CheckGPUModelInitialization_Scalar<float, int32_t>(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_LeftHeavy_Scalar_FloatInt16(TestArgs_t& args) {
+  return CheckGPUModelInitialization_Scalar<float, int16_t>(args, AddLeftHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_RightHeavy_Scalar_FloatInt16(TestArgs_t& args) {
+  return CheckGPUModelInitialization_Scalar<float, int16_t>(args, AddRightHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_Balanced_Scalar_FloatInt16(TestArgs_t& args) {
+  return CheckGPUModelInitialization_Scalar<float, int16_t>(args, AddBalancedTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt16(TestArgs_t& args) {
+  return CheckGPUModelInitialization_Scalar<float, int16_t>(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>);
+}
+
+// ===---------------------------------------------------=== //
+// GPU Basic Scalar Code Generation Tests
+// ===---------------------------------------------------=== //
+
+template<typename ThresholdType, typename IndexType>
+bool Test_GPUCodeGeneration_Scalar_VariableBatchSize(TestArgs_t& args, const int32_t batchSize, ForestConstructor_t forestConstructor) {
+  FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType, ThresholdType> 
+                         irConstructor(args.context, batchSize, forestConstructor);
+  irConstructor.Parse();
+  irConstructor.SetChildIndexBitWidth(1);
+  auto module = irConstructor.GetEvaluationFunction();
+
+  auto schedule = irConstructor.GetSchedule();
+  GPUBasicSchedule(schedule, 4);
+
+  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  // module->dump();
+
+  mlir::decisionforest::GreedilyMapParallelLoopsToGPU(module);
+  // module->dump();
+
+  mlir::decisionforest::ConvertParallelLoopsToGPU(args.context, module);
+  // module->dump();
+
+  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(),
+                                               decisionforest::RepresentationFactory::GetRepresentation("gpu-array"));
+  
+  mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  // module->dump();
+
+  mlir::decisionforest::LowerGPUToLLVM(args.context, module);
+  // module->dump();
+
+  GPUInferenceRunnerForTest inferenceRunner(irConstructor.GetModelGlobalsJSONFilePath(), module, 1 /*tileSize*/, 
+                                            sizeof(ThresholdType)*8, sizeof(IndexType)*8);
+
+  assert (batchSize%2 == 0);
+  std::vector<std::vector<ThresholdType>> inputData;
+  inputData.emplace_back(std::vector<ThresholdType>());
+  auto& firstVec = inputData.front();
+  for (int32_t i=0 ; i<batchSize/2 ; ++i) {
+    auto data=GetBatchSize2Data();
+    firstVec.insert(firstVec.end(), data.front().begin(), data.front().end());
+  }
+  for(auto& batch : inputData) {
+    assert (batch.size() % batchSize == 0);
+    size_t rowSize = batch.size()/batchSize;
+    std::vector<ThresholdType> result(batchSize, -1);
+    inferenceRunner.RunInference<ThresholdType, ThresholdType>(batch.data(), result.data());
+    for(int64_t rowIdx=0 ; rowIdx<batchSize ; ++rowIdx) {
+      std::vector<double> row(batch.begin() + rowIdx*rowSize, batch.begin() + (rowIdx+1)*rowSize);
+      ThresholdType expectedResult = static_cast<ThresholdType>(irConstructor.GetForest().Predict(row));
+      Test_ASSERT(FPEqual(result[rowIdx], expectedResult));
+    }
+  }
+  return true;
+}
+
+bool Test_GPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32(TestArgs_t& args) {
+  return Test_GPUCodeGeneration_Scalar_VariableBatchSize<double, int32_t>(args, 32, AddLeftHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32(TestArgs_t& args) {
+  return Test_GPUCodeGeneration_Scalar_VariableBatchSize<double, int32_t>(args, 32, AddRightHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUCodeGeneration_Balanced_DoubleInt32_BatchSize32(TestArgs_t& args) {
+  return Test_GPUCodeGeneration_Scalar_VariableBatchSize<double, int32_t>(args, 32, AddBalancedTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32(TestArgs_t& args) {
+  return Test_GPUCodeGeneration_Scalar_VariableBatchSize<double, int32_t>(args, 32, AddRightAndLeftHeavyTrees<DoubleInt32Tile>);
+}
+
+bool Test_GPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32(TestArgs_t& args) {
+  return Test_GPUCodeGeneration_Scalar_VariableBatchSize<float, int16_t>(args, 32, AddLeftHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32(TestArgs_t& args) {
+  return Test_GPUCodeGeneration_Scalar_VariableBatchSize<float, int16_t>(args, 32, AddRightHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUCodeGeneration_Balanced_FloatInt16_BatchSize32(TestArgs_t& args) {
+  return Test_GPUCodeGeneration_Scalar_VariableBatchSize<float, int16_t>(args, 32, AddBalancedTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32(TestArgs_t& args) {
+  return Test_GPUCodeGeneration_Scalar_VariableBatchSize<float, int16_t>(args, 32, AddRightAndLeftHeavyTrees<DoubleInt32Tile>);
+}
+}
+}

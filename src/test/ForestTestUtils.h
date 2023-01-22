@@ -207,12 +207,13 @@ public:
   decisionforest::DecisionForest<>& GetForest() { return *this->m_forest; }
 };
 
-class InferenceRunnerForTest : public decisionforest::InferenceRunner {
+template <typename BaseClass>
+class InferenceRunnerForTestTemplate : public BaseClass {
 public:
-  using decisionforest::InferenceRunner::InferenceRunner;
+  using BaseClass::BaseClass;
 
   int32_t ExecuteFunction(const std::string& funcName, std::vector<void*>& args) {
-    auto& engine = m_engine;
+    auto& engine = this->m_engine;
     auto invocationResult = engine->invokePacked(funcName, args);
     if (invocationResult) {
       llvm::errs() << "JIT invocation failed\n";
@@ -222,5 +223,23 @@ public:
     return 0;
   }
 };
+
+using InferenceRunnerForTest = InferenceRunnerForTestTemplate<decisionforest::InferenceRunner>;
+
+template<typename T>
+decisionforest::Memref<T, 1> VectorToMemref(std::vector<T>& vec) {
+  return decisionforest::Memref<T, 1>{vec.data(), vec.data(), 0, {static_cast<int64_t>(vec.size())}, {1}};
+}
+
+namespace TreeBeard
+{
+namespace test
+{
+
+std::vector<std::vector<double>> GetBatchSize1Data();
+std::vector<std::vector<double>> GetBatchSize2Data();
+
+} // namespace test
+} // namespace Treebeard
 
 #endif // _FORESTTESTUTILS_H_
