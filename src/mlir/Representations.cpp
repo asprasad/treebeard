@@ -474,8 +474,48 @@ std::tuple<Type, Type, Type, Type> SparseRepresentation::AddGlobalMemrefs(mlir::
   return std::make_tuple(modelMemrefType, offsetMemrefType, leavesMemrefType, classInfoMemrefType);
 }
 
+void SparseRepresentation::GenModelMemrefInitFunctionBody(MemRefType memrefType, Value modelGlobalMemref,
+                                                          mlir::OpBuilder &builder, Location location, Value tileIndex,
+                                                          Value thresholdMemref, Value indexMemref,
+                                                          Value tileShapeIdMemref, Value childIndexMemref) {
+  auto modelMemrefElementType = memrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
+  int32_t tileSize = modelMemrefElementType.getTileSize();
+
+  // index = tileSize * tileIndex
+  auto tileSizeConst = builder.create<arith::ConstantIndexOp>(location, tileSize);
+  auto tileSizeTimesi = builder.create<arith::MulIOp>(location, tileIndex, tileSizeConst);
+  
+  if (tileSize > 1) {
+    auto thresholdVec = CreateZeroVectorFPConst(builder, location, modelMemrefElementType.getThresholdElementType(), tileSize);
+    auto indexVec = CreateZeroVectorIntConst(builder, location, modelMemrefElementType.getIndexElementType(), tileSize);
+
+    // Load from index to index + (tileSize - 1) into a vector
+    for (int32_t j = 0 ; j<tileSize ; ++j) {
+      auto offset = builder.create<arith::ConstantIndexOp>(location, j);
+      auto index =  builder.create<arith::AddIOp>(location, tileSizeTimesi, offset);
+      auto thresholdVal = builder.create<memref::LoadOp>(location, thresholdMemref, static_cast<Value>(index));
+      auto jConst = builder.create<arith::ConstantIntOp>(location, j, builder.getI32Type());
+      thresholdVec = builder.create<vector::InsertElementOp>(location, thresholdVal, thresholdVec, jConst);
+      auto indexVal = builder.create<memref::LoadOp>(location, indexMemref, static_cast<Value>(index));
+      indexVec = builder.create<vector::InsertElementOp>(location, indexVal, indexVec, jConst);
+    }
+    auto tileShapeID = builder.create<memref::LoadOp>(location, tileShapeIdMemref, tileIndex);
+    auto childIndex = builder.create<memref::LoadOp>(location, childIndexMemref, tileIndex);
+    builder.create<decisionforest::InitSparseTileOp>(location, modelGlobalMemref, tileIndex, thresholdVec, indexVec, tileShapeID, childIndex);
+  }
+  else {
+    // Load from index to index + (tileSize - 1) into a vector
+    auto thresholdVal = builder.create<memref::LoadOp>(location, thresholdMemref, static_cast<Value>(tileIndex));
+    auto indexVal = builder.create<memref::LoadOp>(location, indexMemref, static_cast<Value>(tileIndex));
+    auto childIndex = builder.create<memref::LoadOp>(location, childIndexMemref, static_cast<Value>(tileIndex));
+    // TODO check how tileShapeID vector is created when tileSize = 1
+    auto tileShapeID = builder.create<arith::ConstantIntOp>(location, 0, builder.getI32Type());
+    builder.create<decisionforest::InitSparseTileOp>(location, modelGlobalMemref, tileIndex, thresholdVal, indexVal, tileShapeID, childIndex);
+  }
+}
+
 void SparseRepresentation::AddModelMemrefInitFunction(mlir::ModuleOp module, std::string globalName, MemRefType memrefType, 
-                                ConversionPatternRewriter &rewriter, Location location) {
+                                                      ConversionPatternRewriter &rewriter, Location location) {
   assert (memrefType.getShape().size() == 1);
   SaveAndRestoreInsertionPoint saveAndRestoreEntryPoint(rewriter);
   auto modelMemrefElementType = memrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
@@ -503,38 +543,12 @@ void SparseRepresentation::AddModelMemrefInitFunction(mlir::ModuleOp module, std
   auto forLoop = rewriter.create<scf::ForOp>(location, zeroIndexConst, lenIndexConst, oneIndexConst);
   auto tileIndex = forLoop.getInductionVar();
   rewriter.setInsertionPointToStart(forLoop.getBody());
-
-  // index = tileSize * tileIndex
-  auto tileSizeConst = rewriter.create<arith::ConstantIndexOp>(location, tileSize);
-  auto tileSizeTimesi = rewriter.create<arith::MulIOp>(location, tileIndex, tileSizeConst);
-  
-  if (tileSize > 1) {
-    auto thresholdVec = CreateZeroVectorFPConst(rewriter, location, modelMemrefElementType.getThresholdElementType(), tileSize);
-    auto indexVec = CreateZeroVectorIntConst(rewriter, location, modelMemrefElementType.getIndexElementType(), tileSize);
-
-    // Load from index to index + (tileSize - 1) into a vector
-    for (int32_t j = 0 ; j<tileSize ; ++j) {
-      auto offset = rewriter.create<arith::ConstantIndexOp>(location, j);
-      auto index =  rewriter.create<arith::AddIOp>(location, tileSizeTimesi, offset);
-      auto thresholdVal = rewriter.create<memref::LoadOp>(location, entryBlock.getArgument(0), static_cast<Value>(index));
-      auto jConst = rewriter.create<arith::ConstantIntOp>(location, j, rewriter.getI32Type());
-      thresholdVec = rewriter.create<vector::InsertElementOp>(location, thresholdVal, thresholdVec, jConst);
-      auto indexVal = rewriter.create<memref::LoadOp>(location, entryBlock.getArgument(1), static_cast<Value>(index));
-      indexVec = rewriter.create<vector::InsertElementOp>(location, indexVal, indexVec, jConst);
-    }
-    auto tileShapeID = rewriter.create<memref::LoadOp>(location, entryBlock.getArgument(2), tileIndex);
-    auto childIndex = rewriter.create<memref::LoadOp>(location, entryBlock.getArgument(3), tileIndex);
-    rewriter.create<decisionforest::InitSparseTileOp>(location, getGlobalMemref, tileIndex, thresholdVec, indexVec, tileShapeID, childIndex);
-  }
-  else {
-    // Load from index to index + (tileSize - 1) into a vector
-    auto thresholdVal = rewriter.create<memref::LoadOp>(location, entryBlock.getArgument(0), static_cast<Value>(tileIndex));
-    auto indexVal = rewriter.create<memref::LoadOp>(location, entryBlock.getArgument(1), static_cast<Value>(tileIndex));
-    auto childIndex = rewriter.create<memref::LoadOp>(location, entryBlock.getArgument(3), static_cast<Value>(tileIndex));
-    // TODO check how tileShapeID vector is created when tileSize = 1
-    auto tileShapeID = rewriter.create<arith::ConstantIntOp>(location, 0, rewriter.getI32Type());
-    rewriter.create<decisionforest::InitSparseTileOp>(location, getGlobalMemref, tileIndex, thresholdVal, indexVal, tileShapeID, childIndex);
-  }
+  GenModelMemrefInitFunctionBody(memrefType, getGlobalMemref, 
+                                 rewriter, location, tileIndex,
+                                 initModelMemrefFunc.getArgument(0),
+                                 initModelMemrefFunc.getArgument(1),
+                                 initModelMemrefFunc.getArgument(2),
+                                 initModelMemrefFunc.getArgument(3));
   rewriter.setInsertionPointAfter(forLoop);
   
   auto modelSize = rewriter.create<decisionforest::GetModelMemrefSizeOp>(location, rewriter.getI32Type(), getGlobalMemref, lenIndexConst);
@@ -727,6 +741,8 @@ std::shared_ptr<IRepresentation> RepresentationFactory::GetRepresentation(const 
     return std::make_shared<SparseRepresentation>();
   else if (name == "gpu-array")
     return std::make_shared<GPUArrayBasedRepresentation>();
+  else if (name == "gpu-sparse")
+    return std::make_shared<GPUSparseRepresentation>();
   
   assert(false && "Unknown serialization format");
   return nullptr;
@@ -737,6 +753,13 @@ std::shared_ptr<IRepresentation> ConstructRepresentation() {
     return RepresentationFactory::GetRepresentation("sparse");
   else
     return RepresentationFactory::GetRepresentation("array");
+}
+
+std::shared_ptr<IRepresentation> ConstructGPURepresentation() {
+  if (decisionforest::UseSparseTreeRepresentation)
+    return RepresentationFactory::GetRepresentation("gpu-sparse");
+  else
+    return RepresentationFactory::GetRepresentation("gpu-array");
 }
 
 } // decisionforest

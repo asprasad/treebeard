@@ -92,6 +92,7 @@ public:
 };
 
 class SparseRepresentation : public IRepresentation {
+protected:
   struct SparseEnsembleConstantLoweringInfo {
     mlir::Value modelGlobal;
     mlir::Value offsetGlobal;
@@ -120,6 +121,10 @@ class SparseRepresentation : public IRepresentation {
   // Maps a GetTree operation to a memref that represents the tree once the ensemble constant has been replaced
   std::map<mlir::Operation*, GetTreeLoweringInfo> sparseGetTreeOperationMap;
 
+void GenModelMemrefInitFunctionBody(MemRefType memrefType, Value getGlobalMemref,
+                                    mlir::OpBuilder &builder, Location location, Value tileIndex,
+                                    Value thresholdMemref, Value indexMemref,
+                                    Value tileShapeIdMemref, Value childIndexMemref);
 public:
   virtual ~SparseRepresentation() { }
   void InitRepresentation() override;
@@ -157,7 +162,7 @@ public:
 // Helper to construct the right representation to work around the 
 // global "UseSparseRepresentation"
 std::shared_ptr<IRepresentation> ConstructRepresentation();
-
+std::shared_ptr<IRepresentation> ConstructGPURepresentation();
 
 } // decisionforest
 } // mlir

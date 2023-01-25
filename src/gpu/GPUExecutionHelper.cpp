@@ -114,8 +114,9 @@ int32_t GPUInferenceRunner::CallInitMethod() {
   Memref<TileShapeType, 1> tileShapeIDMemref{tileShapeIDs.data(), tileShapeIDs.data(), 0, {(int64_t)tileShapeIDs.size()}, 1};
   
   if (!decisionforest::UseSparseTreeRepresentation) {
-    typedef ModelMemrefType (*InitModelPtr_t)(ThresholdType*, ThresholdType*, int64_t, int64_t, int64_t, FeatureIndexType*, FeatureIndexType*, int64_t, int64_t, int64_t,
-                                      TileShapeType*, TileShapeType*, int64_t, int64_t, int64_t);
+    typedef ModelMemrefType (*InitModelPtr_t)(ThresholdType*, ThresholdType*, int64_t, int64_t, int64_t, 
+                                              FeatureIndexType*, FeatureIndexType*, int64_t, int64_t, int64_t,
+                                              TileShapeType*, TileShapeType*, int64_t, int64_t, int64_t);
     auto initModelPtr = reinterpret_cast<InitModelPtr_t>(GetFunctionAddress("Init_Model"));
 
     m_modelMemref = initModelPtr(thresholdsMemref.bufferPtr, thresholdsMemref.alignedPtr, thresholdsMemref.offset, thresholdsMemref.lengths[0], thresholdsMemref.strides[0],
@@ -125,8 +126,10 @@ int32_t GPUInferenceRunner::CallInitMethod() {
   else {
     assert (decisionforest::UseSparseTreeRepresentation);
     Memref<ChildIndexType, 1> childIndexMemref{childIndices.data(), childIndices.data(), 0, {(int64_t)childIndices.size()}, 1};
-    typedef ModelMemrefType (*InitModelPtr_t)(ThresholdType*, ThresholdType*, int64_t, int64_t, int64_t, FeatureIndexType*, FeatureIndexType*, int64_t, int64_t, int64_t,
-                                      TileShapeType*, TileShapeType*, int64_t, int64_t, int64_t, ChildIndexType*, ChildIndexType*, int64_t, int64_t, int64_t);
+    typedef ModelMemrefType (*InitModelPtr_t)(ThresholdType*, ThresholdType*, int64_t, int64_t, int64_t, 
+                                              FeatureIndexType*, FeatureIndexType*, int64_t, int64_t, int64_t,
+                                              TileShapeType*, TileShapeType*, int64_t, int64_t, int64_t,
+                                              ChildIndexType*, ChildIndexType*, int64_t, int64_t, int64_t);
     auto initModelPtr = reinterpret_cast<InitModelPtr_t>(GetFunctionAddress("Init_Model"));
 
     m_modelMemref = initModelPtr(thresholdsMemref.bufferPtr, thresholdsMemref.alignedPtr, thresholdsMemref.offset, thresholdsMemref.lengths[0], thresholdsMemref.strides[0],

@@ -158,7 +158,7 @@ bool CheckGPUModelInitialization_Scalar(TestArgs_t& args, ForestConstructor_t fo
   // module->dump();
 
   mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(),
-                                               decisionforest::RepresentationFactory::GetRepresentation("gpu-array"));
+                                               decisionforest::ConstructGPURepresentation());
   
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   AddGPUModelMemrefGetter_Scalar(module);
@@ -266,11 +266,18 @@ bool Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt16(TestArgs_t& args) {
 // ===---------------------------------------------------=== //
 
 template<typename ThresholdType, typename IndexType>
-bool Test_GPUCodeGeneration_Scalar_VariableBatchSize(TestArgs_t& args, const int32_t batchSize, ForestConstructor_t forestConstructor) {
+bool Test_GPUCodeGeneration_Scalar_VariableBatchSize(TestArgs_t& args, 
+                                                     const int32_t batchSize,
+                                                     ForestConstructor_t forestConstructor,
+                                                     int32_t childIndexBitWidth=1) {
   FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType, ThresholdType> 
                          irConstructor(args.context, batchSize, forestConstructor);
   irConstructor.Parse();
-  irConstructor.SetChildIndexBitWidth(1);
+  
+  // If sparse representation is turned on, then child index bit width should be passed
+  assert (!mlir::decisionforest::UseSparseTreeRepresentation || childIndexBitWidth!=1 );
+  irConstructor.SetChildIndexBitWidth(childIndexBitWidth);
+  
   auto module = irConstructor.GetEvaluationFunction();
 
   auto schedule = irConstructor.GetSchedule();
@@ -286,7 +293,7 @@ bool Test_GPUCodeGeneration_Scalar_VariableBatchSize(TestArgs_t& args, const int
   // module->dump();
 
   mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(),
-                                               decisionforest::RepresentationFactory::GetRepresentation("gpu-array"));
+                                               decisionforest::ConstructGPURepresentation());
   
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
@@ -319,6 +326,10 @@ bool Test_GPUCodeGeneration_Scalar_VariableBatchSize(TestArgs_t& args, const int
   return true;
 }
 
+// ===---------------------------------------------------=== //
+// GPU Basic Scalar Code Generation Tests -- Array Based
+// ===---------------------------------------------------=== //
+
 bool Test_GPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32(TestArgs_t& args) {
   return Test_GPUCodeGeneration_Scalar_VariableBatchSize<double, int32_t>(args, 32, AddLeftHeavyTree<DoubleInt32Tile>);
 }
@@ -350,5 +361,50 @@ bool Test_GPUCodeGeneration_Balanced_FloatInt16_BatchSize32(TestArgs_t& args) {
 bool Test_GPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32(TestArgs_t& args) {
   return Test_GPUCodeGeneration_Scalar_VariableBatchSize<float, int16_t>(args, 32, AddRightAndLeftHeavyTrees<DoubleInt32Tile>);
 }
+
+// ===---------------------------------------------------=== //
+// GPU Basic Scalar Code Generation Tests -- Sparse
+// ===---------------------------------------------------=== //
+
+bool Test_SparseGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_GPUCodeGeneration_Scalar_VariableBatchSize<double, int32_t>(args, 32, AddLeftHeavyTree<DoubleInt32Tile>, 32);
+}
+
+bool Test_SparseGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_GPUCodeGeneration_Scalar_VariableBatchSize<double, int32_t>(args, 32, AddRightHeavyTree<DoubleInt32Tile>, 32);
+}
+
+bool Test_SparseGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_GPUCodeGeneration_Scalar_VariableBatchSize<double, int32_t>(args, 32, AddBalancedTree<DoubleInt32Tile>, 32);
+}
+
+bool Test_SparseGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_GPUCodeGeneration_Scalar_VariableBatchSize<double, int32_t>(args, 32, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 32);
+}
+
+bool Test_SparseGPUCodeGeneration_LeftHeavy_FloatInt16_ChI16_BatchSize32(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_GPUCodeGeneration_Scalar_VariableBatchSize<float, int16_t>(args, 32, AddLeftHeavyTree<DoubleInt32Tile>, 16);
+}
+
+bool Test_SparseGPUCodeGeneration_RightHeavy_FloatInt16_ChI16_BatchSize32(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_GPUCodeGeneration_Scalar_VariableBatchSize<float, int16_t>(args, 32, AddRightHeavyTree<DoubleInt32Tile>, 16);
+}
+
+bool Test_SparseGPUCodeGeneration_Balanced_FloatInt16_ChI16_BatchSize32(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_GPUCodeGeneration_Scalar_VariableBatchSize<float, int16_t>(args, 32, AddBalancedTree<DoubleInt32Tile>, 16);
+}
+
+bool Test_SparseGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_ChI16_BatchSize32(TestArgs_t& args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  return Test_GPUCodeGeneration_Scalar_VariableBatchSize<float, int16_t>(args, 32, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 16);
+}
+
 }
 }
