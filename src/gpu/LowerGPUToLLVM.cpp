@@ -46,6 +46,7 @@
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 
 #include "Dialect.h"
+#include "Representations.h"
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
@@ -117,7 +118,11 @@ protected:
 /// code.
 struct LowerGpuOpsToNVVMOpsPass
     : public ConvertGpuOpsToNVVMOpsBase<LowerGpuOpsToNVVMOpsPass> {
-  LowerGpuOpsToNVVMOpsPass() = default;
+  std::shared_ptr<decisionforest::IRepresentation> m_representation;
+
+  LowerGpuOpsToNVVMOpsPass(std::shared_ptr<decisionforest::IRepresentation> representation) 
+    : m_representation(representation)
+  {  }
   LowerGpuOpsToNVVMOpsPass(unsigned indexBitwidth) {
     this->indexBitwidth = indexBitwidth;
   }
@@ -168,6 +173,7 @@ struct LowerGpuOpsToNVVMOpsPass
     populateGpuToNVVMConversionPatterns(converter, llvmPatterns);
     populateGpuWMMAToNVVMConversionPatterns(converter, llvmPatterns);
     decisionforest::populateDecisionTreeToLLVMConversionPatterns(converter, llvmPatterns);
+    m_representation->AddTypeConversions(*m.getContext(), converter);
 
     LLVMConversionTarget target(getContext());
     configureGpuToNVVMConversionLegality(target);
@@ -227,12 +233,16 @@ protected:
 
 class GpuToLLVMConversionPass
     : public GpuToLLVMConversionPassBase<GpuToLLVMConversionPass> {
+
+  std::shared_ptr<decisionforest::IRepresentation> m_representation;
+
 public:
-  GpuToLLVMConversionPass() = default;
-
+  GpuToLLVMConversionPass(std::shared_ptr<decisionforest::IRepresentation> representation) 
+    :m_representation(representation)
+  { }
+  
   GpuToLLVMConversionPass(const GpuToLLVMConversionPass &other)
-      : GpuToLLVMConversionPassBase(other) {}
-
+      : GpuToLLVMConversionPassBase(other), m_representation(other.m_representation) {}
   // Run the dialect converter on the module.
   void runOnOperation() override;
 
@@ -251,7 +261,7 @@ void GpuToLLVMConversionPass::runOnOperation() {
   target.addIllegalDialect<gpu::GPUDialect>();
   target.addIllegalDialect<decisionforest::DecisionForestDialect>();
 
-  decisionforest::AddTreebeardTypeConversions(getContext(), converter);
+  m_representation->AddTypeConversions(getContext(), converter);
 
   mlir::arith::populateArithToLLVMConversionPatterns(converter, patterns);
   mlir::cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
@@ -284,7 +294,7 @@ namespace mlir
 {
 namespace decisionforest
 {
-void LowerGPUToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module) {
+void LowerGPUToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module, std::shared_ptr<decisionforest::IRepresentation> representation) {
   // Initialize LLVM NVPTX backend.
   LLVMInitializeNVPTXTarget();
   LLVMInitializeNVPTXTargetInfo();
@@ -299,13 +309,13 @@ void LowerGPUToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module) {
   pm.addPass(memref::createExpandStridedMetadataPass());
   // pm.addPass(createMemRefToLLVMPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
-  pm.addNestedPass<gpu::GPUModuleOp>(std::make_unique<LowerGpuOpsToNVVMOpsPass>());
+  pm.addNestedPass<gpu::GPUModuleOp>(std::make_unique<LowerGpuOpsToNVVMOpsPass>(representation));
   // pm.addPass(std::make_unique<LowerOMPToLLVMPass>());
   pm.addPass(createReconcileUnrealizedCastsPass());
   // pm.addPass(std::make_unique<PrintModulePass>());
   pm.addNestedPass<gpu::GPUModuleOp>(createGpuSerializeToCubinPass("nvptx64-nvidia-cuda", "sm_35", "+ptx60"));
   pm.addPass(createConvertSCFToCFPass());
-  pm.addPass(std::make_unique<GpuToLLVMConversionPass>());
+  pm.addPass(std::make_unique<GpuToLLVMConversionPass>(representation));
   pm.addPass(createReconcileUnrealizedCastsPass());
   // pm.addPass(std::make_unique<PrintModulePass>());
   

@@ -655,11 +655,12 @@ bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   // module->dump();
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   // module->dump();
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), decisionforest::ConstructRepresentation());
+  auto representation = decisionforest::ConstructRepresentation();
+  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), representation);
   // module->dump();
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
-  mlir::decisionforest::LowerToLLVM(args.context, module);
+  mlir::decisionforest::LowerToLLVM(args.context, module, representation);
   // module->dump();
   // mlir::decisionforest::dumpLLVMIR(module);
   decisionforest::InferenceRunner inferenceRunner(irConstructor.GetModelGlobalsJSONFilePath(), module, 1, 64, 32);
@@ -692,10 +693,11 @@ bool Test_ForestCodeGen_VariableBatchSize(TestArgs_t& args, ForestConstructor_t 
   // module->dump();
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   // module->dump();
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), decisionforest::ConstructRepresentation());
+  auto representation = decisionforest::ConstructRepresentation();
+  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), representation);
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
-  mlir::decisionforest::LowerToLLVM(args.context, module);
+  mlir::decisionforest::LowerToLLVM(args.context, module, representation);
   // module->dump();
   // mlir::decisionforest::dumpLLVMIR(module);
   decisionforest::InferenceRunner inferenceRunner(irConstructor.GetModelGlobalsJSONFilePath(), module, 1, 64, 32);
@@ -1425,14 +1427,14 @@ TestDescriptor testList[] = {
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
-  TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
-  TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
-  TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
-  TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_LeftHeavy_FloatInt16_ChI16_BatchSize32),
-  TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_RightHeavy_FloatInt16_ChI16_BatchSize32),
-  TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_Balanced_FloatInt16_ChI16_BatchSize32),
-  TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_ChI16_BatchSize32),
+  TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize1_I32ChildIdx),
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_LeftHeavy_FloatInt16_ChI16_BatchSize32),
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_RightHeavy_FloatInt16_ChI16_BatchSize32),
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_Balanced_FloatInt16_ChI16_BatchSize32),
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_ChI16_BatchSize32),
 
   // TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
   

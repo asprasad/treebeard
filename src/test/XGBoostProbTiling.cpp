@@ -133,10 +133,11 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
   mlir::decisionforest::DoHybridTiling(args.context, module, options.tileSize, options.tileShapeBitWidth);
   mlir::decisionforest::DoReorderTreesByDepth(args.context, module, -1);
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), decisionforest::ConstructRepresentation());
+  auto representation = decisionforest::ConstructRepresentation();
+  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), representation);
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
-  mlir::decisionforest::LowerToLLVM(args.context, module);
+  mlir::decisionforest::LowerToLLVM(args.context, module, representation);
 
 
   decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
@@ -264,10 +265,11 @@ bool TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int
   mlir::decisionforest::DoHybridTiling(args.context, module, options.tileSize, options.tileShapeBitWidth);
   mlir::decisionforest::DoReorderTreesByDepth(args.context, module, -1);
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), decisionforest::ConstructRepresentation());
+  auto representation = decisionforest::ConstructRepresentation();
+  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), representation);
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
-  mlir::decisionforest::LowerToLLVM(args.context, module);
+  mlir::decisionforest::LowerToLLVM(args.context, module, representation);
 
   decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
   

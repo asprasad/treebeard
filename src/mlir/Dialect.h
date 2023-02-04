@@ -43,16 +43,13 @@ extern bool UseBitcastForComparisonOutcome;
 extern bool UseSparseTreeRepresentation;
 extern bool PeeledCodeGenForProbabiltyBasedTiling;
 
-void AddTreebeardTypeConversions(MLIRContext& context, LLVMTypeConverter& typeConverter);
 void populateDebugOpLoweringPatterns(RewritePatternSet& patterns, LLVMTypeConverter& typeConverter);
 void populateDecisionTreeToLLVMConversionPatterns(LLVMTypeConverter &converter, RewritePatternSet &patterns);
-std::unique_ptr<mlir::Pass> createDecisionForestToLLVMLoweringPass();
-std::unique_ptr<Pass> createLowerToLLVMPass();
 
 void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext& context, mlir::ModuleOp module);
 void LowerEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module, std::shared_ptr<IModelSerializer> serializer, std::shared_ptr<IRepresentation> representation);
 void ConvertNodeTypeToIndexType(mlir::MLIRContext& context, mlir::ModuleOp module);
-void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module);
+void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module, std::shared_ptr<IRepresentation> representation);
 int dumpLLVMIR(mlir::ModuleOp module, bool dumpAsm = false);
 int dumpLLVMIRToFile(mlir::ModuleOp module, const std::string& filename);
 

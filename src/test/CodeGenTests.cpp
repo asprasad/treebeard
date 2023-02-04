@@ -71,7 +71,7 @@ bool Test_LoadTileThresholdOp_DoubleInt32_TileSize1(TestArgs_t& args) {
 
   module.push_back(func);
   // module.dump();
-  decisionforest::LowerToLLVM(context, module);
+  decisionforest::LowerToLLVM(context, module, ConstructRepresentation());
   // module.dump();
 
   auto maybeEngine = mlir::decisionforest::InferenceRunner::CreateExecutionEngine(module);
@@ -140,7 +140,7 @@ bool Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1(TestArgs_t& args) {
 
   module.push_back(func);
   // module.dump();
-  decisionforest::LowerToLLVM(context, module);
+  decisionforest::LowerToLLVM(context, module, ConstructRepresentation());
   // module.dump();
 
   auto maybeEngine = mlir::decisionforest::InferenceRunner::CreateExecutionEngine(module);
@@ -215,7 +215,7 @@ bool Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args) {
 
   module.push_back(func);
   // module.dump();
-  decisionforest::LowerToLLVM(context, module);
+  decisionforest::LowerToLLVM(context, module, ConstructRepresentation());
   // module.dump();
 
   auto maybeEngine = mlir::decisionforest::InferenceRunner::CreateExecutionEngine(module);
@@ -290,7 +290,7 @@ bool Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1(TestArgs_t& arg
 
   module.push_back(func);
   // module.dump();
-  decisionforest::LowerToLLVM(context, module);
+  decisionforest::LowerToLLVM(context, module, ConstructRepresentation());
   // module.dump();
 
   auto maybeEngine = mlir::decisionforest::InferenceRunner::CreateExecutionEngine(module);
@@ -474,10 +474,11 @@ bool Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(TestArgs_t& args, Fore
     scheduleManipulator(irGenerator.GetSchedule());
   decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   // module->dump();
-  decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), decisionforest::ConstructRepresentation());
+  auto representation = decisionforest::ConstructRepresentation();
+  decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), representation);
   decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
-  decisionforest::LowerToLLVM(args.context, module);
+  decisionforest::LowerToLLVM(args.context, module, representation);
   
   // module->dump();
   // decisionforest::dumpLLVMIR(module);
@@ -735,11 +736,12 @@ bool Test_ModelInitialization(TestArgs_t& args, ForestConstructor_t forestConstr
   auto module = irGenerator.GetEvaluationFunction();
 
   decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
-  decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), decisionforest::ConstructRepresentation());
+  auto representation = decisionforest::ConstructRepresentation();
+  decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), representation);
   decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   irGenerator.AddThresholdGetter();  
   // module->dump();
-  decisionforest::LowerToLLVM(args.context, module);
+  decisionforest::LowerToLLVM(args.context, module, representation);
   // module->dump();
   // decisionforest::dumpLLVMIR(module);
   int32_t thresholdSize = sizeof(ThresholdType)*8;
@@ -1157,10 +1159,11 @@ bool Test_UniformTiling_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   decisionforest::DoUniformTiling(args.context, module, tileSize, tileShapeBitWidth, makeAllLeavesSameDepth);
   decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   // module->dump();
-  decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), decisionforest::ConstructRepresentation());
+  auto representation = decisionforest::ConstructRepresentation();
+  decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), representation);
   decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
-  decisionforest::LowerToLLVM(args.context, module);
+  decisionforest::LowerToLLVM(args.context, module, representation);
   // module->dump();
   // decisionforest::dumpLLVMIR(module);
   decisionforest::InferenceRunner inferenceRunner(irGenerator.GetModelGlobalsJSONFilePath(), module, tileSize, sizeof(ThresholdType)*8, sizeof(FeatureIndexType)*8);

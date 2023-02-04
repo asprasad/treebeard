@@ -51,6 +51,7 @@ public:
           return mlir::VectorType::get({ GetTileSize() }, GetIndexElementType());
   }
 
+  virtual void AddTypeConversions(mlir::MLIRContext& context, LLVMTypeConverter& typeConverter) = 0;
 };
 
 class ArrayBasedRepresentation : public IRepresentation {
@@ -136,6 +137,7 @@ public:
   mlir::Type GetTileShapeType() override {
     return m_tileShapeType;
   }
+  void AddTypeConversions(mlir::MLIRContext& context, LLVMTypeConverter& typeConverter) override;
 };
 
 class SparseRepresentation : public IRepresentation {
@@ -227,6 +229,7 @@ public:
   mlir::Type GetTileShapeType() override {
     return m_tileShapeType;
   }
+  void AddTypeConversions(mlir::MLIRContext& context, LLVMTypeConverter& typeConverter) override;
 };
 
 class RepresentationFactory {

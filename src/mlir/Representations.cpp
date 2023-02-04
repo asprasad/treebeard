@@ -4,6 +4,9 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+
+#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 
 #include "Representations.h"
 #include "OpLoweringUtils.h"
@@ -335,6 +338,20 @@ mlir::Value ArrayBasedRepresentation::GenerateIsLeafOp(ConversionPatternRewriter
 
 mlir::Value ArrayBasedRepresentation::GenerateIsLeafTileOp(ConversionPatternRewriter &rewriter, mlir::Operation *op, mlir::Value treeValue, mlir::Value nodeIndex) {
   return this->GenerateIsLeafOp(rewriter, op, treeValue, nodeIndex);
+}
+
+void ArrayBasedRepresentation::AddTypeConversions(mlir::MLIRContext& context, LLVMTypeConverter& typeConverter) {
+  typeConverter.addConversion([&](decisionforest::TiledNumericalNodeType type) {
+                auto thresholdType = type.getThresholdFieldType();
+                auto indexType = type.getIndexFieldType();
+                if (type.getTileSize() == 1) {
+                  return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType});
+                }
+                else {
+                  auto tileShapeIDType = type.getTileShapeType();
+                  return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType});
+                }
+              });
 }
 
 // ===---------------------------------------------------=== //
@@ -736,6 +753,21 @@ mlir::Value SparseRepresentation::GenerateIsLeafTileOp(ConversionPatternRewriter
       rewriter.create<decisionforest::PrintIsLeafOp>(location, nodeIndex, childIndexI32, outcome);
     }
     return comparison;
+}
+
+void SparseRepresentation::AddTypeConversions(mlir::MLIRContext& context, LLVMTypeConverter& typeConverter) {
+  typeConverter.addConversion([&](decisionforest::TiledNumericalNodeType type) {
+              auto thresholdType = type.getThresholdFieldType();
+              auto indexType = type.getIndexFieldType();
+              auto childIndexType = type.getChildIndexType();
+              auto tileShapeIDType = type.getTileShapeType();
+              if (type.getTileSize() == 1) {
+                return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType, childIndexType});
+              }
+              else {
+                return LLVM::LLVMStructType::getLiteral(&context, {thresholdType, indexType, tileShapeIDType, childIndexType});
+              }
+            });
 }
 
 std::shared_ptr<IRepresentation> RepresentationFactory::GetRepresentation(const std::string& name) {
