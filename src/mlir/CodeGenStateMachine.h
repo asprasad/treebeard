@@ -82,10 +82,8 @@ class ScalarTraverseTileCodeGenerator : public ICodeGeneratorStateMachine {
     enum TraverseState { kLoadThreshold, kLoadFeatureIndex, kLoadFeature, kCompare, kNextNode, kDone };
     std::shared_ptr<IRepresentation> m_representation;
     TraverseState m_state;
-    Value m_treeMemref;
     Value m_rowMemref;
     Type m_resultType;
-    MemRefType m_treeMemrefType;
     Value m_nodeToTraverse;
     decisionforest::NodeToIndexOp m_nodeIndex;
     decisionforest::LoadTileThresholdsOp m_loadThresholdOp;
@@ -94,8 +92,9 @@ class ScalarTraverseTileCodeGenerator : public ICodeGeneratorStateMachine {
     arith::ExtUIOp m_comparisonUnsigned;
     Value m_result;
     std::vector<mlir::Value> m_extraLoads;
+    Value m_tree;
   public:
-    ScalarTraverseTileCodeGenerator(Value treeMemref, Value rowMemref, Value node, Type resultType, std::shared_ptr<IRepresentation> representation);
+    ScalarTraverseTileCodeGenerator(Value rowMemref, Value node, Type resultType, std::shared_ptr<IRepresentation> representation, Value tree);
     bool EmitNext(ConversionPatternRewriter& rewriter, Location& location) override;
     std::vector<Value> GetResult() override;
 };
@@ -106,16 +105,13 @@ class VectorTraverseTileCodeGenerator : public ICodeGeneratorStateMachine {
     std::shared_ptr<IRepresentation> m_representation;
     TraverseState m_state;
     Value m_tree;
-    Value m_treeMemref;
     Value m_rowMemref;
     Type m_resultType;
     VectorType m_featureIndexVectorType;
     VectorType m_thresholdVectorType;
     Type m_tileShapeType;
-    decisionforest::TiledNumericalNodeType m_treeTileType;
     int32_t m_tileSize;
 
-    MemRefType m_treeMemrefType;
     Value m_nodeToTraverse;
     decisionforest::NodeToIndexOp m_nodeIndex;
     decisionforest::LoadTileThresholdsOp m_loadThresholdOp;
@@ -130,7 +126,7 @@ class VectorTraverseTileCodeGenerator : public ICodeGeneratorStateMachine {
     std::function<Value(Value)> m_getLutFunc;
 
   public:
-    VectorTraverseTileCodeGenerator(Value tree, Value treeMemref, Value rowMemref, Value node, Type resultType, 
+    VectorTraverseTileCodeGenerator(Value tree, Value rowMemref, Value node, Type resultType, 
                                     std::shared_ptr<IRepresentation> representation, std::function<Value(Value)> getLutFunc);
     bool EmitNext(ConversionPatternRewriter& rewriter, Location& location) override;
     std::vector<Value> GetResult() override;

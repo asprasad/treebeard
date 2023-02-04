@@ -125,12 +125,12 @@ void AddGPUModelMemrefGetter_Scalar(mlir::ModuleOp module) {
 
 void GPUBasicSchedule(decisionforest::Schedule* schedule, int32_t gridXSize) {
   auto& batchIndex = schedule->GetBatchIndex();
-  auto& gridIndex = schedule->NewIndexVariable("gridX");
-  auto& blockIndex = schedule->NewIndexVariable("blockX");
+  auto& blockIndex = schedule->NewIndexVariable("gridX");
+  auto& threadIndex = schedule->NewIndexVariable("blockX");
   
-  schedule->Tile(batchIndex, gridIndex, blockIndex, gridXSize);
-  gridIndex.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::Grid, decisionforest::IndexVariable::Dimension::X);
-  blockIndex.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::ThreadBlock, decisionforest::IndexVariable::Dimension::X);
+  schedule->Tile(batchIndex, blockIndex, threadIndex, gridXSize);
+  blockIndex.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::Grid, decisionforest::IndexVariable::Dimension::X);
+  threadIndex.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::ThreadBlock, decisionforest::IndexVariable::Dimension::X);
 }
 
 template <typename ThresholdType, typename IndexType>

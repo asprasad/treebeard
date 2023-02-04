@@ -205,7 +205,9 @@ struct GetRootOpLowering: public ConversionPattern {
     auto getRootOp = AssertOpIsOfType<mlir::decisionforest::GetRootOp>(op);
     auto nodeIndexConst = rewriter.create<arith::ConstantIndexOp>(op->getLoc(), 0);
 
-    auto treeMemref = m_representation->GetTreeMemref(operands[0]);
+    // [TODO_Ashwin] We're just getting some memref here to pass as an argument to 
+    // the IndexToNodeOp. Maybe we should just get rid of that argument?
+    auto treeMemref = m_representation->GetThresholdsMemref(operands[0]);
     auto nodeType = getRootOp.getResult().getType();
     auto node = rewriter.create<decisionforest::IndexToNodeOp>(op->getLoc(), nodeType, treeMemref, static_cast<Value>(nodeIndexConst));
     rewriter.replaceOp(op, static_cast<Value>(node));
@@ -229,7 +231,7 @@ struct IsLeafOpLowering: public ConversionPattern {
     
     auto location = op->getLoc();
     
-    auto treeMemref = m_representation->GetTreeMemref(operands[0]);
+    auto treeMemref = m_representation->GetThresholdsMemref(operands[0]);
     auto treeMemrefType = treeMemref.getType().cast<MemRefType>();
     assert (treeMemrefType);
     auto nodeIndex = rewriter.create<decisionforest::NodeToIndexOp>(location, rewriter.getIndexType(), treeMemref, operands[1]); // Convert the node to an index
@@ -262,31 +264,26 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     auto traverseTileOp = AssertOpIsOfType<mlir::decisionforest::TraverseTreeTileOp>(op);
+    auto traverseTileAdaptor = decisionforest::TraverseTreeTileOpAdaptor(traverseTileOp);
     assert(operands.size() == 3);
     if (!traverseTileOp)
         return mlir::failure();
     
-    auto treeMemref = m_representation->GetTreeMemref(operands[0]);
-    auto treeMemrefType = treeMemref.getType().cast<MemRefType>();
-    assert (treeMemrefType);
-
-    auto treeTileType = treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
     decisionforest::InterleavedCodeGenStateMachine codeGenStateMachine;
-    if (treeTileType.getTileSize() == 1)
+    if (m_representation->GetTileSize() == 1)
       codeGenStateMachine.AddStateMachine(
         std::make_unique<decisionforest::ScalarTraverseTileCodeGenerator>(
-          treeMemref,
-          operands[2],
-          operands[1],
+          traverseTileAdaptor.getData(),
+          traverseTileAdaptor.getNode(),
           traverseTileOp.getResult().getType(),
-          m_representation));
+          m_representation,
+          traverseTileAdaptor.getTree()));
     else
       codeGenStateMachine.AddStateMachine(
         std::make_unique<decisionforest::VectorTraverseTileCodeGenerator>(
-          operands[0],
-          treeMemref,
-          operands[2],
-          operands[1],
+          traverseTileAdaptor.getTree(),
+          traverseTileAdaptor.getData(),
+          traverseTileAdaptor.getNode(),
           traverseTileOp.getResult().getType(),
           m_representation,
           GetLUTFromTreeOperand));
@@ -314,7 +311,7 @@ struct GetLeafValueOpLowering : public ConversionPattern {
         return mlir::failure();
     auto location = op->getLoc();
 
-    auto treeMemref = m_representation->GetTreeMemref(operands[0]);
+    auto treeMemref = m_representation->GetThresholdsMemref(operands[0]);
     auto nodeIndex = rewriter.create<decisionforest::NodeToIndexOp>(location, rewriter.getIndexType(), treeMemref, operands[1]);
     if (decisionforest::InsertDebugHelpers) {
       rewriter.create<decisionforest::PrintTreeNodeOp>(location, nodeIndex);
@@ -339,16 +336,16 @@ struct GetLeafTileValueOpLowering : public ConversionPattern {
     assert(operands.size() == 2);
     if (!getLeafVal)
         return mlir::failure();
+    decisionforest::GetLeafTileValueOpAdaptor getLeafValAdaptor(getLeafVal);
     auto location = op->getLoc();
 
-    auto treeMemref = m_representation->GetTreeMemref(operands[0]);
-    auto treeMemrefType = treeMemref.getType().cast<MemRefType>();
-    assert (treeMemrefType);
-
-    auto treeTileType = treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
-    auto thresholdType = treeTileType.getThresholdFieldType();
-    auto node = operands[1];
-    auto nodeIndex = rewriter.create<decisionforest::NodeToIndexOp>(location, rewriter.getIndexType(), treeMemref, node);
+    auto thresholdType = m_representation->GetThresholdFieldType();
+    auto node = getLeafValAdaptor.getNode();
+    auto tree = getLeafValAdaptor.getTree();
+    auto nodeIndex = rewriter.create<decisionforest::NodeToIndexOp>(location, 
+                                                                    rewriter.getIndexType(),
+                                                                    m_representation->GetThresholdsMemref(tree),
+                                                                    node);
     if (decisionforest::InsertDebugHelpers) {
       rewriter.create<decisionforest::PrintTreeNodeOp>(location, nodeIndex);
     }
@@ -356,18 +353,21 @@ struct GetLeafTileValueOpLowering : public ConversionPattern {
     // Load threshold
     // TODO Ideally, this should be a different op for when we deal with tile sizes != 1. We will then need to load 
     // a single threshold value and cast it the trees return type
-    auto loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, thresholdType, treeMemref, static_cast<Value>(nodeIndex));
+    auto loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, 
+                                                                                 thresholdType,
+                                                                                 m_representation->GetThresholdsMemref(tree),
+                                                                                 static_cast<Value>(nodeIndex));
     Value leafValue = loadThresholdOp;
-    
-    if (treeTileType.getTileSize() != 1) {
+    auto tileSize = m_representation->GetTileSize();
+    if (tileSize != 1) {
       auto thresholdVectorType = thresholdType.cast<VectorType>();
       if (decisionforest::InsertDebugHelpers) {
         Value vectorVal = loadThresholdOp;
         if (!thresholdVectorType.getElementType().isF64()) {
-          auto doubleVectorType = mlir::VectorType::get({ treeTileType.getTileSize() }, rewriter.getF64Type());
+          auto doubleVectorType = mlir::VectorType::get({ tileSize }, rewriter.getF64Type());
           vectorVal = rewriter.create<arith::ExtFOp>(location, doubleVectorType, loadThresholdOp);
         }
-        InsertPrintVectorOp(rewriter, location, 0, 64, treeTileType.getTileSize(), vectorVal);
+        InsertPrintVectorOp(rewriter, location, 0, 64, tileSize, vectorVal);
       }
       auto zeroConst = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI32Type());
       auto extractElement = rewriter.create<vector::ExtractElementOp>(location, static_cast<Value>(loadThresholdOp), zeroConst);
@@ -396,7 +396,7 @@ struct IsLeafTileOpLowering: public ConversionPattern {
     
     auto location = op->getLoc();
 
-    auto treeMemref = m_representation->GetTreeMemref(operands[0]);
+    auto treeMemref = m_representation->GetThresholdsMemref(operands[0]);
     auto treeMemrefType = treeMemref.getType().cast<MemRefType>();
     assert (treeMemrefType);
 

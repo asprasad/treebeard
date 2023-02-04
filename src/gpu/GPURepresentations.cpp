@@ -192,6 +192,11 @@ mlir::LogicalResult GPUArrayBasedRepresentation::GenerateModelGlobals(Operation 
   auto tileShapeType = treeType.getTileShapeType();
   auto childIndexType = treeType.getChildIndexType();
 
+  m_tileSize = tileSize;
+  m_thresholdType = thresholdType;
+  m_featureIndexType = featureIndexType;
+  m_tileShapeType = tileShapeType;
+
   Type modelMemrefElementType = decisionforest::TiledNumericalNodeType::get(thresholdType, featureIndexType, tileShapeType, 
                                                                             tileSize, childIndexType);
 
@@ -303,6 +308,11 @@ mlir::LogicalResult GPUSparseRepresentation::GenerateModelGlobals(Operation *op,
   auto tileSize = treeType.getTileSize();
   auto tileShapeType = treeType.getTileShapeType();
   auto childIndexType = treeType.getChildIndexType();
+
+  m_tileSize = tileSize;
+  m_thresholdType = thresholdType;
+  m_featureIndexType = featureIndexType;
+  m_tileShapeType = tileShapeType;
 
   Type modelMemrefElementType = decisionforest::TiledNumericalNodeType::get(thresholdType, featureIndexType, tileShapeType, 
                                                                             tileSize, childIndexType);

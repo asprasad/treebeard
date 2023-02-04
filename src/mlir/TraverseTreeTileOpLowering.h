@@ -39,27 +39,20 @@ namespace decisionforest
                 auto node = nodes[i];
                 auto data = dataRows[i];
 
-                auto treeMemref = m_representation->GetTreeMemref(tree);
-                auto treeMemrefType = treeMemref.getType().cast<MemRefType>();
-                assert (treeMemrefType);
-
-                auto treeTileType = treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
-
                 // TODO - tile size should be same for all iterations. Need to assert this somehow.
-                if (treeTileType.getTileSize() == 1) {
+                if (m_representation->GetTileSize() == 1) {
                     codeGenStateMachine.AddStateMachine(
                     std::make_unique<decisionforest::ScalarTraverseTileCodeGenerator>(
-                        treeMemref,
                         data,
                         node,
                         traverseTileOp.getResult(i).getType(),
-                        m_representation));
+                        m_representation,
+                        tree));
                 }
                 else {
                     codeGenStateMachine.AddStateMachine(
                     std::make_unique<decisionforest::VectorTraverseTileCodeGenerator>(
                         tree,
-                        treeMemref,
                         data,
                         node,
                         traverseTileOp.getResult(i).getType(),

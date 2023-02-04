@@ -17,8 +17,13 @@ public:
   virtual void InitRepresentation()=0;
   virtual mlir::LogicalResult GenerateModelGlobals(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter,
                                                    std::shared_ptr<decisionforest::IModelSerializer> m_serializer) = 0;
-  virtual mlir::Value GetTreeMemref(mlir::Value treeValue) = 0;
-  virtual std::vector<mlir::Value> GenerateExtraLoads(mlir::Location location, ConversionPatternRewriter &rewriter, mlir::Value treeMemref, mlir::Value nodeIndex, mlir::Type treeTileType)=0;
+  virtual mlir::Value GetThresholdsMemref(mlir::Value treeValue) = 0;
+  virtual mlir::Value GetFeatureIndexMemref(mlir::Value treeValue) = 0;
+  virtual mlir::Value GetTileShapeMemref(mlir::Value treeValue) = 0;
+  virtual std::vector<mlir::Value> GenerateExtraLoads(mlir::Location location, 
+                                                      ConversionPatternRewriter &rewriter,
+                                                      mlir::Value tree,
+                                                      mlir::Value nodeIndex)=0;
   virtual mlir::Value GenerateMoveToChild(mlir::Location location, ConversionPatternRewriter &rewriter, mlir::Value nodeIndex,
                                           mlir::Value childNumber, int32_t tileSize, std::vector<mlir::Value>& extraLoads)=0;
   virtual void GenerateTreeMemref(mlir::ConversionPatternRewriter &rewriter, mlir::Operation *op, Value ensemble, Value treeIndex)=0;
@@ -27,8 +32,26 @@ public:
                                              mlir::Value nodeIndex)=0;
   virtual mlir::Value GenerateIsLeafOp(ConversionPatternRewriter &rewriter, mlir::Operation *op, mlir::Value treeValue, mlir::Value nodeIndex)=0;
   virtual mlir::Value GenerateIsLeafTileOp(ConversionPatternRewriter &rewriter, mlir::Operation *op, mlir::Value treeValue, mlir::Value nodeIndex)=0;
-};
 
+  virtual int32_t GetTileSize() = 0;
+  virtual mlir::Type GetIndexElementType() = 0;
+  virtual mlir::Type GetThresholdElementType() = 0;
+  virtual mlir::Type GetTileShapeType() = 0;
+  virtual mlir::Type GetThresholdFieldType() { 
+      if (GetTileSize() == 1)
+          return GetThresholdElementType();
+      else
+          return mlir::VectorType::get({ GetTileSize() }, GetThresholdElementType());
+  }
+
+  virtual mlir::Type GetIndexFieldType() { 
+      if (GetTileSize() == 1)
+          return GetIndexElementType();
+      else
+          return mlir::VectorType::get({ GetTileSize() }, GetIndexElementType());
+  }
+
+};
 
 class ArrayBasedRepresentation : public IRepresentation {
 protected:
@@ -55,6 +78,11 @@ protected:
   // Maps a GetTree operation to a memref that represents the tree once the ensemble constant has been replaced
   std::map<mlir::Operation*, mlir::Value> getTreeOperationMap;
 
+  int32_t m_tileSize=-1;
+  mlir::Type m_thresholdType;
+  mlir::Type m_featureIndexType;
+  mlir::Type m_tileShapeType;
+
   void GenModelMemrefInitFunctionBody(MemRefType memrefType, Value memrefValue,
                                       mlir::OpBuilder &rewriter, Location location, Value tileIndex,
                                       Value thresholdMemref, Value indexMemref, Value tileShapeIdMemref);
@@ -72,15 +100,20 @@ protected:
   void AddModelMemrefInitFunction(mlir::ModuleOp module, std::string globalName, MemRefType memrefType, 
                                   ConversionPatternRewriter &rewriter, Location location);
 
+  mlir::Value GetTreeMemref(mlir::Value treeValue);
 public:
   virtual ~ArrayBasedRepresentation() { }
   void InitRepresentation() override;
   mlir::LogicalResult GenerateModelGlobals(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter,
                                            std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override;
+  virtual mlir::Value GetThresholdsMemref(mlir::Value treeValue) override { return GetTreeMemref(treeValue); }
+  virtual mlir::Value GetFeatureIndexMemref(mlir::Value treeValue) override { return GetTreeMemref(treeValue); }
+  virtual mlir::Value GetTileShapeMemref(mlir::Value treeValue) override { return GetTreeMemref(treeValue); }
 
-  mlir::Value GetTreeMemref(mlir::Value treeValue) override;
-  std::vector<mlir::Value> GenerateExtraLoads(mlir::Location location, ConversionPatternRewriter &rewriter, mlir::Value treeMemref, 
-                                              mlir::Value nodeIndex, mlir::Type treeTileType) override { return std::vector<mlir::Value>(); }
+  std::vector<mlir::Value> GenerateExtraLoads(mlir::Location location, 
+                                              ConversionPatternRewriter &rewriter,
+                                              mlir::Value tree, 
+                                              mlir::Value nodeIndex) override { return std::vector<mlir::Value>(); }
   mlir::Value GenerateMoveToChild(mlir::Location location, ConversionPatternRewriter &rewriter, mlir::Value nodeIndex, 
                                   mlir::Value childNumber, int32_t tileSize, std::vector<mlir::Value>& extraLoads) override;
   void GenerateTreeMemref(mlir::ConversionPatternRewriter &rewriter, mlir::Operation *op, Value ensemble, Value treeIndex) override;
@@ -89,6 +122,20 @@ public:
                                      mlir::Value nodeIndex) override;
   mlir::Value GenerateIsLeafOp(ConversionPatternRewriter &rewriter, mlir::Operation *op, mlir::Value treeValue, mlir::Value nodeIndex) override;
   mlir::Value GenerateIsLeafTileOp(ConversionPatternRewriter &rewriter, mlir::Operation *op, mlir::Value treeValue, mlir::Value nodeIndex) override;
+
+  int32_t GetTileSize() override {
+    assert (m_tileSize != -1 && "Tile size is not initialized");
+    return m_tileSize;
+  }
+  mlir::Type GetIndexElementType() override {
+    return m_featureIndexType;
+  }
+  mlir::Type GetThresholdElementType() override {
+    return m_thresholdType;
+  }
+  mlir::Type GetTileShapeType() override {
+    return m_tileShapeType;
+  }
 };
 
 class SparseRepresentation : public IRepresentation {
@@ -121,10 +168,18 @@ protected:
   // Maps a GetTree operation to a memref that represents the tree once the ensemble constant has been replaced
   std::map<mlir::Operation*, GetTreeLoweringInfo> sparseGetTreeOperationMap;
 
-void GenModelMemrefInitFunctionBody(MemRefType memrefType, Value getGlobalMemref,
-                                    mlir::OpBuilder &builder, Location location, Value tileIndex,
-                                    Value thresholdMemref, Value indexMemref,
-                                    Value tileShapeIdMemref, Value childIndexMemref);
+  int32_t m_tileSize=-1;
+  mlir::Type m_thresholdType;
+  mlir::Type m_featureIndexType;
+  mlir::Type m_tileShapeType;
+
+  void GenModelMemrefInitFunctionBody(MemRefType memrefType, Value getGlobalMemref,
+                                      mlir::OpBuilder &builder, Location location, Value tileIndex,
+                                      Value thresholdMemref, Value indexMemref,
+                                      Value tileShapeIdMemref, Value childIndexMemref);
+  
+  mlir::Value GetTreeMemref(mlir::Value treeValue);
+
 public:
   virtual ~SparseRepresentation() { }
   void InitRepresentation() override;
@@ -140,9 +195,16 @@ public:
 
   void AddModelMemrefInitFunction(mlir::ModuleOp module, std::string globalName, MemRefType memrefType, 
                                   ConversionPatternRewriter &rewriter, Location location);
-  mlir::Value GetTreeMemref(mlir::Value treeValue) override;
+
+  virtual mlir::Value GetThresholdsMemref(mlir::Value treeValue) override { return GetTreeMemref(treeValue); }
+  virtual mlir::Value GetFeatureIndexMemref(mlir::Value treeValue) override { return GetTreeMemref(treeValue); }
+  virtual mlir::Value GetTileShapeMemref(mlir::Value treeValue) override { return GetTreeMemref(treeValue); }
+
   mlir::Value GetLeafMemref(mlir::Value treeValue);
-  std::vector<mlir::Value> GenerateExtraLoads(mlir::Location location, ConversionPatternRewriter &rewriter, mlir::Value treeMemref, mlir::Value nodeIndex, mlir::Type treeTileType) override;
+  std::vector<mlir::Value> GenerateExtraLoads(mlir::Location location,
+                                              ConversionPatternRewriter &rewriter,
+                                              mlir::Value tree, 
+                                              mlir::Value nodeIndex) override;
   mlir::Value GenerateMoveToChild(mlir::Location location, ConversionPatternRewriter &rewriter, mlir::Value nodeIndex, 
                                   mlir::Value childNumber, int32_t tileSize, std::vector<mlir::Value>& extraLoads) override;
   void GenerateTreeMemref(mlir::ConversionPatternRewriter &rewriter, mlir::Operation *op, Value ensemble, Value treeIndex) override;
@@ -151,6 +213,20 @@ public:
                                      mlir::Value nodeIndex) override;
   mlir::Value GenerateIsLeafOp(ConversionPatternRewriter &rewriter, mlir::Operation *op, mlir::Value treeValue, mlir::Value nodeIndex) override;
   mlir::Value GenerateIsLeafTileOp(ConversionPatternRewriter &rewriter, mlir::Operation *op, mlir::Value treeValue, mlir::Value nodeIndex) override;
+
+  int32_t GetTileSize() override {
+    assert (m_tileSize != -1 && "Tile size is not initialized");
+    return m_tileSize;
+  }
+  mlir::Type GetIndexElementType() override {
+    return m_featureIndexType;
+  }
+  mlir::Type GetThresholdElementType() override {
+    return m_thresholdType;
+  }
+  mlir::Type GetTileShapeType() override {
+    return m_tileShapeType;
+  }
 };
 
 class RepresentationFactory {

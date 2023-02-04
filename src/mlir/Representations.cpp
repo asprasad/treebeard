@@ -100,13 +100,14 @@ ArrayBasedRepresentation::GlobalMemrefTypes ArrayBasedRepresentation::AddGlobalM
   assert (forestType.doAllTreesHaveSameTileSize()); // There is still an assumption here that all trees have the same tile size
   auto treeType = forestType.getTreeType(0).cast<decisionforest::TreeType>();
 
-  auto thresholdType = treeType.getThresholdType();
-  auto featureIndexType = treeType.getFeatureIndexType(); 
+  m_thresholdType = treeType.getThresholdType();
+  m_featureIndexType = treeType.getFeatureIndexType(); 
   auto tileSize = treeType.getTileSize();
-  auto tileShapeType = treeType.getTileShapeType();
+  m_tileShapeType = treeType.getTileShapeType();
   // assert (tileSize == 1);
-  Type memrefElementType = decisionforest::TiledNumericalNodeType::get(thresholdType, featureIndexType, tileShapeType, tileSize);
-
+  Type memrefElementType = decisionforest::TiledNumericalNodeType::get(m_thresholdType, m_featureIndexType, m_tileShapeType, tileSize);
+  
+  m_tileSize = tileSize;
   serializer->Persist(forest, forestType);
   
   auto modelMemrefSize = decisionforest::GetTotalNumberOfTiles();
@@ -408,15 +409,14 @@ std::tuple<Type, Type, Type, Type> SparseRepresentation::AddGlobalMemrefs(mlir::
   assert (forestType.doAllTreesHaveSameTileSize()); // There is still an assumption here that all trees have the same tile size
   auto treeType = forestType.getTreeType(0).cast<decisionforest::TreeType>();
 
-  auto thresholdType = treeType.getThresholdType();
-  auto featureIndexType = treeType.getFeatureIndexType(); 
-  auto tileSize = treeType.getTileSize();
-  auto tileShapeType = treeType.getTileShapeType();
+  m_thresholdType = treeType.getThresholdType();
+  m_featureIndexType = treeType.getFeatureIndexType(); 
+  m_tileSize = treeType.getTileSize();
+  m_tileShapeType = treeType.getTileShapeType();
   auto childIndexType = treeType.getChildIndexType();
   // assert (tileSize == 1);
-  Type memrefElementType = decisionforest::TiledNumericalNodeType::get(thresholdType, featureIndexType, tileShapeType, 
-                                                                        tileSize, childIndexType);
-
+  Type memrefElementType = decisionforest::TiledNumericalNodeType::get(m_thresholdType, m_featureIndexType, m_tileShapeType, 
+                                                                       m_tileSize, childIndexType);
   serializer->Persist(forest, forestType);
   
   auto modelMemrefSize = decisionforest::GetTotalNumberOfTiles();
@@ -441,13 +441,13 @@ std::tuple<Type, Type, Type, Type> SparseRepresentation::AddGlobalMemrefs(mlir::
   AddGlobalMemrefGetter(module, lengthMemrefName, offsetMemrefType, rewriter, location);
 
   auto leavesMemrefSize = decisionforest::GetTotalNumberOfLeaves();
-  auto leavesMemrefType = MemRefType::get({leavesMemrefSize}, thresholdType);
+  auto leavesMemrefType = MemRefType::get({leavesMemrefSize}, m_thresholdType);
   rewriter.create<memref::GlobalOp>(location, leavesMemrefName, rewriter.getStringAttr("private"),
                                     leavesMemrefType, rewriter.getUnitAttr(), false, IntegerAttr());
   AddGlobalMemrefGetter(module, leavesMemrefName, leavesMemrefType, rewriter, location);
   
   if (TreeBeard::Logging::loggingOptions.logGenCodeStats)
-      TreeBeard::Logging::Log("Leaves memref size : " + std::to_string(leavesMemrefSize * (thresholdType.getIntOrFloatBitWidth()/8)));
+      TreeBeard::Logging::Log("Leaves memref size : " + std::to_string(leavesMemrefSize * (m_thresholdType.getIntOrFloatBitWidth()/8)));
 
   // Create leaf offset memref
   rewriter.create<memref::GlobalOp>(location, leavesOffsetMemrefName, rewriter.getStringAttr("private"),
@@ -574,10 +574,14 @@ mlir::Value SparseRepresentation::GetLeafMemref(mlir::Value treeValue) {
   return leafMemref;
 }
 
-std::vector<mlir::Value> SparseRepresentation::GenerateExtraLoads(mlir::Location location, ConversionPatternRewriter &rewriter, mlir::Value treeMemref, 
-                                              mlir::Value nodeIndex, mlir::Type tileType) {
-  auto treeTileType = tileType.cast<decisionforest::TiledNumericalNodeType>();
-  auto loadChildIndexOp = rewriter.create<decisionforest::LoadChildIndexOp>(location, treeTileType.getChildIndexType(), treeMemref, nodeIndex);
+std::vector<mlir::Value> SparseRepresentation::GenerateExtraLoads(mlir::Location location,
+                                                                  ConversionPatternRewriter &rewriter,
+                                                                  mlir::Value tree,
+                                                                  mlir::Value nodeIndex) {
+  auto treeMemRef = GetTreeMemref(tree);
+  auto memrefType = treeMemRef.getType().cast<MemRefType>();
+  auto treeTileType = memrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
+  auto loadChildIndexOp = rewriter.create<decisionforest::LoadChildIndexOp>(location, treeTileType.getChildIndexType(), treeMemRef, nodeIndex);
   auto childIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadChildIndexOp));
   return std::vector<mlir::Value>{childIndex};
 }

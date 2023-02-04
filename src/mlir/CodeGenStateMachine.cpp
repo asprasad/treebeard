@@ -41,41 +41,51 @@ namespace decisionforest
       return index;
     }
 
-    ScalarTraverseTileCodeGenerator:: ScalarTraverseTileCodeGenerator(Value treeMemref, Value rowMemref, Value node, 
-                                                                      Type resultType, std::shared_ptr<IRepresentation> representation) {
-      m_treeMemref = treeMemref;
+    ScalarTraverseTileCodeGenerator:: ScalarTraverseTileCodeGenerator(Value rowMemref, Value node, 
+                                                                      Type resultType, 
+                                                                      std::shared_ptr<IRepresentation> representation,
+                                                                      Value tree) {
       m_rowMemref = rowMemref;
-      m_treeMemrefType = treeMemref.getType().cast<MemRefType>();
       m_nodeToTraverse = node;
       m_resultType = resultType;
       m_state = kLoadThreshold;
       m_representation = representation;
+      m_tree = tree;
     }
 
     bool ScalarTraverseTileCodeGenerator::EmitNext(ConversionPatternRewriter& rewriter, Location& location) {
-      auto treeTileType = m_treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
-      auto featureIndexType = treeTileType.getIndexElementType();
-      auto thresholdType = treeTileType.getThresholdElementType();
+      auto featureIndexType = m_representation->GetIndexElementType();
+      auto thresholdType = m_representation->GetThresholdElementType();
 
       // Assert tile size is 1
-      assert (treeTileType.getTileSize() == 1);
+      assert (m_representation->GetTileSize() == 1);
       
       switch (m_state) {
         case kLoadThreshold:
           {
-            m_nodeIndex = rewriter.create<decisionforest::NodeToIndexOp>(location, rewriter.getIndexType(), m_treeMemref, m_nodeToTraverse);
+            // TODO_Ashwin Remove the memref argument here
+            m_nodeIndex = rewriter.create<decisionforest::NodeToIndexOp>(location, 
+                                                                         rewriter.getIndexType(),
+                                                                         m_representation->GetThresholdsMemref(m_tree),
+                                                                         m_nodeToTraverse);
             if (decisionforest::InsertDebugHelpers) {
               rewriter.create<decisionforest::PrintTreeNodeOp>(location, m_nodeIndex);
             }
-            m_loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, thresholdType, m_treeMemref, static_cast<Value>(m_nodeIndex));
+            m_loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location,
+                                                                                      thresholdType, 
+                                                                                      m_representation->GetThresholdsMemref(m_tree),
+                                                                                      static_cast<Value>(m_nodeIndex));
             m_state = kLoadFeatureIndex;
           }
           break;
         case kLoadFeatureIndex:
           {
-            m_loadFeatureIndexOp = rewriter.create<decisionforest::LoadTileFeatureIndicesOp>(location, featureIndexType, m_treeMemref, static_cast<Value>(m_nodeIndex));
+            m_loadFeatureIndexOp = rewriter.create<decisionforest::LoadTileFeatureIndicesOp>(location,
+                                                                                             featureIndexType,
+                                                                                             m_representation->GetFeatureIndexMemref(m_tree),
+                                                                                             static_cast<Value>(m_nodeIndex));
 
-            m_extraLoads = m_representation->GenerateExtraLoads(location, rewriter, m_treeMemref, m_nodeIndex, treeTileType);
+            m_extraLoads = m_representation->GenerateExtraLoads(location, rewriter, m_tree, m_nodeIndex);
             m_state = kLoadFeature;
           }
           break;
@@ -112,8 +122,12 @@ namespace decisionforest
             auto comparisonResultIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(m_comparisonUnsigned));
             Value newIndex = m_representation->GenerateMoveToChild(location, rewriter, m_nodeIndex, comparisonResultIndex, 1, m_extraLoads);
 
+            // TODO_Ashwin Remove the reference to the memref below
             // node = indexToNode(index)
-            m_result = rewriter.create<decisionforest::IndexToNodeOp>(location, m_resultType, m_treeMemref, static_cast<Value>(newIndex));
+            m_result = rewriter.create<decisionforest::IndexToNodeOp>(location, 
+                                                                      m_resultType,
+                                                                      m_representation->GetThresholdsMemref(m_tree),
+                                                                      static_cast<Value>(newIndex));
             
             m_state = kDone;
             return false;
@@ -135,30 +149,27 @@ namespace decisionforest
       return results;
     }
 
-    VectorTraverseTileCodeGenerator::VectorTraverseTileCodeGenerator(Value tree, Value treeMemref, Value rowMemref, Value node, 
+    VectorTraverseTileCodeGenerator::VectorTraverseTileCodeGenerator(Value tree, Value rowMemref, Value node, 
                                                                      Type resultType, std::shared_ptr<IRepresentation> representation, 
                                                                      std::function<Value(Value)> getLutFunc) {
       m_tree = tree;
-      m_treeMemref = treeMemref;
       m_rowMemref = rowMemref;
-      m_treeMemrefType = treeMemref.getType().cast<MemRefType>();
       m_nodeToTraverse = node;
       m_resultType = resultType;
       m_state = kLoadThreshold;
       m_representation = representation;
       m_getLutFunc = getLutFunc;
 
-      m_treeTileType = m_treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
-      auto featureIndexType = m_treeTileType.getIndexFieldType();
+      auto featureIndexType = m_representation->GetIndexFieldType();
       m_featureIndexVectorType = featureIndexType.cast<VectorType>();
       assert(m_featureIndexVectorType);
       
-      auto thresholdType = m_treeTileType.getThresholdFieldType();
+      auto thresholdType = m_representation->GetThresholdFieldType();
       m_thresholdVectorType = thresholdType.cast<VectorType>();
       assert(m_thresholdVectorType);
 
-      m_tileShapeType = m_treeTileType.getTileShapeType();
-      m_tileSize = m_treeTileType.getTileSize();
+      m_tileShapeType = m_representation->GetTileShapeType();
+      m_tileSize = m_representation->GetTileSize();
 
       assert (m_tileSize > 1);
     }
@@ -167,12 +178,19 @@ namespace decisionforest
       switch (m_state) {
         case kLoadThreshold:
           {
-            m_nodeIndex = rewriter.create<decisionforest::NodeToIndexOp>(location, rewriter.getIndexType(), m_treeMemref, m_nodeToTraverse);
+            // TODO_Ashwin remove reference to memref
+            m_nodeIndex = rewriter.create<decisionforest::NodeToIndexOp>(location, 
+                                                                         rewriter.getIndexType(), 
+                                                                         m_representation->GetThresholdsMemref(m_tree),
+                                                                         m_nodeToTraverse);
             if (decisionforest::InsertDebugHelpers) {
               rewriter.create<decisionforest::PrintTreeNodeOp>(location, m_nodeIndex);
             }
             // Load threshold
-            m_loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, m_thresholdVectorType, m_treeMemref, static_cast<Value>(m_nodeIndex));
+            m_loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, 
+                                                                                      m_thresholdVectorType,
+                                                                                      m_representation->GetThresholdsMemref(m_tree),
+                                                                                      static_cast<Value>(m_nodeIndex));
             if (decisionforest::InsertDebugHelpers) {
               Value vectorVal = m_loadThresholdOp;
               if (!m_thresholdVectorType.getElementType().isF64()) {
@@ -186,7 +204,10 @@ namespace decisionforest
           break;
         case kLoadFeatureIndex:
           {
-            m_loadFeatureIndexOp = rewriter.create<decisionforest::LoadTileFeatureIndicesOp>(location, m_featureIndexVectorType, m_treeMemref, static_cast<Value>(m_nodeIndex));
+            m_loadFeatureIndexOp = rewriter.create<decisionforest::LoadTileFeatureIndicesOp>(location, 
+                                                                                             m_featureIndexVectorType,
+                                                                                             m_representation->GetFeatureIndexMemref(m_tree),
+                                                                                             static_cast<Value>(m_nodeIndex));
             if (decisionforest::InsertDebugHelpers) {
               InsertPrintVectorOp(
                   rewriter,
@@ -201,7 +222,10 @@ namespace decisionforest
           break;
         case kLoadTileShape:
           {
-            auto loadTileShapeOp = rewriter.create<decisionforest::LoadTileShapeOp>(location, m_tileShapeType, m_treeMemref, static_cast<Value>(m_nodeIndex));
+            auto loadTileShapeOp = rewriter.create<decisionforest::LoadTileShapeOp>(location, 
+                                                                                    m_tileShapeType,
+                                                                                    m_representation->GetTileShapeMemref(m_tree),
+                                                                                    static_cast<Value>(m_nodeIndex));
             m_loadTileShapeIndexOp = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadTileShapeOp));
 
             m_state = kLoadChildIndex;
@@ -209,7 +233,7 @@ namespace decisionforest
           break;
         case kLoadChildIndex:
           {
-            m_extraLoads = m_representation->GenerateExtraLoads(location, rewriter, m_treeMemref, m_nodeIndex, m_treeTileType);
+            m_extraLoads = m_representation->GenerateExtraLoads(location, rewriter, m_tree, m_nodeIndex);
             m_state = kLoadFeature;
           }
           break;
@@ -288,7 +312,11 @@ namespace decisionforest
             Value newIndex = m_representation->GenerateMoveToChild(location, rewriter, m_nodeIndex, childIndex, m_tileSize, m_extraLoads);
             
             // node = indexToNode(index)
-            m_result = rewriter.create<decisionforest::IndexToNodeOp>(location, m_resultType, m_treeMemref, static_cast<Value>(newIndex));
+            // TODO_Ashwin Remove memref reference
+            m_result = rewriter.create<decisionforest::IndexToNodeOp>(location, 
+                                                                      m_resultType,
+                                                                      m_representation->GetThresholdsMemref(m_tree),
+                                                                      static_cast<Value>(newIndex));
 
             m_state = kDone;
             return false;
