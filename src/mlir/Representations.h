@@ -52,6 +52,7 @@ public:
   }
 
   virtual void AddTypeConversions(mlir::MLIRContext& context, LLVMTypeConverter& typeConverter) = 0;
+  virtual void AddLLVMConversionPatterns(LLVMTypeConverter &converter, RewritePatternSet &patterns) = 0;
 };
 
 class ArrayBasedRepresentation : public IRepresentation {
@@ -138,6 +139,7 @@ public:
     return m_tileShapeType;
   }
   void AddTypeConversions(mlir::MLIRContext& context, LLVMTypeConverter& typeConverter) override;
+  void AddLLVMConversionPatterns(LLVMTypeConverter &converter, RewritePatternSet &patterns) override;
 };
 
 class SparseRepresentation : public IRepresentation {
@@ -230,6 +232,7 @@ public:
     return m_tileShapeType;
   }
   void AddTypeConversions(mlir::MLIRContext& context, LLVMTypeConverter& typeConverter) override;
+  void AddLLVMConversionPatterns(LLVMTypeConverter &converter, RewritePatternSet &patterns) override;
 };
 
 class RepresentationFactory {

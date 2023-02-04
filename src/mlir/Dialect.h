@@ -44,7 +44,6 @@ extern bool UseSparseTreeRepresentation;
 extern bool PeeledCodeGenForProbabiltyBasedTiling;
 
 void populateDebugOpLoweringPatterns(RewritePatternSet& patterns, LLVMTypeConverter& typeConverter);
-void populateDecisionTreeToLLVMConversionPatterns(LLVMTypeConverter &converter, RewritePatternSet &patterns);
 
 void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext& context, mlir::ModuleOp module);
 void LowerEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module, std::shared_ptr<IModelSerializer> serializer, std::shared_ptr<IRepresentation> representation);

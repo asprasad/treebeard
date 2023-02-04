@@ -172,8 +172,9 @@ struct LowerGpuOpsToNVVMOpsPass
     populateMemRefToLLVMConversionPatterns(converter, llvmPatterns);
     populateGpuToNVVMConversionPatterns(converter, llvmPatterns);
     populateGpuWMMAToNVVMConversionPatterns(converter, llvmPatterns);
-    decisionforest::populateDecisionTreeToLLVMConversionPatterns(converter, llvmPatterns);
     m_representation->AddTypeConversions(*m.getContext(), converter);
+    m_representation->AddLLVMConversionPatterns(converter, llvmPatterns);
+    decisionforest::populateDebugOpLoweringPatterns(llvmPatterns, converter);
 
     LLVMConversionTarget target(getContext());
     configureGpuToNVVMConversionLegality(target);
