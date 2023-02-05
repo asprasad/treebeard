@@ -76,7 +76,7 @@ struct TileEnsembleAttribute : public RewritePattern {
       auto treeType = forestType.getTreeType(i).cast<decisionforest::TreeType>();
       auto newTreeType = decisionforest::TreeType::get(treeType.getResultType(), forest.GetTree(i).TilingDescriptor().MaxTileSize(), 
                                                        treeType.getThresholdType(), treeType.getFeatureIndexType(), m_tileShapeType, 
-                                                       treeType.isSparseRepresentation(), treeType.getChildIndexType());
+                                                       treeType.getChildIndexType());
       treeTypes.push_back(newTreeType);
     }
     // std::cout << std::endl;

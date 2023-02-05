@@ -21,8 +21,9 @@ bool mlir::decisionforest::UseSparseTreeRepresentation = false;
 bool mlir::decisionforest::PeeledCodeGenForProbabiltyBasedTiling = false;
 
 void TreeTypeStorage::print(mlir::DialectAsmPrinter &printer) {
-    printer << "TreeType(returnType:" << m_resultType << ", tileSize:" << m_tileSize 
-            << ", tileShapeType:" << m_tileShapeType << ", sparse:" << m_sparseRepresentation 
+    printer << "TreeType(returnType:" << m_resultType 
+            << ", tileSize:" << m_tileSize 
+            << ", tileShapeType:" << m_tileShapeType  
             << ", childIndexType:" << m_childIndexType << "))";
 }
 

@@ -151,7 +151,6 @@ protected:
         auto treeType = mlir::decisionforest::TreeType::get(GetMLIRType(ReturnType(), m_builder), tileSize, 
                                                             GetMLIRType(ThresholdType(), m_builder), 
                                                             GetMLIRType(FeatureIndexType(), m_builder), GetMLIRType(int32_t(), m_builder),
-                                                            mlir::decisionforest::UseSparseTreeRepresentation, 
                                                             m_builder.getIntegerType(m_childIndexBitWidth));
 
         auto forestType = mlir::decisionforest::TreeEnsembleType::get(GetMLIRType(ReturnType(), m_builder),

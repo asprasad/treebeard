@@ -182,7 +182,6 @@ struct TreeTypeKey {
     Type thresholdType;
     Type featureIndexType;
     Type tileShapeType;
-    bool sparseRepresentation;
     Type childIndexType;
     Type classIdType;
     bool operator==(const TreeTypeKey& that) const
@@ -192,8 +191,6 @@ struct TreeTypeKey {
                 && this->thresholdType==that.thresholdType
                 && this->featureIndexType==that.featureIndexType
                 && this->tileShapeType==that.tileShapeType
-                && this->sparseRepresentation==that.sparseRepresentation
-                && (this->sparseRepresentation ? this->childIndexType==that.childIndexType : true)
                 && this->childIndexType == that.childIndexType
                 && this->classIdType == that.classIdType;
     }
@@ -201,14 +198,13 @@ struct TreeTypeKey {
 
 struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
     TreeTypeStorage(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType, 
-                    Type tileShapeType, bool sparseRep, Type childIndexType, Type classIdType)
+                    Type tileShapeType, Type childIndexType, Type classIdType)
         :
         m_resultType(resultType),
         m_tileSize(tileSize),
         m_thresholdType(thresholdType),
         m_featureIndexType(featureIndexType),
         m_tileShapeType(tileShapeType),
-        m_sparseRepresentation(sparseRep),
         m_childIndexType(childIndexType),
         m_classIdType(classIdType) {}
 
@@ -222,7 +218,6 @@ struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
             m_thresholdType,
             m_featureIndexType,
             m_tileShapeType,
-            m_sparseRepresentation,
             m_childIndexType,
             m_classIdType
         };
@@ -237,7 +232,6 @@ struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
             key.thresholdType,
             key.featureIndexType,
             key.tileShapeType,
-            key.sparseRepresentation,
             key.childIndexType,
             key.classIdType);
     }
@@ -251,7 +245,6 @@ struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
             thresholdType, 
             featureIndexType, 
             IntegerType::get(context, 32),
-            false, 
             IntegerType::get(context, 32),
             IntegerType::get(context, 8)
         };
@@ -266,13 +259,12 @@ struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
             thresholdType, 
             featureIndexType, 
             tileShapeType, 
-            false, 
             IntegerType::get(context, 32),
             IntegerType::get(context, 8)
         };
     }
 
-    static KeyTy getKey(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType, Type tileShapeType, bool sparseRep, Type childIndexType) {
+    static KeyTy getKey(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType, Type tileShapeType, Type childIndexType) {
         return KeyTy
         {
             resultType, 
@@ -280,13 +272,12 @@ struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
             thresholdType, 
             featureIndexType, 
             tileShapeType, 
-            sparseRep, 
             childIndexType,
             IntegerType::get(resultType.getContext(), 8) // #TODO Tree-Beard#19
         };
     }
 
-    static KeyTy getKey(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType, Type tileShapeType, bool sparseRep, Type childIndexType, Type classIdType) {
+    static KeyTy getKey(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType, Type tileShapeType, Type childIndexType, Type classIdType) {
         return KeyTy
         {
             resultType, 
@@ -294,7 +285,6 @@ struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
             thresholdType, 
             featureIndexType, 
             tileShapeType, 
-            sparseRep, 
             childIndexType,
             classIdType, 
         };
@@ -308,7 +298,6 @@ struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
             key.thresholdType,
             key.featureIndexType,
             key.tileShapeType,
-            key.sparseRepresentation,
             key.childIndexType,
             key.classIdType);
     }
@@ -318,7 +307,6 @@ struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
     Type m_thresholdType;
     Type m_featureIndexType;
     Type m_tileShapeType;
-    bool m_sparseRepresentation;
     Type m_childIndexType;
     Type m_classIdType;
 public:
@@ -340,9 +328,9 @@ public:
         return Base::get(ctx, resultType, tileSize, thresholdType, featureIndexType, tileShapeType);
     }
 
-    static TreeType get(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType, Type tileShapeType, bool sparseRep, Type childIndexType) {
+    static TreeType get(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType, Type tileShapeType, Type childIndexType) {
         mlir::MLIRContext *ctx = resultType.getContext();
-        return Base::get(ctx, resultType, tileSize, thresholdType, featureIndexType, tileShapeType, sparseRep, childIndexType);
+        return Base::get(ctx, resultType, tileSize, thresholdType, featureIndexType, tileShapeType, childIndexType);
     }
 
     mlir::Type getResultType() const { return getImpl()->m_resultType; }
@@ -350,7 +338,6 @@ public:
     mlir::Type getThresholdType() const { return getImpl()->m_thresholdType; }
     mlir::Type getFeatureIndexType() const { return getImpl()->m_featureIndexType; }
     mlir::Type getTileShapeType() const { return getImpl()->m_tileShapeType; }
-    bool isSparseRepresentation() const { return getImpl()->m_sparseRepresentation; }
     mlir::Type getChildIndexType() const { return getImpl()->m_childIndexType; }
     mlir::Type getClassIdType() const { return getImpl()-> m_classIdType; }
 

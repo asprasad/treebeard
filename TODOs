@@ -1,10 +1,10 @@
 * GPU Support
-    - Use schedule to specify which loops correspond to which GPU constructs (grid, threadblock etc)
-    - [Q] If we want to use a common mid-level IR, how do we convey to the final lowering which loops correspond to which GPU constructs?
+    - [Done] Use schedule to specify which loops correspond to which GPU constructs (grid, threadblock etc)
+    - [Done] [Q] If we want to use a common mid-level IR, how do we convey to the final lowering which loops correspond to which GPU constructs?
         - Should we just assume the outer 3 loops are for grid, the next 3 loops are for thread blocks? We could insert dummy loops if user doesn't specify everything.
         - Use attributes on the loops (setAttr)
-    - Lowering from mid-level to low-level needs to take into account the fact that we are compiling to GPUs
-        - Add a new representation for GPU. We need further refactoring of this part of the code!
+    - [Done] Lowering from mid-level to low-level needs to take into account the fact that we are compiling to GPUs
+        - [Done] Add a new representation for GPU. We need further refactoring of this part of the code!
             - How do we insert the model memrefs?
                 - [Option 1]
                     - The init function creates the required memrefs and returns them to the host code
@@ -16,6 +16,18 @@
             - The PredictForest method will take additional parameters (all the memrefs that were globals earlier)
             - Most of the lowering part should be the same. 
 
+    - Reorg forest representation
+        - [Done] Remove the assumption that every tree is represented by a single memref
+        - [Done] Remove the uses of TiledNumericalNodeType in shared code
+        - [Done] Make the lowering of low level ops like LoadTileThreshold etc something specified by the representation
+        - We need more information while lowering LoadTileThresholds/Indices
+            - [Preferred - Opt 1] Add the tree value as an argument to these ops
+                - Replace the tree value by the tree index (current representations replace it with the treeMemref)
+            - [Opt 2] Provide some mechanism to generate index computation code required
+                - This won't work when we need the tree for some other reason!
+        - New representation for reorg forest
+            - Generate Globals will generate different Init methods for each model memref (thresholds, indices, tileshape)
+            - 
 
 * Add a Treebeard context to store all configuration
     - Update the python API!
