@@ -20,7 +20,7 @@
         - [Done] Remove the assumption that every tree is represented by a single memref
         - [Done] Remove the uses of TiledNumericalNodeType in shared code
         - [Done] Make the lowering of low level ops like LoadTileThreshold etc something specified by the representation
-        - We need more information while lowering LoadTileThresholds/Indices
+        - [Done] We need more information while lowering LoadTileThresholds/Indices
             - [Preferred - Opt 1] Add the tree value as an argument to these ops
                 - Replace the tree value by the tree index (current representations replace it with the treeMemref)
             - [Opt 2] Provide some mechanism to generate index computation code required

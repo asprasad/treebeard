@@ -95,9 +95,9 @@ void AddGPUModelMemrefGetter_Scalar(mlir::ModuleOp module) {
     // Generate the initialization code
     auto thenBuilder = ifInBounds.getThenBodyBuilder();
     auto loadThreshold = thenBuilder.create<decisionforest::LoadTileThresholdsOp>(location, tileType.getThresholdElementType(), 
-                                                                                  getModelFunc.getArgument(0), elementIndex);
+                                                                                  getModelFunc.getArgument(0), elementIndex, oneIndexConst);
     auto loadIndex = thenBuilder.create<decisionforest::LoadTileFeatureIndicesOp>(location, tileType.getIndexElementType(), 
-                                                                                  getModelFunc.getArgument(0), elementIndex);
+                                                                                  getModelFunc.getArgument(0), elementIndex, oneIndexConst);
     /*auto writeThreshold =*/ thenBuilder.create<memref::StoreOp>(location, static_cast<Value>(loadThreshold),
                                                                   allocThreshold.getMemref(), static_cast<Value>(elementIndex));
     /*auto writeIndex =*/ thenBuilder.create<memref::StoreOp>(location, static_cast<Value>(loadIndex), 

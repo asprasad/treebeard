@@ -353,10 +353,12 @@ struct GetLeafTileValueOpLowering : public ConversionPattern {
     // Load threshold
     // TODO Ideally, this should be a different op for when we deal with tile sizes != 1. We will then need to load 
     // a single threshold value and cast it the trees return type
+    Value treeIndex = GetTreeIndexValue(tree);
     auto loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, 
                                                                                  thresholdType,
                                                                                  m_representation->GetThresholdsMemref(tree),
-                                                                                 static_cast<Value>(nodeIndex));
+                                                                                 static_cast<Value>(nodeIndex),
+                                                                                 treeIndex);
     Value leafValue = loadThresholdOp;
     auto tileSize = m_representation->GetTileSize();
     if (tileSize != 1) {

@@ -111,8 +111,6 @@ class DecisionForest_Op<string mnemonic, list<Trait> traits = []> :
 
 
 //------- High level IR Ops ------------------
-// TODO Need to parameterize 
-// * The number of return values (may have multiple return probablities, class ID etc)
 
 def InputDataType : AnyTypeOf<[F16MemRef, F32MemRef, F64MemRef]>;
 def ReturnType : AnyTypeOf<[I8, I16, I32, F16, F32, F64, I8MemRef, I16MemRef, I32MemRef, F16MemRef, F32MemRef, F64MemRef]>;
@@ -286,10 +284,12 @@ def TiledNumericalNodeMemRef  : MemRefOf<[TiledNumericalNodeType]>;
 def TileOfThresholdTypes : AnyTypeOf<[ThresholdValueType, VectorOf<[ThresholdValueType]>]>;
 def TileOfFeatureIndices : AnyTypeOf<[FeatureIndexType, VectorOf<[FeatureIndexType]>]>;
 
+// ----- Low-level IR Ops ------
+
 def LoadTileThresholdsOp : DecisionForest_Op<"loadTileThresholds", [Pure]> {
   let summary = "Load the thresholds from a tree tile.";
   let description = "Load all the thresholds from a tile in a tree memref. Takes a memref and an index into the memref and returns a vector of floating point values.";
-  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex);
+  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex, Index:$treeIndex);
 
   let results = (outs TileOfThresholdTypes);
 }
@@ -297,7 +297,7 @@ def LoadTileThresholdsOp : DecisionForest_Op<"loadTileThresholds", [Pure]> {
 def LoadTileFeatureIndicesOp : DecisionForest_Op<"loadTileFeatureIndices", [Pure]> {
   let summary = "Load the feature indices from a tree tile.";
   let description = "Load all the feature indices from a tile in a tree memref. Takes a memref and an index into the memref and returns a vector of floating point values.";
-  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex);
+  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex, Index:$treeIndex);
 
   let results = (outs TileOfFeatureIndices);
 }
@@ -305,38 +305,9 @@ def LoadTileFeatureIndicesOp : DecisionForest_Op<"loadTileFeatureIndices", [Pure
 def LoadTileShapeOp : DecisionForest_Op<"loadTileShape", [Pure]> {
   let summary = "Load the shape of a tree tile.";
   let description = "Load the shape ID from a tile in a tree memref. Takes a memref and an index into the memref and returns an integer.";
-  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex);
+  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex, Index:$treeIndex);
 
   let results = (outs TileShapeType);
-}
-
-def LoadChildIndexOp : DecisionForest_Op<"loadChildIndex", [Pure]> {
-  let summary = "Load the child index of a tree tile.";
-  let description = "Load the child index from a tile in a tree memref. Takes a memref and an index into the memref and returns an integer.";
-  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex);
-
-  let results = (outs ChildIndexType);
-}
-
-def InitTileOp : DecisionForest_Op<"initTile"> {
-  let summary = "Initialize a tree tile.";
-  let description = "Initialize a single tile in a tree memref. Takes a memref and an index along with the values to write into the tile.";
-  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, 
-                       Index:$tileIndex,
-                       TileOfThresholdTypes:$thresholds,
-                       TileOfFeatureIndices:$featureIndices,
-                       TileShapeType:$tileShapeID);
-}
-
-def InitSparseTileOp : DecisionForest_Op<"initSparseTile"> {
-  let summary = "Initialize a sparse tree tile.";
-  let description = "Initialize a single tile in a tree memref. Takes a memref and an index along with the values to write into the tile.";
-  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, 
-                       Index:$tileIndex,
-                       TileOfThresholdTypes:$thresholds,
-                       TileOfFeatureIndices:$featureIndices,
-                       TileShapeType:$tileShapeID,
-                       ChildIndexType:$childIndex);
 }
 
 def IndexToNodeOp : DecisionForest_Op<"indexToNode", [Pure]> {
@@ -355,6 +326,39 @@ def NodeToIndexOp : DecisionForest_Op<"nodeToIndex", [Pure]> {
   let results = (outs Index);
 }
 
+// ----- Representation Specific Low-level IR Ops ------
+
+// Array-based representation
+def InitTileOp : DecisionForest_Op<"initTile"> {
+  let summary = "Initialize a tree tile.";
+  let description = "Initialize a single tile in a tree memref. Takes a memref and an index along with the values to write into the tile.";
+  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, 
+                       Index:$tileIndex,
+                       TileOfThresholdTypes:$thresholds,
+                       TileOfFeatureIndices:$featureIndices,
+                       TileShapeType:$tileShapeID);
+}
+
+// Sparse representation
+def LoadChildIndexOp : DecisionForest_Op<"loadChildIndex", [Pure]> {
+  let summary = "Load the child index of a tree tile.";
+  let description = "Load the child index from a tile in a tree memref. Takes a memref and an index into the memref and returns an integer.";
+  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, Index:$nodeIndex);
+
+  let results = (outs ChildIndexType);
+}
+
+def InitSparseTileOp : DecisionForest_Op<"initSparseTile"> {
+  let summary = "Initialize a sparse tree tile.";
+  let description = "Initialize a single tile in a tree memref. Takes a memref and an index along with the values to write into the tile.";
+  let arguments = (ins TiledNumericalNodeMemRef:$treeMemref, 
+                       Index:$tileIndex,
+                       TileOfThresholdTypes:$thresholds,
+                       TileOfFeatureIndices:$featureIndices,
+                       TileShapeType:$tileShapeID,
+                       ChildIndexType:$childIndex);
+}
+
 def GetModelMemrefSizeOp : DecisionForest_Op<"getModelMemrefSizeOp", [Pure]> {
   let summary = "Gets the size (in bytes) of the argument model memref.";
   let description = "Gets the size (in bytes) of the argument model memref. Takes into account the actual size of the tile on the target to which we are compiling.";
@@ -362,25 +366,6 @@ def GetModelMemrefSizeOp : DecisionForest_Op<"getModelMemrefSizeOp", [Pure]> {
 
   let results = (outs I32);
 }
-// class NodeConstantOp<string mnemonic, list<OpTrait> traits = []> : 
-//   DecisionForest_Op<mnemonic, traits> {
-//     string myStr = "";
-// }
-
-// def NumericalNodeConstantOp : NodeConstantOp<"numerical", [Pure]> {
-//   let arguments = (ins F64ElementsAttr:$threshold, I32ElementsAttr:$featureIndex, NodeType:$left, NodeType:$right);
-//   let results = (outs NumericalNodeType);
-//   let myStr = "abc";
-// }
-
-// def CategoricalNodeConstantOp : NodeConstantOp<"numerical"> {
-//   
-// }
-
-// def LeafNodeConstantOp : NodeConstantOp<"numerical", [Pure]> {
-//   let arguments = (ins F64ElementsAttr:$value);
-//   let results = (outs LeafNodeType);
-// }
 
 // ----- Debugging IR Ops ------
 def PrintTreePredictionOp : DecisionForest_Op<"printTreePrediction", []> {

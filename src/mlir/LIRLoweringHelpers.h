@@ -88,6 +88,13 @@ inline void AddGlobalMemrefGetter(mlir::ModuleOp module, std::string globalName,
   module.push_back(getGlobalMemrefFunc);
 }
 
+inline Value GetTreeIndexValue(Value tree) {
+  auto definingOp = tree.getDefiningOp();
+  auto getTreeOp = AssertOpIsOfType<decisionforest::GetTreeFromEnsembleOp>(definingOp);
+  auto treeIndex = getTreeOp.getTreeIndex();
+  assert (treeIndex.getType().isa<mlir::IndexType>());
+  return treeIndex;
+}
 
 } // helpers
 } // decisionforest

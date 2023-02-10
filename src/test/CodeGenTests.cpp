@@ -61,7 +61,11 @@ bool Test_LoadTileThresholdOp_DoubleInt32_TileSize1(TestArgs_t& args) {
 
   auto inputMemref = func.getArgument(0);
   auto outputMemref = func.getArgument(1);
-  auto threshold = builder.create<decisionforest::LoadTileThresholdsOp>(location, builder.getF64Type(), static_cast<Value>(inputMemref), static_cast<Value>(i));
+  auto threshold = builder.create<decisionforest::LoadTileThresholdsOp>(location, 
+                                                                        builder.getF64Type(),
+                                                                        static_cast<Value>(inputMemref),
+                                                                        static_cast<Value>(i),
+                                                                        static_cast<Value>(zeroConst));
 
   builder.create<memref::StoreOp>(location, TypeRange({ }), static_cast<Value>(threshold), outputMemref, i);
 
@@ -130,7 +134,11 @@ bool Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1(TestArgs_t& args) {
 
   auto inputMemref = func.getArgument(0);
   auto outputMemref = func.getArgument(1);
-  auto featureIndex = builder.create<decisionforest::LoadTileFeatureIndicesOp>(location, builder.getI32Type(), static_cast<Value>(inputMemref), static_cast<Value>(i));
+  auto featureIndex = builder.create<decisionforest::LoadTileFeatureIndicesOp>(location, 
+                                                                               builder.getI32Type(),
+                                                                               static_cast<Value>(inputMemref),
+                                                                               static_cast<Value>(i),
+                                                                               static_cast<Value>(zeroConst));
 
   builder.create<memref::StoreOp>(location, TypeRange({ }), static_cast<Value>(featureIndex), outputMemref, i);
 
@@ -205,7 +213,11 @@ bool Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args) {
   builder.setInsertionPointToStart(batchLoop.getBody());
   auto i = batchLoop.getInductionVar();
 
-  auto threshold = builder.create<decisionforest::LoadTileThresholdsOp>(location, builder.getF64Type(), static_cast<Value>(memrefSubview), static_cast<Value>(i));
+  auto threshold = builder.create<decisionforest::LoadTileThresholdsOp>(location,
+                                                                        builder.getF64Type(),
+                                                                        static_cast<Value>(memrefSubview),
+                                                                        static_cast<Value>(i),
+                                                                        static_cast<Value>(zeroConst));
 
   builder.create<memref::StoreOp>(location, TypeRange({ }), static_cast<Value>(threshold), outputMemref, i);
 
@@ -280,7 +292,11 @@ bool Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1(TestArgs_t& arg
   builder.setInsertionPointToStart(batchLoop.getBody());
   auto i = batchLoop.getInductionVar();
 
-  auto featureIndex = builder.create<decisionforest::LoadTileFeatureIndicesOp>(location, builder.getI32Type(), static_cast<Value>(memrefSubview), static_cast<Value>(i));
+  auto featureIndex = builder.create<decisionforest::LoadTileFeatureIndicesOp>(location, 
+                                                                               builder.getI32Type(),
+                                                                               static_cast<Value>(memrefSubview),
+                                                                               static_cast<Value>(i),
+                                                                               static_cast<Value>(zeroConst));
 
   builder.create<memref::StoreOp>(location, TypeRange({ }), static_cast<Value>(featureIndex), outputMemref, i);
 
@@ -417,13 +433,13 @@ public:
     auto tileShapeMemref = func.getArgument(3);
     auto thresholdVectorType = mlir::VectorType::get({ tileSize }, GetMLIRType(ThresholdType(), this->m_builder));
     auto threshold = builder.create<decisionforest::LoadTileThresholdsOp>(location, thresholdVectorType,
-                                                                          static_cast<Value>(inputMemref), static_cast<Value>(i));
+                                                                          static_cast<Value>(inputMemref), static_cast<Value>(i), static_cast<Value>(zeroConst));
     auto featureIndexVectorType = mlir::VectorType::get({ tileSize }, GetMLIRType(FeatureIndexType(), this->m_builder));
     auto index = builder.create<decisionforest::LoadTileFeatureIndicesOp>(location, featureIndexVectorType,
-                                                                          static_cast<Value>(inputMemref), static_cast<Value>(i));
+                                                                          static_cast<Value>(inputMemref), static_cast<Value>(i), static_cast<Value>(zeroConst));
 
     auto tileShape = builder.create<decisionforest::LoadTileShapeOp>(location, tileShapeType,
-                                                                     static_cast<Value>(inputMemref), static_cast<Value>(i));
+                                                                     static_cast<Value>(inputMemref), static_cast<Value>(i), static_cast<Value>(zeroConst));
 
     auto tileSizeConst = builder.create<arith::ConstantIndexOp>(location, tileSize);
     auto outputMemrefOffset = builder.create<mlir::arith::MulIOp>(location, builder.getIndexType(), i, tileSizeConst);

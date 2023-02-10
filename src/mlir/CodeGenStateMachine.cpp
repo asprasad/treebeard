@@ -4,6 +4,7 @@
 #include "TreeTilingUtils.h"
 #include "TiledTree.h"
 #include "schedule.h"
+#include "OpLoweringUtils.h"
 #include "LIRLoweringHelpers.h"
 
 using namespace mlir::decisionforest::helpers;
@@ -71,19 +72,23 @@ namespace decisionforest
             if (decisionforest::InsertDebugHelpers) {
               rewriter.create<decisionforest::PrintTreeNodeOp>(location, m_nodeIndex);
             }
+            Value treeIndex = GetTreeIndexValue(m_tree);
             m_loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location,
                                                                                       thresholdType, 
                                                                                       m_representation->GetThresholdsMemref(m_tree),
-                                                                                      static_cast<Value>(m_nodeIndex));
+                                                                                      static_cast<Value>(m_nodeIndex),
+                                                                                      treeIndex);
             m_state = kLoadFeatureIndex;
           }
           break;
         case kLoadFeatureIndex:
           {
+            Value treeIndex = GetTreeIndexValue(m_tree);
             m_loadFeatureIndexOp = rewriter.create<decisionforest::LoadTileFeatureIndicesOp>(location,
                                                                                              featureIndexType,
                                                                                              m_representation->GetFeatureIndexMemref(m_tree),
-                                                                                             static_cast<Value>(m_nodeIndex));
+                                                                                             static_cast<Value>(m_nodeIndex),
+                                                                                             treeIndex);
 
             m_extraLoads = m_representation->GenerateExtraLoads(location, rewriter, m_tree, m_nodeIndex);
             m_state = kLoadFeature;
@@ -187,10 +192,12 @@ namespace decisionforest
               rewriter.create<decisionforest::PrintTreeNodeOp>(location, m_nodeIndex);
             }
             // Load threshold
+            Value treeIndex = GetTreeIndexValue(m_tree);
             m_loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, 
                                                                                       m_thresholdVectorType,
                                                                                       m_representation->GetThresholdsMemref(m_tree),
-                                                                                      static_cast<Value>(m_nodeIndex));
+                                                                                      static_cast<Value>(m_nodeIndex),
+                                                                                      treeIndex);
             if (decisionforest::InsertDebugHelpers) {
               Value vectorVal = m_loadThresholdOp;
               if (!m_thresholdVectorType.getElementType().isF64()) {
@@ -204,10 +211,12 @@ namespace decisionforest
           break;
         case kLoadFeatureIndex:
           {
+            Value treeIndex = GetTreeIndexValue(m_tree);
             m_loadFeatureIndexOp = rewriter.create<decisionforest::LoadTileFeatureIndicesOp>(location, 
                                                                                              m_featureIndexVectorType,
                                                                                              m_representation->GetFeatureIndexMemref(m_tree),
-                                                                                             static_cast<Value>(m_nodeIndex));
+                                                                                             static_cast<Value>(m_nodeIndex),
+                                                                                             treeIndex);
             if (decisionforest::InsertDebugHelpers) {
               InsertPrintVectorOp(
                   rewriter,
@@ -222,10 +231,12 @@ namespace decisionforest
           break;
         case kLoadTileShape:
           {
+            Value treeIndex = GetTreeIndexValue(m_tree);
             auto loadTileShapeOp = rewriter.create<decisionforest::LoadTileShapeOp>(location, 
                                                                                     m_tileShapeType,
                                                                                     m_representation->GetTileShapeMemref(m_tree),
-                                                                                    static_cast<Value>(m_nodeIndex));
+                                                                                    static_cast<Value>(m_nodeIndex),
+                                                                                    treeIndex);
             m_loadTileShapeIndexOp = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadTileShapeOp));
 
             m_state = kLoadChildIndex;
