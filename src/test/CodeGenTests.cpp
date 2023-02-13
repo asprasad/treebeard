@@ -491,7 +491,10 @@ bool Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(TestArgs_t& args, Fore
   decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   // module->dump();
   auto representation = decisionforest::ConstructRepresentation();
-  decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), representation);
+  decisionforest::LowerEnsembleToMemrefs(args.context, 
+                                         module,
+                                         decisionforest::ConstructModelSerializer(irGenerator.GetModelGlobalsJSONFilePath()),
+                                         representation);
   decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
   decisionforest::LowerToLLVM(args.context, module, representation);
@@ -753,7 +756,10 @@ bool Test_ModelInitialization(TestArgs_t& args, ForestConstructor_t forestConstr
 
   decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   auto representation = decisionforest::ConstructRepresentation();
-  decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), representation);
+  decisionforest::LowerEnsembleToMemrefs(args.context,
+                                         module,
+                                         decisionforest::ConstructModelSerializer(irGenerator.GetModelGlobalsJSONFilePath()),
+                                         representation);
   decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   irGenerator.AddThresholdGetter();  
   // module->dump();
@@ -1176,7 +1182,10 @@ bool Test_UniformTiling_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   // module->dump();
   auto representation = decisionforest::ConstructRepresentation();
-  decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), representation);
+  decisionforest::LowerEnsembleToMemrefs(args.context,
+                                         module,
+                                         decisionforest::ConstructModelSerializer(irGenerator.GetModelGlobalsJSONFilePath()),
+                                         representation);
   decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
   decisionforest::LowerToLLVM(args.context, module, representation);

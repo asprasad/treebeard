@@ -168,7 +168,7 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
     TreeBeard::CompilerOptions options(compilerConfigJSONFile);
     TreeBeard::TreebeardContext tbContext{jsonFile, modelGlobalsJSONFile, options, 
                                           mlir::decisionforest::ConstructRepresentation(),
-                                          mlir::decisionforest::ConstructModelSerializer()};
+                                          mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONFile)};
     TreeBeard::ConvertXGBoostJSONToLLVMIR(tbContext, llvmIRFile);
   }
   else {
@@ -177,7 +177,7 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
                                        TreeBeard::TilingType::kUniform, false, false, invertLoops ? &scheduleManipulator : nullptr);
     TreeBeard::TreebeardContext tbContext{jsonFile, modelGlobalsJSONFile, options, 
                                           mlir::decisionforest::ConstructRepresentation(),
-                                          mlir::decisionforest::ConstructModelSerializer()};
+                                          mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONFile)};
     TreeBeard::ConvertXGBoostJSONToLLVMIR(tbContext, llvmIRFile);
   }
   return true;

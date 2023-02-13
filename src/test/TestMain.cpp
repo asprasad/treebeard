@@ -479,7 +479,7 @@ bool Test_BufferInit_RightHeavy(TestArgs_t& args) {
                                                                 mlir::decisionforest::ReductionType::kAdd, treeType);
   
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
-  decisionforest::ConstructModelSerializer()->Persist(forest, forestType);
+  decisionforest::ConstructModelSerializer(GetGlobalJSONNameForTests())->Persist(forest, forestType);
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
   mlir::decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
 
@@ -547,7 +547,7 @@ bool Test_BufferInitialization_TwoTrees(TestArgs_t& args) {
                                                                 mlir::decisionforest::ReductionType::kAdd, treeType);
   
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
-  decisionforest::ConstructModelSerializer()->Persist(forest, forestType);
+  decisionforest::ConstructModelSerializer(GetGlobalJSONNameForTests())->Persist(forest, forestType);
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
   mlir::decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
 
@@ -590,7 +590,7 @@ bool Test_BufferInitializationWithOneTree_LeftHeavy(TestArgs_t& args) {
                                                                 mlir::decisionforest::ReductionType::kAdd, treeType);
   
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
-  decisionforest::ConstructModelSerializer()->Persist(forest, forestType);
+  decisionforest::ConstructModelSerializer(GetGlobalJSONNameForTests())->Persist(forest, forestType);
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
   mlir::decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
   
@@ -656,7 +656,10 @@ bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   // module->dump();
   auto representation = decisionforest::ConstructRepresentation();
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), representation);
+  mlir::decisionforest::LowerEnsembleToMemrefs(args.context,
+                                               module,
+                                               decisionforest::ConstructModelSerializer(irConstructor.GetModelGlobalsJSONFilePath()),
+                                               representation);
   // module->dump();
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
@@ -694,7 +697,10 @@ bool Test_ForestCodeGen_VariableBatchSize(TestArgs_t& args, ForestConstructor_t 
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   // module->dump();
   auto representation = decisionforest::ConstructRepresentation();
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), representation);
+  mlir::decisionforest::LowerEnsembleToMemrefs(args.context,
+                                               module,
+                                               decisionforest::ConstructModelSerializer(irConstructor.GetModelGlobalsJSONFilePath()),
+                                               representation);
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
   mlir::decisionforest::LowerToLLVM(args.context, module, representation);
@@ -852,7 +858,7 @@ bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t fore
   auto forestType = mlir::decisionforest::TreeEnsembleType::get(thresholdType, 1, thresholdType /*HACK type doesn't matter for this test*/,
                                                                 mlir::decisionforest::ReductionType::kAdd, treeTypes);
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
-  decisionforest::ConstructModelSerializer()->Persist(forest, forestType);
+  decisionforest::ConstructModelSerializer(GetGlobalJSONNameForTests())->Persist(forest, forestType);
   mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
   mlir::decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
 

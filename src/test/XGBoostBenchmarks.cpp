@@ -85,7 +85,7 @@ double Test_CodeGenForJSON_ProbabilityBasedTiling(int64_t batchSize, const std::
   
   TreeBeard::TreebeardContext tbContext{modelJsonPath, modelGlobalsJSONFilePath, options, 
                                         mlir::decisionforest::ConstructRepresentation(),
-                                        mlir::decisionforest::ConstructModelSerializer()};
+                                        mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONFilePath)};
   auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ReturnType, FeatureIndexType, int32_t, FloatType>(context, tbContext);
 
   decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, floatTypeBitWidth, sizeof(FeatureIndexType)*8);

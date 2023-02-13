@@ -345,9 +345,9 @@ ArrayBasedRepresentation::GlobalMemrefTypes ArrayBasedRepresentation::AddGlobalM
     rewriter.getUnitAttr(),
     false,
     IntegerAttr());
-    AddGlobalMemrefGetter(module, treeInfo, classInfoMemrefType, rewriter, location);
+  AddGlobalMemrefGetter(module, treeInfo, classInfoMemrefType, rewriter, location);
 
-    return GlobalMemrefTypes { modelMemrefType, offsetMemrefType, classInfoMemrefType };
+  return GlobalMemrefTypes { modelMemrefType, offsetMemrefType, classInfoMemrefType };
 }
 
 void ArrayBasedRepresentation::GenModelMemrefInitFunctionBody(MemRefType memrefType, Value getGlobalMemref,

@@ -14,7 +14,15 @@ namespace decisionforest
 class IRepresentation;
 
 class IModelSerializer {
+protected:
+  std::string m_filepath;
+  int32_t m_batchSize=-1;
+  int32_t m_inputElementBitWidth=-1;
+  int32_t m_returnTypeBitwidth=-1;
 public:
+  IModelSerializer(const std::string& filepath)
+    :m_filepath(filepath)
+  { }
   virtual ~IModelSerializer() { }
   virtual void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType)=0;
 };

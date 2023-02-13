@@ -158,7 +158,9 @@ bool CheckGPUModelInitialization_Scalar(TestArgs_t& args, ForestConstructor_t fo
   // module->dump();
 
   auto representation = decisionforest::ConstructGPURepresentation();
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(),
+  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, 
+                                               module,
+                                               decisionforest::ConstructModelSerializer(irConstructor.GetModelGlobalsJSONFilePath()),
                                                representation);
   
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
@@ -294,7 +296,9 @@ bool Test_GPUCodeGeneration_Scalar_VariableBatchSize(TestArgs_t& args,
   // module->dump();
 
   auto representation = decisionforest::ConstructGPURepresentation();
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(),
+  mlir::decisionforest::LowerEnsembleToMemrefs(args.context,
+                                               module,
+                                               decisionforest::ConstructModelSerializer(irConstructor.GetModelGlobalsJSONFilePath()),
                                                representation);
   
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);

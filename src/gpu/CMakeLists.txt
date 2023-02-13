@@ -3,11 +3,13 @@ PRIVATE
 GPUSupportUtils.cpp
 GPURepresentations.cpp
 LowerGPUToLLVM.cpp
-GPUExecutionHelper.cpp)
+GPUExecutionHelper.cpp
+ReorgForestRepresentation.cpp)
 
 target_sources(treebeard-runtime 
 PRIVATE
 GPUSupportUtils.cpp
 GPURepresentations.cpp
 LowerGPUToLLVM.cpp
-GPUExecutionHelper.cpp)
+GPUExecutionHelper.cpp
+ReorgForestRepresentation.cpp)

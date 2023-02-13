@@ -12,25 +12,31 @@ namespace decisionforest
 
 class ArrayRepresentationSerializer : public IModelSerializer {
 public:
+  ArrayRepresentationSerializer(const std::string& modelGlobalsJSONPath)
+    :IModelSerializer(modelGlobalsJSONPath)
+  { }
   ~ArrayRepresentationSerializer() {}
   void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
 };
 
 class SparseRepresentationSerializer : public IModelSerializer {
 public:
+  SparseRepresentationSerializer(const std::string& modelGlobalsJSONPath)
+    :IModelSerializer(modelGlobalsJSONPath)
+  { }
   ~SparseRepresentationSerializer() {}
   void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
 };
 
 class ModelSerializerFactory {
 public:
-  static std::shared_ptr<IModelSerializer> GetModelSerializer(const std::string& name);
+  static std::shared_ptr<IModelSerializer> GetModelSerializer(const std::string& name, const std::string& modelGlobalsJSONPath);
 };
 
 // TODO This function needs to be removed
 // Helper to construct the right serializer to work around the 
 // global "UseSparseRepresentation"
-std::shared_ptr<IModelSerializer> ConstructModelSerializer();
+std::shared_ptr<IModelSerializer> ConstructModelSerializer(const std::string& modelGlobalsJSONPath);
 
 } // decisionforest
 } // mlir

@@ -127,7 +127,7 @@ extern "C" void GenerateLLVMIRForXGBoostModel(const char* modelJSONPath, const c
   TreeBeard::CompilerOptions *optionsPtr = reinterpret_cast<TreeBeard::CompilerOptions*>(options);
   TreeBeard::TreebeardContext tbContext{modelJSONPath, modelGlobalsJSONPath, *optionsPtr, 
                                         mlir::decisionforest::ConstructRepresentation(),
-                                        mlir::decisionforest::ConstructModelSerializer()};
+                                        mlir::decisionforest::ConstructModelSerializer(std::string(modelGlobalsJSONPath))};
   TreeBeard::ConvertXGBoostJSONToLLVMIR(tbContext, llvmIRFilePath);
 }
 
@@ -139,7 +139,7 @@ extern "C" intptr_t CreateInferenceRunner(const char* modelJSONPath, const char*
   TreeBeard::InitializeMLIRContext(context); 
   TreeBeard::TreebeardContext tbContext{modelJSONPath, modelGlobalsJSONPath, *optionsPtr, 
                                         mlir::decisionforest::ConstructRepresentation(),
-                                        mlir::decisionforest::ConstructModelSerializer()};
+                                        mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath)};
   auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON(context, tbContext);
   auto inferenceRunner = new mlir::decisionforest::InferenceRunner(modelGlobalsJSONPath, module, 
                                                                    optionsPtr->tileSize, optionsPtr->thresholdTypeWidth,

@@ -237,21 +237,21 @@ void ArrayRepresentationSerializer::Persist(mlir::decisionforest::DecisionForest
 }
 
 // TODO Make this implementation more general by having some kind of registry
-std::shared_ptr<IModelSerializer> ModelSerializerFactory::GetModelSerializer(const std::string& name) {
+std::shared_ptr<IModelSerializer> ModelSerializerFactory::GetModelSerializer(const std::string& name, const std::string& modelGlobalsJSONPath) {
   if (name == "array")
-    return std::make_shared<ArrayRepresentationSerializer>();
+    return std::make_shared<ArrayRepresentationSerializer>(modelGlobalsJSONPath);
   else if (name == "sparse")
-    return std::make_shared<SparseRepresentationSerializer>();
+    return std::make_shared<SparseRepresentationSerializer>(modelGlobalsJSONPath);
   
   assert(false && "Unknown serialization format");
   return nullptr;
 }
 
-std::shared_ptr<IModelSerializer> ConstructModelSerializer() {
+std::shared_ptr<IModelSerializer> ConstructModelSerializer(const std::string& modelGlobalsJSONPath) {
   if (decisionforest::UseSparseTreeRepresentation)
-    return ModelSerializerFactory::GetModelSerializer("sparse");
+    return ModelSerializerFactory::GetModelSerializer("sparse", modelGlobalsJSONPath);
   else
-    return ModelSerializerFactory::GetModelSerializer("array");
+    return ModelSerializerFactory::GetModelSerializer("array", modelGlobalsJSONPath);
 }
 
 }

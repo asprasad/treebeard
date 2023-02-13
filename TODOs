@@ -26,8 +26,18 @@
             - [Opt 2] Provide some mechanism to generate index computation code required
                 - This won't work when we need the tree for some other reason!
         - New representation for reorg forest
-            - Generate Globals will generate different Init methods for each model memref (thresholds, indices, tileshape)
-            - 
+            - Generate Globals will generate different Init methods for each model memref (thresholds, indices)
+                - This rep will only support scalar code gen 
+                - 
+            - Need to stop using the JSONReader class
+                - Everything that is being written by the JSONReader class needs to go through the serializer 
+                    - batch size
+                    - row size
+                    - 
+                - Uses of the class
+                    - ModelJSONParser
+                    - InferenceRunner
+        - How do we construct the right serializer? Should we have a global map?
 
 * Add a Treebeard context to store all configuration
     - Update the python API!
