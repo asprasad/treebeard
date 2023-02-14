@@ -25,7 +25,8 @@ extern "C" intptr_t InitializeInferenceRunner(const char* soPath, const char* mo
   int32_t tileSize = tileSizeEntries.front()["TileSize"];
   int32_t thresholdBitwidth = tileSizeEntries.front()["ThresholdBitWidth"];
   int32_t featureIndexBitwidth = tileSizeEntries.front()["FeatureIndexBitWidth"];
-  auto inferenceRunner = new mlir::decisionforest::SharedObjectInferenceRunner(modelGlobalsJSONPath, soPath, tileSize, 
+  auto serializer = mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);
+  auto inferenceRunner = new mlir::decisionforest::SharedObjectInferenceRunner(serializer, soPath, tileSize, 
                                                                                thresholdBitwidth, featureIndexBitwidth);
   return reinterpret_cast<intptr_t>(inferenceRunner);
 }
@@ -141,7 +142,7 @@ extern "C" intptr_t CreateInferenceRunner(const char* modelJSONPath, const char*
                                         mlir::decisionforest::ConstructRepresentation(),
                                         mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath)};
   auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON(context, tbContext);
-  auto inferenceRunner = new mlir::decisionforest::InferenceRunner(modelGlobalsJSONPath, module, 
+  auto inferenceRunner = new mlir::decisionforest::InferenceRunner(tbContext.serializer, module, 
                                                                    optionsPtr->tileSize, optionsPtr->thresholdTypeWidth,
                                                                    optionsPtr->featureIndexTypeWidth);
   return reinterpret_cast<intptr_t>(inferenceRunner);

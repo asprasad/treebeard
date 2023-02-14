@@ -148,7 +148,7 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
   mlir::decisionforest::LowerToLLVM(args.context, module, representation);
 
 
-  decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
+  decisionforest::InferenceRunner inferenceRunner(serializer, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
   
   std::vector<std::vector<FloatType>> inputData;
   std::vector<std::vector<FloatType>> xgBoostPredictions;
@@ -286,7 +286,7 @@ bool TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int
   // module->dump();
   mlir::decisionforest::LowerToLLVM(args.context, module, representation);
 
-  decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
+  decisionforest::InferenceRunner inferenceRunner(serializer, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
   
   std::vector<std::vector<FloatType>> inputData;
   std::vector<std::vector<FloatType>> xgBoostPredictions;

@@ -209,7 +209,8 @@ int64_t RunXGBoostInferenceOnCSVInput(const std::string& csvPath, mlir::decision
 
 void RunInferenceUsingSO(const std::string&modelJsonPath, const std::string& soPath, const std::string& modelGlobalsJSONPath, 
                          const std::string& csvPath, const CompilerOptions& options) {
-  mlir::decisionforest::SharedObjectInferenceRunner inferenceRunner(modelGlobalsJSONPath, soPath, options.tileSize, options.thresholdTypeWidth, options.featureIndexTypeWidth);
+  auto serializer = mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);
+  mlir::decisionforest::SharedObjectInferenceRunner inferenceRunner(serializer, soPath, options.tileSize, options.thresholdTypeWidth, options.featureIndexTypeWidth);
   int64_t time;
   if (options.returnTypeFloatType){ 
     assert (options.inputElementTypeWidth == options.returnTypeWidth);

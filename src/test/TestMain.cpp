@@ -673,7 +673,7 @@ bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   mlir::decisionforest::LowerToLLVM(args.context, module, representation);
   // module->dump();
   // mlir::decisionforest::dumpLLVMIR(module);
-  decisionforest::InferenceRunner inferenceRunner(irConstructor.GetModelGlobalsJSONFilePath(), module, 1, 64, 32);
+  decisionforest::InferenceRunner inferenceRunner(serializer, module, 1, 64, 32);
   
   // inferenceRunner.PrintLengthsArray();
   // inferenceRunner.PrintOffsetsArray();
@@ -719,7 +719,7 @@ bool Test_ForestCodeGen_VariableBatchSize(TestArgs_t& args, ForestConstructor_t 
   mlir::decisionforest::LowerToLLVM(args.context, module, representation);
   // module->dump();
   // mlir::decisionforest::dumpLLVMIR(module);
-  decisionforest::InferenceRunner inferenceRunner(irConstructor.GetModelGlobalsJSONFilePath(), module, 1, 64, 32);
+  decisionforest::InferenceRunner inferenceRunner(serializer, module, 1, 64, 32);
   
   // inferenceRunner.PrintLengthsArray();
   // inferenceRunner.PrintOffsetsArray();

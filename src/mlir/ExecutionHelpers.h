@@ -14,6 +14,7 @@
 
 #include "TreeTilingUtils.h"
 #include "TypeDefinitions.h"
+#include "TreebeardContext.h"
 
 namespace mlir
 {
@@ -29,6 +30,7 @@ using ClassMemrefType = Memref<int8_t, 1>;
 
 class InferenceRunnerBase {
 protected:
+  std::shared_ptr<IModelSerializer> m_serializer;
   std::string m_modelGlobalsJSONFilePath;
   int32_t m_inputElementBitWidth;
   int32_t m_returnTypeBitWidth;
@@ -52,10 +54,17 @@ protected:
   
   void Init();
 public:
-  InferenceRunnerBase(const std::string& modelGlobalsJSONFilePath, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize)
-    : m_modelGlobalsJSONFilePath(modelGlobalsJSONFilePath), m_tileSize(tileSize), m_thresholdSize(thresholdSize), m_featureIndexSize(featureIndexSize) 
+  InferenceRunnerBase(std::shared_ptr<IModelSerializer> serializer,
+                     int32_t tileSize,
+                     int32_t thresholdSize,
+                     int32_t featureIndexSize)
+    : m_serializer(serializer),
+      m_modelGlobalsJSONFilePath(serializer->GetFilePath()),
+      m_tileSize(tileSize),
+      m_thresholdSize(thresholdSize),
+      m_featureIndexSize(featureIndexSize) 
   { 
-    decisionforest::ForestJSONReader::GetInstance().SetFilePath(modelGlobalsJSONFilePath);
+    decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_modelGlobalsJSONFilePath);
     decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
     // TODO read the thresholdSize and featureIndexSize from the JSON!
     m_batchSize = decisionforest::ForestJSONReader::GetInstance().GetBatchSize();
@@ -114,8 +123,11 @@ protected:
   void* GetFunctionAddress(const std::string& functionName) override;
 public:
   static llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> CreateExecutionEngine(mlir::ModuleOp module);
-  InferenceRunner(const std::string& modelGlobalsJSONFilePath, mlir::ModuleOp module, int32_t tileSize, 
-                  int32_t thresholdSize, int32_t featureIndexSize);
+  InferenceRunner(std::shared_ptr<IModelSerializer> serializer, 
+                  mlir::ModuleOp module,
+                  int32_t tileSize, 
+                  int32_t thresholdSize,
+                  int32_t featureIndexSize);
 };
 
 class SharedObjectInferenceRunner : public InferenceRunnerBase{
@@ -123,7 +135,11 @@ class SharedObjectInferenceRunner : public InferenceRunnerBase{
 protected:
   void* GetFunctionAddress(const std::string& functionName) override;
 public:
-  SharedObjectInferenceRunner(const std::string& modelGlobalsJSONFilePath, const std::string& soPath, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize);
+  SharedObjectInferenceRunner(std::shared_ptr<IModelSerializer> serializer,
+                              const std::string& soPath,
+                              int32_t tileSize,
+                              int32_t thresholdSize,
+                              int32_t featureIndexSize);
   ~SharedObjectInferenceRunner();
 };
 
