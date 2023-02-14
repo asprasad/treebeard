@@ -179,7 +179,7 @@ bool CheckGPUModelInitialization_Scalar(TestArgs_t& args, ForestConstructor_t fo
   mlir::decisionforest::LowerGPUToLLVM(args.context, module, representation);
   // module->dump();
 
-  GPUInferenceRunnerForTest inferenceRunner(irConstructor.GetModelGlobalsJSONFilePath(), 
+  GPUInferenceRunnerForTest inferenceRunner(serializer, 
                                             module,
                                             1,
                                             sizeof(ThresholdType)*8,
@@ -324,7 +324,9 @@ bool Test_GPUCodeGeneration_Scalar_VariableBatchSize(TestArgs_t& args,
   mlir::decisionforest::LowerGPUToLLVM(args.context, module, representation);
   // module->dump();
 
-  GPUInferenceRunnerForTest inferenceRunner(irConstructor.GetModelGlobalsJSONFilePath(), module, 1 /*tileSize*/, 
+  GPUInferenceRunnerForTest inferenceRunner(serializer,
+                                            module,
+                                            1 /*tileSize*/, 
                                             sizeof(ThresholdType)*8, sizeof(IndexType)*8);
 
   assert (batchSize%2 == 0);

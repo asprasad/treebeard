@@ -14,6 +14,7 @@
 
 #include "TreeTilingUtils.h"
 #include "TypeDefinitions.h"
+#include "TreebeardContext.h"
 
 namespace mlir
 {
@@ -34,6 +35,7 @@ using ModelMemrefType = Memref<Tile, 1>;
 
 class GPUInferenceRunner {
 protected:
+  std::shared_ptr<IModelSerializer> m_serializer;
   std::string m_modelGlobalsJSONFilePath;
   int32_t m_inputElementBitWidth;
   int32_t m_returnTypeBitWidth;
@@ -68,11 +70,20 @@ protected:
   llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> CreateExecutionEngine(mlir::ModuleOp module);
 
 public:
-  GPUInferenceRunner(const std::string& modelGlobalsJSONFilePath, mlir::ModuleOp module, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize)
-    : m_modelGlobalsJSONFilePath(modelGlobalsJSONFilePath), m_tileSize(tileSize), m_thresholdSize(thresholdSize), m_featureIndexSize(featureIndexSize),
-      m_maybeEngine(CreateExecutionEngine(module)), m_engine(m_maybeEngine.get()), m_module(module) 
+  GPUInferenceRunner(std::shared_ptr<IModelSerializer> serializer, 
+                     mlir::ModuleOp module,
+                     int32_t tileSize,
+                     int32_t thresholdSize,
+                     int32_t featureIndexSize)
+    : m_serializer(serializer),
+      m_modelGlobalsJSONFilePath(serializer->GetFilePath()),
+      m_tileSize(tileSize),
+      m_thresholdSize(thresholdSize),
+      m_featureIndexSize(featureIndexSize),
+      m_maybeEngine(CreateExecutionEngine(module)),
+      m_engine(m_maybeEngine.get()), m_module(module) 
   { 
-    decisionforest::ForestJSONReader::GetInstance().SetFilePath(modelGlobalsJSONFilePath);
+    decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_modelGlobalsJSONFilePath);
     decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
     // TODO read the thresholdSize and featureIndexSize from the JSON!
     m_batchSize = decisionforest::ForestJSONReader::GetInstance().GetBatchSize();
