@@ -12,11 +12,10 @@ template<typename ThresholdType=double, typename ReturnType=double, typename Fea
          typename NodeIndexType=int32_t, typename InputElementType=ThresholdType>
 mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, TreebeardContext& tbContext) {
   const std::string& modelJsonPath=tbContext.modelJSONPath;
-  const std::string& modelGlobalsJSONPath=tbContext.modelGlobalsJSONPath;
   const CompilerOptions& options=tbContext.options;
   
   TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>
-                               xgBoostParser(context, modelJsonPath, modelGlobalsJSONPath, options.statsProfileCSVPath, options.batchSize);
+                               xgBoostParser(context, modelJsonPath, tbContext.serializer, options.statsProfileCSVPath, options.batchSize);
   xgBoostParser.Parse();
   xgBoostParser.SetChildIndexBitWidth(options.childIndexBitWidth);
   auto module = xgBoostParser.GetEvaluationFunction();

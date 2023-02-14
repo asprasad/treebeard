@@ -2,6 +2,7 @@
 #include "DecisionForest.h"
 #include "xgboostparser.h"
 #include "TestUtilsCommon.h"
+#include "ModelSerializers.h"
 
 namespace
 {
@@ -9,7 +10,7 @@ namespace
 void ComputeForestInferenceStatsImpl(const std::string& modelJSONPath, const std::string& csvPath, int32_t numRows, std::ostream& outputStream, bool sortLeaves) {
   // std::string csvPath = "/home/ashwin/ML/scikit-learn_bench/xgb_models/airline_xgb_model_save.json.test.csv";
   mlir::MLIRContext context;
-  TreeBeard::XGBoostJSONParser<> xgBoostParser(context, modelJSONPath, "", 1);
+  TreeBeard::XGBoostJSONParser<> xgBoostParser(context, modelJSONPath, mlir::decisionforest::ConstructModelSerializer(""), 1);
   xgBoostParser.Parse();
   auto decisionForest = xgBoostParser.GetForest();
 

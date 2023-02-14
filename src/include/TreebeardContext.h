@@ -17,7 +17,8 @@ class IModelSerializer {
 protected:
   std::string m_filepath;
   int32_t m_batchSize=-1;
-  int32_t m_inputElementBitWidth=-1;
+  int32_t m_rowSize=-1;
+  int32_t m_inputTypeBitWidth=-1;
   int32_t m_returnTypeBitwidth=-1;
 public:
   IModelSerializer(const std::string& filepath)
@@ -25,6 +26,18 @@ public:
   { }
   virtual ~IModelSerializer() { }
   virtual void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType)=0;
+  
+  const std::string& GetFilePath() const { return m_filepath; }
+  
+  virtual void SetBatchSize(int32_t value)=0;
+  virtual void SetRowSize(int32_t value)=0;
+  virtual void SetInputTypeBitWidth(int32_t value)=0;
+  virtual void SetReturnTypeBitWidth(int32_t value)=0;
+
+  int32_t SetBatchSize() { return m_batchSize; }
+  int32_t GetRowSize() { return m_rowSize; }
+  int32_t SetInputTypeBitWidth() { return m_inputTypeBitWidth; }
+  int32_t SetReturnTypeBitWidth() { return m_returnTypeBitwidth; }
 };
 
 } // decisionforest

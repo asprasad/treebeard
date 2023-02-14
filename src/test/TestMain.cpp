@@ -640,7 +640,14 @@ bool Test_BufferInitializationWithTwoTrees_FloatInt8(TestArgs_t& args) {
 // IR Tests
 bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestConstructor, std::vector< std::vector<double> >& inputData,
                                    int32_t childIndexBitWidth=1, ScheduleManipulator_t scheduleManipulator=nullptr) {
-  FixedTreeIRConstructor<> irConstructor(args.context, 1, forestConstructor);
+  auto modelGlobalsJSONPath = TreeBeard::ModelJSONParser<double,
+                                                         double,
+                                                         int32_t,
+                                                         int32_t,
+                                                         double>::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
+  auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);
+
+  FixedTreeIRConstructor<> irConstructor(args.context, serializer, 1, forestConstructor);
   irConstructor.Parse();
   // If sparse representation is turned on, then child index bit width should be passed
   assert (!mlir::decisionforest::UseSparseTreeRepresentation || childIndexBitWidth!=1 );
@@ -658,7 +665,7 @@ bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   auto representation = decisionforest::ConstructRepresentation();
   mlir::decisionforest::LowerEnsembleToMemrefs(args.context,
                                                module,
-                                               decisionforest::ConstructModelSerializer(irConstructor.GetModelGlobalsJSONFilePath()),
+                                               serializer,
                                                representation);
   // module->dump();
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
@@ -683,7 +690,13 @@ bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
 bool Test_ForestCodeGen_VariableBatchSize(TestArgs_t& args, ForestConstructor_t forestConstructor, 
                                           int64_t batchSize, std::vector< std::vector<double> >& inputData, int32_t childIndexBitWidth=1,
                                           ScheduleManipulator_t scheduleManipulator=nullptr) {
-  FixedTreeIRConstructor<> irConstructor(args.context, batchSize, forestConstructor);
+  auto modelGlobalsJSONPath = TreeBeard::ModelJSONParser<double,
+                                                         double,
+                                                         int32_t,
+                                                         int32_t,
+                                                         double>::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
+  auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);                                            
+  FixedTreeIRConstructor<> irConstructor(args.context, serializer, batchSize, forestConstructor);
   irConstructor.Parse();
   irConstructor.SetChildIndexBitWidth(childIndexBitWidth);
   auto module = irConstructor.GetEvaluationFunction();
@@ -699,7 +712,7 @@ bool Test_ForestCodeGen_VariableBatchSize(TestArgs_t& args, ForestConstructor_t 
   auto representation = decisionforest::ConstructRepresentation();
   mlir::decisionforest::LowerEnsembleToMemrefs(args.context,
                                                module,
-                                               decisionforest::ConstructModelSerializer(irConstructor.GetModelGlobalsJSONFilePath()),
+                                               serializer,
                                                representation);
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();

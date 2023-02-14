@@ -8,6 +8,7 @@
 #include "TreeTilingUtils.h"
 #include "Dialect.h"
 #include "StatsUtils.h"
+#include "ModelSerializers.h"
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -78,7 +79,6 @@ protected:
     using DecisionTreeType = typename DecisionForestType::DecisionTreeType;
 
     std::string m_jsonFilePath;
-    std::string m_modelGlobalsJSONFilePath;
     std::string m_statsProfileCSV;
     DecisionForestType *m_forest;
     DecisionTreeType *m_currentTree;
@@ -88,6 +88,8 @@ protected:
     mlir::OpBuilder m_builder;
     int32_t m_batchSize;
     int32_t m_childIndexBitWidth;
+    
+    std::shared_ptr<mlir::decisionforest::IModelSerializer> m_serializer;
 
     void SetReductionType(mlir::decisionforest::ReductionType reductionType) { m_forest->SetReductionType(reductionType); }
     void AddFeature(const std::string& featureName, const std::string& type) { m_forest->AddFeature(featureName, type); }
@@ -123,7 +125,7 @@ protected:
         mlir::Type elementType = GetMLIRType(InputElementType(), m_builder); //GetMLIRTypeFromString(features.front().type, m_builder);
         int64_t shape[] = { m_batchSize, static_cast<int64_t>(features.size())};
         // TODO This needs to be moved elsewhere. Seems too obscure a place for this!
-        mlir::decisionforest::ForestJSONReader::GetInstance().SetRowSize(features.size());
+        m_serializer->SetRowSize(features.size());
         // auto affineMap = mlir::makeStridedLinearLayoutMap(mlir::ArrayRef<int64_t>({ static_cast<int64_t>(features.size()), 1 }), 0, elementType.getContext());
         // return mlir::MemRefType::get(shape, elementType, affineMap);
         return mlir::MemRefType::get(shape, elementType);
@@ -163,29 +165,34 @@ public:
         return jsonFilePath + ".treebeard-globals.json";
     }
 
-    ModelJSONParser(const std::string& jsonFilePath, const std::string& modelGlobalsJSONFilePath, mlir::MLIRContext& context, 
-                    int32_t batchSize, double_t initialValue, const std::string& statsProfileCSV)
-        : m_jsonFilePath(jsonFilePath), m_modelGlobalsJSONFilePath(modelGlobalsJSONFilePath),
+    ModelJSONParser(const std::string& jsonFilePath, 
+                    std::shared_ptr<mlir::decisionforest::IModelSerializer> serializer,
+                    mlir::MLIRContext& context, 
+                    int32_t batchSize,
+                    double_t initialValue,
+                    const std::string& statsProfileCSV)
+        : m_jsonFilePath(jsonFilePath),
           m_statsProfileCSV(statsProfileCSV), m_forest(new DecisionForestType(initialValue)), 
           m_currentTree(nullptr), m_schedule(nullptr), m_context(context), m_builder(&context),
-          m_batchSize(batchSize), m_childIndexBitWidth(1) 
+          m_batchSize(batchSize), m_childIndexBitWidth(1), m_serializer(serializer) 
     {
         m_module = mlir::ModuleOp::create(m_builder.getUnknownLoc(), llvm::StringRef("MyModule"));
-        // m_modelGlobalsJSONFilePath = ModelGlobalJSONFilePathFromJSONFilePath(jsonFilePath);
-        mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_modelGlobalsJSONFilePath);
-        mlir::decisionforest::ForestJSONReader::GetInstance().SetBatchSize(batchSize);
-        mlir::decisionforest::ForestJSONReader::GetInstance().SetInputElementBitWidth(sizeof(InputElementType)*8);
-        mlir::decisionforest::ForestJSONReader::GetInstance().SetReturnTypeBitWidth(sizeof(ReturnType)*8);
+        m_serializer->SetBatchSize(batchSize);
+        m_serializer->SetInputTypeBitWidth(sizeof(InputElementType)*8);
+        m_serializer->SetReturnTypeBitWidth(sizeof(ReturnType)*8);
     }
 
-    ModelJSONParser(const std::string& jsonFilePath, const std::string& modelGlobalsJSONFilePath, mlir::MLIRContext& context, 
-                    int32_t batchSize, double_t initialValue)
-        : ModelJSONParser(jsonFilePath, modelGlobalsJSONFilePath, context, batchSize, initialValue, "")
+    ModelJSONParser(const std::string& jsonFilePath, 
+                    std::shared_ptr<mlir::decisionforest::IModelSerializer> serializer,
+                    mlir::MLIRContext& context, 
+                    int32_t batchSize,
+                    double_t initialValue)
+        : ModelJSONParser(jsonFilePath, serializer, context, batchSize, initialValue, "")
     { }
 
 
-    ModelJSONParser(const std::string& jsonFilePath, const std::string& modelGlobalsJSONFilePath, mlir::MLIRContext& context, int32_t batchSize)
-        : ModelJSONParser(jsonFilePath, modelGlobalsJSONFilePath, context, batchSize, 0.0, "")
+    ModelJSONParser(const std::string& jsonFilePath, std::shared_ptr<mlir::decisionforest::IModelSerializer> serializer, mlir::MLIRContext& context, int32_t batchSize)
+        : ModelJSONParser(jsonFilePath, serializer, context, batchSize, 0.0, "")
     {
     }
     
@@ -195,7 +202,7 @@ public:
     }
 
     mlir::decisionforest::Schedule* GetSchedule() { return m_schedule; }
-    const std::string& GetModelGlobalsJSONFilePath() { return m_modelGlobalsJSONFilePath; }
+    const std::string& GetModelGlobalsJSONFilePath() { return m_serializer->GetFilePath(); }
 
     virtual void Parse() = 0;
 

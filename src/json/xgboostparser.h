@@ -17,17 +17,23 @@ class XGBoostJSONParser : public ModelJSONParser<ThresholdType, ReturnType, Feat
     static constexpr double_t INITIAL_VALUE = 0;
 
 public:
-    XGBoostJSONParser(mlir::MLIRContext& context, const std::string& filename, const std::string& modelGlobalsJSONFilePath, int32_t batchSize)
-        :ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(filename, modelGlobalsJSONFilePath, context, batchSize, INITIAL_VALUE)
+    XGBoostJSONParser(mlir::MLIRContext& context, 
+                      const std::string& filename,
+                      std::shared_ptr<mlir::decisionforest::IModelSerializer> serializer,
+                      int32_t batchSize)
+        :ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(filename, serializer, context, batchSize, INITIAL_VALUE)
     {
         std::ifstream fin(filename);
         assert (fin);
         fin >> m_json;
     }
     
-    XGBoostJSONParser(mlir::MLIRContext& context, const std::string& filename, 
-                     const std::string& modelGlobalsJSONFilePath, const std::string& statsProfileCSV, int32_t batchSize)
-        :ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(filename, modelGlobalsJSONFilePath, context, batchSize, INITIAL_VALUE, statsProfileCSV)
+    XGBoostJSONParser(mlir::MLIRContext& context,
+                     const std::string& filename, 
+                     std::shared_ptr<mlir::decisionforest::IModelSerializer> serializer,
+                     const std::string& statsProfileCSV,
+                     int32_t batchSize)
+        :ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(filename, serializer, context, batchSize, INITIAL_VALUE, statsProfileCSV)
     {
         std::ifstream fin(filename);
         assert (fin);

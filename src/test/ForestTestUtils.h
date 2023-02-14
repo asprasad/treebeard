@@ -194,16 +194,27 @@ class FixedTreeIRConstructor : public TreeBeard::ModelJSONParser<ThresholdType, 
   std::vector<DoubleInt32Tile> m_treeSerialization;
   ForestConstructor_t m_constructForest;
 public:
-  FixedTreeIRConstructor(MLIRContext& context, int32_t batchSize, ForestConstructor_t constructForest)
-    : TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(TreeBeard::test::GetGlobalJSONNameForTests(), 
-                                 TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests()),
-                                 context, batchSize), m_constructForest(constructForest)
+  FixedTreeIRConstructor(MLIRContext& context,
+                         std::shared_ptr<decisionforest::IModelSerializer> serializer,
+                         int32_t batchSize,
+                         ForestConstructor_t constructForest)
+    : TreeBeard::ModelJSONParser<ThresholdType,
+                                 ReturnType,
+                                 FeatureIndexType,
+                                 NodeIndexType,
+                                 InputElementType>(TreeBeard::test::GetGlobalJSONNameForTests(), 
+                                                   serializer,
+                                                   context,
+                                                   batchSize),
+                                 m_constructForest(constructForest)
   {  }
+
   void Parse() override {
     m_treeSerialization = m_constructForest(*this->m_forest);
     this->m_forest->SetPredictionTransformation(decisionforest::PredictionTransformation::kIdentity);
     AddFeaturesToForest(*this->m_forest, m_treeSerialization, "float");
   }
+  
   decisionforest::DecisionForest<>& GetForest() { return *this->m_forest; }
 };
 

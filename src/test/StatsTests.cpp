@@ -21,6 +21,7 @@
 #include "ForestTestUtils.h"
 #include "CompileUtils.h"
 #include "StatsUtils.h"
+#include "ModelSerializers.h"
 
 using namespace mlir;
 
@@ -32,7 +33,7 @@ namespace test
 decisionforest::DecisionForest<> ConstructForestAndRunInference(const std::string& modelJSONPath, const std::string& csvPath, int32_t numRows) {
   // std::string csvPath = "/home/ashwin/ML/scikit-learn_bench/xgb_models/airline_xgb_model_save.json.test.csv";
   mlir::MLIRContext context;
-  TreeBeard::XGBoostJSONParser<> xgBoostParser(context, modelJSONPath, "", 1);
+  TreeBeard::XGBoostJSONParser<> xgBoostParser(context, modelJSONPath, decisionforest::ConstructModelSerializer(""), 1);
   xgBoostParser.Parse();
   auto decisionForest = xgBoostParser.GetForest();
 
@@ -51,7 +52,7 @@ bool Test_XGBoostModel_StatGenerationAndReading(const std::string& modelJSON, co
   TreeBeard::Profile::ComputeForestProbabilityProfile(modelJSON, inputCSV, statsCSV, -1);
 
   mlir::MLIRContext context;
-  TreeBeard::XGBoostJSONParser<> xgBoostParser(context, modelJSON, "", 1);
+  TreeBeard::XGBoostJSONParser<> xgBoostParser(context, modelJSON, decisionforest::ConstructModelSerializer(""), 1);
   xgBoostParser.Parse();
   auto decisionForest = xgBoostParser.GetForest();
 

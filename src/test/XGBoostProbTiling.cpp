@@ -116,8 +116,13 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
                                      TreeBeard::TilingType::kHybrid, false /*makeAllLeavesSameDepth*/, true, nullptr);
   
   auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
+  auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONFilePath);
   // auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType>(args.context, modelJsonPath, modelGlobalsJSONFilePath, options);
-  TreeBeard::XGBoostJSONParser<FloatType, ResultType, FeatureIndexType, NodeIndexType, FloatType> xgBoostParser(args.context, modelJsonPath, modelGlobalsJSONFilePath, options.batchSize);
+  TreeBeard::XGBoostJSONParser<FloatType, 
+                               ResultType,
+                               FeatureIndexType,
+                               NodeIndexType,
+                               FloatType> xgBoostParser(args.context, modelJsonPath, serializer, options.batchSize);
   xgBoostParser.Parse();
   xgBoostParser.SetChildIndexBitWidth(options.childIndexBitWidth);
 
@@ -136,7 +141,7 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
   auto representation = decisionforest::ConstructRepresentation();
   mlir::decisionforest::LowerEnsembleToMemrefs(args.context, 
                                                module,
-                                               decisionforest::ConstructModelSerializer(modelGlobalsJSONFilePath),
+                                               serializer,
                                                representation);
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();
@@ -258,9 +263,13 @@ bool TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int
                                      TreeBeard::TilingType::kHybrid, false /*makeAllLeavesSameDepth*/, true, nullptr);
   
   auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
+  auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONFilePath);
   // auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType>(args.context, modelJsonPath, modelGlobalsJSONFilePath, options);
-  TreeBeard::XGBoostJSONParser<FloatType, ResultType, FeatureIndexType, NodeIndexType, FloatType>
-                               xgBoostParser(args.context, modelJsonPath, modelGlobalsJSONFilePath, statsProfileCSV, options.batchSize);
+  TreeBeard::XGBoostJSONParser<FloatType, 
+                               ResultType,
+                               FeatureIndexType,
+                               NodeIndexType,
+                               FloatType> xgBoostParser(args.context, modelJsonPath, serializer, statsProfileCSV, options.batchSize);
   xgBoostParser.Parse();
   xgBoostParser.SetChildIndexBitWidth(options.childIndexBitWidth);
   auto module = xgBoostParser.GetEvaluationFunction();
@@ -271,7 +280,7 @@ bool TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int
   auto representation = decisionforest::ConstructRepresentation();
   mlir::decisionforest::LowerEnsembleToMemrefs(args.context,
                                                module,
-                                               decisionforest::ConstructModelSerializer(modelGlobalsJSONFilePath),
+                                               serializer,
                                                representation);
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   // module->dump();

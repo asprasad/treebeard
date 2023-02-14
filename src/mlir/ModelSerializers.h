@@ -17,6 +17,11 @@ public:
   { }
   ~ArrayRepresentationSerializer() {}
   void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
+
+  void SetBatchSize(int32_t value) override;
+  void SetRowSize(int32_t value) override;
+  void SetInputTypeBitWidth(int32_t value) override;
+  void SetReturnTypeBitWidth(int32_t value) override;
 };
 
 class SparseRepresentationSerializer : public IModelSerializer {
@@ -26,6 +31,11 @@ public:
   { }
   ~SparseRepresentationSerializer() {}
   void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
+  
+  void SetBatchSize(int32_t value) override;
+  void SetRowSize(int32_t value) override;
+  void SetInputTypeBitWidth(int32_t value) override;
+  void SetReturnTypeBitWidth(int32_t value) override;
 };
 
 class ModelSerializerFactory {
