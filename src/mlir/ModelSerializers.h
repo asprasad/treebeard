@@ -17,6 +17,7 @@ public:
   { }
   ~ArrayRepresentationSerializer() {}
   void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
+  void ReadData() override;
 
   void SetBatchSize(int32_t value) override;
   void SetRowSize(int32_t value) override;
@@ -31,6 +32,7 @@ public:
   { }
   ~SparseRepresentationSerializer() {}
   void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
+  void ReadData() override;
   
   void SetBatchSize(int32_t value) override;
   void SetRowSize(int32_t value) override;

@@ -59,24 +59,8 @@ int32_t InferenceRunnerBase::InitializeLengthsArray() {
   return 0;
 }
 
-void InferenceRunnerBase::PrintLengthsArray() {
-  // TODO The ForestJSONReader class needs to provide an interface to iterate over tile sizes and bit widths
-  // We need to construct the name of the getter function based on those. 
-  typedef LengthMemrefType (*GetLengthFunc_t)();
-  auto getLengthPtr = reinterpret_cast<GetLengthFunc_t>(GetFunctionAddress("Get_lengths"));
-  LengthMemrefType lengthMemref = getLengthPtr();
-  std::cout << "Length memref (size : " << lengthMemref.lengths[0] << ", ";
-  std::cout << "elements : {";
-  for (int64_t i=0; i<lengthMemref.lengths[0]; ++i)
-    std::cout << " " << lengthMemref.alignedPtr[i];
-  std::cout << " })\n";
-
-  return;
-}
-
 // TODO All the initialize methods are doing the same thing, except that the getter they're calling are different. 
 // Refactor them into a shared method.
-
 int32_t InferenceRunnerBase::InitializeOffsetsArray() {
   // TODO The ForestJSONReader class needs to provide an interface to iterate over tile sizes and bit widths
   // We need to construct the name of the getter function based on those. 
@@ -85,21 +69,6 @@ int32_t InferenceRunnerBase::InitializeOffsetsArray() {
   auto offsetMemref = getOffsetPtr();
   mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(offsetMemref.alignedPtr, m_tileSize, m_thresholdSize, m_featureIndexSize);
   return 0;
-}
-
-void InferenceRunnerBase::PrintOffsetsArray() {
-  // TODO The ForestJSONReader class needs to provide an interface to iterate over tile sizes and bit widths
-  // We need to construct the name of the getter function based on those. 
-  typedef OffsetMemrefType (*GetOffsetsFunc_t)();
-  auto getOffsetPtr = reinterpret_cast<GetOffsetsFunc_t>(GetFunctionAddress("Get_offsets"));
-  auto offsetMemref = getOffsetPtr();
-  std::cout << "Offset memref (size : " << offsetMemref.lengths[0] << ", ";
-  std::cout << "elements : {";
-  for (int64_t i=0; i<offsetMemref.lengths[0]; ++i)
-    std::cout << " " << offsetMemref.alignedPtr[i];
-  std::cout << " })\n";
-
-  return;
 }
 
 template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType>

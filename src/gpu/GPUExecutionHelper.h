@@ -83,13 +83,12 @@ public:
       m_maybeEngine(CreateExecutionEngine(module)),
       m_engine(m_maybeEngine.get()), m_module(module) 
   { 
-    decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_modelGlobalsJSONFilePath);
-    decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
+    m_serializer->ReadData();
     // TODO read the thresholdSize and featureIndexSize from the JSON!
-    m_batchSize = decisionforest::ForestJSONReader::GetInstance().GetBatchSize();
-    m_rowSize = decisionforest::ForestJSONReader::GetInstance().GetRowSize();
-    m_inputElementBitWidth = decisionforest::ForestJSONReader::GetInstance().GetInputElementBitWidth();
-    m_returnTypeBitWidth = decisionforest::ForestJSONReader::GetInstance().GetReturnTypeBitWidth();
+    m_batchSize = m_serializer->GetBatchSize();
+    m_rowSize = m_serializer->GetRowSize();
+    m_inputElementBitWidth = m_serializer->GetInputTypeBitWidth();
+    m_returnTypeBitWidth = m_serializer->GetReturnTypeBitWidth();
 
     Init();
   }

@@ -64,13 +64,11 @@ public:
       m_thresholdSize(thresholdSize),
       m_featureIndexSize(featureIndexSize) 
   { 
-    decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_modelGlobalsJSONFilePath);
-    decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
-    // TODO read the thresholdSize and featureIndexSize from the JSON!
-    m_batchSize = decisionforest::ForestJSONReader::GetInstance().GetBatchSize();
-    m_rowSize = decisionforest::ForestJSONReader::GetInstance().GetRowSize();
-    m_inputElementBitWidth = decisionforest::ForestJSONReader::GetInstance().GetInputElementBitWidth();
-    m_returnTypeBitWidth = decisionforest::ForestJSONReader::GetInstance().GetReturnTypeBitWidth();
+    m_serializer->ReadData();
+    m_batchSize = m_serializer->GetBatchSize();
+    m_rowSize = m_serializer->GetRowSize();
+    m_inputElementBitWidth = m_serializer->GetInputTypeBitWidth();
+    m_returnTypeBitWidth = m_serializer->GetReturnTypeBitWidth();
   }
   virtual ~InferenceRunnerBase() { }
   
@@ -87,10 +85,6 @@ public:
   int32_t GetInputElementBitWidth() { return m_inputElementBitWidth; }
   int32_t GetReturnTypeBitWidth() { return m_returnTypeBitWidth; }
   
-  void PrintLengthsArray();
-  void PrintOffsetsArray();
-  void PrintModelArray();
-
   template<typename InputElementType, typename ReturnType>
   int32_t RunInference(InputElementType *input, ReturnType *returnValue, int32_t inputRowSize, int32_t batchSize) {
     assert (batchSize == m_batchSize);
