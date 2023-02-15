@@ -518,7 +518,7 @@ bool Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(TestArgs_t& args, Fore
   for(auto& row : inputData) {
     ThresholdType result = -1;
     std::vector<InputElementType> inputRow(row.begin(), row.end());
-    inferenceRunner.RunInference<InputElementType, ReturnType>(inputRow.data(), &result, inputRow.size(), 1);
+    inferenceRunner.RunInference<InputElementType, ReturnType>(inputRow.data(), &result);
     ThresholdType expectedResult = irGenerator.GetForest().Predict(row);
     Test_ASSERT(FPEqual(result, expectedResult));
   }
@@ -1228,7 +1228,7 @@ bool Test_UniformTiling_BatchSize1(TestArgs_t& args,
   for(auto& row : inputData) {
     ThresholdType result = -1;
     std::vector<InputElementType> inputRow(row.begin(), row.end());
-    inferenceRunner.RunInference<InputElementType, ReturnType>(inputRow.data(), &result, inputRow.size(), 1);
+    inferenceRunner.RunInference<InputElementType, ReturnType>(inputRow.data(), &result);
     ThresholdType expectedResult = irGenerator.GetForest().Predict(row);
     Test_ASSERT(FPEqual(result, expectedResult));
   }

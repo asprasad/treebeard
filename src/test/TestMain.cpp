@@ -680,7 +680,7 @@ bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   
   for(auto& row : inputData) {
     double result = -1;
-    inferenceRunner.RunInference<double, double>(row.data(), &result, row.size(), 1);
+    inferenceRunner.RunInference<double, double>(row.data(), &result);
     double expectedResult = irConstructor.GetForest().Predict(row);
     Test_ASSERT(FPEqual(result, expectedResult));
   }
@@ -728,7 +728,7 @@ bool Test_ForestCodeGen_VariableBatchSize(TestArgs_t& args, ForestConstructor_t 
     assert (batch.size() % batchSize == 0);
     size_t rowSize = batch.size()/batchSize;
     std::vector<double> result(batchSize, -1);
-    inferenceRunner.RunInference<double, double>(batch.data(), result.data(), batch.size()/batchSize, batchSize);
+    inferenceRunner.RunInference<double, double>(batch.data(), result.data());
     for(int64_t rowIdx=0 ; rowIdx<batchSize ; ++rowIdx) {
       std::vector<double> row(batch.begin() + rowIdx*rowSize, batch.begin() + (rowIdx+1)*rowSize);
       double expectedResult = irConstructor.GetForest().Predict(row);

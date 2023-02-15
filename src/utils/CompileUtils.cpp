@@ -196,7 +196,7 @@ int64_t RunXGBoostInferenceOnCSVInput(const std::string& csvPath, mlir::decision
     for(auto& batch : inputData) {
       assert (batch.size() % batchSize == 0);
       std::vector<ReturnType> result(batchSize, -1);
-      inferenceRunner.RunInference<FloatType, ReturnType>(batch.data(), result.data(), rowSize, batchSize);
+      inferenceRunner.RunInference<FloatType, ReturnType>(batch.data(), result.data());
     }
   }
   std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();

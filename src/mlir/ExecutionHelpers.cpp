@@ -7,6 +7,7 @@
 #include "ExecutionHelpers.h"
 #include "Dialect.h"
 #include "Logger.h"
+#include "TreebeardContext.h"
 
 namespace 
 {
@@ -34,6 +35,24 @@ namespace mlir
 {
 namespace decisionforest
 {
+
+InferenceRunnerBase::InferenceRunnerBase(std::shared_ptr<IModelSerializer> serializer,
+                                         int32_t tileSize,
+                                         int32_t thresholdSize,
+                                         int32_t featureIndexSize)
+  : m_serializer(serializer),
+    m_modelGlobalsJSONFilePath(serializer->GetFilePath()),
+    m_tileSize(tileSize),
+    m_thresholdSize(thresholdSize),
+    m_featureIndexSize(featureIndexSize) 
+{ 
+  m_serializer->ReadData();
+  m_batchSize = m_serializer->GetBatchSize();
+  m_rowSize = m_serializer->GetRowSize();
+  m_inputElementBitWidth = m_serializer->GetInputTypeBitWidth();
+  m_returnTypeBitWidth = m_serializer->GetReturnTypeBitWidth();
+}
+
 void InferenceRunnerBase::Init() {
   InitializeLengthsArray();
   InitializeOffsetsArray();

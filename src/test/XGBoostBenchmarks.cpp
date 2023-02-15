@@ -111,13 +111,12 @@ double Test_CodeGenForJSON_ProbabilityBasedTiling(int64_t batchSize, const std::
   std::cin >> ch;
 #endif
 
-  size_t rowSize = csvReader.GetRow(0).size() - 1; // The last entry is the xgboost prediction
   std::vector<ReturnType> result(batchSize, -1);
   std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
   for (int32_t trial=0 ; trial<NUM_RUNS ; ++trial) {
     for(auto& batch : inputData) {
       // assert (batch.size() % batchSize == 0);
-      inferenceRunner.RunInference<FloatType, ReturnType>(batch.data(), result.data(), rowSize, batchSize);
+      inferenceRunner.RunInference<FloatType, ReturnType>(batch.data(), result.data());
     }
   }
   std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
