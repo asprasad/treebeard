@@ -5,6 +5,7 @@
 #include "DecisionForest.h"
 #include "TreeTilingUtils.h"
 #include "Dialect.h"
+#include "ExecutionHelpers.h"
 
 namespace mlir
 {
@@ -20,6 +21,14 @@ protected:
   int32_t m_rowSize=-1;
   int32_t m_inputTypeBitWidth=-1;
   int32_t m_returnTypeBitwidth=-1;
+  InferenceRunnerBase *m_inferenceRunner=nullptr;
+
+  template<typename FuncType>
+  FuncType GetFunctionAddress(const std::string& funcName) {
+    return reinterpret_cast<FuncType>(m_inferenceRunner->GetFunctionAddress(funcName));
+  }
+
+  virtual void InitializeBuffersImpl()=0;
 public:
   IModelSerializer(const std::string& filepath)
     :m_filepath(filepath)
@@ -27,7 +36,12 @@ public:
   virtual ~IModelSerializer() { }
   virtual void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType)=0;
   virtual void ReadData()=0;
-
+  
+  void InitializeBuffers(InferenceRunnerBase* inferenceRunner) {
+    m_inferenceRunner = inferenceRunner;
+    this->InitializeBuffersImpl();
+  }
+  
   const std::string& GetFilePath() const { return m_filepath; }
   
   virtual void SetBatchSize(int32_t value)=0;

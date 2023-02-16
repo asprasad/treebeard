@@ -10,10 +10,35 @@ namespace mlir
 namespace decisionforest
 {
 
-class ArrayRepresentationSerializer : public IModelSerializer {
+class ArraySparseSerializerBase : public IModelSerializer {
+protected:
+  bool m_sparseRepresentation;
+  template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType, typename ChildIndexType>
+  int32_t CallInitMethod();
+  
+  template<typename ThresholdType, typename FeatureIndexType>
+  int32_t ResolveTileShapeType();
+
+  template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType>
+  int32_t ResolveChildIndexType();
+
+  int32_t InitializeLengthsArray();
+  int32_t InitializeOffsetsArray();
+  int32_t InitializeModelArray();
+  void InitializeClassInformation();
+public:
+  ArraySparseSerializerBase(const std::string& modelGlobalsJSONPath, bool sparseRep)
+    :IModelSerializer(modelGlobalsJSONPath), m_sparseRepresentation(sparseRep)
+  { }
+  ~ArraySparseSerializerBase() { }
+};
+
+class ArrayRepresentationSerializer : public ArraySparseSerializerBase {
+protected:
+  void InitializeBuffersImpl() override;
 public:
   ArrayRepresentationSerializer(const std::string& modelGlobalsJSONPath)
-    :IModelSerializer(modelGlobalsJSONPath)
+    :ArraySparseSerializerBase(modelGlobalsJSONPath, false)
   { }
   ~ArrayRepresentationSerializer() {}
   void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
@@ -25,10 +50,13 @@ public:
   void SetReturnTypeBitWidth(int32_t value) override;
 };
 
-class SparseRepresentationSerializer : public IModelSerializer {
+class SparseRepresentationSerializer : public ArraySparseSerializerBase {
+protected:
+  int32_t InitializeLeafArrays();
+  void InitializeBuffersImpl() override;
 public:
   SparseRepresentationSerializer(const std::string& modelGlobalsJSONPath)
-    :IModelSerializer(modelGlobalsJSONPath)
+    :ArraySparseSerializerBase(modelGlobalsJSONPath, true)
   { }
   ~SparseRepresentationSerializer() {}
   void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) override;

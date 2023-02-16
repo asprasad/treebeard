@@ -30,6 +30,7 @@ using ClassMemrefType = Memref<int8_t, 1>;
 // using ResultMemrefType = Memref<double, 1>;
 
 class InferenceRunnerBase {
+  friend class IModelSerializer;
 protected:
   std::shared_ptr<IModelSerializer> m_serializer;
   std::string m_modelGlobalsJSONFilePath;
@@ -42,15 +43,6 @@ protected:
   int32_t m_rowSize;
   void *m_inferenceFuncPtr;
   
-  template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType, typename ChildIndexType>
-  int32_t CallInitMethod();
-  
-  template<typename ThresholdType, typename FeatureIndexType>
-  int32_t ResolveTileShapeType();
-
-  template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType>
-  int32_t ResolveChildIndexType();
-
   virtual void* GetFunctionAddress(const std::string& functionName) = 0;
   
   void Init();
@@ -61,16 +53,13 @@ public:
                       int32_t featureIndexSize);
   virtual ~InferenceRunnerBase() { }
   
-  int32_t InitializeLengthsArray();
-  int32_t InitializeOffsetsArray();
-  int32_t InitializeModelArray();
   int32_t InitializeLUT();
-  int32_t InitializeLeafArrays();
-  void InitializeClassInformation();
 
   int32_t GetBatchSize() { return m_batchSize; }
+  int32_t GetTileSize() { return m_tileSize; }
   int32_t GetRowSize() { return m_rowSize; }
   int32_t GetThresholdWidth() { return m_thresholdSize; }
+  int32_t GetFeatureIndexWidth() { return m_featureIndexSize; }
   int32_t GetInputElementBitWidth() { return m_inputElementBitWidth; }
   int32_t GetReturnTypeBitWidth() { return m_returnTypeBitWidth; }
   

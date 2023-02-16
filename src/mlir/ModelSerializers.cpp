@@ -4,20 +4,18 @@
 #include "Logger.h"
 #include "ModelSerializers.h"
 
-namespace mlir
-{
-namespace decisionforest
+namespace 
 {
 
-void LogLeafDepths(const std::vector<int32_t>& depths) {
-    std::string out;
-    for (auto depth : depths) {
-        out += std::to_string(depth) + ", ";
-    }
-    TreeBeard::Logging::Log(out);
-}
+// void LogLeafDepths(const std::vector<int32_t>& depths) {
+//     std::string out;
+//     for (auto depth : depths) {
+//         out += std::to_string(depth) + ", ";
+//     }
+//     TreeBeard::Logging::Log(out);
+// }
 
-void LogTreeStats(const std::vector<TiledTreeStats>& tiledTreeStats) {
+void LogTreeStats(const std::vector<mlir::decisionforest::TiledTreeStats>& tiledTreeStats) {
     int32_t numDummyNodes=0, numEmptyTiles=0, numLeafNodesInTiledTree=0, numLeavesInOrigModel=0, numTiles=0, numUniqueTiles=0;
     int32_t numNodesInOrigModel=0, numLeavesWithAllSiblingsLeaves=0;
     double_t averageDepth=0.0, avgOrigTreeDepth=0.0;
@@ -84,6 +82,190 @@ void LogTileShapeStats(std::vector<T>& numberOfTileShapes, const std::string& me
     std::string logString = message + " - Min:" + std::to_string(min) + ", Max:" + std::to_string(max) + ", Median:" + std::to_string(median) + ", Mean:" + std::to_string(mean);
     TreeBeard::Logging::Log(logString);
 }
+
+}
+
+namespace mlir
+{
+namespace decisionforest
+{
+
+// ===---------------------------------------------------=== //
+// ArraySparseSerializerBase Methods
+// ===---------------------------------------------------=== //
+
+int32_t ArraySparseSerializerBase::InitializeLengthsArray() {
+  // TODO The ForestJSONReader class needs to provide an interface to iterate over tile sizes and bit widths
+  // We need to construct the name of the getter function based on those. 
+  typedef LengthMemrefType (*GetLengthFunc_t)();
+  auto getLengthPtr = GetFunctionAddress<GetLengthFunc_t>("Get_lengths");
+  LengthMemrefType lengthMemref = getLengthPtr();
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthMemref.alignedPtr,
+                                                                               m_inferenceRunner->GetTileSize(),
+                                                                               m_inferenceRunner->GetThresholdWidth(),
+                                                                               m_inferenceRunner->GetFeatureIndexWidth()); 
+
+  return 0;
+}
+
+// TODO All the initialize methods are doing the same thing, except that the getter they're calling are different. 
+// Refactor them into a shared method.
+int32_t ArraySparseSerializerBase::InitializeOffsetsArray() {
+  // TODO The ForestJSONReader class needs to provide an interface to iterate over tile sizes and bit widths
+  // We need to construct the name of the getter function based on those. 
+  typedef OffsetMemrefType (*GetOffsetsFunc_t)();
+  auto getOffsetPtr = GetFunctionAddress<GetOffsetsFunc_t>("Get_offsets");
+  auto offsetMemref = getOffsetPtr();
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(offsetMemref.alignedPtr,
+                                                                               m_inferenceRunner->GetTileSize(),
+                                                                               m_inferenceRunner->GetThresholdWidth(),
+                                                                               m_inferenceRunner->GetFeatureIndexWidth()); 
+  return 0;
+}
+
+template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType>
+int32_t ArraySparseSerializerBase::ResolveChildIndexType() {
+  if (!m_sparseRepresentation)
+    return CallInitMethod<ThresholdType, FeatureIndexType, TileShapeType, int32_t>();
+  else {
+    auto childIndexBitWidth = mlir::decisionforest::ForestJSONReader::GetInstance().GetChildIndexBitWidth();
+    assert (childIndexBitWidth > 0);
+    if (childIndexBitWidth == 8)
+      return CallInitMethod<ThresholdType, FeatureIndexType, TileShapeType, int8_t>();
+    else if (childIndexBitWidth == 16)
+      return CallInitMethod<ThresholdType, FeatureIndexType, TileShapeType, int16_t>();
+    else if (childIndexBitWidth == 32)
+      return CallInitMethod<ThresholdType, FeatureIndexType, TileShapeType, int32_t>();
+    else
+      assert (false && "Unsupported child index bit width");
+    return -1;
+  }
+}
+
+template<typename ThresholdType, typename FeatureIndexType>
+int32_t ArraySparseSerializerBase::ResolveTileShapeType() {
+  auto tileShapeBitWidth = mlir::decisionforest::ForestJSONReader::GetInstance().GetTileShapeBitWidth();
+  if (tileShapeBitWidth == 8)
+    return ResolveChildIndexType<ThresholdType, FeatureIndexType, int8_t>();
+  else if (tileShapeBitWidth == 16)
+    return ResolveChildIndexType<ThresholdType, FeatureIndexType, int16_t>();
+  else if (tileShapeBitWidth == 32)
+    return ResolveChildIndexType<ThresholdType, FeatureIndexType, int32_t>();
+  else
+    assert (false && "Unsupported tile shape bit width");
+  return -1;
+}
+
+
+template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType, typename ChildIndexType>
+int32_t ArraySparseSerializerBase::CallInitMethod() {
+  auto tileSize = m_inferenceRunner->GetTileSize();
+  auto thresholdSize = m_inferenceRunner->GetThresholdWidth();
+  auto featureIndexSize = m_inferenceRunner->GetFeatureIndexWidth();
+  std::vector<ThresholdType> thresholds;
+  std::vector<FeatureIndexType> featureIndices;
+  std::vector<TileShapeType> tileShapeIDs;
+  std::vector<ChildIndexType> childIndices;
+
+  if (!m_sparseRepresentation)
+    mlir::decisionforest::ForestJSONReader::GetInstance().GetModelValues(tileSize, thresholdSize, featureIndexSize, thresholds, featureIndices, tileShapeIDs);
+  else {
+    assert (m_sparseRepresentation);
+    mlir::decisionforest::ForestJSONReader::GetInstance().GetModelValues(tileSize, thresholdSize, featureIndexSize, 
+                                                                         thresholds, featureIndices, tileShapeIDs, childIndices);
+  }
+
+  Memref<ThresholdType, 1> thresholdsMemref{thresholds.data(), thresholds.data(), 0, {(int64_t)thresholds.size()}, 1};
+  Memref<FeatureIndexType, 1> featureIndexMemref{featureIndices.data(), featureIndices.data(), 0, {(int64_t)featureIndices.size()}, 1};
+  Memref<TileShapeType, 1> tileShapeIDMemref{tileShapeIDs.data(), tileShapeIDs.data(), 0, {(int64_t)tileShapeIDs.size()}, 1};
+  int32_t returnValue = -1;
+  
+  if (!m_sparseRepresentation) {
+    typedef int32_t (*InitModelPtr_t)(ThresholdType*, ThresholdType*, int64_t, int64_t, int64_t, FeatureIndexType*, FeatureIndexType*, int64_t, int64_t, int64_t,
+                                      TileShapeType*, TileShapeType*, int64_t, int64_t, int64_t);
+    auto initModelPtr = GetFunctionAddress<InitModelPtr_t>("Init_model");
+
+    returnValue = initModelPtr(thresholdsMemref.bufferPtr, thresholdsMemref.alignedPtr, thresholdsMemref.offset, thresholdsMemref.lengths[0], thresholdsMemref.strides[0],
+                featureIndexMemref.bufferPtr, featureIndexMemref.alignedPtr, featureIndexMemref.offset, featureIndexMemref.lengths[0], featureIndexMemref.strides[0],
+                tileShapeIDMemref.bufferPtr, tileShapeIDMemref.alignedPtr, tileShapeIDMemref.offset, tileShapeIDMemref.lengths[0], tileShapeIDMemref.strides[0]);
+  }
+  else {
+    assert (m_sparseRepresentation);
+    Memref<ChildIndexType, 1> childIndexMemref{childIndices.data(), childIndices.data(), 0, {(int64_t)childIndices.size()}, 1};
+    typedef int32_t (*InitModelPtr_t)(ThresholdType*, ThresholdType*, int64_t, int64_t, int64_t, FeatureIndexType*, FeatureIndexType*, int64_t, int64_t, int64_t,
+                                      TileShapeType*, TileShapeType*, int64_t, int64_t, int64_t, ChildIndexType*, ChildIndexType*, int64_t, int64_t, int64_t);
+    auto initModelPtr = GetFunctionAddress<InitModelPtr_t>("Init_model");
+
+    returnValue = initModelPtr(thresholdsMemref.bufferPtr, thresholdsMemref.alignedPtr, thresholdsMemref.offset, thresholdsMemref.lengths[0], thresholdsMemref.strides[0],
+                featureIndexMemref.bufferPtr, featureIndexMemref.alignedPtr, featureIndexMemref.offset, featureIndexMemref.lengths[0], featureIndexMemref.strides[0],
+                tileShapeIDMemref.bufferPtr, tileShapeIDMemref.alignedPtr, tileShapeIDMemref.offset, tileShapeIDMemref.lengths[0], tileShapeIDMemref.strides[0],
+                childIndexMemref.bufferPtr, childIndexMemref.alignedPtr, childIndexMemref.offset, childIndexMemref.lengths[0], childIndexMemref.strides[0]);
+  }
+  if (TreeBeard::Logging::loggingOptions.logGenCodeStats) {
+    TreeBeard::Logging::Log("Model memref size : " + std::to_string(returnValue));
+    std::set<int32_t> tileShapes(tileShapeIDs.begin(), tileShapeIDs.end());
+    TreeBeard::Logging::Log("Number of unique tile shapes : " + std::to_string(tileShapes.size()));
+  }
+  assert(returnValue != -1);
+  return returnValue;
+}
+
+int32_t ArraySparseSerializerBase::InitializeModelArray() {
+  // TODO The ForestJSONReader class needs to provide an interface to iterate over tile sizes and bit widths
+  // We need to construct the name of the getter function based on those.
+  auto thresholdSize = m_inferenceRunner->GetThresholdWidth();
+  auto featureIndexSize = m_inferenceRunner->GetFeatureIndexWidth();
+  if (thresholdSize == 64) {
+    if (featureIndexSize == 32) {
+      return ResolveTileShapeType<double, int32_t>();
+    }
+    else if (featureIndexSize == 16) {
+      return ResolveTileShapeType<double, int16_t>();
+    }
+    else if (featureIndexSize == 8) {
+      return ResolveTileShapeType<double, int8_t>();
+    }
+    else {
+      assert (false);
+    }
+  }
+  else if (thresholdSize == 32) {
+    if (featureIndexSize == 32) {
+      return ResolveTileShapeType<float, int32_t>();
+    }
+    else if (featureIndexSize == 16) {
+      return ResolveTileShapeType<float, int16_t>();
+    }
+    else if (featureIndexSize == 8) {
+      return ResolveTileShapeType<float, int8_t>();
+    }
+    else {
+      assert (false);
+    }
+  }
+  else {
+    assert (false);
+  }
+  return 0;
+}
+
+void ArraySparseSerializerBase::InitializeClassInformation() {
+  
+  if (mlir::decisionforest::ForestJSONReader::GetInstance().GetNumberOfClasses() == 0) return;
+   
+  typedef ClassMemrefType (*GetClassMemref_t)();
+  auto getClassInfoPtr = GetFunctionAddress<GetClassMemref_t>("Get_treeClassInfo");
+  ClassMemrefType treeClassInfo = getClassInfoPtr();
+
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeClassInformation(treeClassInfo.alignedPtr,
+                                                                                   m_inferenceRunner->GetTileSize(),
+                                                                                   m_inferenceRunner->GetThresholdWidth(),
+                                                                                   m_inferenceRunner->GetFeatureIndexWidth()); 
+}
+
+// ===---------------------------------------------------=== //
+// Persistence Helper Methods
+// ===---------------------------------------------------=== //
 
 template<typename PersistTreeScalarType, typename PersistTreeTiledType>
 void PersistDecisionForestImpl(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType,
@@ -228,6 +410,10 @@ void PersistDecisionForestSparse(mlir::decisionforest::DecisionForest<>& forest,
     );
 }
 
+// ===---------------------------------------------------=== //
+// SparseRepresentationSerializer Methods
+// ===---------------------------------------------------=== //
+
 void SparseRepresentationSerializer::SetBatchSize(int32_t value){
     m_batchSize = value;
 }
@@ -263,6 +449,46 @@ void SparseRepresentationSerializer::ReadData() {
     m_returnTypeBitwidth = decisionforest::ForestJSONReader::GetInstance().GetReturnTypeBitWidth();
 }
 
+int32_t SparseRepresentationSerializer::InitializeLeafArrays() {
+  auto tileSize = m_inferenceRunner->GetTileSize();
+  auto thresholdSize = m_inferenceRunner->GetThresholdWidth();
+  auto featureIndexSize = m_inferenceRunner->GetFeatureIndexWidth();
+  {
+    // Initialize the leaf values
+    typedef Memref<double, 1> (*GetLeavesFunc_t)();
+    auto getLeavesPtr = GetFunctionAddress<GetLeavesFunc_t>("Get_leaves");
+    auto leavesMemref = getLeavesPtr();
+    mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLeaves(leavesMemref.alignedPtr, tileSize, thresholdSize, featureIndexSize); 
+  }
+  {
+    // Initialize leaf offsets
+    typedef OffsetMemrefType (*GetOffsetsFunc_t)();
+    auto getOffsetPtr = GetFunctionAddress<GetOffsetsFunc_t>("Get_leavesOffsets");
+    auto offsetMemref = getOffsetPtr();
+    mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLeavesOffsetBuffer(offsetMemref.alignedPtr, tileSize, thresholdSize, featureIndexSize);
+  }
+  {
+    typedef LengthMemrefType (*GetLengthFunc_t)();
+    auto getLengthPtr = GetFunctionAddress<GetLengthFunc_t>("Get_leavesLengths");
+    LengthMemrefType lengthMemref = getLengthPtr();
+    mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLeavesLengthBuffer(lengthMemref.alignedPtr, tileSize, 
+                                                                                       thresholdSize, featureIndexSize); 
+  }
+  return 0;
+}
+
+void SparseRepresentationSerializer::InitializeBuffersImpl() {
+    InitializeLengthsArray();
+    InitializeOffsetsArray();
+    InitializeModelArray();
+    InitializeClassInformation();
+    InitializeLeafArrays();
+}
+
+// ===---------------------------------------------------=== //
+// ArrayRepresentationSerializer Methods
+// ===---------------------------------------------------=== //
+
 void ArrayRepresentationSerializer::SetBatchSize(int32_t value){
     m_batchSize = value;
 }
@@ -296,6 +522,13 @@ void ArrayRepresentationSerializer::ReadData() {
     m_rowSize = decisionforest::ForestJSONReader::GetInstance().GetRowSize();
     m_inputTypeBitWidth = decisionforest::ForestJSONReader::GetInstance().GetInputElementBitWidth();
     m_returnTypeBitwidth = decisionforest::ForestJSONReader::GetInstance().GetReturnTypeBitWidth();
+}
+
+void ArrayRepresentationSerializer::InitializeBuffersImpl() {
+    InitializeLengthsArray();
+    InitializeOffsetsArray();
+    InitializeModelArray();
+    InitializeClassInformation();
 }
 
 // TODO Make this implementation more general by having some kind of registry

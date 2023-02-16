@@ -190,7 +190,6 @@ int64_t RunXGBoostInferenceOnCSVInput(const std::string& csvPath, mlir::decision
   std::cin >> ch;
 
   constexpr int32_t NUM_RUNS=1000;
-  size_t rowSize = csvReader.GetRow(0).size() - 1; // The last entry is the xgboost prediction
   std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
   for (int32_t trial=0 ; trial<NUM_RUNS ; ++trial) {
     for(auto& batch : inputData) {
