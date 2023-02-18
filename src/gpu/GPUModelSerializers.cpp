@@ -217,6 +217,31 @@ void GPUArraySparseSerializerBase::CallPredictionMethod(void* predictFuncPtr,
     return;
 }    
 
+void GPUArraySparseSerializerBase::ReadData() {
+    decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_filepath);
+    decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
+    // TODO read the thresholdSize and featureIndexSize from the JSON!
+    m_batchSize = decisionforest::ForestJSONReader::GetInstance().GetBatchSize();
+    m_rowSize = decisionforest::ForestJSONReader::GetInstance().GetRowSize();
+    m_inputTypeBitWidth = decisionforest::ForestJSONReader::GetInstance().GetInputElementBitWidth();
+    m_returnTypeBitwidth = decisionforest::ForestJSONReader::GetInstance().GetReturnTypeBitWidth();
+}
+
+void GPUArraySparseSerializerBase::SetBatchSize(int32_t value){
+    m_batchSize = value;
+}
+
+void GPUArraySparseSerializerBase::SetRowSize(int32_t value) {
+    m_rowSize = value;
+}
+
+void GPUArraySparseSerializerBase::SetInputTypeBitWidth(int32_t value){
+    m_inputTypeBitWidth = value;
+}
+
+void GPUArraySparseSerializerBase::SetReturnTypeBitWidth(int32_t value){
+    m_returnTypeBitwidth = value;
+}
 
 // ===---------------------------------------------------=== //
 // Persistence Helper Methods
@@ -229,22 +254,6 @@ void PersistDecisionForestSparse(mlir::decisionforest::DecisionForest<>& forest,
 // GPUSparseRepresentationSerializer Methods
 // ===---------------------------------------------------=== //
 
-void GPUSparseRepresentationSerializer::SetBatchSize(int32_t value){
-    m_batchSize = value;
-}
-
-void GPUSparseRepresentationSerializer::SetRowSize(int32_t value) {
-    m_rowSize = value;
-}
-
-void GPUSparseRepresentationSerializer::SetInputTypeBitWidth(int32_t value){
-    m_inputTypeBitWidth = value;
-}
-
-void GPUSparseRepresentationSerializer::SetReturnTypeBitWidth(int32_t value){
-    m_returnTypeBitwidth = value;
-}
-
 void GPUSparseRepresentationSerializer::Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) {
     mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_filepath);
     mlir::decisionforest::ForestJSONReader::GetInstance().SetBatchSize(m_batchSize);
@@ -252,16 +261,6 @@ void GPUSparseRepresentationSerializer::Persist(mlir::decisionforest::DecisionFo
     mlir::decisionforest::ForestJSONReader::GetInstance().SetInputElementBitWidth(m_inputTypeBitWidth);
     mlir::decisionforest::ForestJSONReader::GetInstance().SetReturnTypeBitWidth(m_returnTypeBitwidth);
     PersistDecisionForestSparse(forest, forestType);
-}
-
-void GPUSparseRepresentationSerializer::ReadData() {
-    decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_filepath);
-    decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
-    // TODO read the thresholdSize and featureIndexSize from the JSON!
-    m_batchSize = decisionforest::ForestJSONReader::GetInstance().GetBatchSize();
-    m_rowSize = decisionforest::ForestJSONReader::GetInstance().GetRowSize();
-    m_inputTypeBitWidth = decisionforest::ForestJSONReader::GetInstance().GetInputElementBitWidth();
-    m_returnTypeBitwidth = decisionforest::ForestJSONReader::GetInstance().GetReturnTypeBitWidth();
 }
 
 int32_t GPUSparseRepresentationSerializer::InitializeLeafArrays() {
@@ -280,22 +279,6 @@ void GPUSparseRepresentationSerializer::InitializeBuffersImpl() {
 // GPUArrayRepresentationSerializer Methods
 // ===---------------------------------------------------=== //
 
-void GPUArrayRepresentationSerializer::SetBatchSize(int32_t value){
-    m_batchSize = value;
-}
-
-void GPUArrayRepresentationSerializer::SetRowSize(int32_t value) {
-    m_rowSize = value;
-}
-
-void GPUArrayRepresentationSerializer::SetInputTypeBitWidth(int32_t value){
-    m_inputTypeBitWidth = value;
-}
-
-void GPUArrayRepresentationSerializer::SetReturnTypeBitWidth(int32_t value){
-    m_returnTypeBitwidth = value;
-}
-
 void GPUArrayRepresentationSerializer::Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) {
     mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_filepath);
     mlir::decisionforest::ForestJSONReader::GetInstance().SetBatchSize(m_batchSize);
@@ -303,16 +286,6 @@ void GPUArrayRepresentationSerializer::Persist(mlir::decisionforest::DecisionFor
     mlir::decisionforest::ForestJSONReader::GetInstance().SetInputElementBitWidth(m_inputTypeBitWidth);
     mlir::decisionforest::ForestJSONReader::GetInstance().SetReturnTypeBitWidth(m_returnTypeBitwidth);
     PersistDecisionForestArrayBased(forest, forestType);
-}
-
-void GPUArrayRepresentationSerializer::ReadData() {
-    decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_filepath);
-    decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
-    // TODO read the thresholdSize and featureIndexSize from the JSON!
-    m_batchSize = decisionforest::ForestJSONReader::GetInstance().GetBatchSize();
-    m_rowSize = decisionforest::ForestJSONReader::GetInstance().GetRowSize();
-    m_inputTypeBitWidth = decisionforest::ForestJSONReader::GetInstance().GetInputElementBitWidth();
-    m_returnTypeBitwidth = decisionforest::ForestJSONReader::GetInstance().GetReturnTypeBitWidth();
 }
 
 void GPUArrayRepresentationSerializer::InitializeBuffersImpl() {

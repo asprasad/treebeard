@@ -264,6 +264,32 @@ void ArraySparseSerializerBase::InitializeClassInformation() {
                                                                                    m_inferenceRunner->GetFeatureIndexWidth()); 
 }
 
+void ArraySparseSerializerBase::ReadData() {
+    decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_filepath);
+    decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
+    // TODO read the thresholdSize and featureIndexSize from the JSON!
+    m_batchSize = decisionforest::ForestJSONReader::GetInstance().GetBatchSize();
+    m_rowSize = decisionforest::ForestJSONReader::GetInstance().GetRowSize();
+    m_inputTypeBitWidth = decisionforest::ForestJSONReader::GetInstance().GetInputElementBitWidth();
+    m_returnTypeBitwidth = decisionforest::ForestJSONReader::GetInstance().GetReturnTypeBitWidth();
+}
+
+void ArraySparseSerializerBase::SetBatchSize(int32_t value){
+    m_batchSize = value;
+}
+
+void ArraySparseSerializerBase::SetRowSize(int32_t value) {
+    m_rowSize = value;
+}
+
+void ArraySparseSerializerBase::SetInputTypeBitWidth(int32_t value){
+    m_inputTypeBitWidth = value;
+}
+
+void ArraySparseSerializerBase::SetReturnTypeBitWidth(int32_t value){
+    m_returnTypeBitwidth = value;
+}
+
 // ===---------------------------------------------------=== //
 // Persistence Helper Methods
 // ===---------------------------------------------------=== //
@@ -415,22 +441,6 @@ void PersistDecisionForestSparse(mlir::decisionforest::DecisionForest<>& forest,
 // SparseRepresentationSerializer Methods
 // ===---------------------------------------------------=== //
 
-void SparseRepresentationSerializer::SetBatchSize(int32_t value){
-    m_batchSize = value;
-}
-
-void SparseRepresentationSerializer::SetRowSize(int32_t value) {
-    m_rowSize = value;
-}
-
-void SparseRepresentationSerializer::SetInputTypeBitWidth(int32_t value){
-    m_inputTypeBitWidth = value;
-}
-
-void SparseRepresentationSerializer::SetReturnTypeBitWidth(int32_t value){
-    m_returnTypeBitwidth = value;
-}
-
 void SparseRepresentationSerializer::Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) {
     mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_filepath);
     mlir::decisionforest::ForestJSONReader::GetInstance().SetBatchSize(m_batchSize);
@@ -438,16 +448,6 @@ void SparseRepresentationSerializer::Persist(mlir::decisionforest::DecisionFores
     mlir::decisionforest::ForestJSONReader::GetInstance().SetInputElementBitWidth(m_inputTypeBitWidth);
     mlir::decisionforest::ForestJSONReader::GetInstance().SetReturnTypeBitWidth(m_returnTypeBitwidth);
     PersistDecisionForestSparse(forest, forestType);
-}
-
-void SparseRepresentationSerializer::ReadData() {
-    decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_filepath);
-    decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
-    // TODO read the thresholdSize and featureIndexSize from the JSON!
-    m_batchSize = decisionforest::ForestJSONReader::GetInstance().GetBatchSize();
-    m_rowSize = decisionforest::ForestJSONReader::GetInstance().GetRowSize();
-    m_inputTypeBitWidth = decisionforest::ForestJSONReader::GetInstance().GetInputElementBitWidth();
-    m_returnTypeBitwidth = decisionforest::ForestJSONReader::GetInstance().GetReturnTypeBitWidth();
 }
 
 int32_t SparseRepresentationSerializer::InitializeLeafArrays() {
@@ -490,22 +490,6 @@ void SparseRepresentationSerializer::InitializeBuffersImpl() {
 // ArrayRepresentationSerializer Methods
 // ===---------------------------------------------------=== //
 
-void ArrayRepresentationSerializer::SetBatchSize(int32_t value){
-    m_batchSize = value;
-}
-
-void ArrayRepresentationSerializer::SetRowSize(int32_t value) {
-    m_rowSize = value;
-}
-
-void ArrayRepresentationSerializer::SetInputTypeBitWidth(int32_t value){
-    m_inputTypeBitWidth = value;
-}
-
-void ArrayRepresentationSerializer::SetReturnTypeBitWidth(int32_t value){
-    m_returnTypeBitwidth = value;
-}
-
 void ArrayRepresentationSerializer::Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) {
     mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_filepath);
     mlir::decisionforest::ForestJSONReader::GetInstance().SetBatchSize(m_batchSize);
@@ -513,16 +497,6 @@ void ArrayRepresentationSerializer::Persist(mlir::decisionforest::DecisionForest
     mlir::decisionforest::ForestJSONReader::GetInstance().SetInputElementBitWidth(m_inputTypeBitWidth);
     mlir::decisionforest::ForestJSONReader::GetInstance().SetReturnTypeBitWidth(m_returnTypeBitwidth);
     PersistDecisionForestArrayBased(forest, forestType);
-}
-
-void ArrayRepresentationSerializer::ReadData() {
-    decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_filepath);
-    decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
-    // TODO read the thresholdSize and featureIndexSize from the JSON!
-    m_batchSize = decisionforest::ForestJSONReader::GetInstance().GetBatchSize();
-    m_rowSize = decisionforest::ForestJSONReader::GetInstance().GetRowSize();
-    m_inputTypeBitWidth = decisionforest::ForestJSONReader::GetInstance().GetInputElementBitWidth();
-    m_returnTypeBitwidth = decisionforest::ForestJSONReader::GetInstance().GetReturnTypeBitWidth();
 }
 
 void ArrayRepresentationSerializer::InitializeBuffersImpl() {

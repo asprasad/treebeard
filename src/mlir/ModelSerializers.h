@@ -31,6 +31,13 @@ public:
     :IModelSerializer(modelGlobalsJSONPath), m_sparseRepresentation(sparseRep)
   { }
   ~ArraySparseSerializerBase() { }
+
+  void ReadData() override;
+
+  void SetBatchSize(int32_t value) override;
+  void SetRowSize(int32_t value) override;
+  void SetInputTypeBitWidth(int32_t value) override;
+  void SetReturnTypeBitWidth(int32_t value) override;
 };
 
 class ArrayRepresentationSerializer : public ArraySparseSerializerBase {
@@ -42,12 +49,6 @@ public:
   { }
   ~ArrayRepresentationSerializer() {}
   void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
-  void ReadData() override;
-
-  void SetBatchSize(int32_t value) override;
-  void SetRowSize(int32_t value) override;
-  void SetInputTypeBitWidth(int32_t value) override;
-  void SetReturnTypeBitWidth(int32_t value) override;
 };
 
 class SparseRepresentationSerializer : public ArraySparseSerializerBase {
@@ -60,12 +61,6 @@ public:
   { }
   ~SparseRepresentationSerializer() {}
   void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
-  void ReadData() override;
-  
-  void SetBatchSize(int32_t value) override;
-  void SetRowSize(int32_t value) override;
-  void SetInputTypeBitWidth(int32_t value) override;
-  void SetReturnTypeBitWidth(int32_t value) override;
 };
 
 class ModelSerializerFactory {

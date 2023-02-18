@@ -37,10 +37,16 @@ public:
     :IModelSerializer(modelGlobalsJSONPath), m_sparseRepresentation(sparseRep)
   { }
   ~GPUArraySparseSerializerBase() { }
+  void ReadData() override;
+
   void CallPredictionMethod(void* predictFuncPtr,
                             Memref<double, 2> inputs,
                             Memref<double, 1> results) override;
   bool HasCustomPredictionMethod() override { return true; }
+  void SetBatchSize(int32_t value) override;
+  void SetRowSize(int32_t value) override;
+  void SetInputTypeBitWidth(int32_t value) override;
+  void SetReturnTypeBitWidth(int32_t value) override;
 
   ModelMemrefType GetModelMemref() { return m_modelMemref; }    
 };
@@ -54,12 +60,6 @@ public:
   { }
   ~GPUArrayRepresentationSerializer() {}
   void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
-  void ReadData() override;
-
-  void SetBatchSize(int32_t value) override;
-  void SetRowSize(int32_t value) override;
-  void SetInputTypeBitWidth(int32_t value) override;
-  void SetReturnTypeBitWidth(int32_t value) override;
 };
 
 class GPUSparseRepresentationSerializer : public GPUArraySparseSerializerBase {
@@ -74,12 +74,6 @@ public:
   { }
   ~GPUSparseRepresentationSerializer() {}
   void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
-  void ReadData() override;
-  
-  void SetBatchSize(int32_t value) override;
-  void SetRowSize(int32_t value) override;
-  void SetInputTypeBitWidth(int32_t value) override;
-  void SetReturnTypeBitWidth(int32_t value) override;
 };
 
 } // decisionforest
