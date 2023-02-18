@@ -1,3 +1,7 @@
+* There is a chance that all the current changes have broken the runtime and python API
+    - UseSparseRepresentation was getting set in JSONReader, which was called directly from the inferenceRunner constructor before. Now this won't happen!
+    - Construction of the Serializer (which is passed to InferenceRunner) depends on setting this bool correctly!
+
 * GPU Support
     - [Done] Use schedule to specify which loops correspond to which GPU constructs (grid, threadblock etc)
     - [Done] [Q] If we want to use a common mid-level IR, how do we convey to the final lowering which loops correspond to which GPU constructs?

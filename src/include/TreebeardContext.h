@@ -36,6 +36,11 @@ public:
   virtual ~IModelSerializer() { }
   virtual void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType)=0;
   virtual void ReadData()=0;
+
+  virtual void CallPredictionMethod(void* predictFuncPtr,
+                                    Memref<double, 2> inputs,
+                                    Memref<double, 1> results) { }
+  virtual bool HasCustomPredictionMethod() { return false; }    
   
   void InitializeBuffers(InferenceRunnerBase* inferenceRunner) {
     m_inferenceRunner = inferenceRunner;

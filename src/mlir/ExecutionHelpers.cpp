@@ -61,7 +61,6 @@ void InferenceRunnerBase::Init() {
   m_inferenceFuncPtr = GetFunctionAddress("Prediction_Function");
 }
 
-
 int32_t InferenceRunnerBase::InitializeLUT() {
   using LUTMemrefType = Memref<int8_t, 2>;
   typedef LUTMemrefType (*GetLUTFunc_t)();
@@ -72,6 +71,26 @@ int32_t InferenceRunnerBase::InitializeLUT() {
   return 0;
 }
 
+int32_t InferenceRunnerBase::RunInference_CustomImpl(double *input, double *returnValue) {
+  Memref<double, 2> inputs{reinterpret_cast<double*>(input),
+                            reinterpret_cast<double*>(input),
+                            0,
+                            {m_batchSize, m_rowSize}, // lengths
+                            {m_rowSize, 1} // strides
+                          };
+  Memref<double, 1> resultMemref{reinterpret_cast<double*>(returnValue),
+                                  reinterpret_cast<double*>(returnValue),
+                                  0,
+                                  {m_batchSize}, //length
+                                  {1}
+                                };
+  m_serializer->CallPredictionMethod(m_inferenceFuncPtr, inputs, resultMemref);
+  return 0;
+}
+
+bool InferenceRunnerBase::SerializerHasCustomPredictionMethod() {
+  return m_serializer->HasCustomPredictionMethod();
+}
 // ===------------------------------------------------------=== //
 // Shared object inference runner 
 // ===------------------------------------------------------=== //

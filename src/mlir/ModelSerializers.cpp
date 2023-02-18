@@ -3,6 +3,7 @@
 #include "TiledTree.h"
 #include "Logger.h"
 #include "ModelSerializers.h"
+#include "../gpu/GPUModelSerializers.h"
 
 namespace 
 {
@@ -532,12 +533,16 @@ void ArrayRepresentationSerializer::InitializeBuffersImpl() {
 }
 
 // TODO Make this implementation more general by having some kind of registry
-std::shared_ptr<IModelSerializer> ModelSerializerFactory::GetModelSerializer(const std::string& name, const std::string& modelGlobalsJSONPath) {
+std::shared_ptr<IModelSerializer> ModelSerializerFactory::GetModelSerializer(const std::string& name, 
+                                                                             const std::string& modelGlobalsJSONPath) {
   if (name == "array")
     return std::make_shared<ArrayRepresentationSerializer>(modelGlobalsJSONPath);
   else if (name == "sparse")
     return std::make_shared<SparseRepresentationSerializer>(modelGlobalsJSONPath);
-  
+  else if (name == "gpu-array")
+    return std::make_shared<GPUArrayRepresentationSerializer>(modelGlobalsJSONPath);
+  else if (name == "gpu-sparse")
+    return std::make_shared<GPUSparseRepresentationSerializer>(modelGlobalsJSONPath);
   assert(false && "Unknown serialization format");
   return nullptr;
 }
@@ -547,6 +552,13 @@ std::shared_ptr<IModelSerializer> ConstructModelSerializer(const std::string& mo
     return ModelSerializerFactory::GetModelSerializer("sparse", modelGlobalsJSONPath);
   else
     return ModelSerializerFactory::GetModelSerializer("array", modelGlobalsJSONPath);
+}
+
+std::shared_ptr<IModelSerializer> ConstructGPUModelSerializer(const std::string& modelGlobalsJSONPath) {
+  if (decisionforest::UseSparseTreeRepresentation)
+    return ModelSerializerFactory::GetModelSerializer("gpu-sparse", modelGlobalsJSONPath);
+  else
+    return ModelSerializerFactory::GetModelSerializer("gpu-array", modelGlobalsJSONPath);
 }
 
 }

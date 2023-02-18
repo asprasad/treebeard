@@ -22,10 +22,17 @@ namespace decisionforest
 
 class IModelSerializer;
 
+// This is just a place holder type for documentation.
+// We don't really want to intrepret this type on the CPU. 
+struct Tile {
+
+};
+
 using LengthMemrefType = Memref<int64_t, 1>;
 using OffsetMemrefType = Memref<int64_t, 1>;
 // #TODO Tree-Beard#19
 using ClassMemrefType = Memref<int8_t, 1>;
+using ModelMemrefType = Memref<Tile, 1>;
 
 // using ResultMemrefType = Memref<double, 1>;
 
@@ -46,6 +53,31 @@ protected:
   virtual void* GetFunctionAddress(const std::string& functionName) = 0;
   
   void Init();
+  
+  template<typename InputElementType, typename ReturnType>
+  int32_t RunInference_Default(InputElementType *input, ReturnType *returnValue) {
+    
+    typedef Memref<ReturnType, 1> (*InferenceFunc_t)(InputElementType*, InputElementType*, int64_t, int64_t, int64_t, int64_t, int64_t, 
+                                                     ReturnType*, ReturnType*, int64_t, int64_t, int64_t);
+    auto inferenceFuncPtr = reinterpret_cast<InferenceFunc_t>(m_inferenceFuncPtr);
+    InputElementType *ptr = input, *alignedPtr = input;
+    int64_t rowSize = m_rowSize, offset = 0, stride = 1;
+    ReturnType *resultPtr = returnValue, *resultAlignedPtr = returnValue;
+    int64_t resultLen = m_batchSize;
+    inferenceFuncPtr(ptr, alignedPtr, offset, m_batchSize, rowSize, rowSize /*stride by rowSize to move from one row to the next*/, stride, 
+                     resultPtr, resultAlignedPtr, offset, resultLen, stride);
+    return 0;
+  }
+
+  bool SerializerHasCustomPredictionMethod();
+  int32_t RunInference_CustomImpl(double *input, double* returnValue);
+
+  template<typename InputElementType, typename ReturnType>
+  int32_t RunInference_Custom(InputElementType *input, ReturnType *returnValue) {
+    RunInference_CustomImpl(reinterpret_cast<double*>(input),
+                            reinterpret_cast<double*>(returnValue));
+    return 0;
+  }
 public:
   InferenceRunnerBase(std::shared_ptr<IModelSerializer> serializer,
                       int32_t tileSize,
@@ -65,16 +97,12 @@ public:
   
   template<typename InputElementType, typename ReturnType>
   int32_t RunInference(InputElementType *input, ReturnType *returnValue) {
-
-    typedef Memref<ReturnType, 1> (*InferenceFunc_t)(InputElementType*, InputElementType*, int64_t, int64_t, int64_t, int64_t, int64_t, 
-                                                     ReturnType*, ReturnType*, int64_t, int64_t, int64_t);
-    auto inferenceFuncPtr = reinterpret_cast<InferenceFunc_t>(m_inferenceFuncPtr);
-    InputElementType *ptr = input, *alignedPtr = input;
-    int64_t rowSize = m_rowSize, offset = 0, stride = 1;
-    ReturnType *resultPtr = returnValue, *resultAlignedPtr = returnValue;
-    int64_t resultLen = m_batchSize;
-    inferenceFuncPtr(ptr, alignedPtr, offset, m_batchSize, rowSize, rowSize /*stride by rowSize to move from one row to the next*/, stride, 
-                     resultPtr, resultAlignedPtr, offset, resultLen, stride);
+    if (SerializerHasCustomPredictionMethod()) {
+      return RunInference_Custom(input, returnValue);
+    }
+    else {
+      return RunInference_Default(input, returnValue);
+    }
     return 0;
   }
 };

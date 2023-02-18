@@ -1,5 +1,5 @@
-#ifndef _MODELSERIALIZERS_H_
-#define _MODELSERIALIZERS_H_
+#ifndef _GPUMODELSERIALIZERS_H_
+#define _GPUMODELSERIALIZERS_H_
 
 #include <map>
 #include <set>
@@ -10,8 +10,14 @@ namespace mlir
 namespace decisionforest
 {
 
-class ArraySparseSerializerBase : public IModelSerializer {
+class GPUArraySparseSerializerBase : public IModelSerializer {
 protected:
+  // GPU buffers
+  LengthMemrefType m_lengthsMemref;
+  LengthMemrefType m_offsetsMemref;
+  ModelMemrefType m_modelMemref;
+  // TODO we should have a way to store the class IDs memref here
+  
   bool m_sparseRepresentation;
   template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType, typename ChildIndexType>
   int32_t CallInitMethod();
@@ -27,20 +33,26 @@ protected:
   int32_t InitializeModelArray();
   void InitializeClassInformation();
 public:
-  ArraySparseSerializerBase(const std::string& modelGlobalsJSONPath, bool sparseRep)
+  GPUArraySparseSerializerBase(const std::string& modelGlobalsJSONPath, bool sparseRep)
     :IModelSerializer(modelGlobalsJSONPath), m_sparseRepresentation(sparseRep)
   { }
-  ~ArraySparseSerializerBase() { }
+  ~GPUArraySparseSerializerBase() { }
+  void CallPredictionMethod(void* predictFuncPtr,
+                            Memref<double, 2> inputs,
+                            Memref<double, 1> results) override;
+  bool HasCustomPredictionMethod() override { return true; }
+
+  ModelMemrefType GetModelMemref() { return m_modelMemref; }    
 };
 
-class ArrayRepresentationSerializer : public ArraySparseSerializerBase {
+class GPUArrayRepresentationSerializer : public GPUArraySparseSerializerBase {
 protected:
   void InitializeBuffersImpl() override;
 public:
-  ArrayRepresentationSerializer(const std::string& modelGlobalsJSONPath)
-    :ArraySparseSerializerBase(modelGlobalsJSONPath, false)
+  GPUArrayRepresentationSerializer(const std::string& modelGlobalsJSONPath)
+    :GPUArraySparseSerializerBase(modelGlobalsJSONPath, false)
   { }
-  ~ArrayRepresentationSerializer() {}
+  ~GPUArrayRepresentationSerializer() {}
   void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
   void ReadData() override;
 
@@ -50,15 +62,17 @@ public:
   void SetReturnTypeBitWidth(int32_t value) override;
 };
 
-class SparseRepresentationSerializer : public ArraySparseSerializerBase {
+class GPUSparseRepresentationSerializer : public GPUArraySparseSerializerBase {
 protected:
+  // TODO This should also have a way to store the memref
+  // for the leaves array
   int32_t InitializeLeafArrays();
   void InitializeBuffersImpl() override;
 public:
-  SparseRepresentationSerializer(const std::string& modelGlobalsJSONPath)
-    :ArraySparseSerializerBase(modelGlobalsJSONPath, true)
+  GPUSparseRepresentationSerializer(const std::string& modelGlobalsJSONPath)
+    :GPUArraySparseSerializerBase(modelGlobalsJSONPath, true)
   { }
-  ~SparseRepresentationSerializer() {}
+  ~GPUSparseRepresentationSerializer() {}
   void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
   void ReadData() override;
   
@@ -68,18 +82,7 @@ public:
   void SetReturnTypeBitWidth(int32_t value) override;
 };
 
-class ModelSerializerFactory {
-public:
-  static std::shared_ptr<IModelSerializer> GetModelSerializer(const std::string& name, const std::string& modelGlobalsJSONPath);
-};
-
-// TODO This function needs to be removed
-// Helper to construct the right serializer to work around the 
-// global "UseSparseRepresentation"
-std::shared_ptr<IModelSerializer> ConstructModelSerializer(const std::string& modelGlobalsJSONPath);
-std::shared_ptr<IModelSerializer> ConstructGPUModelSerializer(const std::string& modelGlobalsJSONPath);
-
 } // decisionforest
 } // mlir
 
-#endif // _MODELSERIALIZERS_H_
+#endif // _GPUMODELSERIALIZERS_H_

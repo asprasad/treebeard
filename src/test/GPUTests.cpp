@@ -19,6 +19,7 @@
 #include "Representations.h"
 #include "GPUSupportUtils.h"
 #include "GPUExecutionHelper.h"
+#include "GPUModelSerializers.h"
 
 using namespace mlir;
 
@@ -30,7 +31,9 @@ namespace test
 class GPUInferenceRunnerForTest : public InferenceRunnerForTestTemplate<decisionforest::GPUInferenceRunner> {
 public:
   using InferenceRunnerForTestTemplate<decisionforest::GPUInferenceRunner>::InferenceRunnerForTestTemplate;
-  decisionforest::ModelMemrefType GetModelMemref() { return this->m_modelMemref; }
+  decisionforest::ModelMemrefType GetModelMemref() { 
+    return reinterpret_cast<decisionforest::GPUArraySparseSerializerBase*>(m_serializer.get())->GetModelMemref();
+  }
 };
 
 // ===---------------------------------------------------=== //
@@ -144,9 +147,8 @@ bool CheckGPUModelInitialization_Scalar(TestArgs_t& args, ForestConstructor_t fo
                                                          IndexType,
                                                          IndexType,
                                                          ThresholdType>::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
-  auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);
+  auto serializer = decisionforest::ConstructGPUModelSerializer(modelGlobalsJSONPath);
   
-
   FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType, ThresholdType> 
                          irConstructor(args.context, serializer, batchSize, forestConstructor);
   irConstructor.Parse();
@@ -288,7 +290,7 @@ bool Test_GPUCodeGeneration_Scalar_VariableBatchSize(TestArgs_t& args,
                                                          IndexType,
                                                          IndexType,
                                                          ThresholdType>::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
-  auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);
+  auto serializer = decisionforest::ConstructGPUModelSerializer(modelGlobalsJSONPath);
                                                       
   FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType, ThresholdType> 
                          irConstructor(args.context, serializer, batchSize, forestConstructor);
