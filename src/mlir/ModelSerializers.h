@@ -65,8 +65,19 @@ public:
 
 class ModelSerializerFactory {
 public:
-  static std::shared_ptr<IModelSerializer> GetModelSerializer(const std::string& name, const std::string& modelGlobalsJSONPath);
+  typedef std::shared_ptr<IModelSerializer> 
+               (*SerializerConstructor_t)(const std::string& modelGlobalsJSONPath);
+private:
+  std::map<std::string, SerializerConstructor_t> m_constructionMap;
+public:
+  static ModelSerializerFactory& Get();
+  bool RegisterSerializer(const std::string& name,
+                          SerializerConstructor_t constructionFunc);
+  std::shared_ptr<IModelSerializer> GetModelSerializer(const std::string& name,
+                                                       const std::string& modelGlobalsJSONPath);
 };
+
+#define REGISTER_SERIALIZER(name, func) __attribute__((unused)) static bool UNIQUE_NAME(register_serializer_) = ModelSerializerFactory::Get().RegisterSerializer(#name, func);
 
 // TODO This function needs to be removed
 // Helper to construct the right serializer to work around the 

@@ -2,6 +2,7 @@
 #include "TreeTilingUtils.h"
 #include "TiledTree.h"
 #include "Logger.h"
+#include "ModelSerializers.h"
 #include "GPUModelSerializers.h"
 
 namespace mlir
@@ -275,6 +276,12 @@ void GPUSparseRepresentationSerializer::InitializeBuffersImpl() {
     InitializeLeafArrays();
 }
 
+std::shared_ptr<IModelSerializer> ConstructGPUSparseRepresentation(const std::string& jsonFilename) {
+  return std::make_shared<GPUSparseRepresentationSerializer>(jsonFilename);
+}
+
+REGISTER_SERIALIZER(gpu_sparse, ConstructGPUSparseRepresentation)
+
 // ===---------------------------------------------------=== //
 // GPUArrayRepresentationSerializer Methods
 // ===---------------------------------------------------=== //
@@ -294,6 +301,12 @@ void GPUArrayRepresentationSerializer::InitializeBuffersImpl() {
     InitializeModelArray();
     InitializeClassInformation();
 }
+
+std::shared_ptr<IModelSerializer> ConstructGPUArrayRepresentation(const std::string& jsonFilename) {
+  return std::make_shared<GPUArrayRepresentationSerializer>(jsonFilename);
+}
+
+REGISTER_SERIALIZER(gpu_array, ConstructGPUArrayRepresentation)
 
 }
 }

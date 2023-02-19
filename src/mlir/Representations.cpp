@@ -575,6 +575,12 @@ void ArrayBasedRepresentation::AddLLVMConversionPatterns(LLVMTypeConverter &conv
                GetModelMemrefSizeOpLowering>(converter);
 }
 
+std::shared_ptr<IRepresentation> ConstructArrayBasedRepresentation() {
+  return std::make_shared<ArrayBasedRepresentation>();
+}
+
+REGISTER_REPRESENTATION(array, ConstructArrayBasedRepresentation)
+
 // ===---------------------------------------------------=== //
 // Sparse representation
 // ===---------------------------------------------------=== //
@@ -1010,32 +1016,48 @@ void SparseRepresentation::AddLLVMConversionPatterns(LLVMTypeConverter &converte
                GetModelMemrefSizeOpLowering>(converter);
 }
 
+std::shared_ptr<IRepresentation> ConstructSparseRepresentation() {
+  return std::make_shared<SparseRepresentation>();
+}
+
+REGISTER_REPRESENTATION(sparse, ConstructSparseRepresentation)
+
+// ===---------------------------------------------------=== //
+// ModelSerializerFactory Methods
+// ===---------------------------------------------------=== //
+
 std::shared_ptr<IRepresentation> RepresentationFactory::GetRepresentation(const std::string& name) {
-  if (name == "array")
-    return std::make_shared<ArrayBasedRepresentation>();
-  else if (name == "sparse")
-    return std::make_shared<SparseRepresentation>();
-  else if (name == "gpu-array")
-    return std::make_shared<GPUArrayBasedRepresentation>();
-  else if (name == "gpu-sparse")
-    return std::make_shared<GPUSparseRepresentation>();
-  
-  assert(false && "Unknown serialization format");
-  return nullptr;
+  auto mapIter = m_constructionMap.find(name);
+  assert (mapIter != m_constructionMap.end() && "Unknown representation name!");
+  return mapIter->second();
+}
+
+RepresentationFactory& RepresentationFactory::Get() {
+  static std::unique_ptr<RepresentationFactory> s_instancePtr = nullptr;
+  if (s_instancePtr == nullptr)
+    s_instancePtr = std::make_unique<RepresentationFactory>();
+  return *s_instancePtr; 
+}
+
+bool RepresentationFactory::RegisterRepresentation(const std::string& name,
+                                                   RepresentationConstructor_t constructionFunc) {
+  assert (m_constructionMap.find(name) == m_constructionMap.end());
+  m_constructionMap[name] = constructionFunc;
+  return true;
 }
 
 std::shared_ptr<IRepresentation> ConstructRepresentation() {
   if (decisionforest::UseSparseTreeRepresentation)
-    return RepresentationFactory::GetRepresentation("sparse");
+    return RepresentationFactory::Get().GetRepresentation("sparse");
   else
-    return RepresentationFactory::GetRepresentation("array");
+    return RepresentationFactory::Get().GetRepresentation("array");
 }
 
 std::shared_ptr<IRepresentation> ConstructGPURepresentation() {
   if (decisionforest::UseSparseTreeRepresentation)
-    return RepresentationFactory::GetRepresentation("gpu-sparse");
+    return RepresentationFactory::Get().GetRepresentation("gpu_sparse");
   else
-    return RepresentationFactory::GetRepresentation("gpu-array");
+    return RepresentationFactory::Get().GetRepresentation("gpu_array");
 }
 
 } // decisionforest

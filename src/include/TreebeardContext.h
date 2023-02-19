@@ -7,6 +7,11 @@
 #include "Dialect.h"
 #include "ExecutionHelpers.h"
 
+#define CONCAT(a, b, c) CONCAT_INNER(a, b, c)
+#define CONCAT_INNER(a, b, c) a##b##c
+
+#define UNIQUE_NAME(base) CONCAT(base, __COUNTER__, __LINE__)
+
 namespace mlir
 {
 namespace decisionforest

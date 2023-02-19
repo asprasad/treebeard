@@ -236,9 +236,18 @@ public:
 };
 
 class RepresentationFactory {
+  typedef std::shared_ptr<IRepresentation> (*RepresentationConstructor_t)();
+private:
+  std::map<std::string, RepresentationConstructor_t> m_constructionMap;
 public:
-  static std::shared_ptr<IRepresentation> GetRepresentation(const std::string& name);
+  static RepresentationFactory& Get();
+  bool RegisterRepresentation(const std::string& name,
+                              RepresentationConstructor_t constructionFunc);
+
+  std::shared_ptr<IRepresentation> GetRepresentation(const std::string& name);
 };
+
+#define REGISTER_REPRESENTATION(name, func) __attribute__((unused)) static bool UNIQUE_NAME(register_rep_) = RepresentationFactory::Get().RegisterRepresentation(#name, func);
 
 // TODO This function needs to be removed
 // Helper to construct the right representation to work around the 

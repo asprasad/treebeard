@@ -256,6 +256,12 @@ mlir::LogicalResult GPUArrayBasedRepresentation::GenerateModelGlobals(Operation 
 //   return mlir::Value();
 // }
 
+std::shared_ptr<IRepresentation> ConstructGPUArrayBasedRepresentation() {
+  return std::make_shared<GPUArrayBasedRepresentation>();
+}
+
+REGISTER_REPRESENTATION(gpu_array, ConstructGPUArrayBasedRepresentation)
+
 // ===---------------------------------------------------=== //
 // GPU sparse representation
 // ===---------------------------------------------------=== //
@@ -367,6 +373,11 @@ mlir::LogicalResult GPUSparseRepresentation::GenerateModelGlobals(Operation *op,
   return mlir::success();
 }
 
+std::shared_ptr<IRepresentation> ConstructGPUSparseRepresentation() {
+  return std::make_shared<GPUSparseRepresentation>();
+}
+
+REGISTER_REPRESENTATION(gpu_sparse, ConstructGPUSparseRepresentation)
 
 }
 }

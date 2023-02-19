@@ -486,6 +486,12 @@ void SparseRepresentationSerializer::InitializeBuffersImpl() {
     InitializeLeafArrays();
 }
 
+std::shared_ptr<IModelSerializer> ConstructSparseRepresentation(const std::string& jsonFilename) {
+  return std::make_shared<SparseRepresentationSerializer>(jsonFilename);
+}
+
+REGISTER_SERIALIZER(sparse, ConstructSparseRepresentation)
+
 // ===---------------------------------------------------=== //
 // ArrayRepresentationSerializer Methods
 // ===---------------------------------------------------=== //
@@ -506,33 +512,49 @@ void ArrayRepresentationSerializer::InitializeBuffersImpl() {
     InitializeClassInformation();
 }
 
-// TODO Make this implementation more general by having some kind of registry
+std::shared_ptr<IModelSerializer> ConstructArrayRepresentation(const std::string& jsonFilename) {
+  return std::make_shared<ArrayRepresentationSerializer>(jsonFilename);
+}
+
+REGISTER_SERIALIZER(array, ConstructArrayRepresentation)
+
+// ===---------------------------------------------------=== //
+// ModelSerializerFactory Methods
+// ===---------------------------------------------------=== //
+
 std::shared_ptr<IModelSerializer> ModelSerializerFactory::GetModelSerializer(const std::string& name, 
                                                                              const std::string& modelGlobalsJSONPath) {
-  if (name == "array")
-    return std::make_shared<ArrayRepresentationSerializer>(modelGlobalsJSONPath);
-  else if (name == "sparse")
-    return std::make_shared<SparseRepresentationSerializer>(modelGlobalsJSONPath);
-  else if (name == "gpu-array")
-    return std::make_shared<GPUArrayRepresentationSerializer>(modelGlobalsJSONPath);
-  else if (name == "gpu-sparse")
-    return std::make_shared<GPUSparseRepresentationSerializer>(modelGlobalsJSONPath);
-  assert(false && "Unknown serialization format");
-  return nullptr;
+  auto mapIter = m_constructionMap.find(name);
+  assert (mapIter != m_constructionMap.end() && "Unknown serializer name!");
+  return mapIter->second(modelGlobalsJSONPath);
+}
+
+ModelSerializerFactory& ModelSerializerFactory::Get() {
+  static std::unique_ptr<ModelSerializerFactory> s_instancePtr = nullptr;
+  if (s_instancePtr == nullptr)
+    s_instancePtr = std::make_unique<ModelSerializerFactory>();
+  return *s_instancePtr; 
+}
+
+bool ModelSerializerFactory::RegisterSerializer(const std::string& name,
+                                                SerializerConstructor_t constructionFunc) {
+  assert (m_constructionMap.find(name) == m_constructionMap.end());
+  m_constructionMap[name] = constructionFunc;
+  return true;
 }
 
 std::shared_ptr<IModelSerializer> ConstructModelSerializer(const std::string& modelGlobalsJSONPath) {
   if (decisionforest::UseSparseTreeRepresentation)
-    return ModelSerializerFactory::GetModelSerializer("sparse", modelGlobalsJSONPath);
+    return ModelSerializerFactory::Get().GetModelSerializer("sparse", modelGlobalsJSONPath);
   else
-    return ModelSerializerFactory::GetModelSerializer("array", modelGlobalsJSONPath);
+    return ModelSerializerFactory::Get().GetModelSerializer("array", modelGlobalsJSONPath);
 }
 
 std::shared_ptr<IModelSerializer> ConstructGPUModelSerializer(const std::string& modelGlobalsJSONPath) {
   if (decisionforest::UseSparseTreeRepresentation)
-    return ModelSerializerFactory::GetModelSerializer("gpu-sparse", modelGlobalsJSONPath);
+    return ModelSerializerFactory::Get().GetModelSerializer("gpu_sparse", modelGlobalsJSONPath);
   else
-    return ModelSerializerFactory::GetModelSerializer("gpu-array", modelGlobalsJSONPath);
+    return ModelSerializerFactory::Get().GetModelSerializer("gpu_array", modelGlobalsJSONPath);
 }
 
 }
