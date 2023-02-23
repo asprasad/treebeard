@@ -70,8 +70,16 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
           auto insertPoint = builder.saveInsertionPoint();
           builder.setInsertionPoint(op);
           auto waitBeforeReturn = builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{});
-          /*auto outputTransfer = */ builder.create<gpu::MemcpyOp>(location, waitBeforeReturn.getAsyncToken().getType(), ValueRange{waitBeforeReturn.getAsyncToken()}, 
+          auto outputTransfer = builder.create<gpu::MemcpyOp>(location, waitBeforeReturn.getAsyncToken().getType(), ValueRange{waitBeforeReturn.getAsyncToken()}, 
                                                                    static_cast<Value>(func.getArgument(1)), outputAlloc.getMemref());
+          auto deallocInput = builder.create<gpu::DeallocOp>(location, 
+                                                             outputTransfer.getAsyncToken().getType(),
+                                                             ValueRange{outputTransfer.getAsyncToken()},
+                                                             inputAlloc.getMemref());
+          /*auto deallocOutput =*/ builder.create<gpu::DeallocOp>(location,
+                                                                  deallocInput.getAsyncToken().getType(),
+                                                                  ValueRange{deallocInput.getAsyncToken()},
+                                                                  outputAlloc.getMemref());
           builder.setInsertionPoint(insertPoint.getBlock(), insertPoint.getPoint());                                                              
         }
       }
