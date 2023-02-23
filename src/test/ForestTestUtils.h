@@ -171,6 +171,16 @@ std::vector<TileType> AddRightAndLeftHeavyTrees(decisionforest::DecisionForest<>
 }
 
 template<typename TileType>
+std::vector<TileType> AddRightLeftAndBalancedTrees(decisionforest::DecisionForest<>& forest) {
+  auto expectedArray = AddRightHeavyTree<TileType>(forest);
+  auto expectedArray2 = AddLeftHeavyTree<TileType>(forest);
+  auto expectedArray3 = AddBalancedTree<TileType>(forest);
+  expectedArray.insert(std::end(expectedArray), std::begin(expectedArray2), std::end(expectedArray2));
+  expectedArray.insert(std::end(expectedArray), std::begin(expectedArray3), std::end(expectedArray3));
+  return expectedArray;
+}
+
+template<typename TileType>
 void AddFeaturesToForest(decisionforest::DecisionForest<>& forest, std::vector<TileType>& serializedForest, std::string featureType) {
   int32_t numFeatures = -1;
   for (auto& tile : serializedForest) {

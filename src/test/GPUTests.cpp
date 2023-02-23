@@ -473,8 +473,32 @@ bool Test_SparseGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_ChI16_BatchSize32
 // GPU Basic Scalar Code Generation Tests -- Sparse
 // ===---------------------------------------------------=== //
 
+bool Test_ReorgGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32(TestArgs_t& args) {
+  return Test_GPUCodeGeneration_ReorgForestRep<double, int32_t>(args, 32, AddLeftHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_ReorgGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32(TestArgs_t& args) {
+  return Test_GPUCodeGeneration_ReorgForestRep<double, int32_t>(args, 32, AddRightHeavyTree<DoubleInt32Tile>);
+}
+
 bool Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32(TestArgs_t& args) {
   return Test_GPUCodeGeneration_ReorgForestRep<double, int32_t>(args, 32, AddRightAndLeftHeavyTrees<DoubleInt32Tile>);
+}
+
+bool Test_ReorgGPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32(TestArgs_t& args) {
+  return Test_GPUCodeGeneration_ReorgForestRep<float, int16_t>(args, 32, AddLeftHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_ReorgGPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32(TestArgs_t& args) {
+  return Test_GPUCodeGeneration_ReorgForestRep<float, int16_t>(args, 32, AddRightHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32(TestArgs_t& args) {
+  return Test_GPUCodeGeneration_ReorgForestRep<float, int16_t>(args, 32, AddRightAndLeftHeavyTrees<DoubleInt32Tile>);
+}
+
+bool Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32(TestArgs_t& args) {
+  return Test_GPUCodeGeneration_ReorgForestRep<float, int16_t>(args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>);
 }
 
 }

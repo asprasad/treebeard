@@ -456,7 +456,13 @@ bool Test_SparseGPUCodeGeneration_RightHeavy_FloatInt16_ChI16_BatchSize32(TestAr
 bool Test_SparseGPUCodeGeneration_Balanced_FloatInt16_ChI16_BatchSize32(TestArgs_t& args);
 bool Test_SparseGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_ChI16_BatchSize32(TestArgs_t& args);
 
+bool Test_ReorgGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32(TestArgs_t& args);
+bool Test_ReorgGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32(TestArgs_t& args);
 bool Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32(TestArgs_t& args);
+bool Test_ReorgGPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32(TestArgs_t& args);
+bool Test_ReorgGPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32(TestArgs_t& args);
+bool Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32(TestArgs_t& args);
+bool Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32(TestArgs_t& args);
 
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
@@ -749,7 +755,7 @@ std::vector<std::vector<double>> GetBatchSize1Data() {
 }
 
 std::vector<std::vector<double>> GetBatchSize2Data() {
-  std::vector<double> inputData1 = {0.1, 0.2, 0.5, 0.3, 0.25,
+  std::vector<double> inputData1 = {0.1, 0.2, 0.4, 0.3, 0.25,
                                     0.1, 0.2, 0.6, 0.3, 0.25};
   std::vector<std::vector<double>> data = { inputData1 };
   return data;
@@ -1443,12 +1449,27 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_RightHeavy_FloatInt16_ChI16_BatchSize32),
   TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_Balanced_FloatInt16_ChI16_BatchSize32),
   TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_ChI16_BatchSize32),
+
+  // Basic reorg forest tests
+  TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
+  TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
+  TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
+  TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32),
+  TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32),
+  TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32),
+  TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32),
 };
 
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
+  TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
+  TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
   TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
+  TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32),
+  TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32),
+  TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32),
+  TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32),
   // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
   // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
   // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
@@ -1648,9 +1669,9 @@ const std::string boldBlue("\033[1;34m");
 const std::string white("\033[0;37m");
 const std::string underline("\033[4m");
 
-bool RunTest(TestDescriptor test, TestArgs_t& args) {
+bool RunTest(TestDescriptor test, TestArgs_t& args, size_t testNum) {
 	std::string errStr;
-	std::cout << white << "Running test " << blue << test.m_testName << reset << ".... ";
+	std::cout << white << testNum << ". Running test " << blue << test.m_testName << reset << ".... ";
 	bool pass = false;
   // try
   std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
@@ -1693,7 +1714,7 @@ void RunTestsImpl(TestDescriptor *testsToRun, size_t numberOfTests) {
     decisionforest::UseSparseTreeRepresentation = false;
     mlir::decisionforest::ForestJSONReader::GetInstance().SetChildIndexBitWidth(-1);
     
-    bool pass = RunTest(testsToRun[i], args);
+    bool pass = RunTest(testsToRun[i], args, i+1);
     numPassed += pass ? 1 : 0;
     overallPass = overallPass && pass;
   }
