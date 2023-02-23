@@ -280,18 +280,13 @@ bool Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt16(TestArgs_t& args) {
 // ===---------------------------------------------------=== //
 
 template<typename ThresholdType, typename IndexType>
-bool Test_GPUCodeGeneration_Scalar_VariableBatchSize(TestArgs_t& args, 
-                                                     const int32_t batchSize,
-                                                     ForestConstructor_t forestConstructor,
-                                                     int32_t childIndexBitWidth=1) {
-
-  auto modelGlobalsJSONPath = TreeBeard::ModelJSONParser<ThresholdType,
-                                                         ThresholdType,
-                                                         IndexType,
-                                                         IndexType,
-                                                         ThresholdType>::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
-  auto serializer = decisionforest::ConstructGPUModelSerializer(modelGlobalsJSONPath);
-                                                      
+bool Test_GPUCodeGeneration_Scalar_VariableBatchSize_AnyRep(TestArgs_t& args, 
+                                                            const int32_t batchSize,
+                                                            ForestConstructor_t forestConstructor,
+                                                            std::shared_ptr<decisionforest::IModelSerializer> serializer,
+                                                            std::shared_ptr<decisionforest::IRepresentation> representation,
+                                                            int32_t childIndexBitWidth=1) {
+                                                    
   FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType, ThresholdType> 
                          irConstructor(args.context, serializer, batchSize, forestConstructor);
   irConstructor.Parse();
@@ -314,7 +309,6 @@ bool Test_GPUCodeGeneration_Scalar_VariableBatchSize(TestArgs_t& args,
   mlir::decisionforest::ConvertParallelLoopsToGPU(args.context, module);
   // module->dump();
 
-  auto representation = decisionforest::ConstructGPURepresentation();
   mlir::decisionforest::LowerEnsembleToMemrefs(args.context,
                                                module,
                                                serializer,
@@ -353,6 +347,48 @@ bool Test_GPUCodeGeneration_Scalar_VariableBatchSize(TestArgs_t& args,
   return true;
 }
 
+template<typename ThresholdType, typename IndexType>
+bool Test_GPUCodeGeneration_Scalar_VariableBatchSize(TestArgs_t& args, 
+                                                     const int32_t batchSize,
+                                                     ForestConstructor_t forestConstructor,
+                                                     int32_t childIndexBitWidth=1) {
+
+  auto modelGlobalsJSONPath = TreeBeard::ModelJSONParser<ThresholdType,
+                                                         ThresholdType,
+                                                         IndexType,
+                                                         IndexType,
+                                                         ThresholdType>::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
+
+  return Test_GPUCodeGeneration_Scalar_VariableBatchSize_AnyRep<ThresholdType, IndexType>(args, 
+                                                                                          batchSize,
+                                                                                          forestConstructor,
+                                                                                          decisionforest::ConstructGPUModelSerializer(modelGlobalsJSONPath),
+                                                                                          decisionforest::ConstructGPURepresentation(),
+                                                                                          childIndexBitWidth);
+}
+
+template<typename ThresholdType, typename IndexType>
+bool Test_GPUCodeGeneration_ReorgForestRep(TestArgs_t& args, 
+                                           const int32_t batchSize,
+                                           ForestConstructor_t forestConstructor,
+                                           int32_t childIndexBitWidth=1) {
+
+  auto modelGlobalsJSONPath = TreeBeard::ModelJSONParser<ThresholdType,
+                                                         ThresholdType,
+                                                         IndexType,
+                                                         IndexType,
+                                                         ThresholdType>::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
+
+  auto serializer = decisionforest::ModelSerializerFactory::Get().GetModelSerializer("gpu_reorg", modelGlobalsJSONPath);
+  auto representation = decisionforest::RepresentationFactory::Get().GetRepresentation("gpu_reorg");
+
+  return Test_GPUCodeGeneration_Scalar_VariableBatchSize_AnyRep<ThresholdType, IndexType>(args, 
+                                                                                          batchSize,
+                                                                                          forestConstructor,
+                                                                                          serializer,
+                                                                                          representation,
+                                                                                          childIndexBitWidth);
+}
 // ===---------------------------------------------------=== //
 // GPU Basic Scalar Code Generation Tests -- Array Based
 // ===---------------------------------------------------=== //
@@ -431,6 +467,14 @@ bool Test_SparseGPUCodeGeneration_Balanced_FloatInt16_ChI16_BatchSize32(TestArgs
 bool Test_SparseGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_ChI16_BatchSize32(TestArgs_t& args) {
   decisionforest::UseSparseTreeRepresentation = true;
   return Test_GPUCodeGeneration_Scalar_VariableBatchSize<float, int16_t>(args, 32, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 16);
+}
+
+// ===---------------------------------------------------=== //
+// GPU Basic Scalar Code Generation Tests -- Sparse
+// ===---------------------------------------------------=== //
+
+bool Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32(TestArgs_t& args) {
+  return Test_GPUCodeGeneration_ReorgForestRep<double, int32_t>(args, 32, AddRightAndLeftHeavyTrees<DoubleInt32Tile>);
 }
 
 }

@@ -18,7 +18,7 @@ namespace decisionforest
 // ===---------------------------------------------------=== //
 
 void GenerateSimpleInitializer(const std::string& funcName, ConversionPatternRewriter &rewriter, Location location, 
-                                                            ModuleOp module, MemRefType memrefType) {
+                               ModuleOp module, MemRefType memrefType) {
   // TODO why did this not work when I used the rewriter instead of the builder?
   // auto insertPoint = rewriter.saveInsertionPoint();
   auto functionType = FunctionType::get(rewriter.getContext(), {memrefType}, {memrefType});
@@ -218,7 +218,7 @@ mlir::LogicalResult GPUArrayBasedRepresentation::GenerateModelGlobals(Operation 
 
   // Add the class info argument
   auto classInfoSize = forest.IsMultiClassClassifier() ? offsetSize : 0;
-  auto classInfoMemrefType = MemRefType::get({classInfoSize}, treeType.getResultType());
+  auto classInfoMemrefType = MemRefType::get({classInfoSize}, rewriter.getI8Type());
   func.insertArgument(func.getNumArguments(), classInfoMemrefType, mlir::DictionaryAttr(), location);
   m_classInfoMemrefArgIndex = func.getNumArguments() - 1;
 

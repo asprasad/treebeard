@@ -54,10 +54,10 @@ public:
   
   const std::string& GetFilePath() const { return m_filepath; }
   
-  virtual void SetBatchSize(int32_t value)=0;
-  virtual void SetRowSize(int32_t value)=0;
-  virtual void SetInputTypeBitWidth(int32_t value)=0;
-  virtual void SetReturnTypeBitWidth(int32_t value)=0;
+  virtual void SetBatchSize(int32_t value) { m_batchSize=value; }
+  virtual void SetRowSize(int32_t value) { m_rowSize=value; }
+  virtual void SetInputTypeBitWidth(int32_t value) { m_inputTypeBitWidth=value; }
+  virtual void SetReturnTypeBitWidth(int32_t value) { m_returnTypeBitwidth=value; }
 
   int32_t GetBatchSize() { return m_batchSize; }
   int32_t GetRowSize() { return m_rowSize; }

@@ -6,6 +6,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "Dialect.h"
 #include "Logger.h"
+#include "../json/JSONHelpers.h"
 
 namespace mlir
 {
@@ -69,23 +70,6 @@ void ForestJSONBuilder::AddTreesToJSON(std::list<int32_t>& treeIndices, std::lis
     m_json.push_back(treeSet);
 }
 
-template<typename ContainerType, typename ElemType>
-void ParseJSONList(ContainerType& container, json& jsonList) {
-    for (auto& elemJSON : jsonList) {
-        ElemType elem = elemJSON.get<ElemType>();
-        container.push_back(elem);
-    }
-}
-
-template<typename ContainerType, typename ElemType>
-void ParseJSONListOfLists(std::list<ContainerType>& container, json& jsonListOfLists) {
-    for (auto& jsonList : jsonListOfLists) {
-        ContainerType elem;
-        ParseJSONList<ContainerType, ElemType>(elem, jsonList);
-        container.push_back(elem);
-    }
-}
-
 void ForestJSONReader::ParseSingleTileSizeEntry(json& tileSizeEntryJSON, ForestJSONReader::SingleTileSizeEntry& tileSizeEntry) {
     tileSizeEntry.tileSize = tileSizeEntryJSON["TileSize"].get<int32_t>();
     tileSizeEntry.thresholdBitWidth = tileSizeEntryJSON["ThresholdBitWidth"].get<int32_t>();
@@ -132,16 +116,6 @@ void ForestJSONReader::ParseJSONFile() {
         newEntries.push_back(tileSizeEntry);
     }
     m_tileSizeEntries = newEntries;
-}
-
-template<typename T>
-json WriteListOfVectorsToJSON(std::list<std::vector<T>>& values) {
-    json retJSON;
-    for (auto& val : values) {
-        json currJSON = val;
-        retJSON.push_back(currJSON);
-    }
-    return retJSON;
 }
 
 void ForestJSONReader::WriteSingleTileSizeEntryToJSON(json& tileSizeEntryJSON, ForestJSONReader::SingleTileSizeEntry& tileSizeEntry) {
