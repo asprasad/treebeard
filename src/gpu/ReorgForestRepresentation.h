@@ -48,7 +48,8 @@ public:
   ~ReorgForestSerializer() {}
   void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
   void ReadData() override;
-
+  void CleanupBuffers() override;
+  
   void CallPredictionMethod(void* predictFuncPtr,
                             Memref<double, 2> inputs,
                             Memref<double, 1> results) override;

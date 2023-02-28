@@ -5,6 +5,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 
@@ -273,8 +274,24 @@ void ReorgForestSerializer::CallPredictionMethod(void* predictFuncPtr,
                      nullptr, nullptr, 0, 0, 0);
     return;
 }
+
 bool ReorgForestSerializer::HasCustomPredictionMethod() {
   return true;
+}
+
+void ReorgForestSerializer::CleanupBuffers() {
+    using InputElementType = double;
+    using ReturnType = double;
+
+    typedef int32_t (*CleanupFunc_t)(double*, double*, int64_t, int64_t, int64_t,
+                                     int32_t*, int32_t*, int64_t, int64_t, int64_t);
+                                     // int8_t*, int8_t*, int64_t, int64_t, int64_t);
+    auto cleanupFuncPtr = this->GetFunctionAddress<CleanupFunc_t>("Dealloc_Buffers");
+    cleanupFuncPtr(m_thresholdMemref.bufferPtr, m_thresholdMemref.alignedPtr, m_thresholdMemref.offset, m_thresholdMemref.lengths[0], m_thresholdMemref.strides[0],
+                   m_featureIndexMemref.bufferPtr, m_featureIndexMemref.alignedPtr, m_featureIndexMemref.offset, m_featureIndexMemref.lengths[0], m_featureIndexMemref.strides[0]);
+                   // nullptr, nullptr, 0, 0, 0);
+    return;
+
 }
 
 std::shared_ptr<IModelSerializer> ConstructGPUReorgForestSerializer(const std::string& jsonFilename) {
@@ -286,6 +303,12 @@ REGISTER_SERIALIZER(gpu_reorg, ConstructGPUReorgForestSerializer)
 // ===---------------------------------------------------=== //
 // Reorg forest representation methods
 // ===---------------------------------------------------=== //
+
+void GenerateCleanupProc(const std::string& funcName,
+                         ConversionPatternRewriter &rewriter,
+                         Location location, 
+                         ModuleOp module,
+                         const std::vector<Type>& memrefTypes);
 
 mlir::LogicalResult ReorgForestRepresentation::GenerateModelGlobals(Operation *op,
                                                                     ArrayRef<Value> operands,
@@ -335,6 +358,8 @@ mlir::LogicalResult ReorgForestRepresentation::GenerateModelGlobals(Operation *o
   GenerateSimpleInitializer("Init_Thresholds", rewriter, location, module, thresholdMemrefType);
   GenerateSimpleInitializer("Init_FeatureIndices", rewriter, location, module, featureIndexMemrefType);
   GenerateSimpleInitializer("Init_ClassIDs", rewriter, location, module, classInfoMemrefType);
+
+  GenerateCleanupProc("Dealloc_Buffers", rewriter, location, module, std::vector<Type>{thresholdMemrefType, featureIndexMemrefType});
 
   m_thresholdMemref = func.getArgument(m_thresholdMemrefArgIndex);
   m_featureIndexMemref = func.getArgument(m_featureIndexMemrefArgIndex);

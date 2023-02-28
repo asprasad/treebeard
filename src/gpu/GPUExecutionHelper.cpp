@@ -23,6 +23,10 @@ namespace mlir
 namespace decisionforest
 {
 
+GPUInferenceRunner::~GPUInferenceRunner() { 
+  m_serializer->CleanupBuffers();
+}
+
 llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> GPUInferenceRunner::CreateExecutionEngine(mlir::ModuleOp module) {
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();

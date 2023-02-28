@@ -38,6 +38,31 @@ void GenerateSimpleInitializer(const std::string& funcName, ConversionPatternRew
   // rewriter.setInsertionPoint(insertPoint.getBlock(), insertPoint.getPoint());
 }
 
+void GenerateCleanupProc(const std::string& funcName,
+                         ConversionPatternRewriter &rewriter,
+                         Location location, 
+                         ModuleOp module,
+                         const std::vector<Type>& memrefTypes) {
+  auto functionType = FunctionType::get(rewriter.getContext(), memrefTypes, {rewriter.getI32Type()});
+  NamedAttribute visibilityAttribute{module.getSymVisibilityAttrName(), rewriter.getStringAttr("public")};
+  auto initFunc = func::FuncOp::create(location, funcName, functionType, ArrayRef<NamedAttribute>(visibilityAttribute));
+  auto &entryBlock = *initFunc.addEntryBlock();
+  // rewriter.setInsertionPointToStart(&entryBlock);
+  mlir::OpBuilder builder(initFunc.getContext());
+  builder.setInsertionPointToStart(&entryBlock);
+  auto waitOp = builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{});
+  auto asyncToken = waitOp.getAsyncToken();
+  for (size_t i=0 ; i<memrefTypes.size() ; ++i) {
+    auto dealloc = builder.create<gpu::DeallocOp>(location, asyncToken.getType(), ValueRange{asyncToken}, initFunc.getArgument(i));
+    asyncToken = dealloc.getAsyncToken();
+  }
+
+  /*auto waitBeforeReturn =*/ builder.create<gpu::WaitOp>(location, asyncToken.getType(), ValueRange{asyncToken});
+  auto constRetVal = builder.create<arith::ConstantIntOp>(location, 0 /*value*/, 32 /*width*/);
+  builder.create<mlir::func::ReturnOp>(location, static_cast<Value>(constRetVal));
+  module.push_back(initFunc);
+}
+
 template<typename BodyCreator_t>
 void GenerateModelMemrefInitializerImpl(const std::string& funcName, ConversionPatternRewriter &rewriter, Location location, 
                                         ModuleOp module, MemRefType memrefType, bool sparseRep, BodyCreator_t createBody) {

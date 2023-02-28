@@ -40,7 +40,6 @@ class InferenceRunnerBase {
   friend class IModelSerializer;
 protected:
   std::shared_ptr<IModelSerializer> m_serializer;
-  std::string m_modelGlobalsJSONFilePath;
   int32_t m_inputElementBitWidth;
   int32_t m_returnTypeBitWidth;
   int32_t m_tileSize;

@@ -41,7 +41,6 @@ InferenceRunnerBase::InferenceRunnerBase(std::shared_ptr<IModelSerializer> seria
                                          int32_t thresholdSize,
                                          int32_t featureIndexSize)
   : m_serializer(serializer),
-    m_modelGlobalsJSONFilePath(serializer->GetFilePath()),
     m_tileSize(tileSize),
     m_thresholdSize(thresholdSize),
     m_featureIndexSize(featureIndexSize) 

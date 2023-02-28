@@ -47,6 +47,8 @@ public:
                                     Memref<double, 1> results) { }
   virtual bool HasCustomPredictionMethod() { return false; }    
   
+  virtual void CleanupBuffers() { }
+
   void InitializeBuffers(InferenceRunnerBase* inferenceRunner) {
     m_inferenceRunner = inferenceRunner;
     this->InitializeBuffersImpl();

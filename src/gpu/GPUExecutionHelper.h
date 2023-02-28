@@ -43,7 +43,7 @@ public:
   { 
     Init();
   }
-  virtual ~GPUInferenceRunner() { }
+  virtual ~GPUInferenceRunner();
 };
 
 } // decisionforest
