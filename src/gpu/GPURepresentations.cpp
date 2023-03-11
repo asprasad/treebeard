@@ -254,6 +254,11 @@ mlir::LogicalResult GPUArrayBasedRepresentation::GenerateModelGlobals(Operation 
   GenerateSimpleInitializer("Init_Lengths", rewriter, location, module, offsetMemrefType);
   GenerateSimpleInitializer("Init_ClassIds", rewriter, location, module, classInfoMemrefType);
 
+  GenerateCleanupProc("Dealloc_Buffers", 
+                      rewriter, 
+                      location,
+                      module, 
+                      std::vector<Type>{modelMemrefType, offsetMemrefType, offsetMemrefType}); //, classInfoMemrefType})
   EnsembleConstantLoweringInfo info 
   {
     static_cast<Value>(m_modelMemref),
@@ -376,6 +381,12 @@ mlir::LogicalResult GPUSparseRepresentation::GenerateModelGlobals(Operation *op,
   GenerateSimpleInitializer("Init_Offsets", rewriter, location, module, offsetMemrefType);
   GenerateSimpleInitializer("Init_Lengths", rewriter, location, module, offsetMemrefType);
   GenerateSimpleInitializer("Init_ClassIds", rewriter, location, module, classInfoMemrefType);
+
+  GenerateCleanupProc("Dealloc_Buffers", 
+                    rewriter, 
+                    location,
+                    module, 
+                    std::vector<Type>{modelMemrefType, offsetMemrefType, offsetMemrefType}); //, classInfoMemrefType})
 
   SparseEnsembleConstantLoweringInfo info 
   {

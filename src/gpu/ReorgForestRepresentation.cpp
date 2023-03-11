@@ -172,10 +172,13 @@ void ReorgForestSerializer::ReadData() {
   m_numberOfClasses = m_json["NumberOfClasses"];
 
   // m_thresholds = m_json["Thresholds"];
+  m_thresholds.clear();
   ParseJSONList<std::vector<double>, double>(m_thresholds, m_json["Thresholds"]);
   // m_featureIndices = m_json["FeatureIndices"];
+  m_featureIndices.clear();
   ParseJSONList<std::vector<int32_t>, int32_t>(m_featureIndices, m_json["FeatureIndices"]);
   // m_classIds = m_json["ClassIDs"];
+  m_classIds.clear();
   ParseJSONList<std::vector<int8_t>, int8_t>(m_classIds, m_json["ClassIDs"]);
 }
 
@@ -280,9 +283,6 @@ bool ReorgForestSerializer::HasCustomPredictionMethod() {
 }
 
 void ReorgForestSerializer::CleanupBuffers() {
-    using InputElementType = double;
-    using ReturnType = double;
-
     typedef int32_t (*CleanupFunc_t)(double*, double*, int64_t, int64_t, int64_t,
                                      int32_t*, int32_t*, int64_t, int64_t, int64_t);
                                      // int8_t*, int8_t*, int64_t, int64_t, int64_t);

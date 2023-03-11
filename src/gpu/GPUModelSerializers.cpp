@@ -218,6 +218,19 @@ void GPUArraySparseSerializerBase::CallPredictionMethod(void* predictFuncPtr,
     return;
 }    
 
+void GPUArraySparseSerializerBase::CleanupBuffers() {
+  typedef int32_t (*CleanupFunc_t)(Tile*, Tile*, int64_t, int64_t, int64_t,
+                                  int64_t*, int64_t*, int64_t, int64_t, int64_t,
+                                  int64_t*, int64_t*, int64_t, int64_t, int64_t);
+                                  // int8_t*, int8_t*, int64_t, int64_t, int64_t);
+  auto cleanupFuncPtr = this->GetFunctionAddress<CleanupFunc_t>("Dealloc_Buffers");
+  cleanupFuncPtr(m_modelMemref.bufferPtr, m_modelMemref.alignedPtr, m_modelMemref.offset, m_modelMemref.lengths[0], m_modelMemref.strides[0],
+                 m_offsetsMemref.bufferPtr, m_offsetsMemref.alignedPtr, m_offsetsMemref.offset, m_offsetsMemref.lengths[0], m_offsetsMemref.strides[0],
+                 m_lengthsMemref.bufferPtr, m_lengthsMemref.alignedPtr, m_lengthsMemref.offset, m_lengthsMemref.lengths[0], m_lengthsMemref.strides[0]);
+  //               // nullptr, nullptr, 0, 0, 0);
+
+}
+
 void GPUArraySparseSerializerBase::ReadData() {
     decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_filepath);
     decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();

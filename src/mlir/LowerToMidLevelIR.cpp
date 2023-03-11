@@ -12,6 +12,9 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Dialect/GPU/Transforms/ParallelLoopMapper.h"
 
+#include "llvm/Target/TargetMachine.h"
+
+
 using namespace mlir;
 
 namespace {
@@ -406,6 +409,7 @@ struct PredictForestOpLowering: public ConversionPattern {
       // auto indexConst = rewriter.create<arith::ConstantIndexOp>(location, (int64_t)1);
       // walkOp = rewriter.create<memref::LoadOp>()
       walkOp = rewriter.create<decisionforest::WalkDecisionTreeOp>(location, treeType.getThresholdType(), tree, row);
+      // auto printResult = rewriter.create<gpu::PrintfOp>(location, "Result [%d]: %lf\t", ValueRange{rowIndex, static_cast<Value>(walkOp)});
     }
     GenerateMultiClassAccumulate(rewriter, location, static_cast<Value>(walkOp), rowIndex, treeIndex, state);
 
@@ -580,6 +584,8 @@ struct PredictForestOpLowering: public ConversionPattern {
       auto currentMemrefElem = rewriter.create<memref::LoadOp>(location, state.resultMemref, ValueRange{rowIndex});
       auto newMemrefElem = rewriter.create<arith::AddFOp>(location, state.resultMemrefType.getElementType(), loop.getResults()[0], currentMemrefElem);
       rewriter.create<memref::StoreOp>(location, newMemrefElem, state.resultMemref, ValueRange{rowIndex});
+
+      // rewriter.create<gpu::PrintfOp>(location, "Writing result[%d] = %lf + %lf: %lf\n", ValueRange{rowIndex, currentMemrefElem, loop.getResults()[0], newMemrefElem});
     }
   }
 
@@ -966,7 +972,7 @@ struct HighLevelIRToMidLevelIRLoweringPass: public PassWrapper<HighLevelIRToMidL
 
     target.addLegalDialect<memref::MemRefDialect, scf::SCFDialect, 
                            decisionforest::DecisionForestDialect, math::MathDialect,
-                           arith::ArithDialect, func::FuncDialect>();
+                           arith::ArithDialect, func::FuncDialect, gpu::GPUDialect>();
 
     target.addIllegalOp<decisionforest::PredictForestOp>();
 
@@ -988,6 +994,7 @@ namespace decisionforest
 void AddWalkDecisionTreeOpLoweringPass(mlir::OpPassManager &optPM);
 
 void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext& context, mlir::ModuleOp module) {
+  // llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
   mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
@@ -997,6 +1004,7 @@ void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext& context, mlir::ModuleOp m
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to mid level IR failed.\n";
   }
+  // llvm::DebugFlag = false;
 }
 
 } // decisionforest

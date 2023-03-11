@@ -1,6 +1,8 @@
 #include <vector>
 #include <sstream>
 #include <chrono>
+#include <thread>
+
 #include "TreeTilingUtils.h"
 #include "ExecutionHelpers.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -20,6 +22,7 @@
 #include "GPUSupportUtils.h"
 #include "GPUExecutionHelper.h"
 #include "GPUModelSerializers.h"
+#include "ReorgForestRepresentation.h"
 
 using namespace mlir;
 
@@ -37,7 +40,7 @@ public:
 };
 
 // ===---------------------------------------------------=== //
-// GPU Model Initialization Tests
+// GPU Model Initialization Test Helpers
 // ===---------------------------------------------------=== //
 
 void AddGPUModelMemrefGetter_Scalar(mlir::ModuleOp module) {
@@ -125,6 +128,68 @@ void AddGPUModelMemrefGetter_Scalar(mlir::ModuleOp module) {
 
   module.push_back(getModelFunc);
 }
+
+void AddGPUModelMemrefGetter_Reorg(mlir::ModuleOp module) {
+  // Get the tiled node type from the model memref type by finding the Init_Model method
+  MemRefType modelMemrefType, featureIndexMemrefType;
+  module.walk([&](mlir::func::FuncOp func) {
+    if (func.getName() == "Init_Thresholds")
+      modelMemrefType = func.getResultTypes()[0].cast<mlir::MemRefType>();
+    if (func.getName() == "Init_FeatureIndices")
+      featureIndexMemrefType = func.getResultTypes()[0].cast<mlir::MemRefType>();
+  });
+  auto getModelFunctionType = FunctionType::get(featureIndexMemrefType.getContext(), 
+                                                TypeRange{modelMemrefType, featureIndexMemrefType, modelMemrefType, featureIndexMemrefType},
+                                                TypeRange{IntegerType::get(featureIndexMemrefType.getContext(), 32)});
+
+  auto location = module.getLoc();
+  auto getModelFunc = func::FuncOp::create(location, "GetModelValues", getModelFunctionType);
+  getModelFunc.setPublic();
+
+  auto entryBlock = getModelFunc.addEntryBlock();
+  mlir::OpBuilder builder(getModelFunc.getContext());
+  builder.setInsertionPointToStart(entryBlock);
+
+  auto waitOp = builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{});
+
+  // auto oneIndexConst = builder.create<arith::ConstantIndexOp>(location, 1);
+  // auto numThreadBlocksConst = builder.create<arith::ConstantIndexOp>(location, 1);
+  // auto numThreadsPerBlockConst = builder.create<arith::ConstantIndexOp>(location, 7);
+  // auto gpuLaunch = builder.create<gpu::LaunchOp>(location, numThreadBlocksConst, 
+  //                                               oneIndexConst, oneIndexConst, 
+  //                                               numThreadsPerBlockConst, oneIndexConst, oneIndexConst,
+  //                                               nullptr, waitOp.getAsyncToken().getType(), 
+  //                                               waitOp.getAsyncToken());
+  
+  // builder.setInsertionPointToStart(&gpuLaunch.getBody().front());
+  // auto thresholdVal = builder.create<memref::LoadOp>(location, getModelFunc.getArgument(0), ValueRange{gpuLaunch.getThreadIds().x});
+  // auto indexVal = builder.create<memref::LoadOp>(location, getModelFunc.getArgument(1), ValueRange{gpuLaunch.getThreadIds().x});
+  // // builder.create<gpu::PrintfOp>(location, "Threshold[%ld]: %lf\tIndices[%ld]: %d\n", ValueRange{ gpuLaunch.getThreadIds().x, static_cast<Value>(thresholdVal), 
+  // //                                                                                            gpuLaunch.getThreadIds().x, static_cast<Value>(indexVal)});
+  // builder.create<gpu::TerminatorOp>(location);
+  // // Wait and return 
+  // builder.setInsertionPointAfter(gpuLaunch); 
+
+  // Transfer back the offsets and the thresholds
+  auto transferThresholds = builder.create<gpu::MemcpyOp>(location, waitOp.getAsyncToken().getType(),  
+                                                          ValueRange{waitOp.getAsyncToken()}, getModelFunc.getArgument(2), 
+                                                          getModelFunc.getArgument(0));
+
+  auto transferIndices = builder.create<gpu::MemcpyOp>(location, transferThresholds.getAsyncToken().getType(), 
+                                                       ValueRange{transferThresholds.getAsyncToken()}, getModelFunc.getArgument(3), 
+                                                       getModelFunc.getArgument(1));
+
+  // Wait and return 
+  /*auto waitBeforeReturn =*/ builder.create<gpu::WaitOp>(location, transferIndices.getAsyncToken().getType(), transferIndices.getAsyncToken());
+  auto returnVal = builder.create<arith::ConstantIntOp>(location, 42 /*value*/, 32 /*width*/);
+  builder.create<func::ReturnOp>(location, static_cast<Value>(returnVal));
+
+  module.push_back(getModelFunc);
+}
+
+// ===---------------------------------------------------=== //
+// GPU Model Initialization Tests
+// ===---------------------------------------------------=== //
 
 void GPUBasicSchedule(decisionforest::Schedule* schedule, int32_t gridXSize) {
   auto& batchIndex = schedule->GetBatchIndex();
@@ -470,7 +535,7 @@ bool Test_SparseGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_ChI16_BatchSize32
 }
 
 // ===---------------------------------------------------=== //
-// GPU Basic Scalar Code Generation Tests -- Sparse
+// GPU Basic Scalar Code Generation Tests -- Reorg
 // ===---------------------------------------------------=== //
 
 bool Test_ReorgGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32(TestArgs_t& args) {
@@ -479,6 +544,10 @@ bool Test_ReorgGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32(TestArgs_t& a
 
 bool Test_ReorgGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32(TestArgs_t& args) {
   return Test_GPUCodeGeneration_ReorgForestRep<double, int32_t>(args, 32, AddRightHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_ReorgGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32(TestArgs_t& args) {
+  return Test_GPUCodeGeneration_ReorgForestRep<double, int32_t>(args, 32, AddBalancedTree<DoubleInt32Tile>);
 }
 
 bool Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32(TestArgs_t& args) {
@@ -499,6 +568,147 @@ bool Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32(TestAr
 
 bool Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32(TestArgs_t& args) {
   return Test_GPUCodeGeneration_ReorgForestRep<float, int16_t>(args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>);
+}
+
+// ===---------------------------------------------------=== //
+// GPU Basic Model Initialization Tests -- Reorg
+// ===---------------------------------------------------=== //
+
+template <typename ThresholdType, typename IndexType>
+bool CheckGPUModelInitialization_ReorgForest(TestArgs_t& args, ForestConstructor_t forestConstructor) {
+  // Batch size and the exact number of inputs per thread do not affect the model 
+  // initialization. So just hard coding those.
+  const int32_t batchSize = 32;
+
+  auto modelGlobalsJSONPath = TreeBeard::ModelJSONParser<ThresholdType,
+                                                         ThresholdType,
+                                                         IndexType,
+                                                         IndexType,
+                                                         ThresholdType>::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
+  auto serializer = decisionforest::ModelSerializerFactory::Get().GetModelSerializer("gpu_reorg", modelGlobalsJSONPath);
+  
+  FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType, ThresholdType> 
+                         irConstructor(args.context, serializer, batchSize, forestConstructor);
+  irConstructor.Parse();
+  irConstructor.SetChildIndexBitWidth(1);
+  auto module = irConstructor.GetEvaluationFunction();
+
+  auto schedule = irConstructor.GetSchedule();
+  GPUBasicSchedule(schedule, 4);
+
+  // module->dump();
+  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  // module->dump();
+
+  mlir::decisionforest::GreedilyMapParallelLoopsToGPU(module);
+  // module->dump();
+
+  mlir::decisionforest::ConvertParallelLoopsToGPU(args.context, module);
+  // module->dump();
+
+  auto representation = decisionforest::RepresentationFactory::Get().GetRepresentation("gpu_reorg");
+  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, 
+                                               module,
+                                               serializer,
+                                               representation);
+  
+  mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  AddGPUModelMemrefGetter_Reorg(module);
+  // module->dump();
+
+  mlir::decisionforest::LowerGPUToLLVM(args.context, module, representation);
+  // module->dump();
+
+  GPUInferenceRunnerForTest inferenceRunner(serializer, 
+                                            module,
+                                            1,
+                                            sizeof(ThresholdType)*8,
+                                            sizeof(IndexType)*8);
+  
+  auto reorgSerializer = reinterpret_cast<decisionforest::ReorgForestSerializer*>(serializer.get());
+  auto thresholdGPUMemref = reorgSerializer->GetThresholdMemref();
+  auto featureIndexGPUMemref = reorgSerializer->GetFeatureIndexMemref();
+  auto numModelElements = reorgSerializer->GetNumberOfElements();
+  auto actualThresholds = reorgSerializer->GetThresholds<ThresholdType>();
+  auto actualFeatureIndices = reorgSerializer->GetFeatureIndices<ThresholdType>();
+
+  std::vector<ThresholdType> thresholds(numModelElements, -42);
+  std::vector<IndexType> featureIndices(numModelElements, -42);
+
+  auto thresholdMemref = VectorToMemref(thresholds);
+  auto featureIndicesMemref = VectorToMemref(featureIndices);
+
+  int32_t retVal = -1;
+  // Get the threshold values from the model memref
+  std::vector<void*> funcArgs = { &thresholdGPUMemref.bufferPtr, &thresholdGPUMemref.alignedPtr, &thresholdGPUMemref.offset, &thresholdGPUMemref.lengths[0], &thresholdGPUMemref.strides[0],
+                              &featureIndexGPUMemref.bufferPtr, &featureIndexGPUMemref.alignedPtr, &featureIndexGPUMemref.offset, &featureIndexGPUMemref.lengths[0], &featureIndexGPUMemref.strides[0],
+                              &thresholdMemref.bufferPtr, &thresholdMemref.alignedPtr, &thresholdMemref.offset, &thresholdMemref.lengths[0], &thresholdMemref.strides[0],
+                              &featureIndicesMemref.bufferPtr, &featureIndicesMemref.alignedPtr, &featureIndicesMemref.offset, &featureIndicesMemref.lengths[0], &featureIndicesMemref.strides[0],
+                              &retVal };
+
+  // TODO_Ashwin : This is a HACK!!
+  std::chrono::milliseconds timespan(1);
+  std::this_thread::sleep_for(timespan);
+  inferenceRunner.ExecuteFunction("GetModelValues", funcArgs);
+
+  auto thresholdZip = llvm::zip(thresholds, actualThresholds);
+  for (auto thresholdTuple: thresholdZip) {
+    // Test_ASSERT(FPEqual(std::get<0>(thresholdTuple), std::get<1>(thresholdTuple)));
+    Test_ASSERT(std::get<0>(thresholdTuple) == std::get<1>(thresholdTuple));
+  }
+  auto featureIndexZip = llvm::zip(featureIndices, actualFeatureIndices);
+  for (auto indexTuple : featureIndexZip) {
+    Test_ASSERT(std::get<0>(indexTuple) == std::get<1>(indexTuple));
+  }
+  return true;
+}
+
+bool Test_GPUModelInit_LeftHeavy_Reorg_DoubleInt(TestArgs_t& args) {
+  return CheckGPUModelInitialization_ReorgForest<double, int32_t>(args, AddLeftHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_RightHeavy_Reorg_DoubleInt(TestArgs_t& args) {
+  return CheckGPUModelInitialization_ReorgForest<double, int32_t>(args, AddRightHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_Balanced_Reorg_DoubleInt(TestArgs_t& args) {
+  return CheckGPUModelInitialization_ReorgForest<double, int32_t>(args, AddBalancedTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_LeftAndRightHeavy_Reorg_DoubleInt(TestArgs_t& args) {
+  return CheckGPUModelInitialization_ReorgForest<double, int32_t>(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_LeftHeavy_Reorg_FloatInt(TestArgs_t& args) {
+  return CheckGPUModelInitialization_ReorgForest<float, int32_t>(args, AddLeftHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_RightHeavy_Reorg_FloatInt(TestArgs_t& args) {
+  return CheckGPUModelInitialization_ReorgForest<float, int32_t>(args, AddRightHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_Balanced_Reorg_FloatInt(TestArgs_t& args) {
+  return CheckGPUModelInitialization_ReorgForest<float, int32_t>(args, AddBalancedTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt(TestArgs_t& args) {
+  return CheckGPUModelInitialization_ReorgForest<float, int32_t>(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_LeftHeavy_Reorg_FloatInt16(TestArgs_t& args) {
+  return CheckGPUModelInitialization_ReorgForest<float, int16_t>(args, AddLeftHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_RightHeavy_Reorg_FloatInt16(TestArgs_t& args) {
+  return CheckGPUModelInitialization_ReorgForest<float, int16_t>(args, AddRightHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_Balanced_Reorg_FloatInt16(TestArgs_t& args) {
+  return CheckGPUModelInitialization_ReorgForest<float, int16_t>(args, AddBalancedTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt16(TestArgs_t& args) {
+  return CheckGPUModelInitialization_ReorgForest<float, int16_t>(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>);
 }
 
 }

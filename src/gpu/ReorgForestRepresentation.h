@@ -59,6 +59,22 @@ public:
     assert (m_thresholds.size() == m_featureIndices.size());
     return m_thresholds.size();
   }
+
+  Memref<double, 1> GetThresholdMemref() { return m_thresholdMemref; }
+  Memref<int32_t, 1> GetFeatureIndexMemref() { return m_featureIndexMemref; }
+  size_t GetNumberOfElements() { return m_thresholds.size(); }
+  
+  template<typename T>
+  std::vector<T> GetThresholds() {
+    std::vector<T> thresholds(m_thresholds.begin(), m_thresholds.end());
+    return thresholds;
+  }
+
+  template<typename T>
+  std::vector<T> GetFeatureIndices() {
+    std::vector<T> indices(m_featureIndices.begin(), m_featureIndices.end());
+    return indices;
+  }
 };
 
 // ===---------------------------------------------------=== //
