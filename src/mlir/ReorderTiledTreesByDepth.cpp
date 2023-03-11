@@ -221,7 +221,7 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
 
       // No need to split if we're splitting the last index.
       if (intervalEnd == indexToSplit->GetRange().m_stop) {
-        indexToSplit->SetUnrollFactor(currDepth);
+        indexToSplit->SetTreeWalkUnrollFactor(currDepth);
         break;
       }
 
@@ -231,7 +231,7 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
       
       assert (indexToSplit->GetRange().m_start == currTreeIndex);
       schedule->Split(*indexToSplit, firstIndex, secondIndex, intervalEnd, indexMap);
-      firstIndex.SetUnrollFactor(currDepth);
+      firstIndex.SetTreeWalkUnrollFactor(currDepth);
 
       indexToSplit = &secondIndex;
       currTreeIndex = intervalEnd;

@@ -617,7 +617,7 @@ struct PredictForestOpLowering: public ConversionPattern {
     }
 
     // Walk the tree
-    auto unrollLoopAttr = decisionforest::UnrollLoopAttribute::get(treeType, indexVar.GetContainingLoop()->GetUnrollFactor());
+    auto unrollLoopAttr = decisionforest::UnrollLoopAttribute::get(treeType, indexVar.GetContainingLoop()->GetTreeWalkUnrollFactor());
     auto walkOp = rewriter.create<decisionforest::PipelinedWalkDecisionTreeOp>(location, treeResultTypes, unrollLoopAttr, trees, rows);
     for (size_t i = 0; i < rowIndices.size(); i++) {
       // Don't accumulate into memref in case of multiclass.
