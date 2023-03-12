@@ -207,6 +207,14 @@ def GetTreeFromEnsembleOp : DecisionForest_Op<"getTree", [Pure]> {
   let results = (outs TreeType);
 }
 
+def CacheTreesFromEnsembleOp : DecisionForest_Op<"cacheTrees", [Pure]> {
+  let summary = "Cache trees from the forest.";
+  let description = "Cache a subset of trees from the forest. Takes three arguments -- an ensemble, and two integers to represent the range of trees to cache. Returns an ensemble value.";
+  let arguments = (ins TreeEnsembleType:$forest, Index:$startTreeIndex, Index:$endTreeIndex);
+
+  let results = (outs TreeEnsembleType);
+}
+
 def GetTreeClassIdOp : DecisionForest_Op<"getTreeClassId", [Pure]> {
   let summary = "Get tree class from ensemble.";
   let description = "Index the forest and get the class Id of the tree at that index. Takes two arguments -- an ensemble and an integer and returns a tree value.";

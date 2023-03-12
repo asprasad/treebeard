@@ -28,7 +28,8 @@ void TreeTypeStorage::print(mlir::DialectAsmPrinter &printer) {
 }
 
 void TreeEnsembleTypeStorage::print(mlir::DialectAsmPrinter &printer) {
-    printer << "TreeEnsembleType(#Trees:" << m_numTrees << ", rowType:" << m_rowType 
+    std::string ensembleType = m_ensembleSubset ? "TreeEnsembleSubsetType" : "TreeEnsembleType";
+    printer << ensembleType << "(#Trees:" << m_numTrees << ", rowType:" << m_rowType 
             << ", resultType:" << m_resultType << ", reductionType:" << (int32_t)m_reductionType << ")";
 }
 

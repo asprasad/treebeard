@@ -34,7 +34,7 @@
                 - Replace the tree value by the tree index (current representations replace it with the treeMemref)
             - [Opt 2] Provide some mechanism to generate index computation code required
                 - This won't work when we need the tree for some other reason!
-        - New representation for reorg forest
+        - [Done] New representation for reorg forest
             - Generate Globals will generate different Init methods for each model memref (thresholds, indices)
                 - This rep will only support scalar code gen 
                 - 
@@ -46,7 +46,15 @@
                 - Uses of the class
                     - ModelJSONParser
                     - InferenceRunner
-        - How do we construct the right serializer? Should we have a global map?
+        - [Done] How do we construct the right serializer? Should we have a global map?
+    
+    - Shared memory support (for trees)
+        - [Done] Add caching to schedule
+        - [Done] New op to model caching of trees
+        - [Done] Type support to represent ensemble subsets (that are cached)
+        - Insert cache op in the right loops
+            - Refactor loop code generator to go through common choke point while constructing loops
+        - First step is to lower cache op to do nothing -- just correctly interpret the ensemble subset type 
 
 * Add a Treebeard context to store all configuration
     - Update the python API!
