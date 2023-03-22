@@ -110,11 +110,56 @@ This document contains notes about Treebeard's GPU support.
   * Entire model is loaded into shared memory
   * Rows are loaded from global memory
   * One thread performs full inference for one row (so reduction is in a register)
+    ```C++
+      auto& batchIndex = schedule.GetBatchIndex();
+      auto& treeIndex = schedule.GetTreeIndex();
+      
+      auto& b0 = schedule.NewIndexVariable("b0");
+      auto& b1 = schedule.NewIndexVariable("b1");
+
+      auto& t0 = schedule.NewIndexVariable("t0");
+      auto& t1 = schedule.NewIndexVariable("t1");
+      
+      schedule.Tile(batchIndex, b0, b1, rowsPerThreadBlock);
+      b0.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::Grid,
+                         decisionforest::IndexVariable::Dimension::X);
+      b1.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::ThreadBlock,
+                         decisionforest::IndexVariable::Dimension::X);
+      
+      schedule.Tile(treeIndex, t0, t1, schedule.GetForestSize());
+      schedule.Cache(t0);
+    ```
 * __Shared Partial Forest__
   * Part of model is loaded into shared memory
   * Row is read from global memory
   * One thread walks all trees in shared memory for a single row (partial results are reduced in a register)
   * Reduction across partial results is performed in global memory (as separate kernels)
+    ```C++
+      auto& batchIndex = schedule.GetBatchIndex();
+      auto& treeIndex = schedule.GetTreeIndex();
+      
+      auto& b0 = schedule.NewIndexVariable("b0");
+      auto& b1 = schedule.NewIndexVariable("b1");
+
+      auto& t0 = schedule.NewIndexVariable("t0");
+      auto& t0Inner = schedule.NewIndexVariable("t0Inner");
+      auto& t1 = schedule.NewIndexVariable("t1");
+      auto& t2 = schedule.NewIndexVariable("t2");
+      
+      schedule.Tile(batchIndex, b0, b1, rowsPerThreadBlock);
+      
+      schedule.Tile(treeIndex, t0, t1, treesPerThreadBlock);
+      schedule.Tile(t0Inner, t1, t2, treesPerThreadBlock);
+      schedule.Cache(t1);
+      schedule.Reorder(std::vector<decisionforest::IndexVariable*>{&b0, &t0, &b1, &t1, &t2});
+
+      b0.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::Grid, 
+                        decisionforest::IndexVariable::Dimension::X);
+      t0.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::Grid,
+                        decisionforest::IndexVariable::Dimension::Y);
+      b1.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::ThreadBlock,
+                        decisionforest::IndexVariable::Dimension::X);
+    ```
 
 ## Implementation Details
 * __High-level IR__
