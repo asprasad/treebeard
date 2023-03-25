@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Pass/Pass.h"
@@ -223,7 +224,6 @@ struct IsLeafOpLowering: public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     
-    // Create a subview of the model memref corresponding to this ensemble with the index equal to offsetMemref[treeIndex]
     mlir::decisionforest::IsLeafOp isLeafOp = AssertOpIsOfType<mlir::decisionforest::IsLeafOp>(op);
     assert(operands.size() == 2);
     if (!isLeafOp)
@@ -390,7 +390,6 @@ struct IsLeafTileOpLowering: public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     
-    // Create a subview of the model memref corresponding to this ensemble with the index equal to offsetMemref[treeIndex]
     mlir::decisionforest::IsLeafTileOp isLeafOp = AssertOpIsOfType<mlir::decisionforest::IsLeafTileOp>(op);
     assert(operands.size() == 2);
     if (!isLeafOp)
@@ -414,6 +413,24 @@ struct IsLeafTileOpLowering: public ConversionPattern {
   }
 };
 
+struct CacheTreesFromEnsembleOpLowering: public ConversionPattern {
+  std::shared_ptr<decisionforest::IRepresentation> m_representation;
+  std::shared_ptr<decisionforest::IModelSerializer> m_serializer;
+  CacheTreesFromEnsembleOpLowering(MLIRContext *ctx, 
+                                   std::shared_ptr<decisionforest::IRepresentation> representation,
+                                   std::shared_ptr<decisionforest::IModelSerializer> serializer) 
+  : ConversionPattern(mlir::decisionforest::CacheTreesFromEnsembleOp::getOperationName(), 1 /*benefit*/, ctx),
+    m_representation(representation),
+    m_serializer(serializer) { }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    m_representation->LowerCacheTreeOp(rewriter, op, operands, m_serializer);        
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
+
 struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLoweringPass, OperationPass<mlir::func::FuncOp>> {
   std::shared_ptr<decisionforest::IModelSerializer> m_serializer;
   std::shared_ptr<decisionforest::IRepresentation> m_representation;
@@ -432,7 +449,7 @@ struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLowe
 
     target.addLegalDialect<AffineDialect, memref::MemRefDialect, 
                            scf::SCFDialect, decisionforest::DecisionForestDialect, vector::VectorDialect,
-                           math::MathDialect, arith::ArithDialect, func::FuncDialect>();
+                           math::MathDialect, arith::ArithDialect, func::FuncDialect, gpu::GPUDialect>();
 
     target.addIllegalOp<decisionforest::EnsembleConstantOp,
                         decisionforest::GetTreeFromEnsembleOp,
@@ -443,7 +460,8 @@ struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLowe
                         decisionforest::InterleavedTraverseTreeTileOp,
                         decisionforest::GetLeafValueOp,
                         decisionforest::GetLeafTileValueOp,
-                        decisionforest::GetTreeClassIdOp>();
+                        decisionforest::GetTreeClassIdOp,
+                        decisionforest::CacheTreesFromEnsembleOp>();
 
     RewritePatternSet patterns(&getContext());
     patterns.add<EnsembleConstantOpLowering>(patterns.getContext(), m_serializer, m_representation);
@@ -456,6 +474,7 @@ struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLowe
     patterns.add<GetLeafTileValueOpLowering>(patterns.getContext(), m_representation);
     patterns.add<IsLeafOpLowering>(patterns.getContext(), m_representation);
     patterns.add<IsLeafTileOpLowering>(patterns.getContext(), m_representation);
+    patterns.add<CacheTreesFromEnsembleOpLowering>(patterns.getContext(), m_representation, m_serializer);
       
     if (failed(applyPartialConversion(getOperation(), target, std::move(patterns))))
         signalPassFailure();
@@ -471,6 +490,7 @@ namespace decisionforest
 void LowerEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module, 
                             std::shared_ptr<IModelSerializer> serializer,
                             std::shared_ptr<IRepresentation> representation) {
+  // llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
   mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();

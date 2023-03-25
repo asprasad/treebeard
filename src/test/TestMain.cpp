@@ -478,6 +478,8 @@ bool Test_ReorgGPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32(TestArgs_t& a
 bool Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32(TestArgs_t& args);
 bool Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32(TestArgs_t& args);
 
+bool Test_SimpleSharedMem_LeftHeavy(TestArgs_t& args);
+
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
     vec[i] = (double)rand()/RAND_MAX;
@@ -1491,6 +1493,7 @@ TestDescriptor testList[] = {
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy),
   // GPU model buffer initialization tests (scalar)
   // TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_DoubleInt),
   // TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_DoubleInt),
@@ -1516,23 +1519,23 @@ TestDescriptor testList[] = {
   // TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32),
 
   // Basic scalar sparse GPU codegen tests
-  TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
-  TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
-  TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
-  TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
-  TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_LeftHeavy_FloatInt16_ChI16_BatchSize32),
-  TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_RightHeavy_FloatInt16_ChI16_BatchSize32),
-  TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_Balanced_FloatInt16_ChI16_BatchSize32),
-  TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_ChI16_BatchSize32),
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_LeftHeavy_FloatInt16_ChI16_BatchSize32),
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_RightHeavy_FloatInt16_ChI16_BatchSize32),
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_Balanced_FloatInt16_ChI16_BatchSize32),
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_ChI16_BatchSize32),
 
-  // Basic reorg forest tests
-  TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
-  TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
-  TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
-  TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32),
-  TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32),
-  TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32),
-  TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32),
+  // // Basic reorg forest tests
+  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32),
+  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32),
+  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32),
+  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32),
 
   // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
   // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),

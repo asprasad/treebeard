@@ -137,6 +137,11 @@ public:
 
   void AddTypeConversions(mlir::MLIRContext& context, LLVMTypeConverter& typeConverter) override { }
   void AddLLVMConversionPatterns(LLVMTypeConverter &converter, RewritePatternSet &patterns) override;
+
+  void LowerCacheTreeOp(ConversionPatternRewriter &rewriter, 
+                        mlir::Operation *op,
+                        ArrayRef<Value> operands,
+                        std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override { assert(false); }
 };
 
 }

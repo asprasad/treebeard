@@ -58,6 +58,8 @@ struct TileEnsembleAttribute : public RewritePattern {
                                                        treeType.getThresholdType(), treeType.getFeatureIndexType(), m_tileShapeType, 
                                                        treeType.getChildIndexType());
       treeTypes.push_back(newTreeType);
+      if (i != 0)
+        assert (treeTypes.at(0) == newTreeType);
 
       if (m_makeAllLeavesSameDepth) {
         forest.GetTree(i).GetTiledTree()->MakeAllLeavesSameDepth();
@@ -66,7 +68,7 @@ struct TileEnsembleAttribute : public RewritePattern {
     }
     // Tile this forest uniformly
     auto newForestType = decisionforest::TreeEnsembleType::get(forestType.getResultType(), forestType.getNumberOfTrees(),
-                                                               forestType.getRowType(), forestType.getReductionType(), treeTypes);
+                                                               forestType.getRowType(), forestType.getReductionType(), treeTypes.at(0));
 
     auto newForestAttribute = decisionforest::DecisionForestAttribute::get(newForestType, forest);
     auto tiledPredictForestOp = rewriter.create<decisionforest::PredictForestOp>(op->getLoc(), predictForestOp.getResult().getType(), 

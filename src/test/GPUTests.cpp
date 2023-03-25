@@ -711,5 +711,142 @@ bool Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt16(TestArgs_t& args) {
   return CheckGPUModelInitialization_ReorgForest<float, int16_t>(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>);
 }
 
+void TahoeSharedForestStrategy(decisionforest::Schedule& schedule, int32_t rowsPerThreadBlock) {
+  auto& batchIndex = schedule.GetBatchIndex();
+  auto& treeIndex = schedule.GetTreeIndex();
+  
+  auto& b0 = schedule.NewIndexVariable("b0");
+  auto& b1 = schedule.NewIndexVariable("b1");
+
+  auto& t0 = schedule.NewIndexVariable("t0");
+  auto& t1 = schedule.NewIndexVariable("t1");
+  
+  schedule.Tile(batchIndex, b0, b1, rowsPerThreadBlock);
+  b0.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::Grid, decisionforest::IndexVariable::Dimension::X);
+  b1.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::ThreadBlock, decisionforest::IndexVariable::Dimension::X);
+  
+  schedule.Tile(treeIndex, t0, t1, schedule.GetForestSize());
+  schedule.Cache(t0);
+}
+
+void TahoeSharedPartialForestStrategy(decisionforest::Schedule& schedule,
+                                      int32_t treesPerThreadBlock,
+                                      int32_t rowsPerThreadBlock) {
+  auto& batchIndex = schedule.GetBatchIndex();
+  auto& treeIndex = schedule.GetTreeIndex();
+  
+  auto& b0 = schedule.NewIndexVariable("b0");
+  auto& b1 = schedule.NewIndexVariable("b1");
+
+  auto& t0 = schedule.NewIndexVariable("t0");
+  auto& t0Inner = schedule.NewIndexVariable("t0Inner");
+  auto& t1 = schedule.NewIndexVariable("t1");
+  auto& t2 = schedule.NewIndexVariable("t2");
+  
+  schedule.Tile(batchIndex, b0, b1, rowsPerThreadBlock);
+  
+  schedule.Tile(treeIndex, t0, t1, treesPerThreadBlock);
+  schedule.Tile(t0Inner, t1, t2, treesPerThreadBlock);
+  schedule.Cache(t1);
+  schedule.Reorder(std::vector<decisionforest::IndexVariable*>{&b0, &t0, &b1, &t1, &t2});
+
+  b0.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::Grid, decisionforest::IndexVariable::Dimension::X);
+  t0.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::Grid, decisionforest::IndexVariable::Dimension::Y);
+  b1.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::ThreadBlock, decisionforest::IndexVariable::Dimension::X);
+}
+
+template<typename ThresholdType, typename IndexType>
+bool Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize_AnyRep(TestArgs_t& args, 
+                                                            const int32_t batchSize,
+                                                            ForestConstructor_t forestConstructor,
+                                                            std::shared_ptr<decisionforest::IModelSerializer> serializer,
+                                                            std::shared_ptr<decisionforest::IRepresentation> representation,
+                                                            int32_t childIndexBitWidth=1) {
+                                                    
+  FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType, ThresholdType> 
+                         irConstructor(args.context, serializer, batchSize, forestConstructor);
+  irConstructor.Parse();
+  
+  // If sparse representation is turned on, then child index bit width should be passed
+  assert (!mlir::decisionforest::UseSparseTreeRepresentation || childIndexBitWidth!=1 );
+  irConstructor.SetChildIndexBitWidth(childIndexBitWidth);
+  
+  auto module = irConstructor.GetEvaluationFunction();
+
+  auto schedule = irConstructor.GetSchedule();
+  TahoeSharedForestStrategy(*schedule, 4);
+
+  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  // module->dump();
+
+  mlir::decisionforest::GreedilyMapParallelLoopsToGPU(module);
+  // // module->dump();
+
+  mlir::decisionforest::ConvertParallelLoopsToGPU(args.context, module);
+  // module->dump();
+
+  mlir::decisionforest::LowerEnsembleToMemrefs(args.context,
+                                               module,
+                                               serializer,
+                                               representation);
+  // module->dump();
+  
+  mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  module->dump();
+
+  // mlir::decisionforest::LowerGPUToLLVM(args.context, module, representation);
+  // // module->dump();
+
+  // GPUInferenceRunnerForTest inferenceRunner(serializer,
+  //                                           module,
+  //                                           1 /*tileSize*/, 
+  //                                           sizeof(ThresholdType)*8, sizeof(IndexType)*8);
+
+  // assert (batchSize%2 == 0);
+  // std::vector<std::vector<ThresholdType>> inputData;
+  // inputData.emplace_back(std::vector<ThresholdType>());
+  // auto& firstVec = inputData.front();
+  // for (int32_t i=0 ; i<batchSize/2 ; ++i) {
+  //   auto data=GetBatchSize2Data();
+  //   firstVec.insert(firstVec.end(), data.front().begin(), data.front().end());
+  // }
+  // for(auto& batch : inputData) {
+  //   assert (batch.size() % batchSize == 0);
+  //   size_t rowSize = batch.size()/batchSize;
+  //   std::vector<ThresholdType> result(batchSize, -1);
+  //   inferenceRunner.RunInference<ThresholdType, ThresholdType>(batch.data(), result.data());
+  //   for(int64_t rowIdx=0 ; rowIdx<batchSize ; ++rowIdx) {
+  //     std::vector<double> row(batch.begin() + rowIdx*rowSize, batch.begin() + (rowIdx+1)*rowSize);
+  //     ThresholdType expectedResult = static_cast<ThresholdType>(irConstructor.GetForest().Predict(row));
+  //     Test_ASSERT(FPEqual(result[rowIdx], expectedResult));
+  //   }
+  // }
+  return true;
+}
+
+template<typename ThresholdType, typename IndexType>
+bool Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize(TestArgs_t& args, 
+                                                     const int32_t batchSize,
+                                                     ForestConstructor_t forestConstructor,
+                                                     int32_t childIndexBitWidth=1) {
+
+  auto modelGlobalsJSONPath = TreeBeard::ModelJSONParser<ThresholdType,
+                                                         ThresholdType,
+                                                         IndexType,
+                                                         IndexType,
+                                                         ThresholdType>::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
+
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize_AnyRep<ThresholdType, IndexType>(args, 
+                                                                                          batchSize,
+                                                                                          forestConstructor,
+                                                                                          decisionforest::ConstructGPUModelSerializer(modelGlobalsJSONPath),
+                                                                                          decisionforest::ConstructGPURepresentation(),
+                                                                                          childIndexBitWidth);
+}
+
+bool Test_SimpleSharedMem_LeftHeavy(TestArgs_t& args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<double, int32_t>(args, 32, AddLeftHeavyTree<DoubleInt32Tile>);
+}
+
 }
 }

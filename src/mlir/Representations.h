@@ -53,6 +53,12 @@ public:
 
   virtual void AddTypeConversions(mlir::MLIRContext& context, LLVMTypeConverter& typeConverter) = 0;
   virtual void AddLLVMConversionPatterns(LLVMTypeConverter &converter, RewritePatternSet &patterns) = 0;
+
+  // Caching
+  virtual void LowerCacheTreeOp(ConversionPatternRewriter &rewriter,
+                                mlir::Operation *op,
+                                ArrayRef<Value> operands,
+                                std::shared_ptr<decisionforest::IModelSerializer> m_serializer)=0;
 };
 
 class ArrayBasedRepresentation : public IRepresentation {
@@ -140,6 +146,11 @@ public:
   }
   void AddTypeConversions(mlir::MLIRContext& context, LLVMTypeConverter& typeConverter) override;
   void AddLLVMConversionPatterns(LLVMTypeConverter &converter, RewritePatternSet &patterns) override;
+
+  void LowerCacheTreeOp(ConversionPatternRewriter &rewriter,
+                        mlir::Operation *op,
+                        ArrayRef<Value> operands,
+                        std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override { }
 };
 
 class SparseRepresentation : public IRepresentation {
@@ -233,6 +244,11 @@ public:
   }
   void AddTypeConversions(mlir::MLIRContext& context, LLVMTypeConverter& typeConverter) override;
   void AddLLVMConversionPatterns(LLVMTypeConverter &converter, RewritePatternSet &patterns) override;
+
+  void LowerCacheTreeOp(ConversionPatternRewriter &rewriter,
+                        mlir::Operation *op,
+                        ArrayRef<Value> operands,
+                        std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override { }
 };
 
 class RepresentationFactory {

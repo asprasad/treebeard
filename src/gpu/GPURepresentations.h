@@ -16,6 +16,12 @@ protected:
   int32_t m_lengthMemrefArgIndex;
   int32_t m_classInfoMemrefArgIndex;
 
+  struct CacheTreesInfo {
+    Value cachedModelBuffer;
+  };
+
+  std::map<mlir::Operation*, CacheTreesInfo> m_cacheTreesOpsMap;
+
   void GenerateModelMemrefInitializer(const std::string& funcName, ConversionPatternRewriter &rewriter, Location location, 
                                       ModuleOp module, MemRefType memrefType);
 
@@ -25,7 +31,16 @@ public:
   mlir::LogicalResult GenerateModelGlobals(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter,
                                            std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override;
 
+  void GenerateTreeMemref(mlir::ConversionPatternRewriter &rewriter, 
+                          mlir::Operation *op, 
+                          Value ensemble,
+                          Value treeIndex) override;
+
   // mlir::Value GenerateGetTreeClassId(mlir::ConversionPatternRewriter &rewriter, mlir::Operation *op, Value ensemble, Value treeIndex) override;
+  void LowerCacheTreeOp(ConversionPatternRewriter &rewriter, 
+                        mlir::Operation *op,
+                        ArrayRef<Value> operands,
+                        std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override;
 };
 
 class GPUSparseRepresentation : public SparseRepresentation {
@@ -46,6 +61,10 @@ public:
                                            std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override;
 
   // mlir::Value GenerateGetTreeClassId(mlir::ConversionPatternRewriter &rewriter, mlir::Operation *op, Value ensemble, Value treeIndex) override;
+  void LowerCacheTreeOp(ConversionPatternRewriter &rewriter, 
+                        mlir::Operation *op,
+                        ArrayRef<Value> operands,
+                        std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override { assert(false); }
 };
 
 } // decisionforest

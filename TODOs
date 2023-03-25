@@ -54,7 +54,20 @@
         - [Done] Type support to represent ensemble subsets (that are cached)
         - Insert cache op in the right loops
             - Refactor loop code generator to go through common choke point while constructing loops
+                - How will caching be generated for GPU dimensions (since we're constructing a single par loop for all these indices)
+                - [Done] Ask Sampath about the pipelined loops
         - First step is to lower cache op to do nothing -- just correctly interpret the ensemble subset type 
+        - Lowering cacheTrees
+            - How do we compute the size of the shared memory buffer?
+                - Since this lowering is done with the lowering of the forest to memrefs, we can compute sizes
+            - How do we represent trees in shared memory? Needs to come from representation
+                - First add globals when going from MIR -> LIR 
+                - While lowering from LIR -> LLVM, after GPULaunchOp outlining, we can run a custom pass to lower the globals to shared mem buffers
+                    - Which globals correspond to shared mem buffers can come from the representation
+            - How do we read in to shared memory across threads?
+                - Extent to be read from model buffers has to be computed each time.
+                - The representation decides the strategy to read the values in to shared memory
+            - 
 
 * Add a Treebeard context to store all configuration
     - Update the python API!

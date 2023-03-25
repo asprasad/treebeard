@@ -77,6 +77,8 @@ struct TileEnsembleAttribute : public RewritePattern {
       auto newTreeType = decisionforest::TreeType::get(treeType.getResultType(), forest.GetTree(i).TilingDescriptor().MaxTileSize(), 
                                                        treeType.getThresholdType(), treeType.getFeatureIndexType(), m_tileShapeType, 
                                                        treeType.getChildIndexType());
+      if (i!=0)
+        assert (treeTypes.at(0) == newTreeType);                                                       
       treeTypes.push_back(newTreeType);
     }
     // std::cout << std::endl;
@@ -84,7 +86,7 @@ struct TileEnsembleAttribute : public RewritePattern {
     TreeBeard::Logging::Log("Number of trees tiled probabilistically : " + std::to_string(numTreesTiledProbabilistically));
     // Tile this forest uniformly
     auto newForestType = decisionforest::TreeEnsembleType::get(forestType.getResultType(), forestType.getNumberOfTrees(),
-                                                               forestType.getRowType(), forestType.getReductionType(), treeTypes);
+                                                               forestType.getRowType(), forestType.getReductionType(), treeTypes.at(0));
 
     auto newForestAttribute = decisionforest::DecisionForestAttribute::get(newForestType, forest);
     auto tiledPredictForestOp = rewriter.create<decisionforest::PredictForestOp>(op->getLoc(), predictForestOp.getResult().getType(), 
