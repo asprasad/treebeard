@@ -295,6 +295,10 @@ namespace mlir
 {
 namespace decisionforest
 {
+
+std::unique_ptr<mlir::Pass> createConvertGlobalsToWorkgroupAllocationsPass();
+std::unique_ptr<mlir::Pass> createDeleteSharedMemoryGlobalsPass();
+
 void LowerGPUToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module, std::shared_ptr<decisionforest::IRepresentation> representation) {
   // Initialize LLVM NVPTX backend.
   LLVMInitializeNVPTXTarget();
@@ -309,12 +313,13 @@ void LowerGPUToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module, std::shar
   pm.addPass(createGpuKernelOutliningPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
   // pm.addPass(createMemRefToLLVMPass());
+  pm.addNestedPass<gpu::GPUModuleOp>(createConvertGlobalsToWorkgroupAllocationsPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
   pm.addNestedPass<gpu::GPUModuleOp>(std::make_unique<LowerGpuOpsToNVVMOpsPass>(representation));
-  // pm.addPass(std::make_unique<LowerOMPToLLVMPass>());
   pm.addPass(createReconcileUnrealizedCastsPass());
-  // pm.addPass(std::make_unique<PrintModulePass>());
+  // // pm.addPass(std::make_unique<PrintModulePass>());
   pm.addNestedPass<gpu::GPUModuleOp>(createGpuSerializeToCubinPass("nvptx64-nvidia-cuda", "sm_35", "+ptx60"));
+  pm.addPass(createDeleteSharedMemoryGlobalsPass());
   pm.addPass(createConvertSCFToCFPass());
   pm.addPass(std::make_unique<GpuToLLVMConversionPass>(representation));
   pm.addPass(createReconcileUnrealizedCastsPass());

@@ -479,6 +479,7 @@ bool Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32(TestAr
 bool Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32(TestArgs_t& args);
 
 bool Test_SimpleSharedMem_LeftHeavy(TestArgs_t& args);
+bool Test_SimpleSharedMem_LeftRightAndBalanced(TestArgs_t& args);
 
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
@@ -1493,6 +1494,7 @@ TestDescriptor testList[] = {
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
   TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy),
   // GPU model buffer initialization tests (scalar)
   // TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_DoubleInt),

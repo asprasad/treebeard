@@ -328,7 +328,10 @@ void GPUArrayBasedRepresentation::LowerCacheTreeOp(ConversionPatternRewriter &re
   std::string globalCacheBufferName = std::string("treeCache_")+std::to_string(reinterpret_cast<long long>(op));
   auto treeMemrefType = ensembleInfo.modelGlobal.getType().cast<MemRefType>();
   // TODO_Ashwin Use the right memory space ID
-  auto cacheBufferType = MemRefType::get({bufferLen}, treeMemrefType.getElementType());
+  auto cacheBufferType = MemRefType::get({bufferLen}, 
+                                         treeMemrefType.getElementType(),
+                                         {}, // Affine map
+                                         3); // Address space ID -- shared memory
   {
     SaveAndRestoreInsertionPoint saveAndRestoreInsertPoint(rewriter);
     rewriter.setInsertionPoint(&owningModule.front());
@@ -368,6 +371,7 @@ void GPUArrayBasedRepresentation::LowerCacheTreeOp(ConversionPatternRewriter &re
   }
   auto endIndex = endIndexIfElse.getResult(0);
 
+  // TODO_Ashwin we know all these dimensions are compile time constants. Can we just const fold?
   // Get the number of threads in the thread block
   auto owningGPULaunchOp = cacheTreesOp->getParentOfType<gpu::LaunchOp>();
   assert (owningGPULaunchOp);
@@ -376,11 +380,13 @@ void GPUArrayBasedRepresentation::LowerCacheTreeOp(ConversionPatternRewriter &re
   auto threadNum = owningGPULaunchOp.getThreadIds();
 
   // TODO_Ashwin everything below assumes that thread blocks are 2D!
+  
+  auto numThreads = rewriter.create<arith::MulIOp>(location, numThreadsX, numThreadsY);
+  
   // index = numThreadsX*threadNum.Y + threadNum.X
   auto nxTimesTy = rewriter.create<arith::MulIOp>(location, numThreadsX, threadNum.y);
-  auto index = rewriter.create<arith::AddIOp>(location, static_cast<Value>(nxTimesTy), threadNum.x);
+  auto threadIndex = rewriter.create<arith::AddIOp>(location, static_cast<Value>(nxTimesTy), threadNum.x);
   
-  // TODO_Ashwin needs a loop around it if we don't have enough threads
   // Generate the stores into shared memory based on these loads
   //    numElementsToRead = endIndex - startIndex
   //    if (index < numElementsToRead) {
@@ -391,30 +397,41 @@ void GPUArrayBasedRepresentation::LowerCacheTreeOp(ConversionPatternRewriter &re
   //    }
   //    syncthreads()
   auto numElementsToRead = rewriter.create<arith::SubIOp>(location, endIndex, startIndex);
-  auto indexLTElemsToRead = rewriter.create<arith::CmpIOp>(location, arith::CmpIPredicate::slt, index.getResult(), numElementsToRead.getResult());
-  auto ifIndexInRange = rewriter.create<scf::IfOp>(location, TypeRange{}, indexLTElemsToRead.getResult(), false);
+  auto zeroIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
+  auto forLoop = rewriter.create<scf::ForOp>(location, 
+                                             static_cast<Value>(zeroIndexConst),
+                                             static_cast<Value>(numElementsToRead),
+                                             static_cast<Value>(numThreads));
+  
+  rewriter.setInsertionPointToStart(forLoop.getBody());
   {
-    auto thenBuilder = ifIndexInRange.getThenBodyBuilder();
-    auto globalIndex = thenBuilder.create<arith::AddIOp>(location, index.getResult(), startIndex.getResult());
-    auto zeroIndexConst = thenBuilder.create<arith::ConstantIndexOp>(location, 0);
-    auto threshold = thenBuilder.create<decisionforest::LoadTileThresholdsOp>(location,
-                                                                              GetThresholdElementType(),
-                                                                              modelMemref,
-                                                                              globalIndex.getResult(),
-                                                                              zeroIndexConst);
-    auto featureIndex = thenBuilder.create<decisionforest::LoadTileFeatureIndicesOp>(location,
-                                                                                    GetIndexElementType(),
-                                                                                    modelMemref,
-                                                                                    globalIndex.getResult(),
-                                                                                    zeroIndexConst);
-    auto tileShapeID = thenBuilder.create<arith::ConstantIntOp>(location, 0, thenBuilder.getI32Type());
-    thenBuilder.create<decisionforest::InitTileOp>(location, 
-                                                  sharedMemoryBuffer.getResult(),
-                                                  index.getResult(),
-                                                  threshold.getResult(),
-                                                  featureIndex.getResult(),
-                                                  tileShapeID.getResult());
+    auto index = rewriter.create<arith::AddIOp>(location, forLoop.getInductionVar(), threadIndex.getResult());
+    auto indexLTElemsToRead = rewriter.create<arith::CmpIOp>(location, arith::CmpIPredicate::slt, index.getResult(), numElementsToRead.getResult());
+    auto ifIndexInRange = rewriter.create<scf::IfOp>(location, TypeRange{}, indexLTElemsToRead.getResult(), false);
+    {
+      auto thenBuilder = ifIndexInRange.getThenBodyBuilder();
+      auto globalIndex = thenBuilder.create<arith::AddIOp>(location, index.getResult(), startIndex.getResult());
+      auto zeroIndexConst = thenBuilder.create<arith::ConstantIndexOp>(location, 0);
+      auto threshold = thenBuilder.create<decisionforest::LoadTileThresholdsOp>(location,
+                                                                                GetThresholdElementType(),
+                                                                                modelMemref,
+                                                                                globalIndex.getResult(),
+                                                                                zeroIndexConst);
+      auto featureIndex = thenBuilder.create<decisionforest::LoadTileFeatureIndicesOp>(location,
+                                                                                      GetIndexElementType(),
+                                                                                      modelMemref,
+                                                                                      globalIndex.getResult(),
+                                                                                      zeroIndexConst);
+      auto tileShapeID = thenBuilder.create<arith::ConstantIntOp>(location, 0, thenBuilder.getI32Type());
+      thenBuilder.create<decisionforest::InitTileOp>(location, 
+                                                    sharedMemoryBuffer.getResult(),
+                                                    index.getResult(),
+                                                    threshold.getResult(),
+                                                    featureIndex.getResult(),
+                                                    tileShapeID.getResult());
+    }
   }
+  rewriter.setInsertionPointAfter(forLoop);
   rewriter.create<gpu::BarrierOp>(location);
 
   m_cacheTreesOpsMap[op] = {sharedMemoryBuffer};

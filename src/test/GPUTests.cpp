@@ -711,6 +711,10 @@ bool Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt16(TestArgs_t& args) {
   return CheckGPUModelInitialization_ReorgForest<float, int16_t>(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>);
 }
 
+// ===---------------------------------------------------=== //
+// GPU Shared Memory Tests
+// ===---------------------------------------------------=== //
+
 void TahoeSharedForestStrategy(decisionforest::Schedule& schedule, int32_t rowsPerThreadBlock) {
   auto& batchIndex = schedule.GetBatchIndex();
   auto& treeIndex = schedule.GetTreeIndex();
@@ -794,8 +798,8 @@ bool Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize_AnyRep(TestArgs_t& args,
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
   module->dump();
 
-  // mlir::decisionforest::LowerGPUToLLVM(args.context, module, representation);
-  // // module->dump();
+  mlir::decisionforest::LowerGPUToLLVM(args.context, module, representation);
+  // module->dump();
 
   // GPUInferenceRunnerForTest inferenceRunner(serializer,
   //                                           module,
@@ -846,6 +850,10 @@ bool Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize(TestArgs_t& args,
 
 bool Test_SimpleSharedMem_LeftHeavy(TestArgs_t& args) {
   return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<double, int32_t>(args, 32, AddLeftHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_SimpleSharedMem_LeftRightAndBalanced(TestArgs_t& args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<double, int32_t>(args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>);
 }
 
 }
