@@ -1489,6 +1489,10 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32),
   TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32),
   TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32),
+
+  // Basic GPU caching tests
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy),
 };
 
 #else // RUN_ALL_TESTS

@@ -778,7 +778,7 @@ bool Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize_AnyRep(TestArgs_t& args,
   auto module = irConstructor.GetEvaluationFunction();
 
   auto schedule = irConstructor.GetSchedule();
-  TahoeSharedForestStrategy(*schedule, 4);
+  TahoeSharedForestStrategy(*schedule, 8);
 
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
   // module->dump();
@@ -796,35 +796,35 @@ bool Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize_AnyRep(TestArgs_t& args,
   // module->dump();
   
   mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
-  module->dump();
+  // module->dump();
 
   mlir::decisionforest::LowerGPUToLLVM(args.context, module, representation);
   // module->dump();
 
-  // GPUInferenceRunnerForTest inferenceRunner(serializer,
-  //                                           module,
-  //                                           1 /*tileSize*/, 
-  //                                           sizeof(ThresholdType)*8, sizeof(IndexType)*8);
+  GPUInferenceRunnerForTest inferenceRunner(serializer,
+                                            module,
+                                            1 /*tileSize*/, 
+                                            sizeof(ThresholdType)*8, sizeof(IndexType)*8);
 
-  // assert (batchSize%2 == 0);
-  // std::vector<std::vector<ThresholdType>> inputData;
-  // inputData.emplace_back(std::vector<ThresholdType>());
-  // auto& firstVec = inputData.front();
-  // for (int32_t i=0 ; i<batchSize/2 ; ++i) {
-  //   auto data=GetBatchSize2Data();
-  //   firstVec.insert(firstVec.end(), data.front().begin(), data.front().end());
-  // }
-  // for(auto& batch : inputData) {
-  //   assert (batch.size() % batchSize == 0);
-  //   size_t rowSize = batch.size()/batchSize;
-  //   std::vector<ThresholdType> result(batchSize, -1);
-  //   inferenceRunner.RunInference<ThresholdType, ThresholdType>(batch.data(), result.data());
-  //   for(int64_t rowIdx=0 ; rowIdx<batchSize ; ++rowIdx) {
-  //     std::vector<double> row(batch.begin() + rowIdx*rowSize, batch.begin() + (rowIdx+1)*rowSize);
-  //     ThresholdType expectedResult = static_cast<ThresholdType>(irConstructor.GetForest().Predict(row));
-  //     Test_ASSERT(FPEqual(result[rowIdx], expectedResult));
-  //   }
-  // }
+  assert (batchSize%2 == 0);
+  std::vector<std::vector<ThresholdType>> inputData;
+  inputData.emplace_back(std::vector<ThresholdType>());
+  auto& firstVec = inputData.front();
+  for (int32_t i=0 ; i<batchSize/2 ; ++i) {
+    auto data=GetBatchSize2Data();
+    firstVec.insert(firstVec.end(), data.front().begin(), data.front().end());
+  }
+  for(auto& batch : inputData) {
+    assert (batch.size() % batchSize == 0);
+    size_t rowSize = batch.size()/batchSize;
+    std::vector<ThresholdType> result(batchSize, -1);
+    inferenceRunner.RunInference<ThresholdType, ThresholdType>(batch.data(), result.data());
+    for(int64_t rowIdx=0 ; rowIdx<batchSize ; ++rowIdx) {
+      std::vector<double> row(batch.begin() + rowIdx*rowSize, batch.begin() + (rowIdx+1)*rowSize);
+      ThresholdType expectedResult = static_cast<ThresholdType>(irConstructor.GetForest().Predict(row));
+      Test_ASSERT(FPEqual(result[rowIdx], expectedResult));
+    }
+  }
   return true;
 }
 

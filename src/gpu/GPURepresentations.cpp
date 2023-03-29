@@ -348,8 +348,8 @@ void GPUArrayBasedRepresentation::LowerCacheTreeOp(ConversionPatternRewriter &re
   auto offsetLenConst = rewriter.create<arith::ConstantIndexOp>(location, offsetsLength);
 
   auto modelMemref = ensembleInfo.modelGlobal;
-  auto modelMemrefLength = ensembleInfo.modelGlobal.getType().cast<MemRefType>().getShape()[0];
-  auto modelLenConst = rewriter.create<arith::ConstantIndexOp>(location, offsetsLength);
+  auto modelMemrefLength = modelMemref.getType().cast<MemRefType>().getShape()[0];
+  auto modelLenConst = rewriter.create<arith::ConstantIndexOp>(location, modelMemrefLength);
 
   auto sharedMemoryBuffer = rewriter.create<memref::GetGlobalOp>(location, cacheBufferType, globalCacheBufferName);
   // Compute the actual range of indices we need to read into the shared mem buffer

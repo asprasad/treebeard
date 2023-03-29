@@ -10,6 +10,8 @@
 
 #include "mlir/Transforms/DialectConversion.h"
 
+#include "OpLoweringUtils.h"
+
 namespace mlir
 {
 namespace decisionforest

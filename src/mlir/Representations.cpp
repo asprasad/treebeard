@@ -1,18 +1,18 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 
-#include "Representations.h"
-#include "OpLoweringUtils.h"
+#include "../gpu/GPURepresentations.h"
 #include "LIRLoweringHelpers.h"
 #include "Logger.h"
-#include "../gpu/GPURepresentations.h"
+#include "OpLoweringUtils.h"
+#include "Representations.h"
 
 using namespace mlir;
 using namespace mlir::decisionforest::helpers;
@@ -26,8 +26,10 @@ const int32_t kFeatureIndexElementNumberInTile = 1;
 const int32_t kTileShapeElementNumberInTile = 2;
 const int32_t kChildIndexElementNumberInTile = 3;
 
-Type GenerateGetElementPtr(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter, Type elementMLIRType,
-                           int64_t elementNumber, TypeConverter* typeConverter, Value& elementPtr) {
+Type generateGetElementPtr(Operation *op, ArrayRef<Value> operands,
+                           ConversionPatternRewriter &rewriter,
+                           Type elementMLIRType, int64_t elementNumber,
+                           TypeConverter *typeConverter, Value &elementPtr) {
   const int32_t kTreeMemrefOperandNum = 0;
   const int32_t kIndexOperandNum = 1;
   auto location = op->getLoc();
@@ -53,7 +55,7 @@ Type GenerateGetElementPtr(Operation *op, ArrayRef<Value> operands, ConversionPa
   auto actualIndex = rewriter.create<LLVM::AddOp>(location, indexType, static_cast<Value>(extractMemrefOffset), static_cast<Value>(indexVal));
 
   // Get a pointer to i'th tile's threshold
-  auto elementPtrType = LLVM::LLVMPointerType::get(elementType);
+  auto elementPtrType = LLVM::LLVMPointerType::get(elementType, alignedPtrType.getAddressSpace());
   assert(elementType == tileType.getBody()[elementNumber] && "The result type should be the same as the element type in the struct.");
   auto elemIndexConst = rewriter.create<LLVM::ConstantOp>(location, rewriter.getI32Type(), rewriter.getIntegerAttr(rewriter.getI32Type(), elementNumber));
   elementPtr = rewriter.create<LLVM::GEPOp>(location, elementPtrType, static_cast<Value>(extractMemrefBufferPointer), 
@@ -67,26 +69,31 @@ Type GenerateGetElementPtr(Operation *op, ArrayRef<Value> operands, ConversionPa
   return elementType;
 }
 
-void GenerateLoadStructElement(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter, 
-                               int64_t elementNumber, TypeConverter* typeConverter) {
-  
+void generateLoadStructElement(Operation *op, ArrayRef<Value> operands,
+                               ConversionPatternRewriter &rewriter,
+                               int64_t elementNumber,
+                               TypeConverter *typeConverter) {
+
   auto location = op->getLoc();
   Value elementPtr;
-  auto elementType = GenerateGetElementPtr(op, operands, rewriter, op->getResult(0).getType(), elementNumber, typeConverter, elementPtr);
-  
+  auto elementType =
+      generateGetElementPtr(op, operands, rewriter, op->getResult(0).getType(),
+                            elementNumber, typeConverter, elementPtr);
+
   // Load the element
   auto elementVal = rewriter.create<LLVM::LoadOp>(location, elementType, static_cast<Value>(elementPtr));
   
   rewriter.replaceOp(op, static_cast<Value>(elementVal));
 }
 
-void GenerateStoreStructElement(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter, Type elementMLIRType,
+void generateStoreStructElement(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter, Type elementMLIRType,
                                int64_t elementNumber, TypeConverter* typeConverter, Value elementVal) {
   
   auto location = op->getLoc();
   Value elementPtr;
-  GenerateGetElementPtr(op, operands, rewriter, elementMLIRType, elementNumber, typeConverter, elementPtr);
-  
+  generateGetElementPtr(op, operands, rewriter, elementMLIRType, elementNumber,
+                        typeConverter, elementPtr);
+
   // Store the element
   rewriter.create<LLVM::StoreOp>(location, elementVal, elementPtr);
 }
@@ -98,7 +105,9 @@ struct LoadTileThresholdOpLowering: public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     assert (operands.size() == 3);
-    GenerateLoadStructElement(op, operands, rewriter, kThresholdElementNumberInTile, getTypeConverter());
+    generateLoadStructElement(op, operands, rewriter,
+                              kThresholdElementNumberInTile,
+                              getTypeConverter());
     return mlir::success();
   }
 };
@@ -110,7 +119,9 @@ struct LoadTileFeatureIndicesOpLowering: public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     assert(operands.size() == 3);
-    GenerateLoadStructElement(op, operands, rewriter, kFeatureIndexElementNumberInTile, getTypeConverter());
+    generateLoadStructElement(op, operands, rewriter,
+                              kFeatureIndexElementNumberInTile,
+                              getTypeConverter());
     return mlir::success();
   }
 };
@@ -122,7 +133,9 @@ struct LoadTileShapeOpLowering : public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     assert(operands.size() == 3);
-    GenerateLoadStructElement(op, operands, rewriter, kTileShapeElementNumberInTile, getTypeConverter());
+    generateLoadStructElement(op, operands, rewriter,
+                              kTileShapeElementNumberInTile,
+                              getTypeConverter());
     return mlir::success();
   }
 };
@@ -134,7 +147,9 @@ struct LoadChildIndexOpLowering : public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     assert(operands.size() == 2);
-    GenerateLoadStructElement(op, operands, rewriter, kChildIndexElementNumberInTile, getTypeConverter());
+    generateLoadStructElement(op, operands, rewriter,
+                              kChildIndexElementNumberInTile,
+                              getTypeConverter());
     return mlir::success();
   }
 };
@@ -147,12 +162,12 @@ struct InitTileOpLowering : public ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     assert(operands.size() == 5);
     decisionforest::InitTileOpAdaptor tileOpAdaptor(operands);
-    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.getThresholds().getType(), 0, getTypeConverter(), tileOpAdaptor.getThresholds());
-    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.getFeatureIndices().getType(), 1, getTypeConverter(), tileOpAdaptor.getFeatureIndices());
+    generateStoreStructElement(op, operands, rewriter, tileOpAdaptor.getThresholds().getType(), 0, getTypeConverter(), tileOpAdaptor.getThresholds());
+    generateStoreStructElement(op, operands, rewriter, tileOpAdaptor.getFeatureIndices().getType(), 1, getTypeConverter(), tileOpAdaptor.getFeatureIndices());
     auto modelMemrefType = op->getOperand(0).getType().cast<MemRefType>();
     auto tileType = modelMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
     if (tileType.getTileSize() > 1)
-      GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.getTileShapeID().getType(), 2, getTypeConverter(), tileOpAdaptor.getTileShapeID());
+      generateStoreStructElement(op, operands, rewriter, tileOpAdaptor.getTileShapeID().getType(), 2, getTypeConverter(), tileOpAdaptor.getTileShapeID());
     rewriter.eraseOp(op);
     return mlir::success();
   }
@@ -166,13 +181,13 @@ struct InitSparseTileOpLowering : public ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     assert(operands.size() == 6);
     decisionforest::InitSparseTileOpAdaptor tileOpAdaptor(operands);
-    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.getThresholds().getType(), 0, getTypeConverter(), tileOpAdaptor.getThresholds());
-    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.getFeatureIndices().getType(), 1, getTypeConverter(), tileOpAdaptor.getFeatureIndices());
+    generateStoreStructElement(op, operands, rewriter, tileOpAdaptor.getThresholds().getType(), 0, getTypeConverter(), tileOpAdaptor.getThresholds());
+    generateStoreStructElement(op, operands, rewriter, tileOpAdaptor.getFeatureIndices().getType(), 1, getTypeConverter(), tileOpAdaptor.getFeatureIndices());
     auto modelMemrefType = op->getOperand(0).getType().cast<MemRefType>();
     auto tileType = modelMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
     if (tileType.getTileSize() > 1)
-      GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.getTileShapeID().getType(), 2, getTypeConverter(), tileOpAdaptor.getTileShapeID());
-    GenerateStoreStructElement(op, operands, rewriter, tileOpAdaptor.getChildIndex().getType(), 3, getTypeConverter(), tileOpAdaptor.getChildIndex());
+      generateStoreStructElement(op, operands, rewriter, tileOpAdaptor.getTileShapeID().getType(), 2, getTypeConverter(), tileOpAdaptor.getTileShapeID());
+    generateStoreStructElement(op, operands, rewriter, tileOpAdaptor.getChildIndex().getType(), 3, getTypeConverter(), tileOpAdaptor.getChildIndex());
 
     rewriter.eraseOp(op);
     return mlir::success();
@@ -425,7 +440,7 @@ void ArrayBasedRepresentation::AddModelMemrefInitFunction(mlir::ModuleOp module,
 }
 
 mlir::Value ArrayBasedRepresentation::GetTreeMemref(mlir::Value treeValue) {
-  auto getTreeOp = treeValue.getDefiningOp();
+  auto *getTreeOp = treeValue.getDefiningOp();
   AssertOpIsOfType<mlir::decisionforest::GetTreeFromEnsembleOp>(getTreeOp);
   auto getTreeOperationMapIter = getTreeOperationMap.find(getTreeOp);
   assert(getTreeOperationMapIter != getTreeOperationMap.end());
@@ -575,11 +590,11 @@ void ArrayBasedRepresentation::AddLLVMConversionPatterns(LLVMTypeConverter &conv
                GetModelMemrefSizeOpLowering>(converter);
 }
 
-std::shared_ptr<IRepresentation> ConstructArrayBasedRepresentation() {
+std::shared_ptr<IRepresentation> constructArrayBasedRepresentation() {
   return std::make_shared<ArrayBasedRepresentation>();
 }
 
-REGISTER_REPRESENTATION(array, ConstructArrayBasedRepresentation)
+REGISTER_REPRESENTATION(array, constructArrayBasedRepresentation)
 
 // ===---------------------------------------------------=== //
 // Sparse representation
@@ -1016,11 +1031,11 @@ void SparseRepresentation::AddLLVMConversionPatterns(LLVMTypeConverter &converte
                GetModelMemrefSizeOpLowering>(converter);
 }
 
-std::shared_ptr<IRepresentation> ConstructSparseRepresentation() {
+std::shared_ptr<IRepresentation> constructSparseRepresentation() {
   return std::make_shared<SparseRepresentation>();
 }
 
-REGISTER_REPRESENTATION(sparse, ConstructSparseRepresentation)
+REGISTER_REPRESENTATION(sparse, constructSparseRepresentation)
 
 // ===---------------------------------------------------=== //
 // ModelSerializerFactory Methods
@@ -1033,10 +1048,10 @@ std::shared_ptr<IRepresentation> RepresentationFactory::GetRepresentation(const 
 }
 
 RepresentationFactory& RepresentationFactory::Get() {
-  static std::unique_ptr<RepresentationFactory> s_instancePtr = nullptr;
-  if (s_instancePtr == nullptr)
-    s_instancePtr = std::make_unique<RepresentationFactory>();
-  return *s_instancePtr; 
+  static std::unique_ptr<RepresentationFactory> sInstancePtr = nullptr;
+  if (sInstancePtr == nullptr)
+      sInstancePtr = std::make_unique<RepresentationFactory>();
+  return *sInstancePtr;
 }
 
 bool RepresentationFactory::RegisterRepresentation(const std::string& name,
@@ -1060,5 +1075,5 @@ std::shared_ptr<IRepresentation> ConstructGPURepresentation() {
     return RepresentationFactory::Get().GetRepresentation("gpu_array");
 }
 
-} // decisionforest
-} // mlir
+} // namespace decisionforest
+} // namespace mlir

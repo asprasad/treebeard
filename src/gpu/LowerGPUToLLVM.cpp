@@ -317,7 +317,7 @@ void LowerGPUToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module, std::shar
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
   pm.addNestedPass<gpu::GPUModuleOp>(std::make_unique<LowerGpuOpsToNVVMOpsPass>(representation));
   pm.addPass(createReconcileUnrealizedCastsPass());
-  // // pm.addPass(std::make_unique<PrintModulePass>());
+  // pm.addPass(std::make_unique<PrintModulePass>());
   pm.addNestedPass<gpu::GPUModuleOp>(createGpuSerializeToCubinPass("nvptx64-nvidia-cuda", "sm_35", "+ptx60"));
   pm.addPass(createDeleteSharedMemoryGlobalsPass());
   pm.addPass(createConvertSCFToCFPass());

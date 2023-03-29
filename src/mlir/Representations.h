@@ -91,9 +91,12 @@ protected:
   mlir::Type m_featureIndexType;
   mlir::Type m_tileShapeType;
 
-  void GenModelMemrefInitFunctionBody(MemRefType memrefType, Value memrefValue,
-                                      mlir::OpBuilder &rewriter, Location location, Value tileIndex,
-                                      Value thresholdMemref, Value indexMemref, Value tileShapeIdMemref);
+  void GenModelMemrefInitFunctionBody(MemRefType memrefType,
+                                      Value getGlobalMemref,
+                                      mlir::OpBuilder &builder,
+                                      Location location, Value tileIndex,
+                                      Value thresholdMemref, Value indexMemref,
+                                      Value tileShapeIdMemref);
   GlobalMemrefTypes AddGlobalMemrefs(
     mlir::ModuleOp module,
     mlir::decisionforest::EnsembleConstantOp& ensembleConstOp,
