@@ -149,12 +149,13 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
 
       // Deallocate the GPU memory. 
       // #TODOSampath - Assumes that we haven't allocated anything that we haven't used to transfer memory from CPU.
-      for (auto& cpuGpuPair : cpuToGpuMemrefMap) {
-        auto gpuMemRef = cpuGpuPair.second;
+      for (auto& cpuGpuMemrefPairs : cpuToGpuMemrefMap) {
+        auto dealloc = builder.create<gpu::DeallocOp>(location, waitToken.getType(), waitToken, cpuGpuMemrefPairs.second);
+        waitToken = dealloc.getAsyncToken();
+      } 
 
-        auto outputTransfer = builder.create<gpu::DeallocOp>(location, waitToken.getType(), waitToken, gpuMemRef);
-        waitToken = outputTransfer.getAsyncToken();
-      }
+      // wait for final dealloc.
+      builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), waitToken);
 
       ReplaceCPUReferencesWithGPUMemref(cpuToGpuMemrefMap);
     }
