@@ -2,9 +2,12 @@
 
 #include "Dialect.h"
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 
+#include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -12,6 +15,9 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "GPUSupportUtils.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/Casting.h"
+#include <vector>
 
 using namespace mlir;
 
@@ -20,81 +26,137 @@ namespace
 
 // Replace all uses of the input argument memref with the gpu memref inside
 // the gpu kernel
-void ReplaceArgumentUsesWithGPUMemref(func::FuncOp func, Value inputGPUMemref, Value outputGPUMemref) {
-  Value argMemref = func.getArgument(0);
-  for (auto& use: argMemref.getUses()) {
-    auto owningOp=use.getOwner();
-    gpu::LaunchOp gpuLaunchOp = owningOp->getParentOfType<gpu::LaunchOp>();
-    if (gpuLaunchOp)
-      owningOp->replaceUsesOfWith(argMemref, inputGPUMemref);
-  }
-  Value outputMemref = func.getArgument(1);
-  for (auto& use: outputMemref.getUses()) {
-    auto owningOp=use.getOwner();
-    gpu::LaunchOp gpuLaunchOp = owningOp->getParentOfType<gpu::LaunchOp>();
-    if (gpuLaunchOp)
-      owningOp->replaceUsesOfWith(outputMemref, outputGPUMemref);
-  }
+void ReplaceCPUReferencesWithGPUMemref(const llvm::DenseMap<Value, Value>& cpuToGPUMemrefMap) {
+  for (auto& cpuToGPUMemrefPair: cpuToGPUMemrefMap) {
+    Value cpuMemref = cpuToGPUMemrefPair.first;
+    Value gpuMemref = cpuToGPUMemrefPair.second;
+    for (auto& use: cpuMemref.getUses()) {
+      auto *owningOp=use.getOwner();
+      gpu::LaunchOp gpuLaunchOp = owningOp->getParentOfType<gpu::LaunchOp>();
+      if (gpuLaunchOp) {
+        owningOp->replaceUsesOfWith(cpuMemref, gpuMemref);
 
-  // Workaround for a bug in the use chains of the second arg
-  func.walk([&](memref::LoadOp loadOp) {
-    auto owningOp=loadOp.getOperation();
-    gpu::LaunchOp gpuLaunchOp = owningOp->getParentOfType<gpu::LaunchOp>();
-    if (gpuLaunchOp)
-      owningOp->replaceUsesOfWith(outputMemref, outputGPUMemref);
-  });
+        // Workaround for a bug in the use chains of the second arg
+        gpuLaunchOp.walk([&](memref::LoadOp loadOp) {
+          loadOp->replaceUsesOfWith(cpuMemref, gpuMemref);
+        });
+      }
+    }
+  }
 }
 
 void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
   module.walk([&](mlir::func::FuncOp func) {
     if (func.getName() == "Prediction_Function") {
       auto location = func.getLoc();
-      // Add the required transfers here
+
       mlir::OpBuilder builder(func.getContext());
+
+      std::vector<Value> memrefsInFuncOp;
+      std::vector<Value> memrefsUsedPostGpuLaunch;
+
+      for (auto& arg : func.getArguments()) {
+        if (arg.getType().isa<MemRefType>())
+          memrefsInFuncOp.push_back(arg);
+      }
+
+      // Collect memrefs used in func op and after gpu.launch
+      for (auto &funcRegion : func->getRegions()) {
+        for (auto &block : funcRegion.getBlocks()) {
+          bool opIsAfterGpuLaunch = false;
+          for (auto &op : block.getOperations()) {
+            if (opIsAfterGpuLaunch) {
+              for (const auto &operand : op.getOperands()) {
+                if (operand.getType().isa<MemRefType>())
+                  memrefsUsedPostGpuLaunch.push_back(operand);
+              }
+            } else {
+              for (const auto &result : op.getResults()) {
+                if (result.getType().isa<MemRefType>())
+                  memrefsInFuncOp.push_back(result);
+              }
+            }
+            auto gpuOp = dyn_cast<gpu::LaunchOp>(op);
+            if (gpuOp) {
+              opIsAfterGpuLaunch = true;
+            }
+          }
+        }
+      }
+
+      // Determine memrefs to be transferred to and from the gpu.
+      llvm::DenseSet<Value> requiresTransferToGpu, requiresTransferFromGpu;
+      for (auto& result : memrefsInFuncOp) {
+        for (auto& use : result.getUses()) {
+          auto *owningOp=use.getOwner();
+          auto launchOp = owningOp->getParentOfType<gpu::LaunchOp>();
+          if (launchOp) {
+            requiresTransferToGpu.insert(result); 
+
+            // Relies on the fact that we currently don't allocate anything on the GPU for the output
+            // without allocating on the input side. If we do allocate, that needs to be handled separately.
+            for (auto &postGpuResult : memrefsUsedPostGpuLaunch) {
+              if (postGpuResult == result) {
+                requiresTransferFromGpu.insert(result);
+              }
+            }
+          }
+        }
+      }
+
       gpu::LaunchOp gpuLaunchOp;
       func.walk([&](gpu::LaunchOp launchOp){
         builder.setInsertionPoint(launchOp.getOperation());
         gpuLaunchOp = launchOp;
       });
-      
+
       auto waitOp = builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{});
-      auto inputAlloc = builder.create<gpu::AllocOp>(location, func.getArgument(0).getType(), waitOp.getAsyncToken().getType(), 
-                                                     ValueRange{waitOp.getAsyncToken()}, ValueRange{}, ValueRange{});
-      auto inputTransfer = builder.create<gpu::MemcpyOp>(location, inputAlloc.getAsyncToken().getType(), ValueRange{inputAlloc.getAsyncToken()}, 
-                                                         inputAlloc.getMemref(), static_cast<Value>(func.getArgument(0)));
+      Value waitToken = waitOp.getAsyncToken();
 
-      auto outputAlloc = builder.create<gpu::AllocOp>(location, func.getArgument(1).getType(), inputTransfer.getAsyncToken().getType(), 
-                                                      ValueRange{inputTransfer.getAsyncToken()}, ValueRange{}, ValueRange{});
-      
-      auto outputTransfer = builder.create<gpu::MemcpyOp>(location, outputAlloc.getAsyncToken().getType(), ValueRange{outputAlloc.getAsyncToken()}, 
-                                                          outputAlloc.getMemref(), static_cast<Value>(func.getArgument(1)));
+      llvm::DenseMap<Value, Value> cpuToGpuMemrefMap, gpuToCpuMemrefMap;
 
-      // gpuLaunchOp.addAsyncDependency(outputAlloc.getAsyncToken());
-      /*auto waitForAllocOp =*/ builder.create<gpu::WaitOp>(location, outputTransfer.getAsyncToken().getType(), ValueRange{outputTransfer.getAsyncToken()});
+      // Generate input transfers.
+      // #TODOSampath - Each transfer doesn't have to wait for subsequent transfers. 
+      // We can collect the wait tokens in a vector and wait for all of them using the gpu::WaitOp
+      for (auto& transferToGpu : requiresTransferToGpu) {
+        auto inputAlloc = builder.create<gpu::AllocOp>(location, transferToGpu.getType(), waitToken.getType(), 
+                                                       ValueRange{waitToken}, ValueRange{}, ValueRange{});
+        auto inputTransfer = builder.create<gpu::MemcpyOp>(location, inputAlloc.getAsyncToken().getType(), ValueRange{inputAlloc.getAsyncToken()}, 
+                                                           inputAlloc.getMemref(), static_cast<Value>(transferToGpu));
+        waitToken = inputTransfer.getAsyncToken();
+        cpuToGpuMemrefMap[transferToGpu] = inputAlloc.getMemref();
 
-      // Find the return statement and add a tranfer before it
-      auto& region = func.getRegion();
-      for (auto& block: region.getBlocks()) {
-        for (auto returnOp : block.getOps<func::ReturnOp>()) {
-          auto op = returnOp.getOperation();
-          auto insertPoint = builder.saveInsertionPoint();
-          builder.setInsertionPoint(op);
-          auto waitBeforeReturn = builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{});
-          // auto waitBeforeReturn = builder.create<gpu::WaitOp>(location, gpuLaunchOp.getAsyncToken().getType(), ValueRange{gpuLaunchOp.getAsyncToken()});
-          auto outputTransfer = builder.create<gpu::MemcpyOp>(location, waitBeforeReturn.getAsyncToken().getType(), ValueRange{waitBeforeReturn.getAsyncToken()}, 
-                                                                   static_cast<Value>(func.getArgument(1)), outputAlloc.getMemref());
-          auto deallocInput = builder.create<gpu::DeallocOp>(location, 
-                                                             outputTransfer.getAsyncToken().getType(),
-                                                             ValueRange{outputTransfer.getAsyncToken()},
-                                                             inputAlloc.getMemref());
-          /*auto deallocOutput =*/ builder.create<gpu::DeallocOp>(location,
-                                                                  deallocInput.getAsyncToken().getType(),
-                                                                  ValueRange{deallocInput.getAsyncToken()},
-                                                                  outputAlloc.getMemref());
-          builder.setInsertionPoint(insertPoint.getBlock(), insertPoint.getPoint());                                                              
+        if (requiresTransferFromGpu.contains(transferToGpu)) {
+          gpuToCpuMemrefMap[transferToGpu] = inputAlloc.getMemref();
         }
       }
-      ReplaceArgumentUsesWithGPUMemref(func, inputAlloc.getMemref(), outputAlloc.getMemref());
+
+      builder.setInsertionPointAfter(gpuLaunchOp.getOperation());
+      auto waitForGpuKernel = builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{});
+      waitToken = waitForGpuKernel.getAsyncToken();
+
+      // Copy out any values that are needed by the CPU.
+      for (auto&cpuGpuPair : gpuToCpuMemrefMap) {
+        auto cpuMemRef = cpuGpuPair.first;
+        auto gpuMemRef = cpuGpuPair.second;
+
+        auto outputTransfer = builder.create<gpu::MemcpyOp>(location, waitToken.getType(), waitToken, cpuMemRef, gpuMemRef);
+        waitToken = outputTransfer.getAsyncToken();
+      }
+
+      auto waitForTransfers = builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), waitToken);
+      waitToken = waitForTransfers.getAsyncToken();
+
+      // Deallocate the GPU memory. 
+      // #TODOSampath - Assumes that we haven't allocated anything that we haven't used to transfer memory from CPU.
+      for (auto& cpuGpuPair : cpuToGpuMemrefMap) {
+        auto gpuMemRef = cpuGpuPair.second;
+
+        auto outputTransfer = builder.create<gpu::DeallocOp>(location, waitToken.getType(), waitToken, gpuMemRef);
+        waitToken = outputTransfer.getAsyncToken();
+      }
+
+      ReplaceCPUReferencesWithGPUMemref(cpuToGpuMemrefMap);
     }
     return mlir::WalkResult::advance();
   });
