@@ -65,20 +65,26 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
         for (auto &block : funcRegion.getBlocks()) {
           bool opIsAfterGpuLaunch = false;
           for (auto &op : block.getOperations()) {
-            if (opIsAfterGpuLaunch) {
-              for (const auto &operand : op.getOperands()) {
-                if (operand.getType().isa<MemRefType>())
-                  memrefsUsedPostGpuLaunch.push_back(operand);
-              }
-            } else {
-              for (const auto &result : op.getResults()) {
-                if (result.getType().isa<MemRefType>())
-                  memrefsInFuncOp.push_back(result);
-              }
-            }
             auto gpuOp = dyn_cast<gpu::LaunchOp>(op);
             if (gpuOp) {
               opIsAfterGpuLaunch = true;
+              continue;
+            }
+
+            if (opIsAfterGpuLaunch) {
+              op.walk([&](Operation* operation) {
+                for (const auto &operand : operation->getOperands()) {
+                  if (operand.getType().isa<MemRefType>())
+                    memrefsUsedPostGpuLaunch.push_back(operand);
+                }
+              });
+            } else {
+              op.walk([&](Operation *operation) {
+                for (const auto &operand : operation->getOperands()) {
+                  if (operand.getType().isa<MemRefType>())
+                    memrefsInFuncOp.push_back(operand);
+                }
+              });
             }
           }
         }
