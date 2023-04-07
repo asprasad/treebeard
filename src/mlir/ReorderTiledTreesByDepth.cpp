@@ -37,7 +37,7 @@ struct ReorderEnsembleConstants : public RewritePattern {
     : RewritePattern(mlir::decisionforest::PredictForestOp::getOperationName(), 1 /*benefit*/, ctx)
   {}
 
-  bool AreTreesSorted(decisionforest::DecisionForest<>& forest) const {
+  bool AreTreesSorted(decisionforest::DecisionForest& forest) const {
     auto trees = forest.GetTrees();
     bool sorted = true;
     size_t i = 0;
@@ -87,7 +87,7 @@ struct ReorderEnsembleConstants : public RewritePattern {
       return mlir::failure();
     
     auto trees = forest.GetTrees();
-    std::vector<std::shared_ptr<decisionforest::DecisionTree<>>> uniformTiledTrees, probTiledTrees, reorderedTrees;
+    std::vector<std::shared_ptr<decisionforest::DecisionTree>> uniformTiledTrees, probTiledTrees, reorderedTrees;
     std::vector<int32_t> depths, peelDepths;
     for (int64_t i=0 ; i<(int64_t)forest.NumTrees() ; ++i) {
       assert (probTiledTrees.size() == peelDepths.size());
@@ -153,7 +153,7 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
       m_pipelineSize(pipelineSize), m_numberOfCores(numCores)
   {}
 
-  void SplitTreeLoopForProbAndUniformTiling(decisionforest::Schedule* schedule, decisionforest::DecisionForest<>& forest,
+  void SplitTreeLoopForProbAndUniformTiling(decisionforest::Schedule* schedule, decisionforest::DecisionForest& forest,
                                             decisionforest::IndexVariable* &probTreeIndex, decisionforest::IndexVariable* &probBatchIndex,
                                             decisionforest::IndexVariable* &unifTreeIndex, decisionforest::IndexVariable* &unifBatchIndex,
                                             decisionforest::IndexVariable* currentTreeIndex, decisionforest::IndexVariable* currentBatchIndex) const {
@@ -191,7 +191,7 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
     unifBatchIndex = mapIter->second.second;
   }
 
-  void SplitTreeLoopForUniformTiling(decisionforest::Schedule *schedule, decisionforest::DecisionForest<>& forest,
+  void SplitTreeLoopForUniformTiling(decisionforest::Schedule *schedule, decisionforest::DecisionForest& forest,
                                      decisionforest::IndexVariable* batchIndexPtr, 
                                      decisionforest::IndexVariable* treeIndexPtr) const {
     if (batchIndexPtr==nullptr && treeIndexPtr==nullptr)
@@ -238,7 +238,7 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
     }
   }
 
-  void SplitTreeLoopForProbabilityBasedTiling(decisionforest::Schedule *schedule, decisionforest::DecisionForest<>& forest,
+  void SplitTreeLoopForProbabilityBasedTiling(decisionforest::Schedule *schedule, decisionforest::DecisionForest& forest,
                                               decisionforest::IndexVariable* batchIndexPtr, 
                                               decisionforest::IndexVariable* treeIndexPtr) const {
     if (batchIndexPtr==nullptr && treeIndexPtr==nullptr)

@@ -48,7 +48,7 @@ public:
     :ArraySparseSerializerBase(modelGlobalsJSONPath, false)
   { }
   ~ArrayRepresentationSerializer() {}
-  void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
+  void Persist(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
 };
 
 class SparseRepresentationSerializer : public ArraySparseSerializerBase {
@@ -60,7 +60,7 @@ public:
     :ArraySparseSerializerBase(modelGlobalsJSONPath, true)
   { }
   ~SparseRepresentationSerializer() {}
-  void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
+  void Persist(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
 };
 
 class ModelSerializerFactory {

@@ -13,3 +13,4 @@ libtreebeard-runtime.so.*
 *.log
 *.gz
 docs/MICRO*2022/*.pdf
+.cache

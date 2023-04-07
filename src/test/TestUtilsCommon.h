@@ -7,6 +7,7 @@
 #include <random>
 #include <functional>
 #include "DecisionForest.h"
+#include "ExecutionHelpers.h"
 #include "schedule.h"
 
 namespace mlir
@@ -124,9 +125,9 @@ std::string GetTreeBeardRepoPath();
 std::string GetTempFilePath();
 std::string GetGlobalJSONNameForTests();
 
-mlir::decisionforest::DecisionForest<> GenerateRandomDecisionForest(int32_t numTrees, int32_t numFeatures, double thresholdMin,
+mlir::decisionforest::DecisionForest GenerateRandomDecisionForest(int32_t numTrees, int32_t numFeatures, double thresholdMin,
                                                                     double thresholdMax, int32_t maxDepth);
-void SaveToXGBoostJSON(mlir::decisionforest::DecisionForest<>& forest, const std::string& filename);
+void SaveToXGBoostJSON(mlir::decisionforest::DecisionForest& forest, const std::string& filename);
 void GenerateRandomModelJSONs(const std::string& dirname, int32_t numberOfModels, int32_t maxNumTrees, 
                               int32_t maxNumFeatures, double thresholdMin, double thresholdMax, int32_t maxDepth);
 
@@ -141,6 +142,46 @@ void RunXGBoostParallelBenchmarks();
 
 // Defined in XGBoostTests.cpp
 extern bool RunSingleBatchSizeForXGBoostTests;
+
+template<typename FloatType, typename ResultType>
+bool ValidateModuleOutputAgainstCSVdata(mlir::decisionforest::InferenceRunnerBase& inferenceRunner,
+                                        const std::string& csvPath,
+                                        int32_t batchSize)
+{
+  TestCSVReader csvReader(csvPath);
+
+  std::vector<std::vector<FloatType>> inputData;
+  std::vector<std::vector<FloatType>> xgBoostPredictions;
+  for (size_t i=batchSize  ; i<csvReader.NumberOfRows()-1 ; i += batchSize) {
+    std::vector<FloatType> batch, preds;
+    for (int32_t j=0 ; j<batchSize ; ++j) {
+      auto rowIndex = (i-batchSize) + j;
+      auto row = csvReader.GetRowOfType<FloatType>(rowIndex);
+      auto xgBoostPrediction = row.back();
+      row.pop_back();
+      preds.push_back(xgBoostPrediction);
+      batch.insert(batch.end(), row.begin(), row.end());
+    }
+    inputData.push_back(batch);
+    xgBoostPredictions.push_back(preds);
+  }
+  auto currentPredictionsIter = xgBoostPredictions.begin();
+  for(auto& batch : inputData) {
+    assert (batch.size() % batchSize == 0);
+    std::vector<ResultType> result(batchSize, -1);
+    inferenceRunner.RunInference<FloatType, ResultType>(batch.data(), result.data());
+    for(int64_t rowIdx=0 ; rowIdx<batchSize ; ++rowIdx) {
+
+      // This needs to be a vector of doubles because the type is hardcoded for Forest::Predict
+      // std::vector<double> row(batch.begin() + rowIdx*rowSize, batch.begin() + (rowIdx+1)*rowSize);
+      ResultType expectedResult = (*currentPredictionsIter)[rowIdx];
+      
+      Test_ASSERT(FPEqual<ResultType>(result[rowIdx], expectedResult));
+    }
+    ++currentPredictionsIter;
+  }
+  return true;
+}
 
 } // test
 } // TreeBeard

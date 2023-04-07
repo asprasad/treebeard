@@ -11,7 +11,7 @@ void ComputeForestInferenceStatsImpl(const std::string& modelJSONPath, const std
   // std::string csvPath = "/home/ashwin/ML/scikit-learn_bench/xgb_models/airline_xgb_model_save.json.test.csv";
   mlir::MLIRContext context;
   TreeBeard::XGBoostJSONParser<> xgBoostParser(context, modelJSONPath, mlir::decisionforest::ConstructModelSerializer(""), 1);
-  xgBoostParser.Parse();
+  xgBoostParser.ConstructForest();
   auto decisionForest = xgBoostParser.GetForest();
 
   TreeBeard::test::TestCSVReader csvReader(csvPath);
@@ -27,13 +27,13 @@ void ComputeForestInferenceStatsImpl(const std::string& modelJSONPath, const std
   outputStream << decisionForest->NumTrees() << ", " << csvReader.NumberOfRows() <<  std::endl;
   for (size_t i=0 ; i<decisionForest->NumTrees() ; ++i) {
     auto& tree = decisionForest->GetTree(i);
-    std::vector<mlir::decisionforest::DecisionTree<>::Node> leaves;
+    std::vector<mlir::decisionforest::DecisionTree::Node> leaves;
     for (auto& node : tree.GetNodes()) {
       if (node.IsLeaf())
         leaves.push_back(node);
     }
     if (sortLeaves)
-      std::sort(leaves.begin(), leaves.end(), [](mlir::decisionforest::DecisionTree<>::Node& n1, mlir::decisionforest::DecisionTree<>::Node& n2) {
+      std::sort(leaves.begin(), leaves.end(), [](mlir::decisionforest::DecisionTree::Node& n1, mlir::decisionforest::DecisionTree::Node& n2) {
         return n1.hitCount > n2.hitCount;
       });
     outputStream << leaves[0].hitCount << ", "  << leaves[0].depth;
@@ -83,7 +83,7 @@ void ComputeForestProbabilityProfileForXGBoostModel(const std::string& modelName
   ComputeForestInferenceStatsImpl(modelJSONPath, csvPath, numRows, fout, false);
 }
 
-void ReadProbabilityProfile(mlir::decisionforest::DecisionForest<>& decisionForest, const std::string& statsCSVFile) {
+void ReadProbabilityProfile(mlir::decisionforest::DecisionForest& decisionForest, const std::string& statsCSVFile) {
   TreeBeard::test::TestCSVReader csvReader(statsCSVFile);
   // std::cerr << "Done reading stats file..\n";
 

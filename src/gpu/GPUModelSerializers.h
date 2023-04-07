@@ -61,7 +61,7 @@ public:
     :GPUArraySparseSerializerBase(modelGlobalsJSONPath, false)
   { }
   ~GPUArrayRepresentationSerializer() {}
-  void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
+  void Persist(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
 };
 
 class GPUSparseRepresentationSerializer : public GPUArraySparseSerializerBase {
@@ -75,7 +75,7 @@ public:
     :GPUArraySparseSerializerBase(modelGlobalsJSONPath, true)
   { }
   ~GPUSparseRepresentationSerializer() {}
-  void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
+  void Persist(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
 };
 
 } // decisionforest

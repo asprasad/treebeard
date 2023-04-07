@@ -295,7 +295,7 @@ void ArraySparseSerializerBase::SetReturnTypeBitWidth(int32_t value){
 // ===---------------------------------------------------=== //
 
 template<typename PersistTreeScalarType, typename PersistTreeTiledType>
-void PersistDecisionForestImpl(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType,
+void PersistDecisionForestImpl(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType,
                                PersistTreeScalarType persistTreeScalar, PersistTreeTiledType persistTreeTiled) {
     
     mlir::decisionforest::ForestJSONReader::GetInstance().ClearAllData();
@@ -364,9 +364,9 @@ void PersistDecisionForestImpl(mlir::decisionforest::DecisionForest<>& forest, m
 // Ultimately, this will write a JSON file. For now, we're just 
 // storing it in memory assuming the compiler and inference 
 // will run in the same process. 
-void PersistDecisionForestArrayBased(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) {
+void PersistDecisionForestArrayBased(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType) {
     PersistDecisionForestImpl(forest, forestType,
-            [](DecisionTree<>& tree, int32_t treeNumber, decisionforest::TreeType treeType) {
+            [](DecisionTree& tree, int32_t treeNumber, decisionforest::TreeType treeType) {
                 std::vector<ThresholdType> thresholds = tree.GetThresholdArray();
                 std::vector<FeatureIndexType> featureIndices = tree.GetFeatureIndexArray();
                 std::vector<int32_t> tileShapeIDs = { };
@@ -401,9 +401,9 @@ void PersistDecisionForestArrayBased(mlir::decisionforest::DecisionForest<>& for
     );
 }
 
-void PersistDecisionForestSparse(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) {
+void PersistDecisionForestSparse(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType) {
     PersistDecisionForestImpl(forest, forestType,
-            [](DecisionTree<>& tree, int32_t treeNumber, decisionforest::TreeType treeType) {
+            [](DecisionTree& tree, int32_t treeNumber, decisionforest::TreeType treeType) {
                 std::vector<ThresholdType> thresholds = tree.GetSparseThresholdArray(), leaves;
                 std::vector<FeatureIndexType> featureIndices = tree.GetSparseFeatureIndexArray();
                 std::vector<int32_t> childIndices = tree.GetChildIndexArray();
@@ -441,7 +441,7 @@ void PersistDecisionForestSparse(mlir::decisionforest::DecisionForest<>& forest,
 // SparseRepresentationSerializer Methods
 // ===---------------------------------------------------=== //
 
-void SparseRepresentationSerializer::Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) {
+void SparseRepresentationSerializer::Persist(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType) {
     mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_filepath);
     mlir::decisionforest::ForestJSONReader::GetInstance().SetBatchSize(m_batchSize);
     mlir::decisionforest::ForestJSONReader::GetInstance().SetRowSize(m_rowSize);
@@ -496,7 +496,7 @@ REGISTER_SERIALIZER(sparse, ConstructSparseRepresentation)
 // ArrayRepresentationSerializer Methods
 // ===---------------------------------------------------=== //
 
-void ArrayRepresentationSerializer::Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) {
+void ArrayRepresentationSerializer::Persist(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType) {
     mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_filepath);
     mlir::decisionforest::ForestJSONReader::GetInstance().SetBatchSize(m_batchSize);
     mlir::decisionforest::ForestJSONReader::GetInstance().SetRowSize(m_rowSize);

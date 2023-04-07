@@ -1,12 +1,20 @@
+#include <cstdint>
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 #include <json.hpp>
+#include <string>
+#include "DecisionForest.h"
+#include "Dialect.h"
+#include "tbruntime.h"
 #include "ExecutionHelpers.h"
 #include "CompileUtils.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "xgboostparser.h"
 #include "schedule.h"
 #include "ModelSerializers.h"
 #include "Representations.h"
+#include "onnxmodelparser.h"
 
 // ===-------------------------------------------------------------=== //
 // Execution API
@@ -143,6 +151,105 @@ extern "C" intptr_t CreateInferenceRunner(const char* modelJSONPath, const char*
                                         mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath)};
   auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON(context, tbContext);
   auto inferenceRunner = new mlir::decisionforest::InferenceRunner(tbContext.serializer, module, 
+                                                                   optionsPtr->tileSize, optionsPtr->thresholdTypeWidth,
+                                                                   optionsPtr->featureIndexTypeWidth);
+  return reinterpret_cast<intptr_t>(inferenceRunner);
+}
+
+mlir::decisionforest::PredictionTransformation GetPredictionTransformation(const std::string& s)
+{
+  if (s == "softmax") return mlir::decisionforest::PredictionTransformation::kSoftMax;
+  if(s == "id") return mlir::decisionforest::PredictionTransformation::kIdentity;
+  if(s == "logistic") return mlir::decisionforest::PredictionTransformation::kSigmoid;
+  
+  assert(false && "Invalid prediction transformation");
+}
+
+extern "C" void CreateLLVMIRForONNXModel(const char *modelPath, const char* llvmIrPath, const char* modelGlobalsJSONPath, intptr_t options)
+{
+  TreeBeard::CompilerOptions *optionsPtr = reinterpret_cast<TreeBeard::CompilerOptions *>(options);
+
+  TreeBeard::TreebeardContext tbContext{
+      modelPath, modelGlobalsJSONPath, *optionsPtr,
+      mlir::decisionforest::ConstructRepresentation(),
+      mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath)};
+
+  TreeBeard::ConvertONNXModelToLLVMIR(tbContext, llvmIrPath);
+}
+
+extern "C" intptr_t CreateInferenceRunnerForONNXModelInputs(
+    int64_t inputAndThresholdSize, int64_t numNodes, const char *predTransform,
+    double baseValue, const int64_t *treeIds, const int64_t *nodeIds,
+    const int64_t *featureIds, void *thresholds, const int64_t *leftChildIds,
+    const int64_t *rightChildIds, int64_t numberOfClasses,
+    const int64_t *targetClassIds, const int64_t *targetClassTreeId,
+    const int64_t *targetClassNodeId, const float *targetWeights,
+    int64_t numWeights, int64_t batchSize, intptr_t options) {
+
+  auto modelGlobalsJSONPath = std::filesystem::temp_directory_path() / "modelGlobals.json";
+
+  TreeBeard::CompilerOptions *optionsPtr =
+      reinterpret_cast<TreeBeard::CompilerOptions *>(options);
+  mlir::MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+  TreeBeard::TreebeardContext tbContext{
+      "", modelGlobalsJSONPath, *optionsPtr,
+      mlir::decisionforest::ConstructRepresentation(),
+      mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath)};
+
+  mlir::ModuleOp module;
+
+  if (inputAndThresholdSize == 8) {
+    auto onnxModelConverter = TreeBeard::ONNXModelConverter<double>(
+    tbContext.serializer,
+    context,
+    baseValue,
+    GetPredictionTransformation(predTransform),
+    numNodes,
+    treeIds,
+    nodeIds,
+    featureIds,
+    (double *)thresholds,
+    leftChildIds,
+    rightChildIds,
+    numberOfClasses,
+    targetClassTreeId,
+    targetClassNodeId,
+    targetClassIds,
+    targetWeights,
+    numWeights,
+    batchSize);
+
+    module = TreeBeard::ConstructLLVMDialectModuleFromForestCreator(
+        context, tbContext, onnxModelConverter);
+
+  }
+  else if (inputAndThresholdSize == 4) {
+    auto onnxModelConverter = TreeBeard::ONNXModelConverter<float>(
+    tbContext.serializer,
+    context,
+    baseValue,
+    GetPredictionTransformation(predTransform),
+    numNodes,
+    treeIds,
+    nodeIds,
+    featureIds,
+    (float *)thresholds,
+    leftChildIds,
+    rightChildIds,
+    numberOfClasses,
+    targetClassTreeId,
+    targetClassNodeId,
+    targetClassIds,
+    targetWeights,
+    numWeights,
+    batchSize);
+
+    module = TreeBeard::ConstructLLVMDialectModuleFromForestCreator(
+        context, tbContext, onnxModelConverter);
+  }
+  
+  auto *inferenceRunner = new mlir::decisionforest::InferenceRunner(tbContext.serializer, module, 
                                                                    optionsPtr->tileSize, optionsPtr->thresholdTypeWidth,
                                                                    optionsPtr->featureIndexTypeWidth);
   return reinterpret_cast<intptr_t>(inferenceRunner);

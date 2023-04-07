@@ -18,11 +18,11 @@ namespace detail
 {
 struct DecisionTreeAttrStorage : public ::mlir::AttributeStorage
 {
-    DecisionTreeAttrStorage(::mlir::Type type, const DecisionForest<>& forest, int64_t index)
+    DecisionTreeAttrStorage(::mlir::Type type, const DecisionForest& forest, int64_t index)
       : m_type(type), m_forest(forest), m_index(index) { }
 
     /// The hash key is a tuple of the parameter types.
-    using KeyTy = std::tuple<::mlir::Type, DecisionForest<>, int64_t>;
+    using KeyTy = std::tuple<::mlir::Type, DecisionForest, int64_t>;
 
     bool operator==(const KeyTy &tblgenKey) const {
         if (!(m_type == std::get<0>(tblgenKey)))
@@ -51,18 +51,18 @@ struct DecisionTreeAttrStorage : public ::mlir::AttributeStorage
                     DecisionTreeAttrStorage(type, forest, index);
     }
     ::mlir::Type m_type;
-    DecisionForest<> m_forest;
+    DecisionForest m_forest;
     int64_t m_index;
 };
 
 // TODO How do we use templatization of DecisionForest here?
 struct DecisionForestAttrStorage : public ::mlir::AttributeStorage
 {
-    DecisionForestAttrStorage(::mlir::Type type, const DecisionForest<>& forest)
+    DecisionForestAttrStorage(::mlir::Type type, const DecisionForest& forest)
       : m_type(type), m_forest(forest) { }
 
     /// The hash key is a tuple of the parameter types.
-    using KeyTy = std::tuple<::mlir::Type, DecisionForest<>>;
+    using KeyTy = std::tuple<::mlir::Type, DecisionForest>;
 
     bool operator==(const KeyTy &tblgenKey) const {
         if (!(m_type == std::get<0>(tblgenKey)))
@@ -88,7 +88,7 @@ struct DecisionForestAttrStorage : public ::mlir::AttributeStorage
           DecisionForestAttrStorage(type, forest);
     }
     ::mlir::Type m_type;
-    DecisionForest<> m_forest;
+    DecisionForest m_forest;
 };
 
 } // namespace detail
@@ -100,7 +100,7 @@ public:
     /// Inherit some necessary constructors from 'AttrBase'.
     using Base::Base;
     // using ValueType = APInt;
-    static DecisionTreeAttribute get(Type type,  DecisionForest<>& forest, int64_t index) {
+    static DecisionTreeAttribute get(Type type,  DecisionForest& forest, int64_t index) {
         return Base::get(type.getContext(), type, forest, index);
     }
     std::string Serialize() {
@@ -123,7 +123,7 @@ public:
     /// Inherit some necessary constructors from 'AttrBase'.
     using Base::Base;
 
-    static DecisionForestAttribute get(Type type, DecisionForest<>& value) {
+    static DecisionForestAttribute get(Type type, DecisionForest& value) {
         return Base::get(type.getContext(), type, value);
     }
     std::string Serialize() {
@@ -135,7 +135,7 @@ public:
         mlir::decisionforest::TreeEnsembleType ensembleType = ensembleMLIRType.cast<mlir::decisionforest::TreeEnsembleType>();
         os << "Forest = ( " << forestStr << " ) forestType = (" << ensembleType << ")";
     }
-    DecisionForest<>& GetDecisionForest() {
+    DecisionForest& GetDecisionForest() {
         return getImpl()->m_forest;
     }
     mlir::Type getType() const {

@@ -5,6 +5,7 @@
 #include <climits>
 #include <cstring>
 
+#include "ExecutionHelpers.h"
 #include "TestUtilsCommon.h"
 
 namespace TreeBeard
@@ -69,6 +70,5 @@ std::string GetGlobalJSONNameForTests() {
   char *execDir = dirname(exePath);
   return std::string(execDir) + "/treebeard_test.json";
 }
-
 } // test 
 } // TreeBeard

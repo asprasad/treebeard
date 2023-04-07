@@ -5,6 +5,7 @@
 #include "Dialect.h"
 #include "TestUtilsCommon.h"
 
+#include "TreebeardContext.h"
 #include "mlir/IR/MLIRContext.h"
 
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -26,6 +27,8 @@
 #include "TestUtilsCommon.h"
 #include "Logger.h"
 #include "json.hpp"
+#include "mlir/Pass/PassManager.h"
+#include "onnxmodelparser.h"
 
 using json = nlohmann::json;
 
@@ -163,6 +166,26 @@ void InitializeMLIRContext(mlir::MLIRContext& context) {
   context.getOrLoadDialect<mlir::func::FuncDialect>();
 }
 
+void ConvertONNXModelToLLVMIR(TreebeardContext& tbContext, const std::string& llvmIRFilePath) {
+  
+  mlir::MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+  const auto &parsedModel = TreeBeard::ONNXModelParseResult::parseModel(tbContext.modelPath);
+
+  // Hardcoding to float because ONNX doesn't support double. Revisit this #TODOSampath
+  auto onnxModelConverter = TreeBeard::ONNXModelConverter<float>(
+      tbContext.serializer, context, parsedModel.baseValue,
+      parsedModel.predTransform, parsedModel.numNodes, parsedModel.treeIds,
+      parsedModel.nodeIds, parsedModel.featureIds, parsedModel.thresholds,
+      parsedModel.trueNodeIds, parsedModel.falseNodeIds,
+      parsedModel.numberOfClasses, parsedModel.targetClassTreeId,
+      parsedModel.targetClassNodeId, parsedModel.targetClassIds,
+      parsedModel.targetWeights, parsedModel.numWeights, tbContext.options.batchSize);
+
+  mlir::ModuleOp module = TreeBeard::ConstructLLVMDialectModuleFromForestCreator(context, tbContext, onnxModelConverter);
+  mlir::decisionforest::dumpLLVMIRToFile(module, llvmIRFilePath);
+}
+
 void ConvertXGBoostJSONToLLVMIR(TreebeardContext& tbContext, const std::string& llvmIRFilePath) {
   mlir::MLIRContext context;
   InitializeMLIRContext(context);
@@ -184,13 +207,14 @@ int64_t RunXGBoostInferenceOnCSVInput(const std::string& csvPath, mlir::decision
     }
     inputData.push_back(batch);
   }
-
+#ifdef PROFILE_MODE
   char ch;
   std::cout << "Attach profiler and press any key...";
   std::cin >> ch;
-
+#endif // PROFILE_MODE
   constexpr int32_t NUM_RUNS=1000;
   std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+
   for (int32_t trial=0 ; trial<NUM_RUNS ; ++trial) {
     for(auto& batch : inputData) {
       assert (batch.size() % batchSize == 0);
@@ -199,14 +223,16 @@ int64_t RunXGBoostInferenceOnCSVInput(const std::string& csvPath, mlir::decision
     }
   }
   std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-
+  
+#ifdef PROFILE_MODE  
   std::cout << "Detach profiler and press any key...";
   std::cin >> ch;
+#endif // PROFILE_MODE
 
   return std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count();
 }
 
-void RunInferenceUsingSO(const std::string&modelJsonPath, const std::string& soPath, const std::string& modelGlobalsJSONPath, 
+void RunInferenceUsingSO(const std::string& soPath, const std::string& modelGlobalsJSONPath, 
                          const std::string& csvPath, const CompilerOptions& options) {
   auto serializer = mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);
   mlir::decisionforest::SharedObjectInferenceRunner inferenceRunner(serializer, soPath, options.tileSize, options.thresholdTypeWidth, options.featureIndexTypeWidth);

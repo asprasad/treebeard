@@ -7,6 +7,7 @@ XGBoostTests.cpp
 XGBoostBenchmarks.cpp
 StatsTests.cpp
 XGBoostProbTiling.cpp
+ONNXTests.cpp
 GPUTests.cpp)
 
 target_sources(treebeard-runtime 

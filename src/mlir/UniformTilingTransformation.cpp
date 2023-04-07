@@ -79,7 +79,7 @@ struct TileEnsembleAttribute : public RewritePattern {
     return mlir::success();
   }
 
-  void DoTileTraversalForNode(const std::vector<decisionforest::DecisionTree<>::Node>& nodes, 
+  void DoTileTraversalForNode(const std::vector<decisionforest::DecisionTree::Node>& nodes, 
                               int32_t currentNode, int32_t tileID, std::vector<int32_t>& tileIDs) const {
     std::queue<int32_t> nodeQ;
     nodeQ.push(currentNode);
@@ -90,17 +90,17 @@ struct TileEnsembleAttribute : public RewritePattern {
       ++numNodes;
       tileIDs.at(node) = tileID;
       auto leftChild = nodes.at(node).leftChild;
-      if (leftChild != decisionforest::DecisionTree<>::INVALID_NODE_INDEX && !nodes.at(leftChild).IsLeaf())
+      if (leftChild != decisionforest::DecisionTree::INVALID_NODE_INDEX && !nodes.at(leftChild).IsLeaf())
         nodeQ.push(leftChild);
       auto rightChild = nodes.at(node).rightChild;
-      if (rightChild != decisionforest::DecisionTree<>::INVALID_NODE_INDEX && !nodes.at(rightChild).IsLeaf())
+      if (rightChild != decisionforest::DecisionTree::INVALID_NODE_INDEX && !nodes.at(rightChild).IsLeaf())
         nodeQ.push(rightChild);
     }
   }
 
-  void ConstructTileIDVector(const std::vector<decisionforest::DecisionTree<>::Node>& nodes,
+  void ConstructTileIDVector(const std::vector<decisionforest::DecisionTree::Node>& nodes,
                              int32_t currentNode, int32_t& tileID, std::vector<int32_t>& tileIDs) const {
-    if (currentNode == decisionforest::DecisionTree<>::INVALID_NODE_INDEX)
+    if (currentNode == decisionforest::DecisionTree::INVALID_NODE_INDEX)
       return;
     if (tileIDs.at(currentNode) == -1) {
       DoTileTraversalForNode(nodes, currentNode, tileID, tileIDs);
@@ -110,7 +110,7 @@ struct TileEnsembleAttribute : public RewritePattern {
     ConstructTileIDVector(nodes, nodes.at(currentNode).rightChild, tileID, tileIDs);
   }
 
-  void TileSingleDecisionTree(decisionforest::DecisionTree<>& tree) const {
+  void TileSingleDecisionTree(decisionforest::DecisionTree& tree) const {
     const auto& nodes = tree.GetNodes();
     std::vector<int32_t> tileIDs(nodes.size(), -1);
     int32_t tileID = 0;

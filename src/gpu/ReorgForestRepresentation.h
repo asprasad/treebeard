@@ -33,7 +33,7 @@ protected:
   Memref<int32_t, 1> m_featureIndexMemref;
   Memref<int8_t, 1> m_classIDMemref;
 
-  void WriteSingleTreeIntoReorgBuffer(mlir::decisionforest::DecisionForest<>& forest, int32_t treeIndex);
+  void WriteSingleTreeIntoReorgBuffer(mlir::decisionforest::DecisionForest& forest, int32_t treeIndex);
   void WriteJSONFile();
   
   template<typename VectorElemType, typename MemrefElemType>
@@ -46,7 +46,7 @@ protected:
 public:
   ReorgForestSerializer(const std::string& jsonFilename);
   ~ReorgForestSerializer() {}
-  void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
+  void Persist(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
   void ReadData() override;
   void CleanupBuffers() override;
   

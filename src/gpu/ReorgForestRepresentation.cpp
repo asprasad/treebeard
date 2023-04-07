@@ -135,7 +135,7 @@ ReorgForestSerializer::ReorgForestSerializer(const std::string& filename)
   :IModelSerializer(filename)
 { }
 
-int32_t ComputeBufferSize(decisionforest::DecisionForest<>& forest) {
+int32_t ComputeBufferSize(decisionforest::DecisionForest& forest) {
   int32_t maxDepth = -1;
   for (auto &tree: forest.GetTrees()) {
     auto depth = tree->GetTreeDepth();
@@ -145,7 +145,7 @@ int32_t ComputeBufferSize(decisionforest::DecisionForest<>& forest) {
   return static_cast<int32_t>(forest.NumTrees()) * (std::pow(2, maxDepth) - 1);
 }
 
-void ReorgForestSerializer::WriteSingleTreeIntoReorgBuffer(mlir::decisionforest::DecisionForest<>& forest, int32_t treeIndex) {
+void ReorgForestSerializer::WriteSingleTreeIntoReorgBuffer(mlir::decisionforest::DecisionForest& forest, int32_t treeIndex) {
   auto& tree = forest.GetTree(treeIndex);
   auto thresholds = tree.GetThresholdArray();
   auto featureIndices = tree.GetFeatureIndexArray();
@@ -203,7 +203,7 @@ void ReorgForestSerializer::WriteJSONFile() {
   fout.close();
 }
 
-void ReorgForestSerializer::Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) {
+void ReorgForestSerializer::Persist(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType) {
   m_numberOfTrees = forestType.getNumberOfTrees();
   m_numberOfClasses = forest.IsMultiClassClassifier() ? forest.GetNumClasses() : 1;
   m_rowSize = forestType.getRowType().cast<MemRefType>().getShape()[0];
@@ -323,7 +323,7 @@ mlir::LogicalResult ReorgForestRepresentation::GenerateModelGlobals(Operation *o
   assert (func);
 
   mlir::decisionforest::DecisionForestAttribute forestAttribute = ensembleConstOp.getForest();
-  mlir::decisionforest::DecisionForest<>& forest = forestAttribute.GetDecisionForest();
+  mlir::decisionforest::DecisionForest& forest = forestAttribute.GetDecisionForest();
   auto forestType = ensembleConstOp.getResult().getType().cast<decisionforest::TreeEnsembleType>();
   assert (forestType.doAllTreesHaveSameTileSize()); // There is still an assumption here that all trees have the same tile size
   auto treeType = forestType.getTreeType(0).cast<decisionforest::TreeType>();

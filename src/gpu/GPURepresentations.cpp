@@ -206,7 +206,7 @@ mlir::LogicalResult GPUArrayBasedRepresentation::GenerateModelGlobals(Operation 
   assert (func);
 
   mlir::decisionforest::DecisionForestAttribute forestAttribute = ensembleConstOp.getForest();
-  mlir::decisionforest::DecisionForest<>& forest = forestAttribute.GetDecisionForest();
+  mlir::decisionforest::DecisionForest& forest = forestAttribute.GetDecisionForest();
   auto forestType = ensembleConstOp.getResult().getType().cast<decisionforest::TreeEnsembleType>();
   assert (forestType.doAllTreesHaveSameTileSize()); // There is still an assumption here that all trees have the same tile size
   auto treeType = forestType.getTreeType(0).cast<decisionforest::TreeType>();
@@ -524,7 +524,7 @@ mlir::LogicalResult GPUSparseRepresentation::GenerateModelGlobals(Operation *op,
   assert (func);
 
   mlir::decisionforest::DecisionForestAttribute forestAttribute = ensembleConstOp.getForest();
-  mlir::decisionforest::DecisionForest<>& forest = forestAttribute.GetDecisionForest();
+  mlir::decisionforest::DecisionForest& forest = forestAttribute.GetDecisionForest();
   auto forestType = ensembleConstOp.getResult().getType().cast<decisionforest::TreeEnsembleType>();
   assert (forestType.doAllTreesHaveSameTileSize()); // There is still an assumption here that all trees have the same tile size
   auto treeType = forestType.getTreeType(0).cast<decisionforest::TreeType>();

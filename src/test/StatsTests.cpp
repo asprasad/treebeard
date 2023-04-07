@@ -30,11 +30,11 @@ namespace TreeBeard
 namespace test
 {
 
-decisionforest::DecisionForest<> ConstructForestAndRunInference(const std::string& modelJSONPath, const std::string& csvPath, int32_t numRows) {
+decisionforest::DecisionForest ConstructForestAndRunInference(const std::string& modelJSONPath, const std::string& csvPath, int32_t numRows) {
   // std::string csvPath = "/home/ashwin/ML/scikit-learn_bench/xgb_models/airline_xgb_model_save.json.test.csv";
   mlir::MLIRContext context;
   TreeBeard::XGBoostJSONParser<> xgBoostParser(context, modelJSONPath, decisionforest::ConstructModelSerializer(""), 1);
-  xgBoostParser.Parse();
+  xgBoostParser.ConstructForest();
   auto decisionForest = xgBoostParser.GetForest();
 
   TreeBeard::test::TestCSVReader csvReader(csvPath);
@@ -53,7 +53,7 @@ bool Test_XGBoostModel_StatGenerationAndReading(const std::string& modelJSON, co
 
   mlir::MLIRContext context;
   TreeBeard::XGBoostJSONParser<> xgBoostParser(context, modelJSON, decisionforest::ConstructModelSerializer(""), 1);
-  xgBoostParser.Parse();
+  xgBoostParser.ConstructForest();
   auto decisionForest = xgBoostParser.GetForest();
 
   TreeBeard::Profile::ReadProbabilityProfile(*decisionForest, statsCSV);

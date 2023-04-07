@@ -312,7 +312,7 @@ ArrayBasedRepresentation::GlobalMemrefTypes ArrayBasedRepresentation::AddGlobalM
   const std::string& treeInfo,
   std::shared_ptr<decisionforest::IModelSerializer> serializer) {
   mlir::decisionforest::DecisionForestAttribute forestAttribute = ensembleConstOp.getForest();
-  mlir::decisionforest::DecisionForest<>& forest = forestAttribute.GetDecisionForest();
+  mlir::decisionforest::DecisionForest& forest = forestAttribute.GetDecisionForest();
 
   SaveAndRestoreInsertionPoint saveAndRestoreInsertPoint(rewriter);
   rewriter.setInsertionPoint(&module.front());
@@ -659,7 +659,7 @@ std::tuple<Type, Type, Type, Type> SparseRepresentation::AddGlobalMemrefs(mlir::
                                         const std::string& leavesOffsetMemrefName, const std::string& treeInfo,
                                         std::shared_ptr<IModelSerializer> serializer) {
   mlir::decisionforest::DecisionForestAttribute forestAttribute = ensembleConstOp.getForest();
-  mlir::decisionforest::DecisionForest<>& forest = forestAttribute.GetDecisionForest();
+  mlir::decisionforest::DecisionForest& forest = forestAttribute.GetDecisionForest();
 
   SaveAndRestoreInsertionPoint saveAndRestoreInsertPoint(rewriter);
   rewriter.setInsertionPoint(&module.front());

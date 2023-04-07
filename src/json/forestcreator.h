@@ -1,6 +1,7 @@
 #ifndef _MODEL_JSON_PARSER_H_
 #define _MODEL_JSON_PARSER_H_
 
+#include <cstdint>
 #include <string>
 #include <vector>
 #include "json.hpp"
@@ -62,6 +63,37 @@ inline mlir::Type GetMLIRType(const double& val, mlir::OpBuilder& builder) {
     return builder.getF64Type();
 }
 
+template<typename T>
+mlir::Type GetMLIRType(const T& val, mlir::MLIRContext& context) {
+    assert (false);
+    return mlir::Type();
+}
+
+template<>
+inline mlir::Type GetMLIRType(const int8_t& val, mlir::MLIRContext& context) {
+    return mlir::IntegerType::get(&context, 8);
+}
+
+template<>
+inline mlir::Type GetMLIRType(const int16_t& val, mlir::MLIRContext& context) {
+    return mlir::IntegerType::get(&context, 16);
+}
+
+template<>
+inline mlir::Type GetMLIRType(const int32_t& val, mlir::MLIRContext& context) {
+    return mlir::IntegerType::get(&context, 32);
+}
+
+template<>
+inline mlir::Type GetMLIRType(const float& val, mlir::MLIRContext& context) {
+    return mlir::Float32Type::get(&context);
+}
+
+template<>
+inline mlir::Type GetMLIRType(const double& val, mlir::MLIRContext& context) {
+    return mlir::Float64Type::get(&context);
+}
+
 inline mlir::Type GetMLIRTypeFromString(const std::string& typestr, mlir::OpBuilder& builder)
 {
     if (typestr == "float")
@@ -71,14 +103,12 @@ inline mlir::Type GetMLIRTypeFromString(const std::string& typestr, mlir::OpBuil
     return mlir::Type();
 }
 
-template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType, typename InputElementType>
-class ModelJSONParser
+class ForestCreator
 {
 protected:
-    using DecisionForestType = mlir::decisionforest::DecisionForest<>; //<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>;
-    using DecisionTreeType = typename DecisionForestType::DecisionTreeType;
+    using DecisionForestType = mlir::decisionforest::DecisionForest;
+    using DecisionTreeType = mlir::decisionforest::DecisionTree;
 
-    std::string m_jsonFilePath;
     std::string m_statsProfileCSV;
     DecisionForestType *m_forest;
     DecisionTreeType *m_currentTree;
@@ -88,7 +118,12 @@ protected:
     mlir::OpBuilder m_builder;
     int32_t m_batchSize;
     int32_t m_childIndexBitWidth;
-    
+    mlir::Type m_thresholdType;
+    mlir::Type m_featureIndexType;
+    mlir::Type m_nodeIndexType;
+    mlir::Type m_returnType;
+    mlir::Type m_inputElementType;
+
     std::shared_ptr<mlir::decisionforest::IModelSerializer> m_serializer;
 
     void SetReductionType(mlir::decisionforest::ReductionType reductionType) { m_forest->SetReductionType(reductionType); }
@@ -96,42 +131,38 @@ protected:
     void NewTree() { m_currentTree = &(m_forest->NewTree()); }
     void EndTree() { m_currentTree = nullptr; }
     void SetTreeNumberOfFeatures(size_t numFeatures) { m_currentTree->SetNumberOfFeatures(numFeatures); }
-    void SetTreeScalingFactor(ThresholdType scale) { m_currentTree->SetTreeScalingFactor(scale); }
-    void SetTreeClassId(int32_t classId) { 
+    void SetTreeScalingFactor(double scale) { m_currentTree->SetTreeScalingFactor(scale); }
+    void SetTreeClassId(int32_t classId) {
         if (m_forest->IsMultiClassClassifier())
             assert(classId < m_forest->GetNumClasses() && "ClassId should be lesser than number of classes for multi-class classifiers.");
-        
+
         m_currentTree->SetClassId(classId);
     }
-    void SetInitialOffset(ReturnType val) { m_forest->SetInitialOffset(val); } 
+    void SetInitialOffset(double val) { m_forest->SetInitialOffset(val); }
     void SetNumberOfClasses(int32_t numClasses) { m_forest->SetNumClasses(numClasses); }
-    
+
     // Create a new node in the current tree
-    NodeIndexType NewNode(ThresholdType threshold, FeatureIndexType featureIndex) { return m_currentTree->NewNode(threshold, featureIndex); }
+    int64_t NewNode(double threshold, int64_t featureIndex) { return m_currentTree->NewNode(threshold, featureIndex); }
     // Set the parent of a node
-    void SetNodeParent(NodeIndexType node, NodeIndexType parent) { m_currentTree->SetNodeParent(node, parent); }
+    void SetNodeParent(int64_t node, int64_t parent) { m_currentTree->SetNodeParent(node, parent); }
     // Set right child of a node
-    void SetNodeRightChild(NodeIndexType node, NodeIndexType child) { m_currentTree->SetNodeRightChild(node, child); }
+    void SetNodeRightChild(int64_t node, int64_t child) { m_currentTree->SetNodeRightChild(node, child); }
     // Set left child of a node
-    void SetNodeLeftChild(NodeIndexType node, NodeIndexType child) { m_currentTree->SetNodeLeftChild(node, child); }
+    void SetNodeLeftChild(int64_t node, int64_t child) { m_currentTree->SetNodeLeftChild(node, child); }
     mlir::Type GetInputRowType() {
         const auto& features = m_forest->GetFeatures();
-        mlir::Type elementType = GetMLIRType(InputElementType(), m_builder); // GetMLIRTypeFromString(features.front().type, m_builder);
         int64_t shape[] = { static_cast<int64_t>(features.size()) };
-        return mlir::MemRefType::get(shape, elementType);
+        return mlir::MemRefType::get(shape, m_inputElementType);
     }
     mlir::Type GetFunctionArgumentType() {
         const auto& features = m_forest->GetFeatures();
-        mlir::Type elementType = GetMLIRType(InputElementType(), m_builder); //GetMLIRTypeFromString(features.front().type, m_builder);
         int64_t shape[] = { m_batchSize, static_cast<int64_t>(features.size())};
         // TODO This needs to be moved elsewhere. Seems too obscure a place for this!
-        m_serializer->SetRowSize(features.size());
-        // auto affineMap = mlir::makeStridedLinearLayoutMap(mlir::ArrayRef<int64_t>({ static_cast<int64_t>(features.size()), 1 }), 0, elementType.getContext());
-        // return mlir::MemRefType::get(shape, elementType, affineMap);
-        return mlir::MemRefType::get(shape, elementType);
+            m_serializer->SetRowSize(features.size());
+        return mlir::MemRefType::get(shape, m_inputElementType);
     }
     mlir::Type GetFunctionResultType() {
-        return mlir::MemRefType::get(m_batchSize, GetMLIRType(ReturnType(), m_builder));
+        return mlir::MemRefType::get(m_batchSize, m_returnType);
     }
     mlir::FunctionType GetFunctionType() {
         auto argType = GetFunctionArgumentType();
@@ -147,16 +178,18 @@ protected:
         predictionFunction.setPublic();
         return predictionFunction;
     }
+
     virtual mlir::decisionforest::TreeEnsembleType GetEnsembleType() {
         // All trees have the default tiling to start with.
         int32_t tileSize = 1;
-        auto treeType = mlir::decisionforest::TreeType::get(GetMLIRType(ReturnType(), m_builder), tileSize, 
-                                                            GetMLIRType(ThresholdType(), m_builder), 
-                                                            GetMLIRType(FeatureIndexType(), m_builder), GetMLIRType(int32_t(), m_builder),
+        auto treeType = mlir::decisionforest::TreeType::get(m_returnType, tileSize,
+                                                            m_thresholdType,
+                                                            m_featureIndexType,
+                                                            GetMLIRType(int32_t(), m_builder),
                                                             m_builder.getIntegerType(m_childIndexBitWidth));
 
-        auto forestType = mlir::decisionforest::TreeEnsembleType::get(GetMLIRType(ReturnType(), m_builder),
-                                                                      m_forest->NumTrees(), GetInputRowType(), 
+        auto forestType = mlir::decisionforest::TreeEnsembleType::get(m_returnType,
+                                                                      m_forest->NumTrees(), GetInputRowType(),
                                                                       mlir::decisionforest::ReductionType::kAdd, treeType);
         return forestType;
     }
@@ -165,38 +198,61 @@ public:
         return jsonFilePath + ".treebeard-globals.json";
     }
 
-    ModelJSONParser(const std::string& jsonFilePath, 
-                    std::shared_ptr<mlir::decisionforest::IModelSerializer> serializer,
-                    mlir::MLIRContext& context, 
+    ForestCreator(std::shared_ptr<mlir::decisionforest::IModelSerializer> serializer,
+                    mlir::MLIRContext& context,
                     int32_t batchSize,
                     double_t initialValue,
-                    const std::string& statsProfileCSV)
-        : m_jsonFilePath(jsonFilePath),
-          m_statsProfileCSV(statsProfileCSV), m_forest(new DecisionForestType(initialValue)), 
-          m_currentTree(nullptr), m_schedule(nullptr), m_context(context), m_builder(&context),
-          m_batchSize(batchSize), m_childIndexBitWidth(1), m_serializer(serializer) 
+                    const std::string& statsProfileCSV,
+                    mlir::Type thresholdType,
+                    mlir::Type featureIndexType,
+                    mlir::Type nodeIndexType,
+                    mlir::Type returnType,
+                    mlir::Type inputElementType)
+        : m_statsProfileCSV(statsProfileCSV),
+        m_forest(new DecisionForestType(initialValue)),
+        m_currentTree(nullptr),
+        m_schedule(nullptr),
+        m_context(context),
+        m_builder(&context),
+        m_batchSize(batchSize),
+        m_childIndexBitWidth(1),
+        m_thresholdType(thresholdType),
+        m_featureIndexType(featureIndexType),
+        m_nodeIndexType(nodeIndexType),
+        m_returnType(returnType),
+        m_inputElementType(inputElementType),
+        m_serializer(std::move(serializer))
     {
         m_module = mlir::ModuleOp::create(m_builder.getUnknownLoc(), llvm::StringRef("MyModule"));
         m_serializer->SetBatchSize(batchSize);
-        m_serializer->SetInputTypeBitWidth(sizeof(InputElementType)*8);
-        m_serializer->SetReturnTypeBitWidth(sizeof(ReturnType)*8);
+        m_serializer->SetInputTypeBitWidth(m_inputElementType.getIntOrFloatBitWidth());
+        m_serializer->SetReturnTypeBitWidth(m_returnType.getIntOrFloatBitWidth());
     }
 
-    ModelJSONParser(const std::string& jsonFilePath, 
-                    std::shared_ptr<mlir::decisionforest::IModelSerializer> serializer,
-                    mlir::MLIRContext& context, 
+    ForestCreator(const std::shared_ptr<mlir::decisionforest::IModelSerializer>& serializer,
+                    mlir::MLIRContext& context,
                     int32_t batchSize,
-                    double_t initialValue)
-        : ModelJSONParser(jsonFilePath, serializer, context, batchSize, initialValue, "")
+                    double_t initialValue,
+                    mlir::Type thresholdType,
+                    mlir::Type featureIndexType,
+                    mlir::Type nodeIndexType,
+                    mlir::Type returnType,
+                    mlir::Type inputElementType)
+        : ForestCreator(serializer, context, batchSize, initialValue, "", thresholdType, featureIndexType, nodeIndexType, returnType, inputElementType)
     { }
 
+    ForestCreator(
+        const std::shared_ptr<mlir::decisionforest::IModelSerializer>& serializer,
+        mlir::MLIRContext &context,
+        int32_t batchSize,
+        mlir::Type thresholdType,
+        mlir::Type featureIndexType,
+        mlir::Type nodeIndexType,
+        mlir::Type returnType,
+        mlir::Type inputElementType)
+        : ForestCreator(serializer, context, batchSize, 0.0, "", thresholdType, featureIndexType, nodeIndexType, returnType, inputElementType) {}
 
-    ModelJSONParser(const std::string& jsonFilePath, std::shared_ptr<mlir::decisionforest::IModelSerializer> serializer, mlir::MLIRContext& context, int32_t batchSize)
-        : ModelJSONParser(jsonFilePath, serializer, context, batchSize, 0.0, "")
-    {
-    }
-    
-    virtual ~ModelJSONParser() {
+    virtual ~ForestCreator() {
         delete m_schedule;
         delete m_forest;
     }
@@ -204,15 +260,15 @@ public:
     mlir::decisionforest::Schedule* GetSchedule() { return m_schedule; }
     const std::string& GetModelGlobalsJSONFilePath() { return m_serializer->GetFilePath(); }
 
-    virtual void Parse() = 0;
+    virtual void ConstructForest() = 0;
 
     // Get the forest pointer
     DecisionForestType* GetForest() { return m_forest; }
 
-    mlir::ModuleOp GetEvaluationFunction() { 
+    mlir::ModuleOp GetEvaluationFunction() {
         if (m_statsProfileCSV != "")
             TreeBeard::Profile::ReadProbabilityProfile(*m_forest, m_statsProfileCSV);
-        
+
         mlir::func::FuncOp function(GetFunctionPrototype());
         if (!function)
             return nullptr;
@@ -224,11 +280,11 @@ public:
 
         auto forestType = GetEnsembleType();
         auto forestAttribute = mlir::decisionforest::DecisionForestAttribute::get(forestType, *m_forest);
-        
+
         auto scheduleType = mlir::decisionforest::ScheduleType::get(&m_context);
         m_schedule = new mlir::decisionforest::Schedule(m_batchSize, m_forest->NumTrees());
         auto scheduleAttribute = mlir::decisionforest::ScheduleAttribute::get(scheduleType, m_schedule);
-        
+
         auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(
             m_builder.getUnknownLoc(),
             GetFunctionResultType(),

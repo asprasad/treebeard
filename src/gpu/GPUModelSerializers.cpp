@@ -261,14 +261,14 @@ void GPUArraySparseSerializerBase::SetReturnTypeBitWidth(int32_t value){
 // Persistence Helper Methods
 // ===---------------------------------------------------=== //
 
-void PersistDecisionForestArrayBased(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType);
-void PersistDecisionForestSparse(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType);
+void PersistDecisionForestArrayBased(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType);
+void PersistDecisionForestSparse(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType);
 
 // ===---------------------------------------------------=== //
 // GPUSparseRepresentationSerializer Methods
 // ===---------------------------------------------------=== //
 
-void GPUSparseRepresentationSerializer::Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) {
+void GPUSparseRepresentationSerializer::Persist(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType) {
     mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_filepath);
     mlir::decisionforest::ForestJSONReader::GetInstance().SetBatchSize(m_batchSize);
     mlir::decisionforest::ForestJSONReader::GetInstance().SetRowSize(m_rowSize);
@@ -299,7 +299,7 @@ REGISTER_SERIALIZER(gpu_sparse, ConstructGPUSparseRepresentation)
 // GPUArrayRepresentationSerializer Methods
 // ===---------------------------------------------------=== //
 
-void GPUArrayRepresentationSerializer::Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) {
+void GPUArrayRepresentationSerializer::Persist(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType) {
     mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_filepath);
     mlir::decisionforest::ForestJSONReader::GetInstance().SetBatchSize(m_batchSize);
     mlir::decisionforest::ForestJSONReader::GetInstance().SetRowSize(m_rowSize);

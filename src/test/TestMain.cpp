@@ -423,6 +423,9 @@ bool Test_PeeledHybridProbabilisticTiling_TileSize8_Epsilon(TestArgs_t &args);
 bool Test_PeeledHybridProbabilisticTiling_TileSize8_Higgs(TestArgs_t &args);
 bool Test_PeeledHybridProbabilisticTiling_TileSize8_Year(TestArgs_t &args);
 
+// ONNXTests
+bool Test_ONNX_TileSize8_Abalone(TestArgs_t &args);
+
 // GPU model initialization tests
 bool Test_GPUModelInit_LeftHeavy_Scalar_DoubleInt(TestArgs_t& args);
 bool Test_GPUModelInit_RightHeavy_Scalar_DoubleInt(TestArgs_t& args);
@@ -491,7 +494,7 @@ bool Test_BufferInit_RightHeavy(TestArgs_t& args) {
   using TileType = NumericalTileType_Packed<ThresholdType, IndexType>;
   auto& context = args.context;
   mlir::OpBuilder builder(&context);
-  mlir::decisionforest::DecisionForest<> forest;
+  mlir::decisionforest::DecisionForest forest;
   auto expectedArray = AddRightHeavyTree<TileType>(forest);
 
   // Construct basic tree types for the tree
@@ -557,7 +560,7 @@ bool Test_BufferInitialization_TwoTrees(TestArgs_t& args) {
   using TileType = NumericalTileType_Packed<ThresholdType, IndexType>;
   auto& context = args.context;
   mlir::OpBuilder builder(&context);
-  mlir::decisionforest::DecisionForest<> forest;
+  mlir::decisionforest::DecisionForest forest;
   auto expectedArray = AddRightHeavyTree<TileType>(forest);
   auto expectedArray2 = AddLeftHeavyTree<TileType>(forest);
   expectedArray.insert(std::end(expectedArray), std::begin(expectedArray2), std::end(expectedArray2));
@@ -602,7 +605,7 @@ bool Test_BufferInitialization_TwoTrees(TestArgs_t& args) {
 bool Test_BufferInitializationWithOneTree_LeftHeavy(TestArgs_t& args) {
   using DoubleInt32Tile = NumericalTileType_Packed<double, int32_t>;
   mlir::MLIRContext& context = args.context;
-  mlir::decisionforest::DecisionForest<> forest;
+  mlir::decisionforest::DecisionForest forest;
   auto expectedArray = AddLeftHeavyTree<DoubleInt32Tile>(forest);  
 
   // Construct basic tree types for the tree
@@ -665,15 +668,11 @@ bool Test_BufferInitializationWithTwoTrees_FloatInt8(TestArgs_t& args) {
 // IR Tests
 bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestConstructor, std::vector< std::vector<double> >& inputData,
                                    int32_t childIndexBitWidth=1, ScheduleManipulator_t scheduleManipulator=nullptr) {
-  auto modelGlobalsJSONPath = TreeBeard::ModelJSONParser<double,
-                                                         double,
-                                                         int32_t,
-                                                         int32_t,
-                                                         double>::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
+  auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
   auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);
 
   FixedTreeIRConstructor<> irConstructor(args.context, serializer, 1, forestConstructor);
-  irConstructor.Parse();
+  irConstructor.ConstructForest();
   // If sparse representation is turned on, then child index bit width should be passed
   assert (!mlir::decisionforest::UseSparseTreeRepresentation || childIndexBitWidth!=1 );
   irConstructor.SetChildIndexBitWidth(childIndexBitWidth);
@@ -715,14 +714,10 @@ bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
 bool Test_ForestCodeGen_VariableBatchSize(TestArgs_t& args, ForestConstructor_t forestConstructor, 
                                           int64_t batchSize, std::vector< std::vector<double> >& inputData, int32_t childIndexBitWidth=1,
                                           ScheduleManipulator_t scheduleManipulator=nullptr) {
-  auto modelGlobalsJSONPath = TreeBeard::ModelJSONParser<double,
-                                                         double,
-                                                         int32_t,
-                                                         int32_t,
-                                                         double>::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
+  auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
   auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);                                            
   FixedTreeIRConstructor<> irConstructor(args.context, serializer, batchSize, forestConstructor);
-  irConstructor.Parse();
+  irConstructor.ConstructForest();
   irConstructor.SetChildIndexBitWidth(childIndexBitWidth);
   auto module = irConstructor.GetEvaluationFunction();
 
@@ -878,7 +873,7 @@ bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t fore
   using VectorTileType = NumericalVectorTileType_Packed<ThresholdType, IndexType, 3>;
   auto& context = args.context;
   mlir::OpBuilder builder(&context);
-  mlir::decisionforest::DecisionForest<> forest;
+  mlir::decisionforest::DecisionForest forest;
   forestConstructor(forest);
 
   // Construct basic tree types for the tree
@@ -961,7 +956,7 @@ bool CheckAllLeavesAreAtSameDepth(mlir::decisionforest::TiledTree* tiledTree) {
       continue;
     auto tilePtr = &tile;
     int32_t leafDepth = 1;
-    while (tilePtr->GetParent() != decisionforest::DecisionTree<>::INVALID_NODE_INDEX) {
+    while (tilePtr->GetParent() != decisionforest::DecisionTree::INVALID_NODE_INDEX) {
       tilePtr = &(tiledTree->GetTile(tilePtr->GetParent()));
       ++leafDepth;
     }
@@ -971,7 +966,7 @@ bool CheckAllLeavesAreAtSameDepth(mlir::decisionforest::TiledTree* tiledTree) {
 }
 
 bool Test_PadTiledTree_BalancedTree_TileSize2(TestArgs_t& args) {
-  decisionforest::DecisionTree<> decisionTree;
+  decisionforest::DecisionTree decisionTree;
   InitializeBalancedTree(decisionTree);
   std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 5, 3, 4 };
   
@@ -986,7 +981,7 @@ bool Test_PadTiledTree_BalancedTree_TileSize2(TestArgs_t& args) {
 }
 
 bool Test_PadTiledTree_BalancedTree_TileSize2_2(TestArgs_t& args) {
-  decisionforest::DecisionTree<> decisionTree;
+  decisionforest::DecisionTree decisionTree;
   InitializeBalancedTree(decisionTree);
   std::vector<int32_t> tileIDs = { 0, 5, 1, 2, 0, 3, 4 };
   
@@ -1001,7 +996,7 @@ bool Test_PadTiledTree_BalancedTree_TileSize2_2(TestArgs_t& args) {
 }
 
 bool Test_PadTiledTree_BalancedTree_TileSize3(TestArgs_t& args) {
-  decisionforest::DecisionTree<> decisionTree;
+  decisionforest::DecisionTree decisionTree;
   InitializeBalancedTree(decisionTree);
   std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 0, 3, 4 };
   
@@ -1039,6 +1034,7 @@ bool Test_SplitSchedule(TestArgs_t& args) {
 
 #ifdef RUN_ALL_TESTS
 TestDescriptor testList[] = {
+  TEST_LIST_ENTRY(Test_ONNX_TileSize8_Abalone),
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy),
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Int16),
   TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Int8),

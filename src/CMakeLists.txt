@@ -1,6 +1,6 @@
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
-set(LIBS
+set(TREEBEARD_DEPENDENCY_LIBS
         #${dialect_libs}
         ${conversion_libs}
         #MLIROptLib
@@ -27,13 +27,13 @@ add_llvm_executable(treebeard
 add_dependencies(treebeard DecisionForestGen)
 
 llvm_update_compile_flags(treebeard)
-target_link_libraries(treebeard PRIVATE ${LIBS})
 add_definitions(-DTREEBEARD_SRC_DIR="${CMAKE_SOURCE_DIR}")
 add_definitions(-DLLVM_LIB_DIR="${LLVM_BUILD_DIRECTORY}")
 mlir_check_all_link_libraries(treebeard)
 
 add_subdirectory(runtime)
 add_subdirectory(include)
+add_subdirectory(json)
 add_subdirectory(test)
 add_subdirectory(mlir)
 add_subdirectory(utils)
@@ -48,3 +48,5 @@ include_directories(test)
 include_directories(utils)
 include_directories(schedule)
 include_directories(gpu)
+
+target_link_libraries(treebeard PRIVATE ${TREEBEARD_DEPENDENCY_LIBS})

@@ -44,7 +44,7 @@
                     - row size
                     - 
                 - Uses of the class
-                    - ModelJSONParser
+                    - ForestCreator
                     - InferenceRunner
         - [Done] How do we construct the right serializer? Should we have a global map?
     

@@ -94,7 +94,7 @@ void ForestJSONReader::ParseSingleTileSizeEntry(json& tileSizeEntryJSON, ForestJ
 
 void ForestJSONReader::ParseJSONFile() {
     ClearAllData();
-    assert (m_jsonFilePath != "");
+    assert (!m_jsonFilePath.empty());
     m_json.clear();
     std::ifstream fin(m_jsonFilePath);
     fin >> m_json;
@@ -590,14 +590,14 @@ int32_t GetTotalNumberOfLeaves() {
 // -----------------------------------------------
 // Methods for class TiledTreeNode
 // -----------------------------------------------
-DecisionTree<>& TiledTreeNode::GetTree() { 
+DecisionTree& TiledTreeNode::GetTree() { 
     return m_tiledTree.m_modifiedTree;
 }
 
 int32_t TiledTreeNode::GetTileDepth() const {
     auto tilePtr = this;
     int32_t tileDepth = 1;
-    while (tilePtr->GetParent() != decisionforest::DecisionTree<>::INVALID_NODE_INDEX) {
+    while (tilePtr->GetParent() != decisionforest::DecisionTree::INVALID_NODE_INDEX) {
         tilePtr = &(m_tiledTree.m_tiles.at(tilePtr->GetParent()));
         ++tileDepth;
     }
@@ -607,14 +607,14 @@ int32_t TiledTreeNode::GetTileDepth() const {
 int32_t TiledTreeNode::GetTileDepth(std::vector<TiledTreeNode>& tiles) const {
     auto tilePtr = this;
     int32_t tileDepth = 1;
-    while (tilePtr->GetParent() != decisionforest::DecisionTree<>::INVALID_NODE_INDEX) {
+    while (tilePtr->GetParent() != decisionforest::DecisionTree::INVALID_NODE_INDEX) {
         tilePtr = &(tiles.at(tilePtr->GetParent()));
         ++tileDepth;
     }
     return tileDepth;
 }
 
-const DecisionTree<>::Node& TiledTreeNode::GetNode(int32_t index) const { 
+const DecisionTree::Node& TiledTreeNode::GetNode(int32_t index) const { 
     return m_tiledTree.m_modifiedTree.GetNodes().at(index);
 }
 
@@ -628,20 +628,20 @@ bool TiledTreeNode::AreNodesInSameTile(int32_t node1, int32_t node2) {
 }
 
 int32_t TiledTreeNode::FindTileEntryNode() {
-    int32_t entryNode = DecisionTree<>::INVALID_NODE_INDEX;
+    int32_t entryNode = DecisionTree::INVALID_NODE_INDEX;
     for (auto nodeIdx : m_nodeIndices) {
         auto& node = GetNode(nodeIdx);
         auto parentIdx = node.parent;
         // Figure out if the parent is in this tile
-        bool isRoot = (parentIdx == DecisionTree<>::INVALID_NODE_INDEX);
+        bool isRoot = (parentIdx == DecisionTree::INVALID_NODE_INDEX);
         bool parentInTile = !isRoot && AreNodesInSameTile(parentIdx, nodeIdx);
         if (!parentInTile) {
-            assert (entryNode == DecisionTree<>::INVALID_NODE_INDEX);
+            assert (entryNode == DecisionTree::INVALID_NODE_INDEX);
             entryNode = nodeIdx;
             // NOT breaking here so we check the rest of the nodes. We should never get back in here.
         }
     }
-    assert (entryNode != DecisionTree<>::INVALID_NODE_INDEX);
+    assert (entryNode != DecisionTree::INVALID_NODE_INDEX);
     return entryNode;
 }
 
@@ -728,7 +728,7 @@ void TiledTreeNode::AddExtraNodesIfNeeded() {
             m_tiledTree.m_modifiedTree.SetNodeLeftChild(candidateIndex, dummyNode);
             
             m_tiledTree.AddNodeToTile(m_tileIndex, dummyNode);
-            const_cast<mlir::decisionforest::DecisionTree<>::Node&>(GetNode(dummyNode)).hitCount = -1;
+            const_cast<mlir::decisionforest::DecisionTree::Node&>(GetNode(dummyNode)).hitCount = -1;
             ++i;
           }
 
@@ -750,7 +750,7 @@ void TiledTreeNode::AddExtraNodesIfNeeded() {
             m_tiledTree.m_modifiedTree.SetNodeRightChild(candidateIndex, dummyNode);
 
             m_tiledTree.AddNodeToTile(m_tileIndex, dummyNode);
-            const_cast<mlir::decisionforest::DecisionTree<>::Node&>(GetNode(dummyNode)).hitCount = -1;
+            const_cast<mlir::decisionforest::DecisionTree::Node&>(GetNode(dummyNode)).hitCount = -1;
             ++i;
           }
           ++candidateIter;
@@ -806,10 +806,10 @@ void TiledTreeNode::GetFeatureIndices(std::vector<int32_t>::iterator beginIter) 
 void TiledTreeNode::ComputeTileShapeString(std::string& str, int32_t tileNodeIndex, int32_t stringIndex) {
     str.at(stringIndex) = '1';
     auto& node = GetNode(tileNodeIndex);
-    if (node.leftChild!=DecisionTree<>::INVALID_NODE_INDEX && AreNodesInSameTile(tileNodeIndex, node.leftChild)) {
+    if (node.leftChild!=DecisionTree::INVALID_NODE_INDEX && AreNodesInSameTile(tileNodeIndex, node.leftChild)) {
         ComputeTileShapeString(str, node.leftChild, 2*stringIndex + 1);
     }
-    if (node.rightChild!=DecisionTree<>::INVALID_NODE_INDEX && AreNodesInSameTile(tileNodeIndex, node.rightChild)) {
+    if (node.rightChild!=DecisionTree::INVALID_NODE_INDEX && AreNodesInSameTile(tileNodeIndex, node.rightChild)) {
         ComputeTileShapeString(str, node.rightChild, 2*stringIndex + 2);
     }
     return;
@@ -836,7 +836,7 @@ void TiledTreeNode::WriteDOTSubGraph(std::ofstream& fout) {
         int64_t parentIndex = node.parent;
         auto& parentNode = GetNode(parentIndex);
         fout << "\t\"node" << nodeIndex << "\" [ label = \"Id:" << nodeIndex << ", Thres:" << node.threshold << ", FeatIdx:" << node.featureIndex << "\"];\n";
-        if (parentIndex != DecisionTree<>::INVALID_NODE_INDEX) {
+        if (parentIndex != DecisionTree::INVALID_NODE_INDEX) {
             std::string edgeColor = parentNode.leftChild == nodeIndex ? "green" : "red";
             if (parentNode.leftChild == parentNode.rightChild)
                 edgeColor = "black";
@@ -850,7 +850,7 @@ void TiledTreeNode::WriteDOTSubGraph(std::ofstream& fout) {
 // Methods for class TiledTree
 // -----------------------------------------------
 
-TiledTree::TiledTree(DecisionTree<>& owningTree)
+TiledTree::TiledTree(DecisionTree& owningTree)
  : m_numberOfDummyTiles(0), m_owningTree(owningTree), m_modifiedTree(owningTree), 
    m_tileShapeToTileIDMap(*TileShapeToTileIDMap::Get(m_owningTree.TilingDescriptor().MaxTileSize())), m_probabilisticallyTiled(false),
    m_levelsToUnroll(-1)
@@ -1024,7 +1024,7 @@ void TiledTree::EmitNodeDOT(std::ofstream& fout, int32_t nodeIndex) {
         << ", Hits:" << node.hitCount
         << ", TileID:" << tileID
         << "\", style=bold, color=" << color << "];\n";
-    if (parentIndex != decisionforest::DecisionTree<>::INVALID_NODE_INDEX) {
+    if (parentIndex != decisionforest::DecisionTree::INVALID_NODE_INDEX) {
         auto& parentNode = m_modifiedTree.GetNodes().at(parentIndex);
         std::string edgeColor = parentNode.leftChild == nodeIndex ? "green" : "red";
         if (parentNode.leftChild == parentNode.rightChild)
@@ -1032,9 +1032,9 @@ void TiledTree::EmitNodeDOT(std::ofstream& fout, int32_t nodeIndex) {
         fout << "\t\"node" << parentIndex << "\" -> \"node" << nodeIndex << "\"[style=bold,color=" << edgeColor << "];\n";
         // fout << "\t\"node" << parentIndex << "\" -> \"node" << nodeIndex << "\";\n";
     }
-    if (node.leftChild != decisionforest::DecisionTree<>::INVALID_NODE_INDEX)
+    if (node.leftChild != decisionforest::DecisionTree::INVALID_NODE_INDEX)
         EmitNodeDOT(fout, node.leftChild);
-    if (node.rightChild != decisionforest::DecisionTree<>::INVALID_NODE_INDEX)
+    if (node.rightChild != decisionforest::DecisionTree::INVALID_NODE_INDEX)
         EmitNodeDOT(fout, node.rightChild);
 }
 
@@ -1129,7 +1129,7 @@ int32_t TiledTree::NumberOfLeafTilesHelper(int32_t tileIndex) {
 int32_t TiledTree::NumberOfLeafTiles() {
     if (m_tiles.size() == 0)
         return 0;
-    assert(m_tiles.at(0).m_parent == DecisionTree<>::INVALID_NODE_INDEX);
+    assert(m_tiles.at(0).m_parent == DecisionTree::INVALID_NODE_INDEX);
     int32_t numLeafTiles = NumberOfLeafTilesHelper(0);
     return numLeafTiles;
 }
@@ -1138,7 +1138,7 @@ bool TiledTree::AreAllSiblingsLeaves(TiledTreeNode& tile, const std::vector<Tile
     if (!tile.IsLeafTile())
         return false;
     auto parentIdx = tile.GetParent();
-    if (parentIdx == DecisionTree<>::INVALID_NODE_INDEX)
+    if (parentIdx == DecisionTree::INVALID_NODE_INDEX)
         return true; // This is the only node in the tree
     auto& parent = tiles.at(parentIdx);
     for (auto childIdx : parent.GetChildren()) {
@@ -1182,7 +1182,7 @@ std::vector<int32_t> TiledTree::GetLeafDepths() {
             continue;
         int32_t depth = 0;
         auto currentTile = &tile;
-        while (currentTile->m_parent != DecisionTree<>::INVALID_NODE_INDEX) {
+        while (currentTile->m_parent != DecisionTree::INVALID_NODE_INDEX) {
             currentTile = &(m_tiles.at(currentTile->m_parent));
             ++depth;
         }
@@ -1339,7 +1339,7 @@ void TiledTree::GetSparseSerialization(std::vector<double>& thresholds, std::vec
 }
 
 bool TiledTree::HasLeafSiblings(TiledTreeNode& tile, std::vector<TiledTreeNode>& sortedTiles) {
-    if (tile.GetParent() == decisionforest::DecisionTree<>::INVALID_NODE_INDEX) {
+    if (tile.GetParent() == decisionforest::DecisionTree::INVALID_NODE_INDEX) {
         // This is the root. So it doesn't have siblings.
         return false;
     }
@@ -1541,7 +1541,7 @@ void TiledTree::IncreaseTileDepth(int32_t leafIndex, int32_t leafDepth, int32_t 
     
     // Replace the leaf tile index with the new tile's index in the parent
     // tiles children vector
-    assert (newTile.m_parent != DecisionTree<>::INVALID_NODE_INDEX);
+    assert (newTile.m_parent != DecisionTree::INVALID_NODE_INDEX);
     auto &parentTile = m_tiles.at(newTile.m_parent);
     auto leafTileChildIter = std::find(parentTile.m_children.begin(), parentTile.m_children.end(), leafIndex);
     assert (leafTileChildIter != parentTile.m_children.end());
@@ -1562,7 +1562,7 @@ void TiledTree::IncreaseTileDepth(int32_t leafIndex, int32_t leafDepth, int32_t 
 
     int32_t tileIndex = 0;
     for (auto& tile : m_tiles) {
-        if (tile.m_parent != DecisionTree<>::INVALID_NODE_INDEX) {
+        if (tile.m_parent != DecisionTree::INVALID_NODE_INDEX) {
             auto& parent = m_tiles.at(tile.m_parent);
             auto childIter = std::find(parent.m_children.begin(), parent.m_children.end(), tileIndex);
             assert (childIter != parent.m_children.end());
@@ -1582,7 +1582,7 @@ void TiledTree::IncreaseTileDepth(int32_t leafIndex, int32_t leafDepth, int32_t 
 void TiledTree::MakeAllLeavesSameDepth() {
     int32_t tileIndex = 0;
     for (auto& tile : m_tiles) {
-        if (tile.m_parent != DecisionTree<>::INVALID_NODE_INDEX) {
+        if (tile.m_parent != DecisionTree::INVALID_NODE_INDEX) {
             auto& parent = m_tiles.at(tile.m_parent);
             auto childIter = std::find(parent.m_children.begin(), parent.m_children.end(), tileIndex);
             assert (childIter != parent.m_children.end());
@@ -1677,7 +1677,7 @@ void TiledTree::AddExtraNodesIfNeeded(int32_t tileIndex) {
             m_modifiedTree.SetNodeLeftChild(candidateIndex, dummyNode);
             
             AddNodeToTile(m_tiles.at(tileIndex).m_tileIndex, dummyNode);
-            const_cast<mlir::decisionforest::DecisionTree<>::Node&>(m_tiles.at(tileIndex).GetNode(dummyNode)).hitCount = -1;
+            const_cast<mlir::decisionforest::DecisionTree::Node&>(m_tiles.at(tileIndex).GetNode(dummyNode)).hitCount = -1;
             ++i;
           }
 
@@ -1709,7 +1709,7 @@ void TiledTree::AddExtraNodesIfNeeded(int32_t tileIndex) {
             m_modifiedTree.SetNodeRightChild(candidateIndex, dummyNode);
 
             AddNodeToTile(m_tiles.at(tileIndex).m_tileIndex, dummyNode);
-            const_cast<mlir::decisionforest::DecisionTree<>::Node&>(m_tiles.at(tileIndex).GetNode(dummyNode)).hitCount = -1;
+            const_cast<mlir::decisionforest::DecisionTree::Node&>(m_tiles.at(tileIndex).GetNode(dummyNode)).hitCount = -1;
             ++i;
           }
           ++candidateIter;
@@ -1887,7 +1887,7 @@ TileShapeToTileIDMap* TileShapeToTileIDMap::Get(int32_t tileSize) {
     return iter->second;
 }
 
-int32_t ConstructTreeForTile(const std::string& tileStr, int32_t root, DecisionTree<>& tree) {
+int32_t ConstructTreeForTile(const std::string& tileStr, int32_t root, DecisionTree& tree) {
     if (root >= static_cast<int32_t>(tileStr.size()))
         return -1;
     if (tileStr.at(root) == '0')
@@ -1907,7 +1907,7 @@ int32_t ConstructTreeForTile(const std::string& tileStr, int32_t root, DecisionT
     return node;
 }
 
-void AddTileChildren(DecisionTree<>& tree, int32_t nodeNumber, int32_t& childNumber) {
+void AddTileChildren(DecisionTree& tree, int32_t nodeNumber, int32_t& childNumber) {
     if (nodeNumber == -1)
         return;
     auto& node = tree.GetNodes().at(nodeNumber);
@@ -1929,7 +1929,7 @@ void AddTileChildren(DecisionTree<>& tree, int32_t nodeNumber, int32_t& childNum
     }
 }
 
-void ComputeLUTHelper(DecisionTree<>& tree, size_t root, std::vector<int32_t>& outcomes, std::map<int32_t, std::vector<int32_t>>& childIndexToOutcomesMap) {
+void ComputeLUTHelper(DecisionTree& tree, size_t root, std::vector<int32_t>& outcomes, std::map<int32_t, std::vector<int32_t>>& childIndexToOutcomesMap) {
     assert(root < tree.GetNodes().size());
     auto& node = tree.GetNodes().at(root);
     if (node.featureIndex >= 0) {
@@ -1978,7 +1978,7 @@ void SetLUTEntries(std::vector<int32_t>& lut, int32_t childIndex, const std::vec
     }
 }
 
-std::vector<int32_t> ComputeLookUpTableForSingleShape(DecisionTree<>& tree, int32_t tileSize) {
+std::vector<int32_t> ComputeLookUpTableForSingleShape(DecisionTree& tree, int32_t tileSize) {
     std::vector<int32_t> outcomes(tileSize, -1);
     std::map<int32_t, std::vector<int32_t>> childIndexToOutcomesMap;
     ComputeLUTHelper(tree, 0, outcomes, childIndexToOutcomesMap);
@@ -2001,7 +2001,7 @@ std::vector<std::vector<int32_t>> TileShapeToTileIDMap::ComputeTileLookUpTable()
             continue;
 
         // First construct a tree that represents the tile
-        DecisionTree<> tree;
+        DecisionTree tree;
         ConstructTreeForTile(mapPair.first, 0, tree);
         
         // TODO make this a method on DecisionTree (can't do it now because level order traversal is not templatized)

@@ -81,7 +81,7 @@ double Test_CodeGenForJSON_ProbabilityBasedTiling(int64_t batchSize, const std::
   if (numberOfCores != -1)
     options.numberOfCores = numberOfCores;
   TreeBeard::InitializeMLIRContext(context);
-  auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, ReturnType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
+  auto modelGlobalsJSONFilePath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
   
   TreeBeard::TreebeardContext tbContext{modelJsonPath, modelGlobalsJSONFilePath, options, 
                                         mlir::decisionforest::ConstructRepresentation(),

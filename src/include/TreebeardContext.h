@@ -39,7 +39,7 @@ public:
     :m_filepath(filepath)
   { }
   virtual ~IModelSerializer() { }
-  virtual void Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType)=0;
+  virtual void Persist(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType)=0;
   virtual void ReadData()=0;
 
   virtual void CallPredictionMethod(void* predictFuncPtr,
@@ -114,7 +114,7 @@ struct CompilerOptions {
 };
 
 struct TreebeardContext {
-  std::string modelJSONPath;
+  std::string modelPath;
   std::string modelGlobalsJSONPath;
   CompilerOptions options;
   std::shared_ptr<mlir::decisionforest::IRepresentation>  representation = nullptr;

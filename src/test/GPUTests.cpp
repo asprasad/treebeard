@@ -5,6 +5,7 @@
 
 #include "TreeTilingUtils.h"
 #include "ExecutionHelpers.h"
+#include "forestcreator.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
@@ -207,16 +208,12 @@ bool CheckGPUModelInitialization_Scalar(TestArgs_t& args, ForestConstructor_t fo
   // initialization. So just hard coding those.
   const int32_t batchSize = 32;
 
-  auto modelGlobalsJSONPath = TreeBeard::ModelJSONParser<ThresholdType,
-                                                         ThresholdType,
-                                                         IndexType,
-                                                         IndexType,
-                                                         ThresholdType>::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
+  auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
   auto serializer = decisionforest::ConstructGPUModelSerializer(modelGlobalsJSONPath);
   
   FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType, ThresholdType> 
                          irConstructor(args.context, serializer, batchSize, forestConstructor);
-  irConstructor.Parse();
+  irConstructor.ConstructForest();
   irConstructor.SetChildIndexBitWidth(1);
   auto module = irConstructor.GetEvaluationFunction();
 
@@ -354,7 +351,7 @@ bool Test_GPUCodeGeneration_Scalar_VariableBatchSize_AnyRep(TestArgs_t& args,
                                                     
   FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType, ThresholdType> 
                          irConstructor(args.context, serializer, batchSize, forestConstructor);
-  irConstructor.Parse();
+  irConstructor.ConstructForest();
   
   // If sparse representation is turned on, then child index bit width should be passed
   assert (!mlir::decisionforest::UseSparseTreeRepresentation || childIndexBitWidth!=1 );
@@ -418,11 +415,7 @@ bool Test_GPUCodeGeneration_Scalar_VariableBatchSize(TestArgs_t& args,
                                                      ForestConstructor_t forestConstructor,
                                                      int32_t childIndexBitWidth=1) {
 
-  auto modelGlobalsJSONPath = TreeBeard::ModelJSONParser<ThresholdType,
-                                                         ThresholdType,
-                                                         IndexType,
-                                                         IndexType,
-                                                         ThresholdType>::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
+  auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
 
   return Test_GPUCodeGeneration_Scalar_VariableBatchSize_AnyRep<ThresholdType, IndexType>(args, 
                                                                                           batchSize,
@@ -438,11 +431,7 @@ bool Test_GPUCodeGeneration_ReorgForestRep(TestArgs_t& args,
                                            ForestConstructor_t forestConstructor,
                                            int32_t childIndexBitWidth=1) {
 
-  auto modelGlobalsJSONPath = TreeBeard::ModelJSONParser<ThresholdType,
-                                                         ThresholdType,
-                                                         IndexType,
-                                                         IndexType,
-                                                         ThresholdType>::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
+  auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
 
   auto serializer = decisionforest::ModelSerializerFactory::Get().GetModelSerializer("gpu_reorg", modelGlobalsJSONPath);
   auto representation = decisionforest::RepresentationFactory::Get().GetRepresentation("gpu_reorg");
@@ -580,16 +569,12 @@ bool CheckGPUModelInitialization_ReorgForest(TestArgs_t& args, ForestConstructor
   // initialization. So just hard coding those.
   const int32_t batchSize = 32;
 
-  auto modelGlobalsJSONPath = TreeBeard::ModelJSONParser<ThresholdType,
-                                                         ThresholdType,
-                                                         IndexType,
-                                                         IndexType,
-                                                         ThresholdType>::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
+  auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
   auto serializer = decisionforest::ModelSerializerFactory::Get().GetModelSerializer("gpu_reorg", modelGlobalsJSONPath);
   
   FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType, ThresholdType> 
                          irConstructor(args.context, serializer, batchSize, forestConstructor);
-  irConstructor.Parse();
+  irConstructor.ConstructForest();
   irConstructor.SetChildIndexBitWidth(1);
   auto module = irConstructor.GetEvaluationFunction();
 
@@ -769,7 +754,7 @@ bool Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize_AnyRep(TestArgs_t& args,
                                                     
   FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType, ThresholdType> 
                          irConstructor(args.context, serializer, batchSize, forestConstructor);
-  irConstructor.Parse();
+  irConstructor.ConstructForest();
   
   // If sparse representation is turned on, then child index bit width should be passed
   assert (!mlir::decisionforest::UseSparseTreeRepresentation || childIndexBitWidth!=1 );
@@ -834,11 +819,7 @@ bool Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize(TestArgs_t& args,
                                                      ForestConstructor_t forestConstructor,
                                                      int32_t childIndexBitWidth=1) {
 
-  auto modelGlobalsJSONPath = TreeBeard::ModelJSONParser<ThresholdType,
-                                                         ThresholdType,
-                                                         IndexType,
-                                                         IndexType,
-                                                         ThresholdType>::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
+  auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
 
   return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize_AnyRep<ThresholdType, IndexType>(args, 
                                                                                           batchSize,

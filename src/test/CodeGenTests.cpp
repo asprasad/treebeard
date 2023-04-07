@@ -3,6 +3,7 @@
 #include "Dialect.h"
 #include "TestUtilsCommon.h"
 
+#include "forestcreator.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -341,7 +342,7 @@ bool Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1(TestArgs_t& arg
 // ---------------------------------------------------
 
 template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType, typename InputElementType>
-class FixedTiledTreeIRConstructor : public TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType> {
+class FixedTiledTreeIRConstructor : public TreeBeard::ForestCreator {
   std::vector<DoubleInt32Tile> m_treeSerialization;
   ForestConstructor_t m_constructForest;
   std::vector<decisionforest::TreeTilingDescriptor>& m_tilingDescriptors;
@@ -368,24 +369,28 @@ class FixedTiledTreeIRConstructor : public TreeBeard::ModelJSONParser<ThresholdT
 
   }
 public:
-  FixedTiledTreeIRConstructor(mlir::MLIRContext& context,
-                              std::shared_ptr<decisionforest::IModelSerializer> serializer,
-                              int32_t batchSize,
-                              ForestConstructor_t constructForest,
-                              std::vector<decisionforest::TreeTilingDescriptor>& tilingDescriptors,
-                              int32_t tileShapeBitWidth,
-                              bool probTiling=false,
-                              int32_t levelsToUnroll=-1)
-    : TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(GetGlobalJSONNameForTests(),
-                                serializer,
-                                context, batchSize),
-      m_constructForest(constructForest), m_tilingDescriptors(tilingDescriptors), m_tileShapeBitWidth(tileShapeBitWidth),
-      m_probabilisticTiled(probTiling), m_levelsToUnroll(levelsToUnroll)
-  {
+  FixedTiledTreeIRConstructor(
+      mlir::MLIRContext &context,
+      std::shared_ptr<decisionforest::IModelSerializer> serializer,
+      int32_t batchSize, ForestConstructor_t constructForest,
+      std::vector<decisionforest::TreeTilingDescriptor> &tilingDescriptors,
+      int32_t tileShapeBitWidth, bool probTiling = false,
+      int32_t levelsToUnroll = -1)
+      : TreeBeard::ForestCreator(
+            serializer, context, batchSize,
+            TreeBeard::GetMLIRType(ThresholdType(), context),
+            TreeBeard::GetMLIRType(FeatureIndexType(), context),
+            TreeBeard::GetMLIRType(NodeIndexType(), context),
+            TreeBeard::GetMLIRType(ReturnType(), context),
+            TreeBeard::GetMLIRType(InputElementType(), context)),
+        m_constructForest(constructForest),
+        m_tilingDescriptors(tilingDescriptors),
+        m_tileShapeBitWidth(tileShapeBitWidth),
+        m_probabilisticTiled(probTiling), m_levelsToUnroll(levelsToUnroll) {
     // Only for tiled scenarios
-    assert (m_tilingDescriptors.at(0).MaxTileSize() > 1);
+    assert(m_tilingDescriptors.at(0).MaxTileSize() > 1);
   }
-  void Parse() override {
+  void ConstructForest() override {
     m_treeSerialization = m_constructForest(*this->m_forest);
     AddFeaturesToForest(*this->m_forest, m_treeSerialization, "float");
     assert (m_tilingDescriptors.size() == this->m_forest->NumTrees());
@@ -464,7 +469,7 @@ public:
 
     this->m_module.push_back(func);
   }
-  decisionforest::DecisionForest<>& GetForest() { return *this->m_forest; }
+  decisionforest::DecisionForest& GetForest() { return *this->m_forest; }
 };
 
 // ===---------------------------------------------------=== //
@@ -486,15 +491,11 @@ bool Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(TestArgs_t& args, Fore
   }
   
   auto tileShapeBitWidth = sizeof(TileShapeType)*8;
-  auto modelGlobalsJSONPath = TreeBeard::ModelJSONParser<ThresholdType,
-                                                         ReturnType,
-                                                         FeatureIndexType,
-                                                         NodeIndexType,
-                                                         InputElementType>::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
+  auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
   auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);
   FixedTiledTreeIRConstructor<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>
                               irGenerator(args.context, serializer, 1, forestConstructor, tilingDescriptors, tileShapeBitWidth);
-  irGenerator.Parse();
+  irGenerator.ConstructForest();
   irGenerator.SetChildIndexBitWidth(childIndexBitWidth);
   auto module = irGenerator.GetEvaluationFunction();
   if (scheduleManipulator)
@@ -760,15 +761,11 @@ bool Test_ModelInitialization(TestArgs_t& args, ForestConstructor_t forestConstr
   }
 
   auto tileShapeBitWidth = sizeof(TileShapeType)*8;
-  auto modelGlobalsJSONPath = TreeBeard::ModelJSONParser<ThresholdType,
-                                                         ReturnType,
-                                                         FeatureIndexType,
-                                                         NodeIndexType,
-                                                         InputElementType>::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
+  auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
   auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);
   FixedTiledTreeIRConstructor<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType> 
                               irGenerator(args.context, serializer, 1, forestConstructor, tilingDescriptors, tileShapeBitWidth);
-  irGenerator.Parse();
+  irGenerator.ConstructForest();
   auto module = irGenerator.GetEvaluationFunction();
 
   decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
@@ -1196,18 +1193,14 @@ bool Test_UniformTiling_BatchSize1(TestArgs_t& args,
                                    int32_t tileSize,
                                    int32_t tileShapeBitWidth,
                                    bool makeAllLeavesSameDepth) {
-  auto modelGlobalsJSONPath = TreeBeard::ModelJSONParser<ThresholdType,
-                                                         ReturnType,
-                                                         FeatureIndexType,
-                                                         NodeIndexType,
-                                                         InputElementType>::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
+  auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
   auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);
   FixedTreeIRConstructor<ThresholdType,
                          ReturnType,
                          FeatureIndexType,
                          NodeIndexType,
                          InputElementType> irGenerator(args.context, serializer, 1, forestConstructor);
-  irGenerator.Parse();
+  irGenerator.ConstructForest();
   auto module = irGenerator.GetEvaluationFunction();
   decisionforest::DoUniformTiling(args.context, module, tileSize, tileShapeBitWidth, makeAllLeavesSameDepth);
   decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);

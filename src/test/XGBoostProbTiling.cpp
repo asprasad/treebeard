@@ -47,7 +47,7 @@ struct SetAndResetPeelTreeWalk {
   }
 };
 
-void InitializeRandomLeafHitCounts(decisionforest::DecisionForest<>& forest) {
+void InitializeRandomLeafHitCounts(decisionforest::DecisionForest& forest) {
   for (size_t i=0 ; i<forest.NumTrees() ; ++i) {
     auto& tree = forest.GetTree(i);
     auto& nodes = tree.GetNodes();
@@ -61,16 +61,16 @@ void InitializeRandomLeafHitCounts(decisionforest::DecisionForest<>& forest) {
       if (!node.IsLeaf())
         continue;
       if (leafIndex < hitLeaves)
-        const_cast<decisionforest::DecisionTree<>::Node&>(node).hitCount = 100;
+        const_cast<decisionforest::DecisionTree::Node&>(node).hitCount = 100;
       else
-        const_cast<decisionforest::DecisionTree<>::Node&>(node).hitCount = 0;
+        const_cast<decisionforest::DecisionTree::Node&>(node).hitCount = 0;
       
       ++leafIndex;
     }
   }
 }
 
-void InitializeLeafHitCountsForUnifAndProb(decisionforest::DecisionForest<>& forest) {
+void InitializeLeafHitCountsForUnifAndProb(decisionforest::DecisionForest& forest) {
   size_t numUnifTrees = forest.NumTrees()/2;
 
   // Make half the trees uniformly tiled (not skewed)
@@ -78,7 +78,7 @@ void InitializeLeafHitCountsForUnifAndProb(decisionforest::DecisionForest<>& for
     auto& tree = forest.GetTree(i);
     auto& nodes = tree.GetNodes();
     for (auto& node : nodes) {
-      const_cast<decisionforest::DecisionTree<>::Node&>(node).hitCount = 1;
+      const_cast<decisionforest::DecisionTree::Node&>(node).hitCount = 1;
     }
   }
 
@@ -96,9 +96,9 @@ void InitializeLeafHitCountsForUnifAndProb(decisionforest::DecisionForest<>& for
       if (!node.IsLeaf())
         continue;
       if (leafIndex < hitLeaves)
-        const_cast<decisionforest::DecisionTree<>::Node&>(node).hitCount = 100;
+        const_cast<decisionforest::DecisionTree::Node&>(node).hitCount = 100;
       else
-        const_cast<decisionforest::DecisionTree<>::Node&>(node).hitCount = 0;
+        const_cast<decisionforest::DecisionTree::Node&>(node).hitCount = 0;
       ++leafIndex;
     }
   }
@@ -115,7 +115,7 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
                                      floatTypeBitWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth,
                                      TreeBeard::TilingType::kHybrid, false /*makeAllLeavesSameDepth*/, true, nullptr);
   
-  auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
+  auto modelGlobalsJSONFilePath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
   auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONFilePath);
   // auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType>(args.context, modelJsonPath, modelGlobalsJSONFilePath, options);
   TreeBeard::XGBoostJSONParser<FloatType, 
@@ -123,7 +123,7 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
                                FeatureIndexType,
                                NodeIndexType,
                                FloatType> xgBoostParser(args.context, modelJsonPath, serializer, options.batchSize);
-  xgBoostParser.Parse();
+  xgBoostParser.ConstructForest();
   xgBoostParser.SetChildIndexBitWidth(options.childIndexBitWidth);
 
   if (allTreesBiased) {
@@ -261,7 +261,7 @@ bool TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int
                                      floatTypeBitWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth,
                                      TreeBeard::TilingType::kHybrid, false /*makeAllLeavesSameDepth*/, true, nullptr);
   
-  auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
+  auto modelGlobalsJSONFilePath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
   auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONFilePath);
   // auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType>(args.context, modelJsonPath, modelGlobalsJSONFilePath, options);
   TreeBeard::XGBoostJSONParser<FloatType, 
@@ -269,7 +269,7 @@ bool TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int
                                FeatureIndexType,
                                NodeIndexType,
                                FloatType> xgBoostParser(args.context, modelJsonPath, serializer, statsProfileCSV, options.batchSize);
-  xgBoostParser.Parse();
+  xgBoostParser.ConstructForest();
   xgBoostParser.SetChildIndexBitWidth(options.childIndexBitWidth);
   auto module = xgBoostParser.GetEvaluationFunction();
 

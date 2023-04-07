@@ -83,6 +83,7 @@ class ForestJSONReader
     json m_json;
     int32_t m_numberOfTrees;
     int32_t m_numberOfClasses;
+    int32_t m_tileSize;
 
     std::string m_jsonFilePath;
 
@@ -220,7 +221,7 @@ void ForestJSONReader::GetModelValues(int32_t tileSize, int32_t thresholdSize, i
     }
 }
 
-// void PersistDecisionForest(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType);
+// void PersistDecisionForest(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType);
 // void ClearPersistedForest();
 
 int32_t GetTotalNumberOfTiles();
