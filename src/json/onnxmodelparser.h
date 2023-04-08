@@ -66,8 +66,8 @@ namespace TreeBeard
         const auto &graph = result.model.graph();
         assert(graph.node_size() == 1 && "Only one node is supported");
 
-        std::cout << "Node name: " << graph.node(0).name() << std::endl;
-        std::cout << "Op type: " << graph.node(0).op_type() << std::endl;
+        // std::cout << "Node name: " << graph.node(0).name() << std::endl;
+        // std::cout << "Op type: " << graph.node(0).op_type() << std::endl;
         const auto &treeNode = graph.node(0);
         assert(
             (treeNode.op_type() == "TreeEnsembleRegressor" ||
