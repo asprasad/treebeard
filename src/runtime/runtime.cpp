@@ -279,3 +279,186 @@ extern "C" void SetOneTreeAtATimeSchedule(intptr_t options) {
   TreeBeard::CompilerOptions *optionsPtr = reinterpret_cast<TreeBeard::CompilerOptions*>(options);
   optionsPtr->scheduleManipulator = new mlir::decisionforest::ScheduleManipulationFunctionWrapper(mlir::decisionforest::OneTreeAtATimeSchedule);
 }
+
+// ===-------------------------------------------------------------=== //
+// Schedule API
+// ===-------------------------------------------------------------=== //
+using Schedule = mlir::decisionforest::Schedule;
+using IndexVariable = mlir::decisionforest::IndexVariable;
+
+extern "C" {
+
+intptr_t Schedule_New(int32_t batchSize, int32_t forestSize);
+void Schedule_Delete(intptr_t schedPtr);
+intptr_t Schedule_NewIndexVariable(intptr_t schedPtr, const char* name);
+intptr_t Schedule_NewIndexVariable2(intptr_t schedPtr, intptr_t indexVarPtr);
+void Schedule_Tile(intptr_t schedPtr, intptr_t indexPtr, intptr_t outerPtr, intptr_t innerPtr, int32_t tileSize);
+void Schedule_Reorder(intptr_t schedPtr, intptr_t indicesPtr, int32_t numIndices);
+void Schedule_Split(intptr_t schedPtr, intptr_t indexPtr, intptr_t firstPtr, intptr_t secondPtr, int32_t splitIteration, intptr_t indexMapPtr);
+void Schedule_Pipeline(intptr_t schedPtr, intptr_t indexPtr, int32_t stepSize);
+void Schedule_Simdize(intptr_t schedPtr, intptr_t indexPtr);
+void Schedule_Parallel(intptr_t schedPtr, intptr_t indexPtr);
+void Schedule_Unroll(intptr_t schedPtr, intptr_t indexVarPtr);
+void Schedule_PeelWalk(intptr_t schedPtr, intptr_t indexVarPtr, int32_t numberOfIterations);
+void Schedule_Cache(intptr_t schedPtr, intptr_t indexVarPtr);
+intptr_t Schedule_GetRootIndex(intptr_t schedPtr);
+intptr_t Schedule_GetBatchIndex(intptr_t schedPtr);
+intptr_t Schedule_GetTreeIndex(intptr_t schedPtr);
+int32_t Schedule_PrintToString(intptr_t schedPtr, intptr_t str, int32_t strLen);
+int32_t Schedule_GetBatchSize(intptr_t schedPtr);
+int32_t Schedule_GetForestSize(intptr_t schedPtr);
+bool Schedule_IsDefaultSchedule(intptr_t schedPtr);
+void Schedule_Finalize(intptr_t schedPtr);
+
+// Constructor and destructor
+intptr_t Schedule_New(int32_t batchSize, int32_t forestSize) {
+  return (intptr_t)(new Schedule(batchSize, forestSize));
+}
+
+void Schedule_Delete(intptr_t schedPtr) {
+  Schedule* sched = reinterpret_cast<Schedule*>(schedPtr);
+  delete sched;
+}
+
+// Loop Modifiers
+intptr_t Schedule_NewIndexVariable(intptr_t schedPtr, const char* name) {
+  Schedule* sched = reinterpret_cast<Schedule*>(schedPtr);
+  return (intptr_t)(&sched->NewIndexVariable(std::string(name)));
+}
+
+intptr_t Schedule_NewIndexVariable2(intptr_t schedPtr, intptr_t indexVarPtr) {
+  Schedule* sched = reinterpret_cast<Schedule*>(schedPtr);
+  IndexVariable* indexVar = reinterpret_cast<IndexVariable*>(indexVarPtr);
+  return (intptr_t)(&sched->NewIndexVariable(*indexVar));
+}
+
+void Schedule_Tile(intptr_t schedPtr, intptr_t indexPtr, intptr_t outerPtr, intptr_t innerPtr, int32_t tileSize) {
+  Schedule* sched = reinterpret_cast<Schedule*>(schedPtr);
+  IndexVariable* index = reinterpret_cast<IndexVariable*>(indexPtr);
+  IndexVariable* outer = reinterpret_cast<IndexVariable*>(outerPtr);
+  IndexVariable* inner = reinterpret_cast<IndexVariable*>(innerPtr);
+  sched->Tile(*index, *outer, *inner, tileSize);
+}
+
+void Schedule_Reorder(intptr_t schedPtr, intptr_t indicesPtr, int32_t numIndices) {
+  Schedule* sched = reinterpret_cast<Schedule*>(schedPtr);
+  std::vector<IndexVariable*> indices(numIndices);
+  for (int i = 0; i < numIndices; i++) {
+    indices[i] = ((IndexVariable**)indicesPtr)[i];
+  }
+  sched->Reorder(indices);
+}
+
+void Schedule_Split(intptr_t schedPtr, intptr_t indexPtr, intptr_t firstPtr, intptr_t secondPtr, int32_t splitIteration, intptr_t indexMapPtr) {
+  Schedule* sched = reinterpret_cast<Schedule*>(schedPtr);
+  IndexVariable* index = reinterpret_cast<IndexVariable*>(indexPtr);
+  IndexVariable* first = reinterpret_cast<IndexVariable*>(firstPtr);
+  IndexVariable* second = reinterpret_cast<IndexVariable*>(secondPtr);
+  Schedule::IndexVariableMapType indexMap;
+  sched->Split(*index, *first, *second, splitIteration, indexMap);
+  int32_t i=0;
+  IndexVariable** indexMapArr = reinterpret_cast<IndexVariable**>(indexMapPtr);
+  for (auto& indexPair: indexMap) {
+    indexMapArr[i] = indexPair.first;
+    indexMapArr[i+1] = indexPair.second.first;
+    indexMapArr[i+2] = indexPair.second.second;
+    i+=3;
+  }
+}
+
+// Optimizations
+void Schedule_Pipeline(intptr_t schedPtr, intptr_t indexPtr, int32_t stepSize) {
+  Schedule* sched = reinterpret_cast<Schedule*>(schedPtr);
+  IndexVariable* index = reinterpret_cast<IndexVariable*>(indexPtr);
+  sched->Pipeline(*index, stepSize);
+}
+
+void Schedule_Simdize(intptr_t schedPtr, intptr_t indexPtr) {
+  Schedule* sched = reinterpret_cast<Schedule*>(schedPtr);
+  IndexVariable* index = reinterpret_cast<IndexVariable*>(indexPtr);
+  sched->Simdize(*index);
+}
+
+void Schedule_Parallel(intptr_t schedPtr, intptr_t indexPtr) {
+  Schedule* sched = reinterpret_cast<Schedule*>(schedPtr);
+  IndexVariable* index = (IndexVariable*)indexPtr;
+  sched->Parallel(*index);
+}
+
+// Wrapper function for Schedule::Unroll
+void Schedule_Unroll(intptr_t schedPtr, intptr_t indexVarPtr) {
+  Schedule* sched = reinterpret_cast<Schedule*>(schedPtr);
+  IndexVariable* indexVar = reinterpret_cast<IndexVariable*>(indexVarPtr);
+  sched->Unroll(*indexVar);
+}
+
+// Wrapper function for Schedule::PeelWalk
+void Schedule_PeelWalk(intptr_t schedPtr, intptr_t indexVarPtr, int32_t numberOfIterations) {
+  Schedule* sched = reinterpret_cast<Schedule*>(schedPtr);
+  IndexVariable* indexVar = reinterpret_cast<IndexVariable*>(indexVarPtr);
+  sched->PeelWalk(*indexVar, numberOfIterations);
+}
+
+// Wrapper function for Schedule::Cache
+void Schedule_Cache(intptr_t schedPtr, intptr_t indexVarPtr) {
+  Schedule* sched = reinterpret_cast<Schedule*>(schedPtr);
+  IndexVariable* indexVar = reinterpret_cast<IndexVariable*>(indexVarPtr);
+  sched->Cache(*indexVar);
+}
+
+// Wrapper function for Schedule::GetRootIndex
+intptr_t Schedule_GetRootIndex(intptr_t schedPtr) {
+  Schedule* sched = reinterpret_cast<Schedule*>(schedPtr);
+  const IndexVariable* rootIndex = sched->GetRootIndex();
+  return reinterpret_cast<intptr_t>(rootIndex);
+}
+
+// Wrapper function for Schedule::GetBatchIndex
+intptr_t Schedule_GetBatchIndex(intptr_t schedPtr) {
+  Schedule* sched = reinterpret_cast<Schedule*>(schedPtr);
+  IndexVariable& batchIndex = sched->GetBatchIndex();
+  return reinterpret_cast<intptr_t>(&batchIndex);
+}
+
+// Wrapper function for Schedule::GetTreeIndex
+intptr_t Schedule_GetTreeIndex(intptr_t schedPtr) {
+  Schedule* sched = reinterpret_cast<Schedule*>(schedPtr);
+  IndexVariable& treeIndex = sched->GetTreeIndex();
+  return reinterpret_cast<intptr_t>(&treeIndex);
+}
+
+// Wrapper function for Schedule::PrintToString
+int32_t Schedule_PrintToString(intptr_t schedPtr, intptr_t str, int32_t strLen) {
+  Schedule* sched = reinterpret_cast<Schedule*>(schedPtr);
+  std::string scheduleString = sched->PrintToString();
+  auto *strPtr = reinterpret_cast<char*>(str);
+  if (strPtr == nullptr)
+    return (int32_t)scheduleString.size();
+  strncpy(strPtr, scheduleString.c_str(), strLen);
+  return std::min((int32_t)scheduleString.size(), strLen);
+}
+
+// Wrapper function for Schedule::GetBatchSize
+int32_t Schedule_GetBatchSize(intptr_t schedPtr) {
+  Schedule* sched = reinterpret_cast<Schedule*>(schedPtr);
+  return sched->GetBatchSize();
+}
+
+// Wrapper function for Schedule::GetForestSize
+int32_t Schedule_GetForestSize(intptr_t schedPtr) {
+  Schedule* sched = reinterpret_cast<Schedule*>(schedPtr);
+  return sched->GetForestSize();
+}
+
+// Wrapper function for Schedule::IsDefaultSchedule
+bool Schedule_IsDefaultSchedule(intptr_t schedPtr) {
+  Schedule* sched = reinterpret_cast<Schedule*>(schedPtr);
+  return sched->IsDefaultSchedule();
+}
+
+// Wrapper function for Schedule::Finalize
+void Schedule_Finalize(intptr_t schedPtr) {
+  Schedule* sched = reinterpret_cast<Schedule*>(schedPtr);
+  sched->Finalize();
+}
+} // extern "C"

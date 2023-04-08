@@ -110,6 +110,65 @@ class TreebeardAPI:
       self.runtime_lib.IsPeeledCodeGenForProbabilityBasedTilingEnabled.argtypes = None
       self.runtime_lib.IsPeeledCodeGenForProbabilityBasedTilingEnabled.restype = ctypes.c_int32
 
+      # Define the argument and return types for the C functions
+      self.runtime_lib.Schedule_New.argtypes = [ctypes.c_int32, ctypes.c_int32]
+      self.runtime_lib.Schedule_New.restype = ctypes.c_int64
+
+      self.runtime_lib.Schedule_Delete.argtypes = [ctypes.c_int64]
+      self.runtime_lib.Schedule_Delete.restype = None
+
+      self.runtime_lib.Schedule_NewIndexVariable.argtypes = [ctypes.c_int64, ctypes.c_char_p]
+      self.runtime_lib.Schedule_NewIndexVariable.restype = ctypes.c_int64
+
+      self.runtime_lib.Schedule_NewIndexVariable2.argtypes = [ctypes.c_int64, ctypes.c_int64]
+      self.runtime_lib.Schedule_NewIndexVariable2.restype = ctypes.c_int64
+
+      self.runtime_lib.Schedule_Tile.argtypes = [ctypes.c_int64, ctypes.c_int64, ctypes.c_int64, ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Schedule_Tile.restype = None
+
+      self.runtime_lib.Schedule_Reorder.argtypes = [ctypes.c_int64, ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Schedule_Reorder.restype = None
+
+      self.runtime_lib.Schedule_Split.argtypes = [ctypes.c_int64, ctypes.c_int64, ctypes.c_int64, ctypes.c_int64, ctypes.c_int32, ctypes.c_int64]
+      self.runtime_lib.Schedule_Split.restype = None
+
+      self.runtime_lib.Schedule_Pipeline.argtypes = [ctypes.c_int64, ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Schedule_Pipeline.restype = None
+
+      self.runtime_lib.Schedule_Simdize.argtypes = [ctypes.c_int64, ctypes.c_int64]
+
+      self.runtime_lib.Schedule_Parallel.argtypes = [ctypes.c_int64, ctypes.c_int64]
+
+      self.runtime_lib.Schedule_Unroll.argtypes = [ctypes.c_int64, ctypes.c_int64]
+
+      self.runtime_lib.Schedule_PeelWalk.argtypes = [ctypes.c_int64, ctypes.c_int64, ctypes.c_int32]
+
+      self.runtime_lib.Schedule_Cache.argtypes = [ctypes.c_int64, ctypes.c_int64]
+
+      self.runtime_lib.Schedule_GetRootIndex.restype = ctypes.c_int64
+      self.runtime_lib.Schedule_GetRootIndex.argtypes = [ctypes.c_int64]
+
+      self.runtime_lib.Schedule_GetBatchIndex.restype = ctypes.c_int64
+      self.runtime_lib.Schedule_GetBatchIndex.argtypes = [ctypes.c_int64]
+
+      self.runtime_lib.Schedule_GetTreeIndex.argtypes = [ctypes.c_int64]
+      self.runtime_lib.Schedule_GetTreeIndex.restype = ctypes.c_int64
+
+      self.runtime_lib.Schedule_PrintToString.argtypes = [ctypes.c_int64, ctypes.c_char_p, ctypes.c_int32]
+      self.runtime_lib.Schedule_PrintToString.restype = ctypes.c_int32
+
+      self.runtime_lib.Schedule_GetBatchSize.argtypes = [ctypes.c_int64]
+      self.runtime_lib.Schedule_GetBatchSize.restype = ctypes.c_int32
+
+      self.runtime_lib.Schedule_GetForestSize.argtypes = [ctypes.c_int64]
+      self.runtime_lib.Schedule_GetForestSize.restype = ctypes.c_int32
+
+      self.runtime_lib.Schedule_IsDefaultSchedule.argtypes = [ctypes.c_int64]
+      self.runtime_lib.Schedule_IsDefaultSchedule.restype = ctypes.c_bool
+
+      self.runtime_lib.Schedule_Finalize.argtypes = [ctypes.c_int64]
+      self.runtime_lib.Schedule_Finalize.restype = None
+
     except Exception as e:
       print("Loading the TreeBeard runtime failed with exception :", e)
   
@@ -133,6 +192,68 @@ class TreebeardAPI:
   def DeleteInferenceRunner(self, inferenceRunner : int) -> None:
     self.runtime_lib.DeleteInferenceRunner(inferenceRunner)
 
+  def Schedule_New(self, batchSize, forestSize):
+      return self.runtime_lib.Schedule_New(batchSize, forestSize)
+
+  def Schedule_Delete(self, schedPtr):
+      self.runtime_lib.Schedule_Delete(schedPtr)
+
+  def Schedule_NewIndexVariable(self, schedPtr, name):
+      return self.runtime_lib.Schedule_NewIndexVariable(schedPtr, name.encode())
+
+  def Schedule_NewIndexVariable2(self, schedPtr, indexVarPtr):
+      return self.runtime_lib.Schedule_NewIndexVariable2(schedPtr, indexVarPtr)
+
+  def Schedule_Tile(self, schedPtr, indexPtr, outerPtr, innerPtr, tileSize):
+      self.runtime_lib.Schedule_Tile(schedPtr, indexPtr, outerPtr, innerPtr, tileSize)
+
+  def Schedule_Reorder(self, schedPtr, indicesPtr, numIndices):
+      self.runtime_lib.Schedule_Reorder(schedPtr, indicesPtr, numIndices)
+
+  def Schedule_Split(self, schedPtr, indexPtr, firstPtr, secondPtr, splitIteration, indexMapPtr):
+      self.runtime_lib.Schedule_Split(schedPtr, indexPtr, firstPtr, secondPtr, splitIteration, indexMapPtr)
+
+  def Schedule_Pipeline(self, schedPtr, indexPtr, stepSize):
+      self.runtime_lib.Schedule_Pipeline(schedPtr, indexPtr, stepSize)
+  
+  def Schedule_Simdize(self, schedPtr, indexPtr):
+      self.runtime_lib.Schedule_Simdize(ctypes.c_int64(schedPtr), ctypes.c_int64(indexPtr))
+
+  def Schedule_Parallel(self, schedPtr, indexPtr):
+      self.runtime_lib.Schedule_Parallel(ctypes.c_int64(schedPtr), ctypes.c_int64(indexPtr))
+
+  def Schedule_Unroll(self, schedPtr, indexVarPtr):
+      self.runtime_lib.Schedule_Unroll(ctypes.c_int64(schedPtr), ctypes.c_int64(indexVarPtr))
+
+  def Schedule_PeelWalk(self, schedPtr, indexVarPtr, numberOfIterations):
+      self.runtime_lib.Schedule_PeelWalk(ctypes.c_int64(schedPtr), ctypes.c_int64(indexVarPtr), ctypes.c_int32(numberOfIterations))
+
+  def Schedule_Cache(self, schedPtr, indexVarPtr):
+      self.runtime_lib.Schedule_Cache(ctypes.c_int64(schedPtr), ctypes.c_int64(indexVarPtr))
+
+  def Schedule_GetRootIndex(self, schedPtr):
+      return self.runtime_lib.Schedule_GetRootIndex(ctypes.c_int64(schedPtr))
+
+  def Schedule_GetBatchIndex(self, schedPtr):
+      return self.runtime_lib.Schedule_GetBatchIndex(ctypes.c_int64(schedPtr))
+
+  def Schedule_GetTreeIndex(self, schedPtr):
+      return self.runtime_lib.Schedule_GetTreeIndex(schedPtr)
+
+  def Schedule_PrintToString(self, schedPtr, string, strLen):
+      return self.runtime_lib.Schedule_PrintToString(schedPtr, string, strLen)
+
+  def Schedule_GetBatchSize(self, schedPtr):
+      return self.runtime_lib.Schedule_GetBatchSize(schedPtr)
+
+  def Schedule_GetForestSize(self, schedPtr):
+      return self.runtime_lib.Schedule_GetForestSize(schedPtr)
+
+  def Schedule_IsDefaultSchedule(self, schedPtr):
+      return self.runtime_lib.Schedule_IsDefaultSchedule(schedPtr)
+
+  def Schedule_Finalize(self, schedPtr):
+      self.runtime_lib.Schedule_Finalize(schedPtr)
 
 treebeardAPI = TreebeardAPI()
 
