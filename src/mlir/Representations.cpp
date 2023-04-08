@@ -7,7 +7,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-
+#include "Dialect.h"
 #include "../gpu/GPURepresentations.h"
 #include "LIRLoweringHelpers.h"
 #include "Logger.h"

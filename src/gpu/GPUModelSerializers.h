@@ -1,3 +1,5 @@
+#ifdef TREEBEARD_GPU_SUPPORT
+
 #ifndef _GPUMODELSERIALIZERS_H_
 #define _GPUMODELSERIALIZERS_H_
 
@@ -82,3 +84,5 @@ public:
 } // mlir
 
 #endif // _GPUMODELSERIALIZERS_H_
+
+#endif // TREEBEARD_GPU_SUPPORT

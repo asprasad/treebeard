@@ -1,3 +1,5 @@
+#ifdef TREEBEARD_GPU_SUPPORT
+
 #include <vector>
 #include <sstream>
 #include <chrono>
@@ -839,3 +841,5 @@ bool Test_SimpleSharedMem_LeftRightAndBalanced(TestArgs_t& args) {
 
 }
 }
+
+#endif // #ifdef TREEBEARD_GPU_SUPPORT

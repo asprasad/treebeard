@@ -1429,6 +1429,7 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Airline),
   TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Abalone),
 
+#ifdef TREEBEARD_GPU_SUPPORT
   // GPU model buffer initialization tests (scalar)
   TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_DoubleInt),
   TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_DoubleInt),
@@ -1489,6 +1490,7 @@ TestDescriptor testList[] = {
   // Basic GPU caching tests
   TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
   TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy),
+#endif // TREEBEARD_GPU_SUPPORT
 };
 
 #else // RUN_ALL_TESTS

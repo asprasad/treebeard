@@ -1,3 +1,5 @@
+#ifdef TREEBEARD_GPU_SUPPORT
+
 #include <optional>
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
@@ -190,3 +192,5 @@ std::unique_ptr<mlir::Pass> createDeleteSharedMemoryGlobalsPass() {
 
 } // decisionforest
 } // mlir
+
+#endif // TREEBEARD_GPU_SUPPORT

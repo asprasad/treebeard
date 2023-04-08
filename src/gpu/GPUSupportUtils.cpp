@@ -1,3 +1,5 @@
+#ifdef TREEBEARD_GPU_SUPPORT
+
 #include "Dialect.h"
 
 #include "mlir/IR/Attributes.h"
@@ -139,3 +141,5 @@ void OutlineGPUKernels(mlir::MLIRContext& context, mlir::ModuleOp module) {
 
 } // decisionforest
 } // mlir
+
+#endif // TREEBEARD_GPU_SUPPORT

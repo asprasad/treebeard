@@ -1,3 +1,5 @@
+#ifdef TREEBEARD_GPU_SUPPORT
+
 #include "Dialect.h"
 #include "OpLoweringUtils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -607,3 +609,5 @@ REGISTER_REPRESENTATION(gpu_sparse, ConstructGPUSparseRepresentation)
 
 }
 }
+
+#endif // TREEBEARD_GPU_SUPPORT

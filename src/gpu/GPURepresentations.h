@@ -1,3 +1,5 @@
+#ifdef TREEBEARD_GPU_SUPPORT
+
 #ifndef _GPUREPRESENTATIONS_H_
 #define _GPUREPRESENTATIONS_H_
 
@@ -71,3 +73,5 @@ public:
 } // mlir
 
 #endif // _GPUREPRESENTATIONS_H_
+
+#endif // TREEBEARD_GPU_SUPPORT

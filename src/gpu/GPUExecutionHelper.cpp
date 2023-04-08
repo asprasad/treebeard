@@ -1,3 +1,5 @@
+#ifdef TREEBEARD_GPU_SUPPORT
+
 #include <iostream>
 #include <unistd.h>
 #include <libgen.h>
@@ -73,3 +75,5 @@ void *GPUInferenceRunner::GetFunctionAddress(const std::string& functionName) {
 
 } // decisionforest
 } // mlir
+
+#endif // TREEBEARD_GPU_SUPPORT

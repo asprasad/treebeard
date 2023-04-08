@@ -1,3 +1,5 @@
+#ifdef TREEBEARD_GPU_SUPPORT
+
 #include <optional>
 
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
@@ -332,3 +334,5 @@ void LowerGPUToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module, std::shar
 }
 }
 }
+
+#endif

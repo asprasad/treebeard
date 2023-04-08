@@ -1,3 +1,5 @@
+option(GPU_SUPPORT "Turn on Treebeard GPU support" OFF)
+
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
 set(TREEBEARD_DEPENDENCY_LIBS
@@ -29,6 +31,9 @@ add_dependencies(treebeard DecisionForestGen)
 llvm_update_compile_flags(treebeard)
 add_definitions(-DTREEBEARD_SRC_DIR="${CMAKE_SOURCE_DIR}")
 add_definitions(-DLLVM_LIB_DIR="${LLVM_BUILD_DIRECTORY}")
+if(GPU_SUPPORT)
+        add_definitions(-DTREEBEARD_GPU_SUPPORT=1)
+endif()
 mlir_check_all_link_libraries(treebeard)
 
 add_subdirectory(runtime)

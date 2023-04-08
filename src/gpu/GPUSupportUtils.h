@@ -1,3 +1,5 @@
+#ifdef TREEBEARD_GPU_SUPPORT
+
 #ifndef _GPUSUPPORTUTILS_H_
 #define _GPUSUPPORTUTILS_H_
 
@@ -18,3 +20,5 @@ void LowerGPUToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module, std::shar
 
 
 #endif // _GPUSUPPORTUTILS_H_
+
+#endif // TREEBEARD_GPU_SUPPORT

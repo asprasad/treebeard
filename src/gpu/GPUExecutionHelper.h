@@ -1,6 +1,8 @@
 #ifndef _GPUEXECUTIONHELPER_H_
 #define _GPUEXECUTIONHELPER_H_
 
+#ifdef TREEBEARD_GPU_SUPPORT
+
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/IR/AsmState.h"
@@ -48,5 +50,7 @@ public:
 
 } // decisionforest
 } // mlir
+
+#endif // TREEBEARD_GPU_SUPPORT
 
 #endif // _GPUEXECUTIONHELPER_H_

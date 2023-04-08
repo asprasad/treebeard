@@ -1,3 +1,5 @@
+#ifdef TREEBEARD_GPU_SUPPORT
+
 #include "TreeTilingDescriptor.h"
 #include "TreeTilingUtils.h"
 #include "TiledTree.h"
@@ -323,3 +325,5 @@ REGISTER_SERIALIZER(gpu_array, ConstructGPUArrayRepresentation)
 
 }
 }
+
+#endif // TREEBEARD_GPU_SUPPORT
