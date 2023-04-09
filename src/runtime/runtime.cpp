@@ -136,7 +136,8 @@ extern "C" void GenerateLLVMIRForXGBoostModel(const char* modelJSONPath, const c
   TreeBeard::CompilerOptions *optionsPtr = reinterpret_cast<TreeBeard::CompilerOptions*>(options);
   TreeBeard::TreebeardContext tbContext{modelJSONPath, modelGlobalsJSONPath, *optionsPtr, 
                                         mlir::decisionforest::ConstructRepresentation(),
-                                        mlir::decisionforest::ConstructModelSerializer(std::string(modelGlobalsJSONPath))};
+                                        mlir::decisionforest::ConstructModelSerializer(std::string(modelGlobalsJSONPath)),
+                                        nullptr  /*TODO_ForestCreator*/ };
   TreeBeard::ConvertXGBoostJSONToLLVMIR(tbContext, llvmIRFilePath);
 }
 
@@ -148,7 +149,8 @@ extern "C" intptr_t CreateInferenceRunner(const char* modelJSONPath, const char*
   TreeBeard::InitializeMLIRContext(context); 
   TreeBeard::TreebeardContext tbContext{modelJSONPath, modelGlobalsJSONPath, *optionsPtr, 
                                         mlir::decisionforest::ConstructRepresentation(),
-                                        mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath)};
+                                        mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath),
+                                        nullptr  /*TODO_ForestCreator*/ };
   auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON(context, tbContext);
   auto inferenceRunner = new mlir::decisionforest::InferenceRunner(tbContext.serializer, module, 
                                                                    optionsPtr->tileSize, optionsPtr->thresholdTypeWidth,
@@ -172,7 +174,8 @@ extern "C" void CreateLLVMIRForONNXModel(const char *modelPath, const char* llvm
   TreeBeard::TreebeardContext tbContext{
       modelPath, modelGlobalsJSONPath, *optionsPtr,
       mlir::decisionforest::ConstructRepresentation(),
-      mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath)};
+      mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath),
+      nullptr /*TODO_ForestCreator*/ };
 
   TreeBeard::ConvertONNXModelToLLVMIR(tbContext, llvmIrPath);
 }
@@ -195,7 +198,8 @@ extern "C" intptr_t CreateInferenceRunnerForONNXModelInputs(
   TreeBeard::TreebeardContext tbContext{
       "", modelGlobalsJSONPath, *optionsPtr,
       mlir::decisionforest::ConstructRepresentation(),
-      mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath)};
+      mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath),
+      nullptr  /*TODO_ForestCreator*/};
 
   mlir::ModuleOp module;
 
@@ -269,6 +273,35 @@ extern "C" void SetPeeledCodeGenForProbabilityBasedTiling(int32_t val) {
 
 extern "C" int32_t IsPeeledCodeGenForProbabilityBasedTilingEnabled() {
   return mlir::decisionforest::PeeledCodeGenForProbabiltyBasedTiling;
+}
+
+// ===-------------------------------------------------------------=== //
+// Representation API
+// ===-------------------------------------------------------------=== //
+
+namespace 
+{
+// This set is needed to prevent the shared_ptr we construct from going out of
+// scope and destroying the representation object.
+std::set<std::shared_ptr<mlir::decisionforest::IRepresentation>> constructedRepresentations;
+}
+
+extern "C" void* ConstructRepresentation(const char* repName) {
+  auto rep = mlir::decisionforest::RepresentationFactory::Get().GetRepresentation(repName);
+  constructedRepresentations.insert(rep);
+  return reinterpret_cast<void*>(rep.get());
+}
+
+extern "C" void DestroyRepresentation(void *rep) {
+  auto iter = constructedRepresentations.begin();
+  for (; iter!=constructedRepresentations.end() ; ++iter) {
+    if (reinterpret_cast<void*>(iter->get()) == rep)
+      break;
+  }
+  if (iter == constructedRepresentations.end())
+    return;
+  constructedRepresentations.erase(iter);
+  return;
 }
 
 // ===-------------------------------------------------------------=== //

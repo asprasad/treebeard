@@ -363,7 +363,8 @@ namespace TreeBeard
       TreeBeard::TreebeardContext tbContext{
           "", modelGlobalsJSONPath, *optionsPtr,
           mlir::decisionforest::ConstructRepresentation(),
-          mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath)};
+          mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath),
+          nullptr /*TODO_ForestCreator*/ };
 
       mlir::ModuleOp module;
 

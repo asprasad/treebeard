@@ -184,6 +184,7 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
     tbContext.representation = mlir::decisionforest::ConstructRepresentation();
     tbContext.serializer = mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONFile);
     tbContext.modelGlobalsJSONPath = modelGlobalsJSONFile;
+    tbContext.forestConstructor = nullptr;  /*TODO_ForestCreator*/ 
   }
   else {
     TreeBeard::CompilerOptions options(
@@ -197,6 +198,7 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
     tbContext.representation = mlir::decisionforest::ConstructRepresentation();
     tbContext.serializer = mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONFile);
     tbContext.modelGlobalsJSONPath = modelGlobalsJSONFile;
+    tbContext.forestConstructor = nullptr;  /*TODO_ForestCreator*/ 
   }
 
   if (!xgboostFile.empty()) {

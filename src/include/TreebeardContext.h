@@ -73,6 +73,8 @@ public:
 namespace TreeBeard
 {
 
+class ForestCreator;
+
 enum class TilingType { kUniform, kProbabilistic, kHybrid };
 
 struct CompilerOptions {
@@ -119,6 +121,7 @@ struct TreebeardContext {
   CompilerOptions options;
   std::shared_ptr<mlir::decisionforest::IRepresentation>  representation = nullptr;
   std::shared_ptr<mlir::decisionforest::IModelSerializer> serializer = nullptr;
+  std::shared_ptr<ForestCreator> forestConstructor = nullptr;
 };
 
 } // namespace TreeBeard

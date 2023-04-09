@@ -217,7 +217,9 @@ void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexTyp
     }
 }
 
-}
+std::shared_ptr<ForestCreator> ConstructXGBoostJSONParser(mlir::MLIRContext& context, TreebeardContext& tbContext);
+
+} // namespace TreeBeard
 
 
 #endif //_XGBOOST_PARSER_H_

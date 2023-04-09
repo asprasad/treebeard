@@ -117,7 +117,7 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
   
   auto modelGlobalsJSONFilePath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
   auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONFilePath);
-  // auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType>(args.context, modelJsonPath, modelGlobalsJSONFilePath, options);
+  
   TreeBeard::XGBoostJSONParser<FloatType, 
                                ResultType,
                                FeatureIndexType,
@@ -263,7 +263,7 @@ bool TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int
   
   auto modelGlobalsJSONFilePath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
   auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONFilePath);
-  // auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType>(args.context, modelJsonPath, modelGlobalsJSONFilePath, options);
+
   TreeBeard::XGBoostJSONParser<FloatType, 
                                ResultType,
                                FeatureIndexType,

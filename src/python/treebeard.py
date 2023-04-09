@@ -169,6 +169,11 @@ class TreebeardAPI:
       self.runtime_lib.Schedule_Finalize.argtypes = [ctypes.c_int64]
       self.runtime_lib.Schedule_Finalize.restype = None
 
+      self.runtime_lib.ConstructRepresentation.argtypes = [ctypes.c_char_p]
+      self.runtime_lib.ConstructRepresentation.restype = ctypes.c_void_p
+
+      self.runtime_lib.DestroyRepresentation.argtypes = [ctypes.c_void_p]
+
     except Exception as e:
       print("Loading the TreeBeard runtime failed with exception :", e)
   

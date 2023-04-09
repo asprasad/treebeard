@@ -54,7 +54,8 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
   
   TreeBeard::TreebeardContext tbContext{modelJsonPath, modelGlobalsJSONFilePath, options, 
                                         mlir::decisionforest::ConstructRepresentation(),
-                                        mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONFilePath)};
+                                        mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONFilePath),
+                                        nullptr /*TODO_ForestCreator*/ };
   auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType>(args.context, tbContext);
 
   decisionforest::InferenceRunner inferenceRunner(tbContext.serializer, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
@@ -2275,7 +2276,8 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
 
   TreeBeard::TreebeardContext tbContext{modelJsonPath, modelGlobalsJSONFilePath, options, 
                                         mlir::decisionforest::ConstructRepresentation(),
-                                        mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONFilePath)};
+                                        mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONFilePath),
+                                        nullptr  /*TODO_ForestCreator*/};
   auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType, int32_t, FloatType>(args.context, tbContext);
 
   decisionforest::InferenceRunner inferenceRunner(tbContext.serializer, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
