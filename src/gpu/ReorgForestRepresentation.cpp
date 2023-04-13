@@ -18,6 +18,7 @@
 #include "ReorgForestRepresentation.h"
 #include "../json/JSONHelpers.h"
 #include "ModelSerializers.h"
+#include <cstdint>
 
 using namespace mlir;
 using namespace mlir::decisionforest::helpers;
@@ -228,7 +229,7 @@ template<typename VectorElemType, typename MemrefElemType>
 void ReorgForestSerializer::InitializeSingleBuffer(const std::string& initFuncName,
                                                    const std::vector<VectorElemType>& vals,
                                                    Memref<VectorElemType, 1>& gpuMemref) {
-  typedef Memref<VectorElemType, 1> (*InitFunc_t)(MemrefElemType*, MemrefElemType*, int64_t, int64_t, int64_t);
+  using InitFunc_t = Memref<VectorElemType, 1> (*)(MemrefElemType *, MemrefElemType *, int64_t, int64_t, int64_t);
   auto initMemref = GetFunctionAddress<InitFunc_t>(initFuncName);
   std::vector<MemrefElemType> castVector(vals.begin(), vals.end());
   gpuMemref = initMemref(castVector.data(), castVector.data(), 0 /*offset*/, vals.size() /*length*/, 1 /*stride*/);
@@ -285,15 +286,31 @@ bool ReorgForestSerializer::HasCustomPredictionMethod() {
 }
 
 void ReorgForestSerializer::CleanupBuffers() {
-    typedef int32_t (*CleanupFunc_t)(double*, double*, int64_t, int64_t, int64_t,
-                                     int32_t*, int32_t*, int64_t, int64_t, int64_t);
-                                     // int8_t*, int8_t*, int64_t, int64_t, int64_t);
+  if (mlir::decisionforest::ForestJSONReader::GetInstance().GetNumberOfClasses() > 0) {
+    using CleanupFunc_t = int32_t (*)(
+        double *, double *, int64_t, int64_t, int64_t,
+        int32_t *, int32_t *, int64_t, int64_t, int64_t,
+        int8_t*, int8_t*, int64_t, int64_t, int64_t);
+
     auto cleanupFuncPtr = this->GetFunctionAddress<CleanupFunc_t>("Dealloc_Buffers");
     cleanupFuncPtr(m_thresholdMemref.bufferPtr, m_thresholdMemref.alignedPtr, m_thresholdMemref.offset, m_thresholdMemref.lengths[0], m_thresholdMemref.strides[0],
-                   m_featureIndexMemref.bufferPtr, m_featureIndexMemref.alignedPtr, m_featureIndexMemref.offset, m_featureIndexMemref.lengths[0], m_featureIndexMemref.strides[0]);
-                   // nullptr, nullptr, 0, 0, 0);
-    return;
+                  m_featureIndexMemref.bufferPtr, m_featureIndexMemref.alignedPtr, m_featureIndexMemref.offset, m_featureIndexMemref.lengths[0], m_featureIndexMemref.strides[0],
+                  m_classIDMemref.bufferPtr, m_classIDMemref.alignedPtr, m_classIDMemref.offset, m_classIDMemref.lengths[0], m_classIDMemref.strides[0]);
+  }
+  else {
+      using CleanupFunc_t = int32_t (*)(
+        double *, double *, int64_t, int64_t, int64_t,
+        int32_t *, int32_t *, int64_t, int64_t, int64_t);
 
+
+    auto cleanupFuncPtr =
+        this->GetFunctionAddress<CleanupFunc_t>("Dealloc_Buffers");
+    cleanupFuncPtr(m_thresholdMemref.bufferPtr, m_thresholdMemref.alignedPtr,
+                   m_thresholdMemref.offset, m_thresholdMemref.lengths[0],
+                   m_thresholdMemref.strides[0], m_featureIndexMemref.bufferPtr,
+                   m_featureIndexMemref.alignedPtr, m_featureIndexMemref.offset,
+                   m_featureIndexMemref.lengths[0], m_featureIndexMemref.strides[0]);
+  }
 }
 
 std::shared_ptr<IModelSerializer> ConstructGPUReorgForestSerializer(const std::string& jsonFilename) {
@@ -359,9 +376,14 @@ mlir::LogicalResult ReorgForestRepresentation::GenerateModelGlobals(Operation *o
 
   GenerateSimpleInitializer("Init_Thresholds", rewriter, location, module, thresholdMemrefType);
   GenerateSimpleInitializer("Init_FeatureIndices", rewriter, location, module, featureIndexMemrefType);
-  GenerateSimpleInitializer("Init_ClassIDs", rewriter, location, module, classInfoMemrefType);
+  
+  auto cleanupArgs = std::vector<Type>{thresholdMemrefType, featureIndexMemrefType};
+  if (forest.IsMultiClassClassifier()) {
+    GenerateSimpleInitializer("Init_ClassIds", rewriter, location, module, classInfoMemrefType);
+    cleanupArgs.push_back(classInfoMemrefType);
+  }
 
-  GenerateCleanupProc("Dealloc_Buffers", rewriter, location, module, std::vector<Type>{thresholdMemrefType, featureIndexMemrefType});
+  GenerateCleanupProc("Dealloc_Buffers", rewriter, location, module, cleanupArgs);
 
   m_thresholdMemref = func.getArgument(m_thresholdMemrefArgIndex);
   m_featureIndexMemref = func.getArgument(m_featureIndexMemrefArgIndex);

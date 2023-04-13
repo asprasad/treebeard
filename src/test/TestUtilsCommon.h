@@ -122,6 +122,8 @@ public:
 };
 
 std::string GetTreeBeardRepoPath();
+// TODOSampath - Move to XGBoostTestUtils?
+std::string GetXGBoostModelPath(const std::string& modelFileName);
 std::string GetTempFilePath();
 std::string GetGlobalJSONNameForTests();
 

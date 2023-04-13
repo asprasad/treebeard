@@ -484,6 +484,10 @@ bool Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32(Tes
 bool Test_SimpleSharedMem_LeftHeavy(TestArgs_t& args);
 bool Test_SimpleSharedMem_LeftRightAndBalanced(TestArgs_t& args);
 
+bool Test_GPUCodeGeneration_Covtype_ArrayRep_DoubleInt32_BatchSize32(TestArgs_t& args);
+bool Test_GPUCodeGeneration_Covtype_SparseRep_DoubleInt32_BatchSize32(TestArgs_t& args);
+bool Test_GPUCodeGeneration_Covtype_ReorgRep_DoubleInt32_BatchSize32(TestArgs_t& args);
+
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
     vec[i] = (double)rand()/RAND_MAX;
@@ -1490,6 +1494,11 @@ TestDescriptor testList[] = {
   // Basic GPU caching tests
   TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
   TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy),
+
+  // XGBoost tests on GPU
+  TEST_LIST_ENTRY(Test_GPUCodeGeneration_Covtype_ArrayRep_DoubleInt32_BatchSize32),
+  TEST_LIST_ENTRY(Test_GPUCodeGeneration_Covtype_SparseRep_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_GPUCodeGeneration_Covtype_ReorgRep_DoubleInt32_BatchSize32), - Currently not supported
 #endif // TREEBEARD_GPU_SUPPORT
 };
 

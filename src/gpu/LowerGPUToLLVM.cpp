@@ -274,6 +274,7 @@ void GpuToLLVMConversionPass::runOnOperation() {
   populateAsyncStructuralTypeConversionsAndLegality(converter, patterns,
                                                     target);
   populateGpuToLLVMConversionPatterns(converter, patterns, gpuBinaryAnnotation);
+  populateAffineToStdConversionPatterns(patterns);
 
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))

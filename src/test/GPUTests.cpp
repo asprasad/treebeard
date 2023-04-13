@@ -1,9 +1,11 @@
 #ifdef TREEBEARD_GPU_SUPPORT
 
+#include <cstdint>
 #include <vector>
 #include <sstream>
 #include <chrono>
 #include <thread>
+#include <filesystem>
 
 #include "TreeTilingUtils.h"
 #include "ExecutionHelpers.h"
@@ -15,6 +17,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "llvm/ADT/STLExtras.h"
+#include "mlir/IR/MLIRContext.h"
 #include "xgboostparser.h"
 #include "TiledTree.h"
 
@@ -26,6 +29,7 @@
 #include "GPUExecutionHelper.h"
 #include "GPUModelSerializers.h"
 #include "ReorgForestRepresentation.h"
+#include "CompileUtils.h"
 
 using namespace mlir;
 
@@ -343,25 +347,24 @@ bool Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt16(TestArgs_t& args) {
 // GPU Basic Scalar Code Generation Tests
 // ===---------------------------------------------------=== //
 
-template<typename ThresholdType, typename IndexType>
-bool Test_GPUCodeGeneration_Scalar_VariableBatchSize_AnyRep(TestArgs_t& args, 
+template <typename ThresholdType, typename IndexType>
+bool VerifyGPUCodeGenerationOutput_Scalar_VariableBatchSize_AnyRep(TestArgs_t& args, 
                                                             const int32_t batchSize,
-                                                            ForestConstructor_t forestConstructor,
+                                                            ForestCreator& forestCreator,
                                                             std::shared_ptr<decisionforest::IModelSerializer> serializer,
                                                             std::shared_ptr<decisionforest::IRepresentation> representation,
-                                                            int32_t childIndexBitWidth=1) {
-                                                    
-  FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType, ThresholdType> 
-                         irConstructor(args.context, serializer, batchSize, forestConstructor);
-  irConstructor.ConstructForest();
+                                                            int32_t childIndexBitWidth=1,
+                                                            const std::string& csvPath="")
+{
+  forestCreator.ConstructForest();
   
   // If sparse representation is turned on, then child index bit width should be passed
   assert (!mlir::decisionforest::UseSparseTreeRepresentation || childIndexBitWidth!=1 );
-  irConstructor.SetChildIndexBitWidth(childIndexBitWidth);
+  forestCreator.SetChildIndexBitWidth(childIndexBitWidth);
   
-  auto module = irConstructor.GetEvaluationFunction();
+  auto module = forestCreator.GetEvaluationFunction();
 
-  auto schedule = irConstructor.GetSchedule();
+  auto schedule = forestCreator.GetSchedule();
   GPUBasicSchedule(schedule, 4);
 
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
@@ -389,6 +392,10 @@ bool Test_GPUCodeGeneration_Scalar_VariableBatchSize_AnyRep(TestArgs_t& args,
                                             1 /*tileSize*/, 
                                             sizeof(ThresholdType)*8, sizeof(IndexType)*8);
 
+  if (!csvPath.empty()) {
+    return ValidateModuleOutputAgainstCSVdata<ThresholdType, int8_t>(inferenceRunner, csvPath, batchSize);
+  }
+
   assert (batchSize%2 == 0);
   std::vector<std::vector<ThresholdType>> inputData;
   inputData.emplace_back(std::vector<ThresholdType>());
@@ -404,11 +411,29 @@ bool Test_GPUCodeGeneration_Scalar_VariableBatchSize_AnyRep(TestArgs_t& args,
     inferenceRunner.RunInference<ThresholdType, ThresholdType>(batch.data(), result.data());
     for(int64_t rowIdx=0 ; rowIdx<batchSize ; ++rowIdx) {
       std::vector<double> row(batch.begin() + rowIdx*rowSize, batch.begin() + (rowIdx+1)*rowSize);
-      ThresholdType expectedResult = static_cast<ThresholdType>(irConstructor.GetForest().Predict(row));
+      ThresholdType expectedResult = static_cast<ThresholdType>(forestCreator.GetForest()->Predict(row));
       Test_ASSERT(FPEqual(result[rowIdx], expectedResult));
     }
   }
   return true;
+}
+
+template<typename ThresholdType, typename IndexType>
+bool Test_GPUCodeGeneration_Scalar_VariableBatchSize_AnyRep(TestArgs_t& args, 
+                                                            const int32_t batchSize,
+                                                            ForestConstructor_t forestConstructor,
+                                                            std::shared_ptr<decisionforest::IModelSerializer> serializer,
+                                                            std::shared_ptr<decisionforest::IRepresentation> representation,
+                                                            int32_t childIndexBitWidth=1) {
+                                                    
+  FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType, ThresholdType> 
+                         irConstructor(args.context, serializer, batchSize, forestConstructor);
+  return VerifyGPUCodeGenerationOutput_Scalar_VariableBatchSize_AnyRep<ThresholdType, IndexType>(args, 
+                                                                                                 batchSize,
+                                                                                                 irConstructor,
+                                                                                                 serializer,
+                                                                                                 representation,
+                                                                                                 childIndexBitWidth);
 }
 
 template<typename ThresholdType, typename IndexType>
@@ -425,6 +450,39 @@ bool Test_GPUCodeGeneration_Scalar_VariableBatchSize(TestArgs_t& args,
                                                                                           decisionforest::ConstructGPUModelSerializer(modelGlobalsJSONPath),
                                                                                           decisionforest::ConstructGPURepresentation(),
                                                                                           childIndexBitWidth);
+}
+
+template<typename ThresholdType, typename ReturnType, typename IndexType>
+bool Test_GPUCodeGeneration_XGBoostModel_VariableBatchSize(TestArgs_t& args, 
+                                                     const int32_t batchSize,
+                                                     const std::string& xgboostModelFile,
+                                                     const std::string& representation,
+                                                     int32_t childIndexBitWidth=1) {
+  using NodeIndexType = int32_t;
+  int32_t floatTypeBitWidth = sizeof(FloatType)*8;
+  TreeBeard::CompilerOptions options(floatTypeBitWidth, sizeof(ThresholdType)*8, IsFloatType(ThresholdType()), 32 /*feature index type*/, sizeof(NodeIndexType)*8,
+                                     floatTypeBitWidth, batchSize, 8, 32, childIndexBitWidth,
+                                     TreeBeard::TilingType::kUniform, false, false, nullptr);
+
+  auto xgboostModelPath = GetXGBoostModelPath(xgboostModelFile);
+  auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(xgboostModelPath);
+  auto csvPath = xgboostModelPath + ".csv";
+
+  auto serializer =
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          representation, modelGlobalsJSONPath);
+  TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, NodeIndexType, NodeIndexType, ThresholdType>
+                               xgBoostParser(args.context, xgboostModelPath, serializer, batchSize);
+
+  return VerifyGPUCodeGenerationOutput_Scalar_VariableBatchSize_AnyRep<
+      ThresholdType, IndexType>(
+      args,
+      batchSize,
+      xgBoostParser,
+      serializer,
+      decisionforest::RepresentationFactory::Get().GetRepresentation(representation),
+      childIndexBitWidth,
+      csvPath);
 }
 
 template<typename ThresholdType, typename IndexType>
@@ -837,6 +895,19 @@ bool Test_SimpleSharedMem_LeftHeavy(TestArgs_t& args) {
 
 bool Test_SimpleSharedMem_LeftRightAndBalanced(TestArgs_t& args) {
   return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<double, int32_t>(args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>);
+}
+
+bool Test_GPUCodeGeneration_Covtype_ArrayRep_DoubleInt32_BatchSize32(TestArgs_t& args) {
+  return Test_GPUCodeGeneration_XGBoostModel_VariableBatchSize<float, int8_t, int32_t>(args, 32, "covtype_xgb_model_save.json", "gpu_array");
+}
+
+bool Test_GPUCodeGeneration_Covtype_SparseRep_DoubleInt32_BatchSize32(TestArgs_t& args) {
+  mlir::decisionforest::UseSparseTreeRepresentation = true;
+  return Test_GPUCodeGeneration_XGBoostModel_VariableBatchSize<float, int8_t, int32_t>(args, 32, "covtype_xgb_model_save.json", "gpu_sparse", 16);
+}
+
+bool Test_GPUCodeGeneration_Covtype_ReorgRep_DoubleInt32_BatchSize32(TestArgs_t& args) {
+  return Test_GPUCodeGeneration_XGBoostModel_VariableBatchSize<float, int8_t, int32_t>(args, 32, "covtype_xgb_model_save.json", "gpu_reorg");
 }
 
 }

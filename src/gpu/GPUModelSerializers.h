@@ -5,6 +5,7 @@
 
 #include <map>
 #include <set>
+#include "ExecutionHelpers.h"
 #include "TreebeardContext.h"
 
 namespace mlir
@@ -18,6 +19,7 @@ protected:
   LengthMemrefType m_lengthsMemref;
   LengthMemrefType m_offsetsMemref;
   ModelMemrefType m_modelMemref;
+  ClassMemrefType m_classIDMemref;
   // TODO we should have a way to store the class IDs memref here
   
   bool m_sparseRepresentation;

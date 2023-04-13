@@ -4,6 +4,7 @@
 #include <libgen.h>
 #include <climits>
 #include <cstring>
+#include <filesystem>
 
 #include "ExecutionHelpers.h"
 #include "TestUtilsCommon.h"
@@ -53,6 +54,13 @@ std::string GetTreeBeardRepoPath() {
   char *buildDir = dirname(execDir);
   char* repoPath = dirname(buildDir);
   return repoPath;
+}
+
+std::string GetXGBoostModelPath(const std::string& modelFileName) {
+  std::filesystem::path tbRepoPath(GetTreeBeardRepoPath());
+  tbRepoPath.append("xgb_models").append(modelFileName);
+  auto xgboostModelPath = tbRepoPath.string();
+  return xgboostModelPath;
 }
 
 std::string GetTempFilePath() {

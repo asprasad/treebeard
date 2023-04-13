@@ -1,11 +1,13 @@
 #ifdef TREEBEARD_GPU_SUPPORT
 
+#include "ExecutionHelpers.h"
 #include "TreeTilingDescriptor.h"
 #include "TreeTilingUtils.h"
 #include "TiledTree.h"
 #include "Logger.h"
 #include "ModelSerializers.h"
 #include "GPUModelSerializers.h"
+#include <cstdint>
 
 namespace mlir
 {
@@ -17,16 +19,16 @@ namespace decisionforest
 // ===---------------------------------------------------=== //
 
 int32_t GPUArraySparseSerializerBase::InitializeLengthsArray() {
-  typedef LengthMemrefType (*InitLengthFunc_t)(int64_t*, int64_t*, int64_t, int64_t, int64_t);
+  using InitLengthFunc_t = LengthMemrefType (*)(int64_t *, int64_t *, int64_t, int64_t, int64_t);
   auto initLengthPtr = GetFunctionAddress<InitLengthFunc_t>("Init_Lengths");
-  auto m_tileSize = m_inferenceRunner->GetTileSize();
-  auto m_thresholdSize = m_inferenceRunner->GetThresholdWidth();
-  auto m_featureIndexSize = m_inferenceRunner->GetFeatureIndexWidth();
+  auto tileSize = m_inferenceRunner->GetTileSize();
+  auto thresholdSize = m_inferenceRunner->GetThresholdWidth();
+  auto featureIndexSize = m_inferenceRunner->GetFeatureIndexWidth();
   std::vector<int64_t> lengths(mlir::decisionforest::ForestJSONReader::GetInstance().GetNumberOfTrees(), -1);
   mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengths.data(), 
-                                                                               m_tileSize,
-                                                                               m_thresholdSize,
-                                                                               m_featureIndexSize);
+                                                                               tileSize,
+                                                                               thresholdSize,
+                                                                               featureIndexSize);
   LengthMemrefType lengthsMemref{lengths.data(), lengths.data(), 0, {static_cast<int64_t>(lengths.size())}, {1}};
   m_lengthsMemref = initLengthPtr(lengthsMemref.bufferPtr, lengthsMemref.alignedPtr, lengthsMemref.offset, lengthsMemref.lengths[0], lengthsMemref.strides[0]);
 
@@ -36,17 +38,17 @@ int32_t GPUArraySparseSerializerBase::InitializeLengthsArray() {
 // TODO All the initialize methods are doing the same thing, except that the getter they're calling are different. 
 // Refactor them into a shared method.
 int32_t GPUArraySparseSerializerBase::InitializeOffsetsArray() {
-  typedef LengthMemrefType (*InitLengthFunc_t)(int64_t*, int64_t*, int64_t, int64_t, int64_t);
+  using InitLengthFunc_t = LengthMemrefType (*)(int64_t *, int64_t *, int64_t, int64_t, int64_t);
   auto initOffsetPtr = GetFunctionAddress<InitLengthFunc_t>("Init_Offsets");
-  auto m_tileSize = m_inferenceRunner->GetTileSize();
-  auto m_thresholdSize = m_inferenceRunner->GetThresholdWidth();
-  auto m_featureIndexSize = m_inferenceRunner->GetFeatureIndexWidth();
+  auto tileSize = m_inferenceRunner->GetTileSize();
+  auto thresholdSize = m_inferenceRunner->GetThresholdWidth();
+  auto featureIndexSize = m_inferenceRunner->GetFeatureIndexWidth();
   
   std::vector<int64_t> offsets(mlir::decisionforest::ForestJSONReader::GetInstance().GetNumberOfTrees(), -1);
   mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(offsets.data(),
-                                                                               m_tileSize,
-                                                                               m_thresholdSize,
-                                                                               m_featureIndexSize);
+                                                                               tileSize,
+                                                                               thresholdSize,
+                                                                               featureIndexSize);
   LengthMemrefType offsetsMemref{offsets.data(), offsets.data(), 0, {static_cast<int64_t>(offsets.size())}, {1}};
   m_offsetsMemref = initOffsetPtr(offsetsMemref.bufferPtr,
                                   offsetsMemref.alignedPtr,
@@ -123,9 +125,7 @@ int32_t GPUArraySparseSerializerBase::CallInitMethod() {
   Memref<TileShapeType, 1> tileShapeIDMemref{tileShapeIDs.data(), tileShapeIDs.data(), 0, {(int64_t)tileShapeIDs.size()}, 1};
   
   if (!m_sparseRepresentation) {
-    typedef ModelMemrefType (*InitModelPtr_t)(ThresholdType*, ThresholdType*, int64_t, int64_t, int64_t, 
-                                              FeatureIndexType*, FeatureIndexType*, int64_t, int64_t, int64_t,
-                                              TileShapeType*, TileShapeType*, int64_t, int64_t, int64_t);
+    using InitModelPtr_t = ModelMemrefType (*)(ThresholdType *, ThresholdType *, int64_t, int64_t, int64_t, FeatureIndexType *, FeatureIndexType *, int64_t, int64_t, int64_t, TileShapeType *, TileShapeType *, int64_t, int64_t, int64_t);
     auto initModelPtr = GetFunctionAddress<InitModelPtr_t>("Init_Model");
 
     m_modelMemref = initModelPtr(thresholdsMemref.bufferPtr, thresholdsMemref.alignedPtr, thresholdsMemref.offset, thresholdsMemref.lengths[0], thresholdsMemref.strides[0],
@@ -135,10 +135,7 @@ int32_t GPUArraySparseSerializerBase::CallInitMethod() {
   else {
     assert (m_sparseRepresentation);
     Memref<ChildIndexType, 1> childIndexMemref{childIndices.data(), childIndices.data(), 0, {(int64_t)childIndices.size()}, 1};
-    typedef ModelMemrefType (*InitModelPtr_t)(ThresholdType*, ThresholdType*, int64_t, int64_t, int64_t, 
-                                              FeatureIndexType*, FeatureIndexType*, int64_t, int64_t, int64_t,
-                                              TileShapeType*, TileShapeType*, int64_t, int64_t, int64_t,
-                                              ChildIndexType*, ChildIndexType*, int64_t, int64_t, int64_t);
+    using InitModelPtr_t = ModelMemrefType (*)(ThresholdType *, ThresholdType *, int64_t, int64_t, int64_t, FeatureIndexType *, FeatureIndexType *, int64_t, int64_t, int64_t, TileShapeType *, TileShapeType *, int64_t, int64_t, int64_t, ChildIndexType *, ChildIndexType *, int64_t, int64_t, int64_t);
     auto initModelPtr = GetFunctionAddress<InitModelPtr_t>("Init_Model");
 
     m_modelMemref = initModelPtr(thresholdsMemref.bufferPtr, thresholdsMemref.alignedPtr, thresholdsMemref.offset, thresholdsMemref.lengths[0], thresholdsMemref.strides[0],
@@ -165,29 +162,27 @@ int32_t GPUArraySparseSerializerBase::InitializeModelArray() {
     if (featureIndexSize == 32) {
       return ResolveTileShapeType<double, int32_t>();
     }
-    else if (featureIndexSize == 16) {
+    if (featureIndexSize == 16) {
       return ResolveTileShapeType<double, int16_t>();
     }
-    else if (featureIndexSize == 8) {
+    if (featureIndexSize == 8) {
       return ResolveTileShapeType<double, int8_t>();
     }
-    else {
-      assert (false);
-    }
+    assert (false);
+   
   }
   else if (thresholdSize == 32) {
     if (featureIndexSize == 32) {
       return ResolveTileShapeType<float, int32_t>();
     }
-    else if (featureIndexSize == 16) {
+    if (featureIndexSize == 16) {
       return ResolveTileShapeType<float, int16_t>();
     }
-    else if (featureIndexSize == 8) {
+    if (featureIndexSize == 8) {
       return ResolveTileShapeType<float, int8_t>();
     }
-    else {
-      assert (false);
-    }
+    assert (false);
+   
   }
   else {
     assert (false);
@@ -196,6 +191,20 @@ int32_t GPUArraySparseSerializerBase::InitializeModelArray() {
 }
 
 void GPUArraySparseSerializerBase::InitializeClassInformation() {
+  if (mlir::decisionforest::ForestJSONReader::GetInstance().GetNumberOfClasses() == 0) return;
+
+  std::vector<int8_t> classIds(mlir::decisionforest::ForestJSONReader::GetInstance().GetNumberOfTrees(), -1);
+  auto tileSize = m_inferenceRunner->GetTileSize();
+  auto thresholdSize = m_inferenceRunner->GetThresholdWidth();
+  auto featureIndexSize = m_inferenceRunner->GetFeatureIndexWidth();
+  mlir::decisionforest::ForestJSONReader::GetInstance()
+      .InitializeClassInformation((void *)classIds.data(), tileSize,
+                                  thresholdSize, featureIndexSize);
+
+  using InitClassIdsFunc_t = ClassMemrefType (*)(int8_t *, int8_t *, int64_t, int64_t, int64_t);
+
+  auto initClassInfoFuncPtr = GetFunctionAddress<InitClassIdsFunc_t>("Init_ClassIds");
+  m_classIDMemref = initClassInfoFuncPtr(classIds.data(), classIds.data(), (int64_t)0, (int64_t)classIds.size(), (int64_t)1);
 }
 
 void GPUArraySparseSerializerBase::CallPredictionMethod(void* predictFuncPtr,
@@ -204,32 +213,51 @@ void GPUArraySparseSerializerBase::CallPredictionMethod(void* predictFuncPtr,
     using InputElementType = double;
     using ReturnType = double;
 
-    typedef Memref<ReturnType, 1> (*InferenceFunc_t)(InputElementType*, InputElementType*, int64_t, int64_t, int64_t, int64_t, int64_t, 
-                                                     ReturnType*, ReturnType*, int64_t, int64_t, int64_t,
-                                                     Tile*, Tile*, int64_t, int64_t, int64_t,
-                                                     int64_t*, int64_t*, int64_t, int64_t, int64_t,
-                                                     int64_t*, int64_t*, int64_t, int64_t, int64_t,
-                                                     int8_t*, int8_t*, int64_t, int64_t, int64_t);
+    using InferenceFunc_t = Memref<ReturnType, 1> (*)(
+        InputElementType *, InputElementType *, int64_t, int64_t, int64_t,
+        int64_t, int64_t, ReturnType *, ReturnType *, int64_t, int64_t, int64_t,
+        Tile *, Tile *, int64_t, int64_t, int64_t, int64_t *, int64_t *,
+        int64_t, int64_t, int64_t, int64_t *, int64_t *, int64_t, int64_t,
+        int64_t, int8_t *, int8_t *, int64_t, int64_t, int64_t);
     auto inferenceFuncPtr = reinterpret_cast<InferenceFunc_t>(predictFuncPtr);
     inferenceFuncPtr(inputs.bufferPtr, inputs.alignedPtr, inputs.offset, inputs.lengths[0], inputs.lengths[1], inputs.strides[0], inputs.strides[1],
                      results.bufferPtr, results.alignedPtr, results.offset, results.lengths[0], results.strides[0],
                      m_modelMemref.bufferPtr, m_modelMemref.alignedPtr, m_modelMemref.offset, m_modelMemref.lengths[0], m_modelMemref.strides[0],
                      m_offsetsMemref.bufferPtr, m_offsetsMemref.alignedPtr, m_offsetsMemref.offset, m_offsetsMemref.lengths[0], m_offsetsMemref.strides[0],
                      m_lengthsMemref.bufferPtr, m_lengthsMemref.alignedPtr, m_lengthsMemref.offset, m_lengthsMemref.lengths[0], m_lengthsMemref.strides[0],
-                     nullptr, nullptr, 0, 0, 0);
-    return;
+                     m_classIDMemref.bufferPtr, m_classIDMemref.alignedPtr, m_classIDMemref.offset, m_classIDMemref.lengths[0], m_classIDMemref.strides[0]);
 }    
 
 void GPUArraySparseSerializerBase::CleanupBuffers() {
-  typedef int32_t (*CleanupFunc_t)(Tile*, Tile*, int64_t, int64_t, int64_t,
-                                  int64_t*, int64_t*, int64_t, int64_t, int64_t,
-                                  int64_t*, int64_t*, int64_t, int64_t, int64_t);
-                                  // int8_t*, int8_t*, int64_t, int64_t, int64_t);
-  auto cleanupFuncPtr = this->GetFunctionAddress<CleanupFunc_t>("Dealloc_Buffers");
-  cleanupFuncPtr(m_modelMemref.bufferPtr, m_modelMemref.alignedPtr, m_modelMemref.offset, m_modelMemref.lengths[0], m_modelMemref.strides[0],
-                 m_offsetsMemref.bufferPtr, m_offsetsMemref.alignedPtr, m_offsetsMemref.offset, m_offsetsMemref.lengths[0], m_offsetsMemref.strides[0],
-                 m_lengthsMemref.bufferPtr, m_lengthsMemref.alignedPtr, m_lengthsMemref.offset, m_lengthsMemref.lengths[0], m_lengthsMemref.strides[0]);
-  //               // nullptr, nullptr, 0, 0, 0);
+
+  if (mlir::decisionforest::ForestJSONReader::GetInstance().GetNumberOfClasses() > 0) {
+    using CleanupFunc_t = int32_t (*)(
+        Tile *, Tile *, int64_t, int64_t, int64_t, int64_t *, int64_t *, int64_t,
+        int64_t, int64_t, int64_t *, int64_t *, int64_t, int64_t, int64_t,
+        int8_t*, int8_t*, int64_t, int64_t, int64_t);
+
+    auto cleanupFuncPtr = this->GetFunctionAddress<CleanupFunc_t>("Dealloc_Buffers");
+    cleanupFuncPtr(m_modelMemref.bufferPtr, m_modelMemref.alignedPtr, m_modelMemref.offset, m_modelMemref.lengths[0], m_modelMemref.strides[0],
+                  m_offsetsMemref.bufferPtr, m_offsetsMemref.alignedPtr, m_offsetsMemref.offset, m_offsetsMemref.lengths[0], m_offsetsMemref.strides[0],
+                  m_lengthsMemref.bufferPtr, m_lengthsMemref.alignedPtr, m_lengthsMemref.offset, m_lengthsMemref.lengths[0], m_lengthsMemref.strides[0],
+                  m_classIDMemref.bufferPtr, m_classIDMemref.alignedPtr, m_classIDMemref.offset, m_classIDMemref.lengths[0], m_classIDMemref.strides[0]);
+  }
+  else {
+      using CleanupFunc_t = int32_t (*)(
+      Tile *, Tile *, int64_t, int64_t, int64_t, int64_t *, int64_t *, int64_t,
+      int64_t, int64_t, int64_t *, int64_t *, int64_t, int64_t, int64_t);
+
+    auto cleanupFuncPtr =
+        this->GetFunctionAddress<CleanupFunc_t>("Dealloc_Buffers");
+    cleanupFuncPtr(m_modelMemref.bufferPtr, m_modelMemref.alignedPtr,
+                   m_modelMemref.offset, m_modelMemref.lengths[0],
+                   m_modelMemref.strides[0], m_offsetsMemref.bufferPtr,
+                   m_offsetsMemref.alignedPtr, m_offsetsMemref.offset,
+                   m_offsetsMemref.lengths[0], m_offsetsMemref.strides[0],
+                   m_lengthsMemref.bufferPtr, m_lengthsMemref.alignedPtr,
+                   m_lengthsMemref.offset, m_lengthsMemref.lengths[0],
+                   m_lengthsMemref.strides[0]);
+  }
 
 }
 

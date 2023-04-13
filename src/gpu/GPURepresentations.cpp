@@ -254,13 +254,18 @@ mlir::LogicalResult GPUArrayBasedRepresentation::GenerateModelGlobals(Operation 
   GenerateModelMemrefInitializer("Init_Model", rewriter, location, module, modelMemrefType);
   GenerateSimpleInitializer("Init_Offsets", rewriter, location, module, offsetMemrefType);
   GenerateSimpleInitializer("Init_Lengths", rewriter, location, module, offsetMemrefType);
-  GenerateSimpleInitializer("Init_ClassIds", rewriter, location, module, classInfoMemrefType);
+
+  auto cleanupArgs = std::vector<Type>{modelMemrefType, offsetMemrefType, offsetMemrefType};
+  if (forest.IsMultiClassClassifier()) {
+    GenerateSimpleInitializer("Init_ClassIds", rewriter, location, module, classInfoMemrefType);
+    cleanupArgs.push_back(classInfoMemrefType);
+  }
 
   GenerateCleanupProc("Dealloc_Buffers", 
                       rewriter, 
                       location,
                       module, 
-                      std::vector<Type>{modelMemrefType, offsetMemrefType, offsetMemrefType}); //, classInfoMemrefType})
+                      cleanupArgs);
   EnsembleConstantLoweringInfo info 
   {
     static_cast<Value>(m_modelMemref),
@@ -572,13 +577,18 @@ mlir::LogicalResult GPUSparseRepresentation::GenerateModelGlobals(Operation *op,
   GenerateModelMemrefInitializer("Init_Model", rewriter, location, module, modelMemrefType);
   GenerateSimpleInitializer("Init_Offsets", rewriter, location, module, offsetMemrefType);
   GenerateSimpleInitializer("Init_Lengths", rewriter, location, module, offsetMemrefType);
-  GenerateSimpleInitializer("Init_ClassIds", rewriter, location, module, classInfoMemrefType);
+
+  auto cleanupArgs = std::vector<Type>{modelMemrefType, offsetMemrefType, offsetMemrefType};
+  if (forest.IsMultiClassClassifier()) {
+    GenerateSimpleInitializer("Init_ClassIds", rewriter, location, module, classInfoMemrefType);
+    cleanupArgs.push_back(classInfoMemrefType);
+  }
 
   GenerateCleanupProc("Dealloc_Buffers", 
                     rewriter, 
                     location,
                     module, 
-                    std::vector<Type>{modelMemrefType, offsetMemrefType, offsetMemrefType}); //, classInfoMemrefType})
+                    cleanupArgs);
 
   SparseEnsembleConstantLoweringInfo info 
   {
