@@ -41,7 +41,6 @@ using TestException = std::runtime_error;
 }
 
 struct TestArgs_t {
-  mlir::MLIRContext& context;
 };
 
 typedef bool(*TestFunc_t)(TestArgs_t& args);

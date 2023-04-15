@@ -216,9 +216,12 @@ bool CheckGPUModelInitialization_Scalar(TestArgs_t& args, ForestConstructor_t fo
 
   auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
   auto serializer = decisionforest::ConstructGPUModelSerializer(modelGlobalsJSONPath);
-  
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
   FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType, ThresholdType> 
-                         irConstructor(args.context, serializer, batchSize, forestConstructor);
+                         irConstructor(context, serializer, batchSize, forestConstructor);
   irConstructor.ConstructForest();
   irConstructor.SetChildIndexBitWidth(1);
   auto module = irConstructor.GetEvaluationFunction();
@@ -227,26 +230,26 @@ bool CheckGPUModelInitialization_Scalar(TestArgs_t& args, ForestConstructor_t fo
   GPUBasicSchedule(schedule, 4);
 
   // module->dump();
-  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
   // module->dump();
 
   mlir::decisionforest::GreedilyMapParallelLoopsToGPU(module);
   // module->dump();
 
-  mlir::decisionforest::ConvertParallelLoopsToGPU(args.context, module);
+  mlir::decisionforest::ConvertParallelLoopsToGPU(context, module);
   // module->dump();
 
   auto representation = decisionforest::ConstructGPURepresentation();
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, 
+  mlir::decisionforest::LowerEnsembleToMemrefs(context, 
                                                module,
                                                serializer,
                                                representation);
   
-  mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   AddGPUModelMemrefGetter_Scalar(module);
   // module->dump();
 
-  mlir::decisionforest::LowerGPUToLLVM(args.context, module, representation);
+  mlir::decisionforest::LowerGPUToLLVM(context, module, representation);
   // module->dump();
 
   GPUInferenceRunnerForTest inferenceRunner(serializer, 
@@ -356,8 +359,9 @@ bool VerifyGPUCodeGenerationOutput_Scalar_VariableBatchSize_AnyRep(TestArgs_t& a
                                                             int32_t childIndexBitWidth=1,
                                                             const std::string& csvPath="")
 {
+  auto& context = forestCreator.GetContext();
   forestCreator.ConstructForest();
-  
+                                                            
   // If sparse representation is turned on, then child index bit width should be passed
   assert (!mlir::decisionforest::UseSparseTreeRepresentation || childIndexBitWidth!=1 );
   forestCreator.SetChildIndexBitWidth(childIndexBitWidth);
@@ -367,24 +371,24 @@ bool VerifyGPUCodeGenerationOutput_Scalar_VariableBatchSize_AnyRep(TestArgs_t& a
   auto schedule = forestCreator.GetSchedule();
   GPUBasicSchedule(schedule, 4);
 
-  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
   // module->dump();
 
   mlir::decisionforest::GreedilyMapParallelLoopsToGPU(module);
   // module->dump();
 
-  mlir::decisionforest::ConvertParallelLoopsToGPU(args.context, module);
+  mlir::decisionforest::ConvertParallelLoopsToGPU(context, module);
   // module->dump();
 
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context,
+  mlir::decisionforest::LowerEnsembleToMemrefs(context,
                                                module,
                                                serializer,
                                                representation);
   
-  mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();
 
-  mlir::decisionforest::LowerGPUToLLVM(args.context, module, representation);
+  mlir::decisionforest::LowerGPUToLLVM(context, module, representation);
   // module->dump();
 
   GPUInferenceRunnerForTest inferenceRunner(serializer,
@@ -426,8 +430,10 @@ bool Test_GPUCodeGeneration_Scalar_VariableBatchSize_AnyRep(TestArgs_t& args,
                                                             std::shared_ptr<decisionforest::IRepresentation> representation,
                                                             int32_t childIndexBitWidth=1) {
                                                     
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
   FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType, ThresholdType> 
-                         irConstructor(args.context, serializer, batchSize, forestConstructor);
+                         irConstructor(context, serializer, batchSize, forestConstructor);
   return VerifyGPUCodeGenerationOutput_Scalar_VariableBatchSize_AnyRep<ThresholdType, IndexType>(args, 
                                                                                                  batchSize,
                                                                                                  irConstructor,
@@ -468,11 +474,14 @@ bool Test_GPUCodeGeneration_XGBoostModel_VariableBatchSize(TestArgs_t& args,
   auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(xgboostModelPath);
   auto csvPath = xgboostModelPath + ".csv";
 
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
   auto serializer =
       decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
           representation, modelGlobalsJSONPath);
   TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, NodeIndexType, NodeIndexType, ThresholdType>
-                               xgBoostParser(args.context, xgboostModelPath, serializer, batchSize);
+                               xgBoostParser(context, xgboostModelPath, serializer, batchSize);
 
   return VerifyGPUCodeGenerationOutput_Scalar_VariableBatchSize_AnyRep<
       ThresholdType, IndexType>(
@@ -629,11 +638,14 @@ bool CheckGPUModelInitialization_ReorgForest(TestArgs_t& args, ForestConstructor
   // initialization. So just hard coding those.
   const int32_t batchSize = 32;
 
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
   auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
   auto serializer = decisionforest::ModelSerializerFactory::Get().GetModelSerializer("gpu_reorg", modelGlobalsJSONPath);
   
   FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType, ThresholdType> 
-                         irConstructor(args.context, serializer, batchSize, forestConstructor);
+                         irConstructor(context, serializer, batchSize, forestConstructor);
   irConstructor.ConstructForest();
   irConstructor.SetChildIndexBitWidth(1);
   auto module = irConstructor.GetEvaluationFunction();
@@ -642,26 +654,26 @@ bool CheckGPUModelInitialization_ReorgForest(TestArgs_t& args, ForestConstructor
   GPUBasicSchedule(schedule, 4);
 
   // module->dump();
-  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
   // module->dump();
 
   mlir::decisionforest::GreedilyMapParallelLoopsToGPU(module);
   // module->dump();
 
-  mlir::decisionforest::ConvertParallelLoopsToGPU(args.context, module);
+  mlir::decisionforest::ConvertParallelLoopsToGPU(context, module);
   // module->dump();
 
   auto representation = decisionforest::RepresentationFactory::Get().GetRepresentation("gpu_reorg");
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, 
+  mlir::decisionforest::LowerEnsembleToMemrefs(context, 
                                                module,
                                                serializer,
                                                representation);
   
-  mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   AddGPUModelMemrefGetter_Reorg(module);
   // module->dump();
 
-  mlir::decisionforest::LowerGPUToLLVM(args.context, module, representation);
+  mlir::decisionforest::LowerGPUToLLVM(context, module, representation);
   // module->dump();
 
   GPUInferenceRunnerForTest inferenceRunner(serializer, 
@@ -811,9 +823,11 @@ bool Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize_AnyRep(TestArgs_t& args,
                                                             std::shared_ptr<decisionforest::IModelSerializer> serializer,
                                                             std::shared_ptr<decisionforest::IRepresentation> representation,
                                                             int32_t childIndexBitWidth=1) {
-                                                    
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
   FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType, ThresholdType> 
-                         irConstructor(args.context, serializer, batchSize, forestConstructor);
+                         irConstructor(context, serializer, batchSize, forestConstructor);
   irConstructor.ConstructForest();
   
   // If sparse representation is turned on, then child index bit width should be passed
@@ -825,25 +839,25 @@ bool Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize_AnyRep(TestArgs_t& args,
   auto schedule = irConstructor.GetSchedule();
   TahoeSharedForestStrategy(*schedule, 8);
 
-  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
   // module->dump();
 
   mlir::decisionforest::GreedilyMapParallelLoopsToGPU(module);
   // // module->dump();
 
-  mlir::decisionforest::ConvertParallelLoopsToGPU(args.context, module);
+  mlir::decisionforest::ConvertParallelLoopsToGPU(context, module);
   // module->dump();
 
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context,
+  mlir::decisionforest::LowerEnsembleToMemrefs(context,
                                                module,
                                                serializer,
                                                representation);
   // module->dump();
   
-  mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();
 
-  mlir::decisionforest::LowerGPUToLLVM(args.context, module, representation);
+  mlir::decisionforest::LowerGPUToLLVM(context, module, representation);
   // module->dump();
 
   GPUInferenceRunnerForTest inferenceRunner(serializer,

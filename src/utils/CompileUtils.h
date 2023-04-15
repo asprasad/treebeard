@@ -52,7 +52,8 @@ inline mlir::ModuleOp ConstructLLVMDialectModuleFromForestCreator(
 
 template<typename ThresholdType=double, typename ReturnType=double, typename FeatureIndexType=int32_t, 
          typename NodeIndexType=int32_t, typename InputElementType=ThresholdType>
-mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, TreebeardContext& tbContext) {
+mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(TreebeardContext& tbContext) {
+  mlir::MLIRContext& context = tbContext.context;
   const std::string& modelJsonPath=tbContext.modelPath;
   const CompilerOptions& options=tbContext.options;
   
@@ -64,7 +65,7 @@ mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& cont
 
 void InitializeMLIRContext(mlir::MLIRContext& context);
 
-mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, TreebeardContext& tbContext);
+mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(TreebeardContext& tbContext);
 void ConvertONNXModelToLLVMIR(TreebeardContext& tbContext, const std::string& llvmIRFilePath);
 void ConvertXGBoostJSONToLLVMIR(TreebeardContext& tbContext, const std::string& llvmIRFilePath);
 

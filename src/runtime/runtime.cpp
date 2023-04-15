@@ -134,10 +134,12 @@ extern "C" void Set_tilingType(intptr_t options, int32_t val) {
 extern "C" void GenerateLLVMIRForXGBoostModel(const char* modelJSONPath, const char* llvmIRFilePath,
                                               const char* modelGlobalsJSONPath, intptr_t options) {
   TreeBeard::CompilerOptions *optionsPtr = reinterpret_cast<TreeBeard::CompilerOptions*>(options);
-  TreeBeard::TreebeardContext tbContext{modelJSONPath, modelGlobalsJSONPath, *optionsPtr, 
+  TreeBeard::TreebeardContext tbContext(modelJSONPath,
+                                        modelGlobalsJSONPath,
+                                        *optionsPtr, 
                                         mlir::decisionforest::ConstructRepresentation(),
                                         mlir::decisionforest::ConstructModelSerializer(std::string(modelGlobalsJSONPath)),
-                                        nullptr  /*TODO_ForestCreator*/ };
+                                        nullptr  /*TODO_ForestCreator*/);
   TreeBeard::ConvertXGBoostJSONToLLVMIR(tbContext, llvmIRFilePath);
 }
 
@@ -145,13 +147,13 @@ extern "C" intptr_t CreateInferenceRunner(const char* modelJSONPath, const char*
                                           intptr_t options) {
   TreeBeard::CompilerOptions *optionsPtr = reinterpret_cast<TreeBeard::CompilerOptions*>(options);
   auto modelGlobalsJSONPath = TreeBeard::XGBoostJSONParser<>::ModelGlobalJSONFilePathFromJSONFilePath(modelJSONPath);
-  mlir::MLIRContext context;
-  TreeBeard::InitializeMLIRContext(context); 
-  TreeBeard::TreebeardContext tbContext{modelJSONPath, modelGlobalsJSONPath, *optionsPtr, 
+  TreeBeard::TreebeardContext tbContext(modelJSONPath,
+                                        modelGlobalsJSONPath,
+                                        *optionsPtr, 
                                         mlir::decisionforest::ConstructRepresentation(),
                                         mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath),
-                                        nullptr  /*TODO_ForestCreator*/ };
-  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON(context, tbContext);
+                                        nullptr  /*TODO_ForestCreator*/);
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON(tbContext);
   auto inferenceRunner = new mlir::decisionforest::InferenceRunner(tbContext.serializer, module, 
                                                                    optionsPtr->tileSize, optionsPtr->thresholdTypeWidth,
                                                                    optionsPtr->featureIndexTypeWidth);
@@ -171,11 +173,12 @@ extern "C" void CreateLLVMIRForONNXModel(const char *modelPath, const char* llvm
 {
   TreeBeard::CompilerOptions *optionsPtr = reinterpret_cast<TreeBeard::CompilerOptions *>(options);
 
-  TreeBeard::TreebeardContext tbContext{
-      modelPath, modelGlobalsJSONPath, *optionsPtr,
-      mlir::decisionforest::ConstructRepresentation(),
-      mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath),
-      nullptr /*TODO_ForestCreator*/ };
+  TreeBeard::TreebeardContext tbContext(modelPath,
+                                        modelGlobalsJSONPath,
+                                        *optionsPtr,
+                                        mlir::decisionforest::ConstructRepresentation(),
+                                        mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath),
+                                        nullptr /*TODO_ForestCreator*/ );
 
   TreeBeard::ConvertONNXModelToLLVMIR(tbContext, llvmIrPath);
 }
@@ -195,11 +198,12 @@ extern "C" intptr_t CreateInferenceRunnerForONNXModelInputs(
       reinterpret_cast<TreeBeard::CompilerOptions *>(options);
   mlir::MLIRContext context;
   TreeBeard::InitializeMLIRContext(context);
-  TreeBeard::TreebeardContext tbContext{
-      "", modelGlobalsJSONPath, *optionsPtr,
-      mlir::decisionforest::ConstructRepresentation(),
-      mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath),
-      nullptr  /*TODO_ForestCreator*/};
+  TreeBeard::TreebeardContext tbContext("",
+                                        modelGlobalsJSONPath,
+                                        *optionsPtr,
+                                        mlir::decisionforest::ConstructRepresentation(),
+                                        mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath),
+                                        nullptr  /*TODO_ForestCreator*/);
 
   mlir::ModuleOp module;
 

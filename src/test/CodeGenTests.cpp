@@ -35,7 +35,9 @@ namespace test
 bool Test_LoadTileThresholdOp_DoubleInt32_TileSize1(TestArgs_t& args) {
   using TestTileType = NumericalTileType_Natural<double, int32_t>;
   
-  auto& context = args.context;
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
   mlir::OpBuilder builder(&context);
   auto location = builder.getUnknownLoc();
   auto module = mlir::ModuleOp::create(location, llvm::StringRef("Test_LoadTileThresholdOp_DoubleInt32_TileSize1"));
@@ -108,7 +110,9 @@ bool Test_LoadTileThresholdOp_DoubleInt32_TileSize1(TestArgs_t& args) {
 bool Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1(TestArgs_t& args) {
   using TestTileType = NumericalTileType_Natural<double, int32_t>;
   
-  auto& context = args.context;
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
   mlir::OpBuilder builder(&context);
   auto location = builder.getUnknownLoc();
   auto module = mlir::ModuleOp::create(location, llvm::StringRef("Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1"));
@@ -181,7 +185,9 @@ bool Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1(TestArgs_t& args) {
 bool Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args) {
   using TestTileType = NumericalTileType_Natural<double, int32_t>;
   
-  auto& context = args.context;
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
   mlir::OpBuilder builder(&context);
   auto location = builder.getUnknownLoc();
   auto module = mlir::ModuleOp::create(location, llvm::StringRef("Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1"));
@@ -260,7 +266,9 @@ bool Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args) {
 bool Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args) {
   using TestTileType = NumericalTileType_Natural<double, int32_t>;
   
-  auto& context = args.context;
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
   mlir::OpBuilder builder(&context);
   auto location = builder.getUnknownLoc();
   auto module = mlir::ModuleOp::create(location, llvm::StringRef("Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1"));
@@ -490,26 +498,29 @@ bool Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(TestArgs_t& args, Fore
     tilingDescriptors.push_back(tilingDescriptor);
   }
   
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
   auto tileShapeBitWidth = sizeof(TileShapeType)*8;
   auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
   auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);
   FixedTiledTreeIRConstructor<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>
-                              irGenerator(args.context, serializer, 1, forestConstructor, tilingDescriptors, tileShapeBitWidth);
+                              irGenerator(context, serializer, 1, forestConstructor, tilingDescriptors, tileShapeBitWidth);
   irGenerator.ConstructForest();
   irGenerator.SetChildIndexBitWidth(childIndexBitWidth);
   auto module = irGenerator.GetEvaluationFunction();
   if (scheduleManipulator)
     scheduleManipulator(irGenerator.GetSchedule());
-  decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
   // module->dump();
   auto representation = decisionforest::ConstructRepresentation();
-  decisionforest::LowerEnsembleToMemrefs(args.context, 
+  decisionforest::LowerEnsembleToMemrefs(context, 
                                          module,
                                          serializer,
                                          representation);
-  decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();
-  decisionforest::LowerToLLVM(args.context, module, representation);
+  decisionforest::LowerToLLVM(context, module, representation);
   
   // module->dump();
   // decisionforest::dumpLLVMIR(module);
@@ -763,21 +774,25 @@ bool Test_ModelInitialization(TestArgs_t& args, ForestConstructor_t forestConstr
   auto tileShapeBitWidth = sizeof(TileShapeType)*8;
   auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
   auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
   FixedTiledTreeIRConstructor<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType> 
-                              irGenerator(args.context, serializer, 1, forestConstructor, tilingDescriptors, tileShapeBitWidth);
+                              irGenerator(context, serializer, 1, forestConstructor, tilingDescriptors, tileShapeBitWidth);
   irGenerator.ConstructForest();
   auto module = irGenerator.GetEvaluationFunction();
 
-  decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
   auto representation = decisionforest::ConstructRepresentation();
-  decisionforest::LowerEnsembleToMemrefs(args.context,
+  decisionforest::LowerEnsembleToMemrefs(context,
                                          module,
                                          serializer,
                                          representation);
-  decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  decisionforest::ConvertNodeTypeToIndexType(context, module);
   irGenerator.AddThresholdGetter();  
   // module->dump();
-  decisionforest::LowerToLLVM(args.context, module, representation);
+  decisionforest::LowerToLLVM(context, module, representation);
   // module->dump();
   // decisionforest::dumpLLVMIR(module);
   int32_t thresholdSize = sizeof(ThresholdType)*8;
@@ -1195,24 +1210,28 @@ bool Test_UniformTiling_BatchSize1(TestArgs_t& args,
                                    bool makeAllLeavesSameDepth) {
   auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
   auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
   FixedTreeIRConstructor<ThresholdType,
                          ReturnType,
                          FeatureIndexType,
                          NodeIndexType,
-                         InputElementType> irGenerator(args.context, serializer, 1, forestConstructor);
+                         InputElementType> irGenerator(context, serializer, 1, forestConstructor);
   irGenerator.ConstructForest();
   auto module = irGenerator.GetEvaluationFunction();
-  decisionforest::DoUniformTiling(args.context, module, tileSize, tileShapeBitWidth, makeAllLeavesSameDepth);
-  decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  decisionforest::DoUniformTiling(context, module, tileSize, tileShapeBitWidth, makeAllLeavesSameDepth);
+  decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
   // module->dump();
   auto representation = decisionforest::ConstructRepresentation();
-  decisionforest::LowerEnsembleToMemrefs(args.context,
+  decisionforest::LowerEnsembleToMemrefs(context,
                                          module,
                                          serializer,
                                          representation);
-  decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();
-  decisionforest::LowerToLLVM(args.context, module, representation);
+  decisionforest::LowerToLLVM(context, module, representation);
   // module->dump();
   // decisionforest::dumpLLVMIR(module);
   decisionforest::InferenceRunner inferenceRunner(serializer, module, tileSize, sizeof(ThresholdType)*8, sizeof(FeatureIndexType)*8);

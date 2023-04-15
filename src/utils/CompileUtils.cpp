@@ -59,13 +59,13 @@ bool loggingEnabled = InitLoggingOptions();
 } // Logging
 
 template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-mlir::ModuleOp SpecializeInputElementType(mlir::MLIRContext& context, TreebeardContext& tbContext) {
+mlir::ModuleOp SpecializeInputElementType(TreebeardContext& tbContext) {
   auto &options = tbContext.options;
   if (options.inputElementTypeWidth == 32) {
-    return ConstructLLVMDialectModuleFromXGBoostJSON<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, float>(context, tbContext);
+    return ConstructLLVMDialectModuleFromXGBoostJSON<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, float>(tbContext);
   }
   else if (options.inputElementTypeWidth == 64) {
-    return ConstructLLVMDialectModuleFromXGBoostJSON<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, double>(context, tbContext);
+    return ConstructLLVMDialectModuleFromXGBoostJSON<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, double>(tbContext);
   }
   else {
     assert (false && "Unknown input element type");
@@ -74,19 +74,19 @@ mlir::ModuleOp SpecializeInputElementType(mlir::MLIRContext& context, TreebeardC
 }
 
 template<typename ThresholdType, typename ReturnType, typename FeatureIndexType>
-mlir::ModuleOp SpecializeNodeIndexType(mlir::MLIRContext& context, TreebeardContext& tbContext) {
+mlir::ModuleOp SpecializeNodeIndexType(TreebeardContext& tbContext) {
   auto& options = tbContext.options;
   if (options.nodeIndexTypeWidth == 8) {
-    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int8_t>(context, tbContext);
+    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int8_t>(tbContext);
   } 
   else if (options.nodeIndexTypeWidth == 16) {
-    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int16_t>(context, tbContext);
+    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int16_t>(tbContext);
   } 
   else if (options.nodeIndexTypeWidth == 32) {
-    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int32_t>(context, tbContext);
+    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int32_t>(tbContext);
   }
   else if (options.nodeIndexTypeWidth == 64) {
-    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int64_t>(context, tbContext);
+    return SpecializeInputElementType<ThresholdType, ReturnType, FeatureIndexType, int64_t>(tbContext);
   } 
   else {
     assert (false && "Unknown feature index type");
@@ -95,19 +95,19 @@ mlir::ModuleOp SpecializeNodeIndexType(mlir::MLIRContext& context, TreebeardCont
 }
 
 template<typename ThresholdType, typename ReturnType>
-mlir::ModuleOp SpecializeFeatureIndexType(mlir::MLIRContext& context, TreebeardContext& tbContext) {
+mlir::ModuleOp SpecializeFeatureIndexType(TreebeardContext& tbContext) {
   auto& options = tbContext.options;
   if (options.featureIndexTypeWidth == 8) {
-    return SpecializeNodeIndexType<ThresholdType, ReturnType, int8_t>(context, tbContext);
+    return SpecializeNodeIndexType<ThresholdType, ReturnType, int8_t>(tbContext);
   } 
   else if (options.featureIndexTypeWidth == 16) {
-    return SpecializeNodeIndexType<ThresholdType, ReturnType, int16_t>(context, tbContext);
+    return SpecializeNodeIndexType<ThresholdType, ReturnType, int16_t>(tbContext);
   } 
   else if (options.featureIndexTypeWidth == 32) {
-    return SpecializeNodeIndexType<ThresholdType, ReturnType, int32_t>(context, tbContext);
+    return SpecializeNodeIndexType<ThresholdType, ReturnType, int32_t>(tbContext);
   }
   else if (options.featureIndexTypeWidth == 64) {
-    return SpecializeNodeIndexType<ThresholdType, ReturnType, int64_t>(context, tbContext);
+    return SpecializeNodeIndexType<ThresholdType, ReturnType, int64_t>(tbContext);
   } 
   else {
     assert (false && "Unknown feature index type");
@@ -116,14 +116,14 @@ mlir::ModuleOp SpecializeFeatureIndexType(mlir::MLIRContext& context, TreebeardC
 }
 
 template<typename ThresholdType>
-mlir::ModuleOp SpecializeReturnType(mlir::MLIRContext& context, TreebeardContext& tbContext) {
+mlir::ModuleOp SpecializeReturnType(TreebeardContext& tbContext) {
   auto& options = tbContext.options;
   if (options.returnTypeFloatType) {
     if (options.returnTypeWidth == 32) {
-      return SpecializeFeatureIndexType<ThresholdType, float>(context, tbContext);
+      return SpecializeFeatureIndexType<ThresholdType, float>(tbContext);
     }
     else if (options.returnTypeWidth == 64) {
-      return SpecializeFeatureIndexType<ThresholdType, double>(context, tbContext);
+      return SpecializeFeatureIndexType<ThresholdType, double>(tbContext);
     } 
     else {
       assert (false && "Unknown return type");
@@ -131,7 +131,7 @@ mlir::ModuleOp SpecializeReturnType(mlir::MLIRContext& context, TreebeardContext
   }
   else {
     if (options.returnTypeWidth == 8) {
-      return SpecializeFeatureIndexType<ThresholdType, int8_t>(context, tbContext);
+      return SpecializeFeatureIndexType<ThresholdType, int8_t>(tbContext);
     }
     else {
       assert (false && "Unknown return type");
@@ -141,13 +141,13 @@ mlir::ModuleOp SpecializeReturnType(mlir::MLIRContext& context, TreebeardContext
 }
 
 
-mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, TreebeardContext& tbContext) {
+mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(TreebeardContext& tbContext) {
   auto& options = tbContext.options;
   if (options.thresholdTypeWidth == 32) {
-    return SpecializeReturnType<float>(context, tbContext);
+    return SpecializeReturnType<float>(tbContext);
   }
   else if (options.thresholdTypeWidth == 64) {
-    return SpecializeReturnType<double>(context, tbContext);
+    return SpecializeReturnType<double>(tbContext);
   }
   else {
     assert (false && "Unknown threshold type");
@@ -187,9 +187,7 @@ void ConvertONNXModelToLLVMIR(TreebeardContext& tbContext, const std::string& ll
 }
 
 void ConvertXGBoostJSONToLLVMIR(TreebeardContext& tbContext, const std::string& llvmIRFilePath) {
-  mlir::MLIRContext context;
-  InitializeMLIRContext(context);
-  auto module = ConstructLLVMDialectModuleFromXGBoostJSON(context, tbContext);
+  auto module = ConstructLLVMDialectModuleFromXGBoostJSON(tbContext);
   mlir::decisionforest::dumpLLVMIRToFile(module, llvmIRFilePath);
 }
 

@@ -65,7 +65,6 @@ double Test_CodeGenForJSON_ProbabilityBasedTiling(int64_t batchSize, const std::
   using FeatureIndexType = int16_t;
   using NodeIndexType = int16_t;
 
-  mlir::MLIRContext context;
   int32_t floatTypeBitWidth = sizeof(FloatType)*8;
   bool reorderTrees = probTiling || (numberOfCores!=-1) || pipelineSize > 1;
   TreeBeard::CompilerOptions options(floatTypeBitWidth, sizeof(ReturnType)*8, IsFloatType(ReturnType()), sizeof(FeatureIndexType)*8, sizeof(NodeIndexType)*8,
@@ -80,14 +79,13 @@ double Test_CodeGenForJSON_ProbabilityBasedTiling(int64_t batchSize, const std::
 
   if (numberOfCores != -1)
     options.numberOfCores = numberOfCores;
-  TreeBeard::InitializeMLIRContext(context);
   auto modelGlobalsJSONFilePath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
   
-  TreeBeard::TreebeardContext tbContext{modelJsonPath, modelGlobalsJSONFilePath, options, 
+  TreeBeard::TreebeardContext tbContext(modelJsonPath, modelGlobalsJSONFilePath, options, 
                                         mlir::decisionforest::ConstructRepresentation(),
                                         mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONFilePath),
-                                        nullptr  /*TODO_ForestCreator*/ };
-  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ReturnType, FeatureIndexType, int32_t, FloatType>(context, tbContext);
+                                        nullptr  /*TODO_ForestCreator*/);
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ReturnType, FeatureIndexType, int32_t, FloatType>(tbContext);
 
   decisionforest::InferenceRunner inferenceRunner(tbContext.serializer, module, tileSize, floatTypeBitWidth, sizeof(FeatureIndexType)*8);
   

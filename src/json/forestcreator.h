@@ -303,6 +303,8 @@ public:
     }
 
     void SetChildIndexBitWidth(int32_t value) { m_childIndexBitWidth = value; }
+
+    mlir::MLIRContext& GetContext() { return m_context; }
 };
 }
 

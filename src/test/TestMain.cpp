@@ -496,7 +496,10 @@ void InitializeVectorWithRandValues(std::vector<double>& vec) {
 template<typename ThresholdType, typename IndexType>
 bool Test_BufferInit_RightHeavy(TestArgs_t& args) {
   using TileType = NumericalTileType_Packed<ThresholdType, IndexType>;
-  auto& context = args.context;
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
   mlir::OpBuilder builder(&context);
   mlir::decisionforest::DecisionForest forest;
   auto expectedArray = AddRightHeavyTree<TileType>(forest);
@@ -562,7 +565,10 @@ bool Test_BufferInitializationWithOneTree_RightHeavy_FloatInt8(TestArgs_t& args)
 template<typename ThresholdType, typename IndexType>
 bool Test_BufferInitialization_TwoTrees(TestArgs_t& args) {
   using TileType = NumericalTileType_Packed<ThresholdType, IndexType>;
-  auto& context = args.context;
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
   mlir::OpBuilder builder(&context);
   mlir::decisionforest::DecisionForest forest;
   auto expectedArray = AddRightHeavyTree<TileType>(forest);
@@ -608,7 +614,10 @@ bool Test_BufferInitialization_TwoTrees(TestArgs_t& args) {
 
 bool Test_BufferInitializationWithOneTree_LeftHeavy(TestArgs_t& args) {
   using DoubleInt32Tile = NumericalTileType_Packed<double, int32_t>;
-  mlir::MLIRContext& context = args.context;
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
   mlir::decisionforest::DecisionForest forest;
   auto expectedArray = AddLeftHeavyTree<DoubleInt32Tile>(forest);  
 
@@ -675,7 +684,10 @@ bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
   auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);
 
-  FixedTreeIRConstructor<> irConstructor(args.context, serializer, 1, forestConstructor);
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
+  FixedTreeIRConstructor<> irConstructor(context, serializer, 1, forestConstructor);
   irConstructor.ConstructForest();
   // If sparse representation is turned on, then child index bit width should be passed
   assert (!mlir::decisionforest::UseSparseTreeRepresentation || childIndexBitWidth!=1 );
@@ -688,17 +700,17 @@ bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   }
 
   // module->dump();
-  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
   // module->dump();
   auto representation = decisionforest::ConstructRepresentation();
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context,
+  mlir::decisionforest::LowerEnsembleToMemrefs(context,
                                                module,
                                                serializer,
                                                representation);
   // module->dump();
-  mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();
-  mlir::decisionforest::LowerToLLVM(args.context, module, representation);
+  mlir::decisionforest::LowerToLLVM(context, module, representation);
   // module->dump();
   // mlir::decisionforest::dumpLLVMIR(module);
   decisionforest::InferenceRunner inferenceRunner(serializer, module, 1, 64, 32);
@@ -720,7 +732,11 @@ bool Test_ForestCodeGen_VariableBatchSize(TestArgs_t& args, ForestConstructor_t 
                                           ScheduleManipulator_t scheduleManipulator=nullptr) {
   auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
   auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);                                            
-  FixedTreeIRConstructor<> irConstructor(args.context, serializer, batchSize, forestConstructor);
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
+  FixedTreeIRConstructor<> irConstructor(context, serializer, batchSize, forestConstructor);
   irConstructor.ConstructForest();
   irConstructor.SetChildIndexBitWidth(childIndexBitWidth);
   auto module = irConstructor.GetEvaluationFunction();
@@ -731,16 +747,16 @@ bool Test_ForestCodeGen_VariableBatchSize(TestArgs_t& args, ForestConstructor_t 
   }
   
   // module->dump();
-  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
   // module->dump();
   auto representation = decisionforest::ConstructRepresentation();
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context,
+  mlir::decisionforest::LowerEnsembleToMemrefs(context,
                                                module,
                                                serializer,
                                                representation);
-  mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();
-  mlir::decisionforest::LowerToLLVM(args.context, module, representation);
+  mlir::decisionforest::LowerToLLVM(context, module, representation);
   // module->dump();
   // mlir::decisionforest::dumpLLVMIR(module);
   decisionforest::InferenceRunner inferenceRunner(serializer, module, 1, 64, 32);
@@ -875,7 +891,10 @@ bool Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx(TestArgs
 template<typename ThresholdType, typename IndexType>
 bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t forestConstructor, std::vector<int32_t>& tileIDs) {
   using VectorTileType = NumericalVectorTileType_Packed<ThresholdType, IndexType, 3>;
-  auto& context = args.context;
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
   mlir::OpBuilder builder(&context);
   mlir::decisionforest::DecisionForest forest;
   forestConstructor(forest);
@@ -1778,17 +1797,7 @@ void RunTestsImpl(TestDescriptor *testsToRun, size_t numberOfTests) {
   int32_t numPassed = 0;
   std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
   for (size_t i = 0; i < numberOfTests; ++i) {
-    mlir::MLIRContext context;
-    context.getOrLoadDialect<mlir::arith::ArithDialect>();
-    context.getOrLoadDialect<mlir::decisionforest::DecisionForestDialect>();
-    context.getOrLoadDialect<mlir::scf::SCFDialect>();
-    context.getOrLoadDialect<mlir::memref::MemRefDialect>();
-    context.getOrLoadDialect<mlir::vector::VectorDialect>();
-    context.getOrLoadDialect<mlir::math::MathDialect>();
-    context.getOrLoadDialect<mlir::omp::OpenMPDialect>();
-    context.getOrLoadDialect<mlir::func::FuncDialect>();
-    context.getOrLoadDialect<mlir::gpu::GPUDialect>();
-    TestArgs_t args = { context };
+    TestArgs_t args;
     
     // Disable sparse code generation by default
     decisionforest::UseSparseTreeRepresentation = false;

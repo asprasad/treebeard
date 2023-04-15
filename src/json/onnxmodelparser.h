@@ -360,11 +360,12 @@ namespace TreeBeard
 
       mlir::MLIRContext context;
       TreeBeard::InitializeMLIRContext(context);
-      TreeBeard::TreebeardContext tbContext{
-          "", modelGlobalsJSONPath, *optionsPtr,
-          mlir::decisionforest::ConstructRepresentation(),
-          mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath),
-          nullptr /*TODO_ForestCreator*/ };
+      TreeBeard::TreebeardContext tbContext("", 
+                                            modelGlobalsJSONPath,
+                                            *optionsPtr,
+                                            mlir::decisionforest::ConstructRepresentation(),
+                                            mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath),
+                                            nullptr /*TODO_ForestCreator*/ );
 
       mlir::ModuleOp module;
 

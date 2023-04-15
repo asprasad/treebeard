@@ -115,13 +115,37 @@ struct CompilerOptions {
   void SetPipelineSize(int32_t pipelineSize) { this->pipelineSize = pipelineSize; }
 };
 
+void InitializeMLIRContext(mlir::MLIRContext& context);
+
 struct TreebeardContext {
+  mlir::MLIRContext context;
   std::string modelPath;
   std::string modelGlobalsJSONPath;
   CompilerOptions options;
   std::shared_ptr<mlir::decisionforest::IRepresentation>  representation = nullptr;
   std::shared_ptr<mlir::decisionforest::IModelSerializer> serializer = nullptr;
   std::shared_ptr<ForestCreator> forestConstructor = nullptr;
+
+  TreebeardContext(const std::string& modelFilePath, 
+                   const std::string& globalsJSONPath,
+                   CompilerOptions& compilerOptions,
+                   std::shared_ptr<mlir::decisionforest::IRepresentation>  rep = nullptr,
+                   std::shared_ptr<mlir::decisionforest::IModelSerializer> ser = nullptr,
+                   std::shared_ptr<ForestCreator> constructor = nullptr) 
+    : modelPath(modelFilePath), 
+      modelGlobalsJSONPath(globalsJSONPath), 
+      options(compilerOptions),
+      representation(rep),
+      serializer(ser),
+      forestConstructor(constructor)
+  {
+    InitializeMLIRContext(context);
+  }
+
+  TreebeardContext() {
+    InitializeMLIRContext(context);
+  }
+
 };
 
 } // namespace TreeBeard

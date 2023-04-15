@@ -117,12 +117,15 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
   
   auto modelGlobalsJSONFilePath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
   auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONFilePath);
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
   
   TreeBeard::XGBoostJSONParser<FloatType, 
                                ResultType,
                                FeatureIndexType,
                                NodeIndexType,
-                               FloatType> xgBoostParser(args.context, modelJsonPath, serializer, options.batchSize);
+                               FloatType> xgBoostParser(context, modelJsonPath, serializer, options.batchSize);
   xgBoostParser.ConstructForest();
   xgBoostParser.SetChildIndexBitWidth(options.childIndexBitWidth);
 
@@ -135,17 +138,17 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
   }
   auto module = xgBoostParser.GetEvaluationFunction();
 
-  mlir::decisionforest::DoHybridTiling(args.context, module, options.tileSize, options.tileShapeBitWidth);
-  mlir::decisionforest::DoReorderTreesByDepth(args.context, module, -1);
-  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  mlir::decisionforest::DoHybridTiling(context, module, options.tileSize, options.tileShapeBitWidth);
+  mlir::decisionforest::DoReorderTreesByDepth(context, module, -1);
+  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
   auto representation = decisionforest::ConstructRepresentation();
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, 
+  mlir::decisionforest::LowerEnsembleToMemrefs(context, 
                                                module,
                                                serializer,
                                                representation);
-  mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();
-  mlir::decisionforest::LowerToLLVM(args.context, module, representation);
+  mlir::decisionforest::LowerToLLVM(context, module, representation);
 
 
   decisionforest::InferenceRunner inferenceRunner(serializer, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
@@ -264,26 +267,29 @@ bool TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int
   auto modelGlobalsJSONFilePath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
   auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONFilePath);
 
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
   TreeBeard::XGBoostJSONParser<FloatType, 
                                ResultType,
                                FeatureIndexType,
                                NodeIndexType,
-                               FloatType> xgBoostParser(args.context, modelJsonPath, serializer, statsProfileCSV, options.batchSize);
+                               FloatType> xgBoostParser(context, modelJsonPath, serializer, statsProfileCSV, options.batchSize);
   xgBoostParser.ConstructForest();
   xgBoostParser.SetChildIndexBitWidth(options.childIndexBitWidth);
   auto module = xgBoostParser.GetEvaluationFunction();
 
-  mlir::decisionforest::DoHybridTiling(args.context, module, options.tileSize, options.tileShapeBitWidth);
-  mlir::decisionforest::DoReorderTreesByDepth(args.context, module, -1);
-  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  mlir::decisionforest::DoHybridTiling(context, module, options.tileSize, options.tileShapeBitWidth);
+  mlir::decisionforest::DoReorderTreesByDepth(context, module, -1);
+  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
   auto representation = decisionforest::ConstructRepresentation();
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context,
+  mlir::decisionforest::LowerEnsembleToMemrefs(context,
                                                module,
                                                serializer,
                                                representation);
-  mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();
-  mlir::decisionforest::LowerToLLVM(args.context, module, representation);
+  mlir::decisionforest::LowerToLLVM(context, module, representation);
 
   decisionforest::InferenceRunner inferenceRunner(serializer, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
   
