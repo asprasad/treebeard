@@ -196,8 +196,6 @@ extern "C" intptr_t CreateInferenceRunnerForONNXModelInputs(
 
   TreeBeard::CompilerOptions *optionsPtr =
       reinterpret_cast<TreeBeard::CompilerOptions *>(options);
-  mlir::MLIRContext context;
-  TreeBeard::InitializeMLIRContext(context);
   TreeBeard::TreebeardContext tbContext("",
                                         modelGlobalsJSONPath,
                                         *optionsPtr,
@@ -205,6 +203,7 @@ extern "C" intptr_t CreateInferenceRunnerForONNXModelInputs(
                                         mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath),
                                         nullptr  /*TODO_ForestCreator*/);
 
+  auto& context = tbContext.context;
   mlir::ModuleOp module;
 
   if (inputAndThresholdSize == 8) {
@@ -228,8 +227,7 @@ extern "C" intptr_t CreateInferenceRunnerForONNXModelInputs(
     numWeights,
     batchSize);
 
-    module = TreeBeard::ConstructLLVMDialectModuleFromForestCreator(
-        context, tbContext, onnxModelConverter);
+    module = TreeBeard::ConstructLLVMDialectModuleFromForestCreator(tbContext, onnxModelConverter);
 
   }
   else if (inputAndThresholdSize == 4) {
@@ -253,8 +251,7 @@ extern "C" intptr_t CreateInferenceRunnerForONNXModelInputs(
     numWeights,
     batchSize);
 
-    module = TreeBeard::ConstructLLVMDialectModuleFromForestCreator(
-        context, tbContext, onnxModelConverter);
+    module = TreeBeard::ConstructLLVMDialectModuleFromForestCreator(tbContext, onnxModelConverter);
   }
   
   auto *inferenceRunner = new mlir::decisionforest::InferenceRunner(tbContext.serializer, module, 

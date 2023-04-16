@@ -352,39 +352,60 @@ namespace TreeBeard
             }
     };
 
+    template<typename ValueType>
+    class ONNXFileParser : public ForestCreator
+    {
+        private:
+            std::unique_ptr<ONNXModelConverter<ValueType>> m_modelConvertor = nullptr;
+        public:
+            ONNXFileParser(TreebeardContext& tbContext) : ForestCreator(tbContext.serializer,
+                                             tbContext.context,
+                                             tbContext.options.batchSize,
+                                             // #TODOSampath - Revisit the types
+                                             GetMLIRType(ValueType(), tbContext.context),
+                                             GetMLIRType(int32_t(), tbContext.context),
+                                             GetMLIRType(int32_t(), tbContext.context),
+                                             GetMLIRType(ValueType(), tbContext.context),
+                                             GetMLIRType(ValueType(), tbContext.context))
+            {
+                mlir::MLIRContext& context = tbContext.context;
+                const auto &parsedModel = TreeBeard::ONNXModelParseResult::parseModel(tbContext.modelPath);
+
+                // Hardcoding to float because ONNX doesn't support double. Revisit this #TODOSampath
+                m_modelConvertor = std::make_unique<ONNXModelConverter<ValueType>>(
+                    tbContext.serializer, context, parsedModel.baseValue,
+                    parsedModel.predTransform, parsedModel.numNodes, parsedModel.treeIds,
+                    parsedModel.nodeIds, parsedModel.featureIds, parsedModel.thresholds,
+                    parsedModel.trueNodeIds, parsedModel.falseNodeIds,
+                    parsedModel.numberOfClasses, parsedModel.targetClassTreeId,
+                    parsedModel.targetClassNodeId, parsedModel.targetClassIds,
+                    parsedModel.targetWeights, parsedModel.numWeights, tbContext.options.batchSize);
+                
+                m_modelConvertor->ConstructForest();
+            }
+
+            void ConstructForest() override
+            {
+                *this->m_forest = *m_modelConvertor->GetForest();
+            }
+    };
+
     template <typename T>
     mlir::decisionforest::InferenceRunnerBase*
     CreateInferenceRunnerForONNXModel(const char *modelPath,
                                   const char *modelGlobalsJSONPath,
                                   CompilerOptions *optionsPtr) {
 
-      mlir::MLIRContext context;
-      TreeBeard::InitializeMLIRContext(context);
-      TreeBeard::TreebeardContext tbContext("", 
+      TreeBeard::TreebeardContext tbContext(modelPath, 
                                             modelGlobalsJSONPath,
                                             *optionsPtr,
                                             mlir::decisionforest::ConstructRepresentation(),
                                             mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath),
                                             nullptr /*TODO_ForestCreator*/ );
-
-      mlir::ModuleOp module;
-
-      const auto &parsedModel = ONNXModelParseResult::parseModel(modelPath);
-
       // Hardcoding to float because ONNX doesn't support double. Revisit this
       // #TODOSampath
-      auto onnxModelConverter = TreeBeard::ONNXModelConverter<T>(
-          tbContext.serializer, context, parsedModel.baseValue,
-          parsedModel.predTransform, parsedModel.numNodes, parsedModel.treeIds,
-          parsedModel.nodeIds, parsedModel.featureIds, parsedModel.thresholds,
-          parsedModel.trueNodeIds, parsedModel.falseNodeIds,
-          parsedModel.numberOfClasses, parsedModel.targetClassTreeId,
-          parsedModel.targetClassNodeId, parsedModel.targetClassIds,
-          parsedModel.targetWeights, parsedModel.numWeights,
-          optionsPtr->batchSize);
-
-      module = TreeBeard::ConstructLLVMDialectModuleFromForestCreator(
-          context, tbContext, onnxModelConverter);
+      ONNXFileParser<T> onnxModelParser(tbContext);
+      mlir::ModuleOp module = TreeBeard::ConstructLLVMDialectModuleFromForestCreator(tbContext, onnxModelParser);
 
       auto *inferenceRunner = new mlir::decisionforest::InferenceRunner(
           tbContext.serializer, module, optionsPtr->tileSize,

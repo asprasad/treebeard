@@ -9,11 +9,11 @@
 namespace TreeBeard
 {
 inline mlir::ModuleOp ConstructLLVMDialectModuleFromForestCreator(
-    mlir::MLIRContext &context,
     TreebeardContext &tbContext,
     ForestCreator &forestCreator) {
 
   const CompilerOptions& options=tbContext.options;
+  auto& context = tbContext.context;
   
   forestCreator.ConstructForest();
   forestCreator.SetChildIndexBitWidth(options.childIndexBitWidth);
@@ -60,7 +60,7 @@ mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(TreebeardContext& tbCon
   TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>
                                xgBoostParser(context, modelJsonPath, tbContext.serializer, options.statsProfileCSVPath, options.batchSize);
   
-  return ConstructLLVMDialectModuleFromForestCreator(context, tbContext, xgBoostParser);
+  return ConstructLLVMDialectModuleFromForestCreator(tbContext, xgBoostParser);
 }
 
 void InitializeMLIRContext(mlir::MLIRContext& context);
