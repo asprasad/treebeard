@@ -21,5 +21,12 @@ target_link_libraries(treebeard-runtime PRIVATE ${Protobuf_LIBRARIES})
 # target_sources(treebeard PRIVATE ${PROTO_SRCS})
 # target_sources(treebeard-runtime PRIVATE ${PROTO_SRCS})
 
-target_sources(treebeard PRIVATE onnx.pb.cc)
-target_sources(treebeard-runtime PRIVATE onnx.pb.cc)
+target_sources(treebeard
+PRIVATE 
+onnx.pb.cc
+ForestCreatorFactory.cpp)
+
+target_sources(treebeard-runtime
+PRIVATE
+onnx.pb.cc
+ForestCreatorFactory.cpp)

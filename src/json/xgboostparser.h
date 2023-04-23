@@ -2,6 +2,7 @@
 #define _XGBOOST_PARSER_H_
 
 #include "forestcreator.h"
+#include "ForestCreatorFactory.h"
 #include <fstream>
 
 namespace TreeBeard
@@ -217,7 +218,7 @@ void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexTyp
     }
 }
 
-std::shared_ptr<ForestCreator> ConstructXGBoostJSONParser(mlir::MLIRContext& context, TreebeardContext& tbContext);
+std::shared_ptr<ForestCreator> ConstructXGBoostJSONParser(TreebeardContext& tbContext);
 
 } // namespace TreeBeard
 

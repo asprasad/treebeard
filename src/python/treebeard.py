@@ -110,13 +110,6 @@ class TreebeardAPI:
       self.runtime_lib.IsPeeledCodeGenForProbabilityBasedTilingEnabled.argtypes = None
       self.runtime_lib.IsPeeledCodeGenForProbabilityBasedTilingEnabled.restype = ctypes.c_int32
 
-      # Define the argument and return types for the C functions
-      self.runtime_lib.Schedule_New.argtypes = [ctypes.c_int32, ctypes.c_int32]
-      self.runtime_lib.Schedule_New.restype = ctypes.c_int64
-
-      self.runtime_lib.Schedule_Delete.argtypes = [ctypes.c_int64]
-      self.runtime_lib.Schedule_Delete.restype = None
-
       self.runtime_lib.Schedule_NewIndexVariable.argtypes = [ctypes.c_int64, ctypes.c_char_p]
       self.runtime_lib.Schedule_NewIndexVariable.restype = ctypes.c_int64
 
@@ -173,6 +166,23 @@ class TreebeardAPI:
       self.runtime_lib.ConstructRepresentation.restype = ctypes.c_void_p
 
       self.runtime_lib.DestroyRepresentation.argtypes = [ctypes.c_void_p]
+      
+      self.runtime_lib.ConstructTreebeardContext.restype = ctypes.c_int64
+      self.runtime_lib.ConstructTreebeardContext.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int64]
+
+      self.runtime_lib.DestroyTreebeardContext.argTypes = [ctypes.c_int64]
+
+      self.runtime_lib.SetForestCreatorType.argTypes = [ctypes.c_int64, ctypes.c_char_p]
+
+      self.runtime_lib.SetRepresentationAndSerializer.argTypes = [ctypes.c_int64, ctypes.c_char_p]
+
+      self.runtime_lib.GetScheduleFromTBContext.restype = ctypes.c_int64
+      self.runtime_lib.GetScheduleFromTBContext.argtypes = [ctypes.c_int64]
+
+      self.runtime_lib.BuildHIRRepresentation.argtypes = [ctypes.c_int64]
+
+      self.runtime_lib.ConstructInferenceRunnerFromHIR.restype = ctypes.c_int64
+      self.runtime_lib.ConstructInferenceRunnerFromHIR.argtypes = [ctypes.c_int64]
 
     except Exception as e:
       print("Loading the TreeBeard runtime failed with exception :", e)
@@ -196,12 +206,6 @@ class TreebeardAPI:
 
   def DeleteInferenceRunner(self, inferenceRunner : int) -> None:
     self.runtime_lib.DeleteInferenceRunner(inferenceRunner)
-
-  def Schedule_New(self, batchSize, forestSize):
-      return self.runtime_lib.Schedule_New(batchSize, forestSize)
-
-  def Schedule_Delete(self, schedPtr):
-      self.runtime_lib.Schedule_Delete(schedPtr)
 
   def Schedule_NewIndexVariable(self, schedPtr, name):
       return self.runtime_lib.Schedule_NewIndexVariable(schedPtr, name.encode())
@@ -259,6 +263,29 @@ class TreebeardAPI:
 
   def Schedule_Finalize(self, schedPtr):
       self.runtime_lib.Schedule_Finalize(schedPtr)
+  
+  def ConstructTreebeardContext(self, model_path, model_globals_path, options_ptr):
+    model_path_ascii = model_path.encode('ascii')
+    model_globals_path_ascii = model_globals_path.encode('ascii')
+    tbContext = self.runtime_lib.ConstructTreebeardContext(model_path_ascii, model_globals_path_ascii, options_ptr)
+    # print("TBContext_Create: ", tbContext, type(tbContext))
+    return tbContext
+
+  def DestroyTreebeardContext(self, treebeard_context_ptr):
+    return self.runtime_lib.DestroyTreebeardContext(ctypes.c_int64(treebeard_context_ptr))
+
+  def SetForestCreatorType(self, treebeard_context_ptr, file_type):
+    file_type_ascii = file_type.encode('ascii')
+    # print("TBContext_SetTypeAPI: ", treebeard_context_ptr, type(treebeard_context_ptr))
+    self.runtime_lib.SetForestCreatorType(ctypes.c_int64(treebeard_context_ptr), file_type_ascii)
+
+  def SetRepresentationAndSerializer(self, treebeard_context_ptr, rep_type):
+    rep_type_ascii = rep_type.encode('ascii')
+    self.runtime_lib.SetRepresentationAndSerializer(ctypes.c_int64(treebeard_context_ptr), rep_type_ascii)
+
+  def GetScheduleFromTBContext(self, treebeard_context_ptr):
+    schedule_ptr = self.runtime_lib.GetScheduleFromTBContext(treebeard_context_ptr)
+    return ctypes.c_int64(schedule_ptr)
 
 treebeardAPI = TreebeardAPI()
 
@@ -317,6 +344,28 @@ class CompilerOptions:
   def SetOneTreeAtATimeSchedule(self) :
     treebeardAPI.runtime_lib.SetOneTreeAtATimeSchedule(self.optionsPtr)
 
+class Schedule:
+  def __init__(self, schedulePtr):
+    self.schedulePtr = schedulePtr
+
+class TreebeardContext:
+  def __init__(self, model_filepath :str, globals_file_path : str, options : CompilerOptions) -> None:
+     self.tbcontextPtr = treebeardAPI.ConstructTreebeardContext(model_filepath, globals_file_path, options.optionsPtr)
+  
+  def __del__(self):
+    treebeardAPI.DestroyTreebeardContext(self.tbcontextPtr)
+
+  def SetInputFiletype(self, file_type:str) -> None:
+    # print("TBContext_SetType: ", self.tbcontextPtr, type(self.tbcontextPtr))
+    treebeardAPI.SetForestCreatorType(self.tbcontextPtr, file_type)
+
+  def SetRepresentationType(self, rep_type:str) -> None:
+    treebeardAPI.SetRepresentationAndSerializer(self.tbcontextPtr, rep_type)
+
+  def GetSchedule(self):
+    schedulePtr = treebeardAPI.GetScheduleFromTBContext(self.tbcontextPtr)
+    return Schedule(schedulePtr)
+
 class TreebeardInferenceRunner:
   def __init__(self) -> None:
     self.treebeardAPI = treebeardAPI
@@ -342,6 +391,16 @@ class TreebeardInferenceRunner:
     inferenceRunner.rowSize = treebeardAPI.GetRowSize(inferenceRunner.inferenceRunner)
     inferenceRunner.batchSize = treebeardAPI.GetBatchSize(inferenceRunner.inferenceRunner)
     return inferenceRunner
+  
+  @classmethod
+  def FromTBContext(self, tbContext):
+    inferenceRunner = TreebeardInferenceRunner()
+    treebeardAPI.runtime_lib.BuildHIRRepresentation(tbContext.tbcontextPtr)
+    inferenceRunner.inferenceRunner = int(treebeardAPI.runtime_lib.ConstructInferenceRunnerFromHIR(tbContext.tbcontextPtr))
+    inferenceRunner.rowSize = treebeardAPI.GetRowSize(inferenceRunner.inferenceRunner)
+    inferenceRunner.batchSize = treebeardAPI.GetBatchSize(inferenceRunner.inferenceRunner)
+    return inferenceRunner
+
 
   def __del__(self):
     self.treebeardAPI.DeleteInferenceRunner(self.inferenceRunner)

@@ -412,6 +412,10 @@ namespace TreeBeard
           optionsPtr->thresholdTypeWidth, optionsPtr->featureIndexTypeWidth);
       return inferenceRunner;
     }
+
+    inline std::shared_ptr<ForestCreator> ConstructONNXFileParser(TreebeardContext& tbContext) {
+        return std::make_shared<ONNXFileParser<float>>(tbContext);
+    }
 }
 
 #endif // ONNX_MODEL_PARSER_H

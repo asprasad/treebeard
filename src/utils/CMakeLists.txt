@@ -5,7 +5,8 @@ TreeTilingUtils.cpp
 RandomTreeGenerator.cpp
 CompileUtils.cpp
 StatsUtils.cpp
-XGBoostJSONParserConstructor.cpp)
+XGBoostJSONParserConstructor.cpp
+TreebeardContext.cpp)
 
 target_sources(treebeard-runtime 
 PRIVATE
@@ -14,4 +15,5 @@ TreeTilingUtils.cpp
 RandomTreeGenerator.cpp
 CompileUtils.cpp
 StatsUtils.cpp
-XGBoostJSONParserConstructor.cpp)
+XGBoostJSONParserConstructor.cpp
+TreebeardContext.cpp)

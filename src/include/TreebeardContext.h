@@ -146,6 +146,8 @@ struct TreebeardContext {
     InitializeMLIRContext(context);
   }
 
+  void SetForestCreatorType(const std::string& creatorName);
+  void SetRepresentationAndSerializer(const std::string& repName);
 };
 
 } // namespace TreeBeard

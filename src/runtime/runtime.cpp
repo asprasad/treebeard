@@ -81,7 +81,7 @@ extern "C" void DeleteInferenceRunner(intptr_t inferenceRunnerInt) {
 }
 
 // ===-------------------------------------------------------------=== //
-// Compilation API
+// CompilerOptions API
 // ===-------------------------------------------------------------=== //
 
 extern "C" intptr_t CreateCompilerOptions() {
@@ -130,6 +130,10 @@ extern "C" void Set_tilingType(intptr_t options, int32_t val) {
     assert (false && "Invalid tiling type value");
   optionsPtr->tilingType = tilingType;
 }
+
+// ===-------------------------------------------------------------=== //
+// Compilation API
+// ===-------------------------------------------------------------=== //
 
 extern "C" void GenerateLLVMIRForXGBoostModel(const char* modelJSONPath, const char* llvmIRFilePath,
                                               const char* modelGlobalsJSONPath, intptr_t options) {
@@ -306,6 +310,62 @@ extern "C" void DestroyRepresentation(void *rep) {
 }
 
 // ===-------------------------------------------------------------=== //
+// TreebeardContext API
+// ===-------------------------------------------------------------=== //
+extern "C" intptr_t ConstructTreebeardContext(const char *modelPath, 
+                                           const char* modelGlobalsJSONPath,
+                                           intptr_t options) {
+  TreeBeard::CompilerOptions *optionsPtr = reinterpret_cast<TreeBeard::CompilerOptions *>(options);
+  auto* tbContext = new TreeBeard::TreebeardContext(modelPath, 
+                                                    modelGlobalsJSONPath,
+                                                    *optionsPtr);
+  return reinterpret_cast<intptr_t>(tbContext);
+}
+
+extern "C" void DestroyTreebeardContext(intptr_t tbContext) {
+  TreeBeard::TreebeardContext* tbContextPtr = reinterpret_cast<TreeBeard::TreebeardContext*>(tbContext);
+  delete tbContextPtr;
+}
+
+extern "C" void SetForestCreatorType(intptr_t tbContext, const char* creatorType) {
+  TreeBeard::TreebeardContext* tbContextPtr = reinterpret_cast<TreeBeard::TreebeardContext*>(tbContext);
+  tbContextPtr->SetForestCreatorType(creatorType);
+}
+
+extern "C" void SetRepresentationAndSerializer(intptr_t tbContext, const char* repType) {
+  TreeBeard::TreebeardContext* tbContextPtr = reinterpret_cast<TreeBeard::TreebeardContext*>(tbContext);
+  tbContextPtr->SetRepresentationAndSerializer(repType);
+}
+
+extern "C" void* GetScheduleFromTBContext(intptr_t tbContext) {
+  TreeBeard::TreebeardContext* tbContextPtr = reinterpret_cast<TreeBeard::TreebeardContext*>(tbContext);
+  return tbContextPtr->forestConstructor->GetSchedule();
+}
+
+// ===-------------------------------------------------------------=== //
+// Generic Compilation API
+// ===-------------------------------------------------------------=== //
+
+extern "C" void BuildHIRRepresentation(void* tbContext) {
+  TreeBeard::TreebeardContext* tbContextPtr = reinterpret_cast<TreeBeard::TreebeardContext*>(tbContext);
+  TreeBeard::BuildHIRModule(*tbContextPtr, *tbContextPtr->forestConstructor);
+  return;
+}
+
+extern "C" void* ConstructInferenceRunnerFromHIR(void *tbContext) {
+  TreeBeard::TreebeardContext* tbContextPtr = reinterpret_cast<TreeBeard::TreebeardContext*>(tbContext);
+  auto module = tbContextPtr->forestConstructor->GetModule();
+  TreeBeard::DoTilingTransformation(module, *tbContextPtr);
+  TreeBeard::LowerHIRModuleToLLVM(module, *tbContextPtr);
+  auto inferenceRunner = new mlir::decisionforest::InferenceRunner(tbContextPtr->serializer,
+                                                                   module, 
+                                                                   tbContextPtr->options.tileSize,
+                                                                   tbContextPtr->options.thresholdTypeWidth,
+                                                                   tbContextPtr->options.featureIndexTypeWidth);
+  return reinterpret_cast<void*>(inferenceRunner);  
+}
+
+// ===-------------------------------------------------------------=== //
 // Predefined Schedule Manipulation API
 // ===-------------------------------------------------------------=== //
 
@@ -322,8 +382,6 @@ using IndexVariable = mlir::decisionforest::IndexVariable;
 
 extern "C" {
 
-intptr_t Schedule_New(int32_t batchSize, int32_t forestSize);
-void Schedule_Delete(intptr_t schedPtr);
 intptr_t Schedule_NewIndexVariable(intptr_t schedPtr, const char* name);
 intptr_t Schedule_NewIndexVariable2(intptr_t schedPtr, intptr_t indexVarPtr);
 void Schedule_Tile(intptr_t schedPtr, intptr_t indexPtr, intptr_t outerPtr, intptr_t innerPtr, int32_t tileSize);
@@ -343,16 +401,6 @@ int32_t Schedule_GetBatchSize(intptr_t schedPtr);
 int32_t Schedule_GetForestSize(intptr_t schedPtr);
 bool Schedule_IsDefaultSchedule(intptr_t schedPtr);
 void Schedule_Finalize(intptr_t schedPtr);
-
-// Constructor and destructor
-intptr_t Schedule_New(int32_t batchSize, int32_t forestSize) {
-  return (intptr_t)(new Schedule(batchSize, forestSize));
-}
-
-void Schedule_Delete(intptr_t schedPtr) {
-  Schedule* sched = reinterpret_cast<Schedule*>(schedPtr);
-  delete sched;
-}
 
 // Loop Modifiers
 intptr_t Schedule_NewIndexVariable(intptr_t schedPtr, const char* name) {

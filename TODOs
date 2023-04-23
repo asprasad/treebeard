@@ -1,6 +1,3 @@
-* Free GPU buffers
-    -- Need to generate cleanup methods?
-    -- Free result and data buffers allocated in predict_function
 * Fix clang build
 
 * There is a chance that all the current changes have broken the runtime and python API
@@ -68,9 +65,21 @@
                 - Extent to be read from model buffers has to be computed each time.
                 - The representation decides the strategy to read the values in to shared memory
             - 
+    * [Done] Free GPU buffers
+        - Need to generate cleanup methods?
+        - Free result and data buffers allocated in predict_function
 
-* Add a Treebeard context to store all configuration
-    - Update the python API!
+* Audit to make sure no MLIRContext objects are being created outside TBContext
+* [Done] Add a factory for ForestCreators
+* Move childIndexBitWidth to the sparseRepresentation class
+* Python API Updates
+    - [Done] Create and initialize TreebeardContext
+    - [Done] Separate API to parse an input file
+    - [Done] API to get schedule from parsed module
+    - Schedule manipulation API 
+    - Further lowering API
+* [Done] Add a Treebeard context to store all configuration
+
 * Make interfaces for mem rep and code gen extensible
     - LowerEnsembleToMemrefs 
         - Object that abstracts 

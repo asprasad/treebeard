@@ -42,11 +42,34 @@ def RunSingleTestJIT(modelJSONPath, csvPath, options, returnType) -> bool:
   print("Passed (", end - start, "s )")
   return True
 
-def RunTestOnSingleModelTestInputsJIT(modelName : str, options, testName : str, returnType=numpy.float32) -> bool:
+def RunSingleTestJIT_TBContext(modelJSONPath, csvPath, options, returnType) -> bool:
+  data_df = pandas.read_csv(csvPath, header=None)
+  data = numpy.array(data_df, order='C') # numpy.genfromtxt(csvPath, ',')
+  inputs = numpy.array(data[:, :-1], numpy.float32, order='C')
+  expectedOutputs = data[:, data.shape[1]-1]
+  
+  globalsPath = modelJSONPath + ".treebeard-globals.json"
+  tbContext = treebeard.TreebeardContext(modelJSONPath, globalsPath, options)
+  tbContext.SetRepresentationType("sparse")
+  tbContext.SetInputFiletype("xgboost_json")
+
+  inferenceRunner = treebeard.TreebeardInferenceRunner.FromTBContext(tbContext)
+  start = time.time()
+  for i in range(0, data.shape[0], 200):
+    batch = inputs[i:i+200, :]
+    results = inferenceRunner.RunInference(batch, returnType)
+    if not CheckArraysEqual(results, expectedOutputs[i:i+200]):
+      print("Failed")
+      return False
+  end = time.time()
+  print("Passed (", end - start, "s )")
+  return True
+
+def RunTestOnSingleModelTestInputsJIT(modelName : str, options, testName : str, returnType=numpy.float32, testFunc=RunSingleTestJIT) -> bool:
   print("Running JIT test", testName, modelName, "...", end=" ")
   modelJSONPath = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), modelName + "_xgb_model_save.json")
   csvPath = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), modelName + "_xgb_model_save.json.test.sampled.csv")
-  return RunSingleTestJIT(modelJSONPath, csvPath, options, returnType)
+  return testFunc(modelJSONPath, csvPath, options, returnType)
 
 def SetStatsProfileCSVPath(options, modelName):
   profilesDir = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), "profiles") 
@@ -106,64 +129,82 @@ def RunParallelTests():
   assert RunTestOnSingleModelTestInputsJIT("letters", invertLoopsTileSize8MulticlassOptions, "one-tree-par-4cores", numpy.int8)
   assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", invertLoopsTileSize8Options, "one-tree-par-4cores")
 
-defaultTileSize8Options = treebeard.CompilerOptions(200, 8)
-defaultTileSize8MulticlassOptions = treebeard.CompilerOptions(200, 8)
-defaultTileSize8MulticlassOptions.SetReturnTypeWidth(8)
-defaultTileSize8MulticlassOptions.SetReturnTypeIsFloatType(False)
+def RunBasicTests(testFunc=RunSingleTestJIT):
+  defaultTileSize8Options = treebeard.CompilerOptions(200, 8)
+  defaultTileSize8MulticlassOptions = treebeard.CompilerOptions(200, 8)
+  defaultTileSize8MulticlassOptions.SetReturnTypeWidth(8)
+  defaultTileSize8MulticlassOptions.SetReturnTypeIsFloatType(False)
 
-assert RunTestOnSingleModelTestInputsJIT("abalone", defaultTileSize8Options, "default-array")
-assert RunTestOnSingleModelTestInputsJIT("airline", defaultTileSize8Options, "default-array")
-assert RunTestOnSingleModelTestInputsJIT("airline-ohe", defaultTileSize8Options, "default-array")
-assert RunTestOnSingleModelTestInputsJIT("covtype", defaultTileSize8MulticlassOptions, "default-array", numpy.int8)
-assert RunTestOnSingleModelTestInputsJIT("epsilon", defaultTileSize8Options, "default-array")
-assert RunTestOnSingleModelTestInputsJIT("higgs", defaultTileSize8Options, "default-array")
-assert RunTestOnSingleModelTestInputsJIT("letters", defaultTileSize8MulticlassOptions, "default-array", numpy.int8)
-assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", defaultTileSize8Options, "default-array")
+  assert RunTestOnSingleModelTestInputsJIT("abalone", defaultTileSize8Options, "default-array")
+  assert RunTestOnSingleModelTestInputsJIT("airline", defaultTileSize8Options, "default-array")
+  assert RunTestOnSingleModelTestInputsJIT("airline-ohe", defaultTileSize8Options, "default-array")
+  assert RunTestOnSingleModelTestInputsJIT("covtype", defaultTileSize8MulticlassOptions, "default-array", numpy.int8)
+  assert RunTestOnSingleModelTestInputsJIT("epsilon", defaultTileSize8Options, "default-array")
+  assert RunTestOnSingleModelTestInputsJIT("higgs", defaultTileSize8Options, "default-array")
+  assert RunTestOnSingleModelTestInputsJIT("letters", defaultTileSize8MulticlassOptions, "default-array", numpy.int8)
+  assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", defaultTileSize8Options, "default-array")
 
-invertLoopsTileSize8Options = treebeard.CompilerOptions(200, 8)
-invertLoopsTileSize8Options.SetOneTreeAtATimeSchedule()
+  invertLoopsTileSize8Options = treebeard.CompilerOptions(200, 8)
+  invertLoopsTileSize8Options.SetOneTreeAtATimeSchedule()
 
-invertLoopsTileSize8MulticlassOptions = treebeard.CompilerOptions(200, 8)
-invertLoopsTileSize8MulticlassOptions.SetReturnTypeWidth(8)
-invertLoopsTileSize8MulticlassOptions.SetReturnTypeIsFloatType(False)
-invertLoopsTileSize8MulticlassOptions.SetOneTreeAtATimeSchedule();
+  invertLoopsTileSize8MulticlassOptions = treebeard.CompilerOptions(200, 8)
+  invertLoopsTileSize8MulticlassOptions.SetReturnTypeWidth(8)
+  invertLoopsTileSize8MulticlassOptions.SetReturnTypeIsFloatType(False)
+  invertLoopsTileSize8MulticlassOptions.SetOneTreeAtATimeSchedule();
 
-assert RunTestOnSingleModelTestInputsJIT("abalone", invertLoopsTileSize8Options, "one-tree-array")
-assert RunTestOnSingleModelTestInputsJIT("airline", invertLoopsTileSize8Options, "one-tree-array")
-assert RunTestOnSingleModelTestInputsJIT("airline-ohe", invertLoopsTileSize8Options, "one-tree-array")
-assert RunTestOnSingleModelTestInputsJIT("covtype", invertLoopsTileSize8MulticlassOptions, "one-tree-array", numpy.int8)
-assert RunTestOnSingleModelTestInputsJIT("epsilon", invertLoopsTileSize8Options, "one-tree-array")
-assert RunTestOnSingleModelTestInputsJIT("higgs", invertLoopsTileSize8Options, "one-tree-array")
-assert RunTestOnSingleModelTestInputsJIT("letters", invertLoopsTileSize8MulticlassOptions, "one-tree-array", numpy.int8)
-assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", invertLoopsTileSize8Options, "one-tree-array")
+  assert RunTestOnSingleModelTestInputsJIT("abalone", invertLoopsTileSize8Options, "one-tree-array")
+  assert RunTestOnSingleModelTestInputsJIT("airline", invertLoopsTileSize8Options, "one-tree-array")
+  assert RunTestOnSingleModelTestInputsJIT("airline-ohe", invertLoopsTileSize8Options, "one-tree-array")
+  assert RunTestOnSingleModelTestInputsJIT("covtype", invertLoopsTileSize8MulticlassOptions, "one-tree-array", numpy.int8)
+  assert RunTestOnSingleModelTestInputsJIT("epsilon", invertLoopsTileSize8Options, "one-tree-array")
+  assert RunTestOnSingleModelTestInputsJIT("higgs", invertLoopsTileSize8Options, "one-tree-array")
+  assert RunTestOnSingleModelTestInputsJIT("letters", invertLoopsTileSize8MulticlassOptions, "one-tree-array", numpy.int8)
+  assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", invertLoopsTileSize8Options, "one-tree-array")
 
-treebeard.SetEnableSparseRepresentation(1)
-assert RunTestOnSingleModelTestInputsJIT("abalone", invertLoopsTileSize8Options, "one-tree-sparse")
-assert RunTestOnSingleModelTestInputsJIT("airline", invertLoopsTileSize8Options, "one-tree-sparse")
-assert RunTestOnSingleModelTestInputsJIT("airline-ohe", invertLoopsTileSize8Options, "one-tree-sparse")
-assert RunTestOnSingleModelTestInputsJIT("covtype", invertLoopsTileSize8MulticlassOptions, "one-tree-sparse", numpy.int8)
-assert RunTestOnSingleModelTestInputsJIT("epsilon", invertLoopsTileSize8Options, "one-tree-sparse")
-assert RunTestOnSingleModelTestInputsJIT("higgs", invertLoopsTileSize8Options, "one-tree-sparse")
-assert RunTestOnSingleModelTestInputsJIT("letters", invertLoopsTileSize8MulticlassOptions, "one-tree-sparse", numpy.int8)
-assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", invertLoopsTileSize8Options, "one-tree-sparse")
+  treebeard.SetEnableSparseRepresentation(1)
+  assert RunTestOnSingleModelTestInputsJIT("abalone", invertLoopsTileSize8Options, "one-tree-sparse")
+  assert RunTestOnSingleModelTestInputsJIT("airline", invertLoopsTileSize8Options, "one-tree-sparse")
+  assert RunTestOnSingleModelTestInputsJIT("airline-ohe", invertLoopsTileSize8Options, "one-tree-sparse")
+  assert RunTestOnSingleModelTestInputsJIT("covtype", invertLoopsTileSize8MulticlassOptions, "one-tree-sparse", numpy.int8)
+  assert RunTestOnSingleModelTestInputsJIT("epsilon", invertLoopsTileSize8Options, "one-tree-sparse")
+  assert RunTestOnSingleModelTestInputsJIT("higgs", invertLoopsTileSize8Options, "one-tree-sparse")
+  assert RunTestOnSingleModelTestInputsJIT("letters", invertLoopsTileSize8MulticlassOptions, "one-tree-sparse", numpy.int8)
+  assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", invertLoopsTileSize8Options, "one-tree-sparse")
 
-probTilingOptions = treebeard.CompilerOptions(200, 8)
-probTilingOptions.SetTilingType(2) # prob tiling
-probTilingOptions.SetReorderTreesByDepth(True)
+  probTilingOptions = treebeard.CompilerOptions(200, 8)
+  probTilingOptions.SetTilingType(2) # prob tiling
+  probTilingOptions.SetReorderTreesByDepth(True)
 
-probTilingMulticlassOptions = treebeard.CompilerOptions(200, 8)
-probTilingMulticlassOptions.SetReturnTypeWidth(8)
-probTilingMulticlassOptions.SetReturnTypeIsFloatType(False)
+  probTilingMulticlassOptions = treebeard.CompilerOptions(200, 8)
+  probTilingMulticlassOptions.SetReturnTypeWidth(8)
+  probTilingMulticlassOptions.SetReturnTypeIsFloatType(False)
 
-assert RunTestOnSingleModelTestInputsJIT("abalone", SetStatsProfileCSVPath(probTilingOptions, "abalone"), "default-probtiling-sparse")
-assert RunTestOnSingleModelTestInputsJIT("airline", SetStatsProfileCSVPath(probTilingOptions, "airline"), "default-probtiling-sparse")
-assert RunTestOnSingleModelTestInputsJIT("airline-ohe", SetStatsProfileCSVPath(probTilingOptions, "airline-ohe"), "default-probtiling-sparse")
-assert RunTestOnSingleModelTestInputsJIT("covtype", SetStatsProfileCSVPath(probTilingMulticlassOptions, "covtype"), "default-probtiling-sparse", numpy.int8)
-assert RunTestOnSingleModelTestInputsJIT("epsilon", SetStatsProfileCSVPath(probTilingOptions, "epsilon"), "default-probtiling-sparse")
-assert RunTestOnSingleModelTestInputsJIT("higgs", SetStatsProfileCSVPath(probTilingOptions, "higgs"), "default-probtiling-sparse")
-assert RunTestOnSingleModelTestInputsJIT("letters", SetStatsProfileCSVPath(probTilingMulticlassOptions, "letters"), "default-probtiling-sparse", numpy.int8)
-assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", SetStatsProfileCSVPath(probTilingOptions, "year_prediction_msd"), "default-probtiling-sparse")
+  assert RunTestOnSingleModelTestInputsJIT("abalone", SetStatsProfileCSVPath(probTilingOptions, "abalone"), "default-probtiling-sparse")
+  assert RunTestOnSingleModelTestInputsJIT("airline", SetStatsProfileCSVPath(probTilingOptions, "airline"), "default-probtiling-sparse")
+  assert RunTestOnSingleModelTestInputsJIT("airline-ohe", SetStatsProfileCSVPath(probTilingOptions, "airline-ohe"), "default-probtiling-sparse")
+  assert RunTestOnSingleModelTestInputsJIT("covtype", SetStatsProfileCSVPath(probTilingMulticlassOptions, "covtype"), "default-probtiling-sparse", numpy.int8)
+  assert RunTestOnSingleModelTestInputsJIT("epsilon", SetStatsProfileCSVPath(probTilingOptions, "epsilon"), "default-probtiling-sparse")
+  assert RunTestOnSingleModelTestInputsJIT("higgs", SetStatsProfileCSVPath(probTilingOptions, "higgs"), "default-probtiling-sparse")
+  assert RunTestOnSingleModelTestInputsJIT("letters", SetStatsProfileCSVPath(probTilingMulticlassOptions, "letters"), "default-probtiling-sparse", numpy.int8)
+  assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", SetStatsProfileCSVPath(probTilingOptions, "year_prediction_msd"), "default-probtiling-sparse")
 
+def RunTBContextTests():
+  defaultTileSize8Options = treebeard.CompilerOptions(200, 8)
+  defaultTileSize8MulticlassOptions = treebeard.CompilerOptions(200, 8)
+  defaultTileSize8MulticlassOptions.SetReturnTypeWidth(8)
+  defaultTileSize8MulticlassOptions.SetReturnTypeIsFloatType(False)
+
+  assert RunTestOnSingleModelTestInputsJIT("abalone", defaultTileSize8Options, "default-array-tbcontext", numpy.float32, RunSingleTestJIT_TBContext)
+  assert RunTestOnSingleModelTestInputsJIT("airline", defaultTileSize8Options, "default-array-tbcontext", numpy.float32, RunSingleTestJIT_TBContext)
+  assert RunTestOnSingleModelTestInputsJIT("airline-ohe", defaultTileSize8Options, "default-array-tbcontext", numpy.float32, RunSingleTestJIT_TBContext)
+  assert RunTestOnSingleModelTestInputsJIT("covtype", defaultTileSize8MulticlassOptions, "default-array-tbcontext", numpy.int8, RunSingleTestJIT_TBContext)
+  assert RunTestOnSingleModelTestInputsJIT("epsilon", defaultTileSize8Options, "default-array-tbcontext", numpy.float32, RunSingleTestJIT_TBContext)
+  assert RunTestOnSingleModelTestInputsJIT("higgs", defaultTileSize8Options, "default-array-tbcontext", numpy.float32, RunSingleTestJIT_TBContext)
+  assert RunTestOnSingleModelTestInputsJIT("letters", defaultTileSize8MulticlassOptions, "default-array-tbcontext", numpy.int8, RunSingleTestJIT_TBContext)
+  assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", defaultTileSize8Options, "default-array-tbcontext", numpy.float32, RunSingleTestJIT_TBContext)
+
+RunTBContextTests()
+RunBasicTests()
 RunPipeliningTests()
 RunParallelTests()
 

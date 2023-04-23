@@ -113,8 +113,9 @@ std::shared_ptr<ForestCreator> SpecializeReturnType(mlir::MLIRContext& context, 
 namespace TreeBeard
 {
 
-std::shared_ptr<ForestCreator> ConstructXGBoostJSONParser(mlir::MLIRContext& context, TreebeardContext& tbContext) {
+std::shared_ptr<ForestCreator> ConstructXGBoostJSONParser(TreebeardContext& tbContext) {
   auto& options = tbContext.options;
+  mlir::MLIRContext& context = tbContext.context; 
   if (options.thresholdTypeWidth == 32) {
     return SpecializeReturnType<float>(context, tbContext);
   }

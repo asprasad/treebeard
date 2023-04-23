@@ -8,16 +8,20 @@
 
 namespace TreeBeard
 {
-inline mlir::ModuleOp ConstructLLVMDialectModuleFromForestCreator(
-    TreebeardContext &tbContext,
-    ForestCreator &forestCreator) {
-
+inline mlir::ModuleOp BuildHIRModule(TreebeardContext &tbContext, ForestCreator &forestCreator) {
   const CompilerOptions& options=tbContext.options;
-  auto& context = tbContext.context;
   
   forestCreator.ConstructForest();
   forestCreator.SetChildIndexBitWidth(options.childIndexBitWidth);
   auto module = forestCreator.GetEvaluationFunction();
+  
+  return module;
+}
+
+inline void DoTilingTransformation(mlir::ModuleOp module,
+                                   TreebeardContext &tbContext) {
+  const CompilerOptions& options=tbContext.options;
+  auto& context = tbContext.context;
 
   // TODO maybe all the manipulation before the lowering to mid-level IR can be a single custom function?
   if (options.tilingType==TilingType::kUniform)
@@ -28,12 +32,11 @@ inline mlir::ModuleOp ConstructLLVMDialectModuleFromForestCreator(
     mlir::decisionforest::DoHybridTiling(context, module, options.tileSize, options.tileShapeBitWidth);
   else
     assert (false && "Unknown tiling type");
-  
-  if (options.scheduleManipulator) {
-    auto schedule = forestCreator.GetSchedule();
-    options.scheduleManipulator->Run(schedule);
-    assert (!options.reorderTreesByDepth && "Cannot have a custom schedule manipulator and the inbuilt one together");
-  }
+}
+
+inline void LowerHIRModuleToLLVM(mlir::ModuleOp module, TreebeardContext &tbContext) {
+  const CompilerOptions& options=tbContext.options;
+  auto& context = tbContext.context;
 
   // TODO this needs to change to something that knows how to do all schedule manipulation
   if (options.reorderTreesByDepth) {
@@ -47,6 +50,23 @@ inline mlir::ModuleOp ConstructLLVMDialectModuleFromForestCreator(
   // module->dump();
   mlir::decisionforest::LowerToLLVM(context, module, tbContext.representation);
   // mlir::decisionforest::dumpLLVMIR(module, false);
+}
+
+inline mlir::ModuleOp ConstructLLVMDialectModuleFromForestCreator(
+    TreebeardContext &tbContext,
+    ForestCreator &forestCreator) {
+  
+  const CompilerOptions& options=tbContext.options;
+  
+  auto module = BuildHIRModule(tbContext, forestCreator);
+  DoTilingTransformation(module, tbContext);
+
+  if (options.scheduleManipulator) {
+    auto schedule = forestCreator.GetSchedule();
+    options.scheduleManipulator->Run(schedule);
+    assert (!options.reorderTreesByDepth && "Cannot have a custom schedule manipulator and the inbuilt one together");
+  }
+  LowerHIRModuleToLLVM(module, tbContext);
   return module;
 }
 
