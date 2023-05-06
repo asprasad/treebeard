@@ -243,33 +243,36 @@ def TileTreeLoopSchedule(schedule: treebeard.Schedule):
   innerIndex = schedule.NewIndexVariable("b1")
   schedule.Tile(treeIndex, outerIndex, innerIndex, tileSize=4)
 
-def RunTileBatchLoopTests():
+def OneTreeAtATimeSchedule(schedule: treebeard.Schedule):
+  tree_index = schedule.GetTreeIndex()
+  batch_index = schedule.GetBatchIndex()
+  index_order = [tree_index, batch_index]
+  schedule.Reorder(index_order)
+
+def run_custom_schedule(test_name, rep, schedule_manipulator):
   defaultTileSize8Options = treebeard.CompilerOptions(200, 8)
   defaultTileSize8MulticlassOptions = treebeard.CompilerOptions(200, 8)
   defaultTileSize8MulticlassOptions.SetReturnTypeWidth(8)
   defaultTileSize8MulticlassOptions.SetReturnTypeIsFloatType(False)
 
   arrayRepSingleTestRunner_TileBatch = partial(RunSingleTestJIT_ScheduleManipulation,
-                                               representation="array",
+                                               representation=rep,
                                                inputType="xgboost_json",
-                                               scheduleManipulator=TileBatchLoopSchedule)
+                                               scheduleManipulator=schedule_manipulator)
 
-  RunAllTests("tiled_batch-array-tbcontext", defaultTileSize8Options, defaultTileSize8MulticlassOptions, arrayRepSingleTestRunner_TileBatch)
+  RunAllTests(test_name, defaultTileSize8Options, defaultTileSize8MulticlassOptions, arrayRepSingleTestRunner_TileBatch)
+
+def RunTileBatchLoopTests():
+  run_custom_schedule("tiled_batch-array-tbcontext", "array", TileBatchLoopSchedule)
 
 def RunTileTreeLoopTests():
-  defaultTileSize8Options = treebeard.CompilerOptions(200, 8)
-  defaultTileSize8MulticlassOptions = treebeard.CompilerOptions(200, 8)
-  defaultTileSize8MulticlassOptions.SetReturnTypeWidth(8)
-  defaultTileSize8MulticlassOptions.SetReturnTypeIsFloatType(False)
+  run_custom_schedule("tiled_tree-array-tbcontext", "array", TileTreeLoopSchedule)
 
-  arrayRepSingleTestRunner_TileTree = partial(RunSingleTestJIT_ScheduleManipulation,
-                                               representation="array",
-                                               inputType="xgboost_json",
-                                               scheduleManipulator=TileTreeLoopSchedule)
-
-  RunAllTests("tiled_tree-array-tbcontext", defaultTileSize8Options, defaultTileSize8MulticlassOptions, arrayRepSingleTestRunner_TileTree)
+def RuneOneTreeAtATimeTests():
+  run_custom_schedule("one_tree_schedule-array-tbcontext", "array", OneTreeAtATimeSchedule)
 
 def ScheduleTest():
+  RuneOneTreeAtATimeTests()
   RunTileBatchLoopTests()
   RunTileTreeLoopTests()
 
