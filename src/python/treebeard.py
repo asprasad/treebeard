@@ -208,7 +208,7 @@ class TreebeardAPI:
     self.runtime_lib.DeleteInferenceRunner(inferenceRunner)
 
   def Schedule_NewIndexVariable(self, schedPtr, name):
-      return self.runtime_lib.Schedule_NewIndexVariable(schedPtr, name.encode())
+      return self.runtime_lib.Schedule_NewIndexVariable(schedPtr, name.encode('utf-8'))
 
   def Schedule_NewIndexVariable2(self, schedPtr, indexVarPtr):
       return self.runtime_lib.Schedule_NewIndexVariable2(schedPtr, indexVarPtr)
@@ -226,13 +226,13 @@ class TreebeardAPI:
       self.runtime_lib.Schedule_Pipeline(schedPtr, indexPtr, stepSize)
   
   def Schedule_Simdize(self, schedPtr, indexPtr):
-      self.runtime_lib.Schedule_Simdize(ctypes.c_int64(schedPtr), ctypes.c_int64(indexPtr))
+      self.runtime_lib.Schedule_Simdize(schedPtr, ctypes.c_int64(indexPtr))
 
   def Schedule_Parallel(self, schedPtr, indexPtr):
-      self.runtime_lib.Schedule_Parallel(ctypes.c_int64(schedPtr), ctypes.c_int64(indexPtr))
+      self.runtime_lib.Schedule_Parallel(schedPtr, ctypes.c_int64(indexPtr))
 
   def Schedule_Unroll(self, schedPtr, indexVarPtr):
-      self.runtime_lib.Schedule_Unroll(ctypes.c_int64(schedPtr), ctypes.c_int64(indexVarPtr))
+      self.runtime_lib.Schedule_Unroll(schedPtr, ctypes.c_int64(indexVarPtr))
 
   def Schedule_PeelWalk(self, schedPtr, indexVarPtr, numberOfIterations):
       self.runtime_lib.Schedule_PeelWalk(ctypes.c_int64(schedPtr), ctypes.c_int64(indexVarPtr), ctypes.c_int32(numberOfIterations))
@@ -241,10 +241,10 @@ class TreebeardAPI:
       self.runtime_lib.Schedule_Cache(ctypes.c_int64(schedPtr), ctypes.c_int64(indexVarPtr))
 
   def Schedule_GetRootIndex(self, schedPtr):
-      return self.runtime_lib.Schedule_GetRootIndex(ctypes.c_int64(schedPtr))
+      return self.runtime_lib.Schedule_GetRootIndex(schedPtr)
 
   def Schedule_GetBatchIndex(self, schedPtr):
-      return self.runtime_lib.Schedule_GetBatchIndex(ctypes.c_int64(schedPtr))
+      return self.runtime_lib.Schedule_GetBatchIndex(schedPtr)
 
   def Schedule_GetTreeIndex(self, schedPtr):
       return self.runtime_lib.Schedule_GetTreeIndex(schedPtr)
@@ -344,9 +344,70 @@ class CompilerOptions:
   def SetOneTreeAtATimeSchedule(self) :
     treebeardAPI.runtime_lib.SetOneTreeAtATimeSchedule(self.optionsPtr)
 
+class IndexVariable:
+  def __init__(self, name, indexVarPtr) -> None:
+     self.name = name
+     self.indexVarPtr = indexVarPtr
+
 class Schedule:
   def __init__(self, schedulePtr):
     self.schedulePtr = schedulePtr
+  
+  def NewIndexVariable(self, name):
+      indexVarPtr = treebeardAPI.Schedule_NewIndexVariable(self.schedulePtr, name)
+      return IndexVariable(name, indexVarPtr)
+
+  def Tile(self, index, outerIndex, innerIndex, tileSize):
+      treebeardAPI.Schedule_Tile(self.schedulePtr, index.indexVarPtr, outerIndex.indexVarPtr, innerIndex.indexVarPtr, tileSize)
+
+  # def Schedule_Reorder(self, schedPtr, indicesPtr, numIndices):
+  #     self.runtime_lib.Schedule_Reorder(schedPtr, indicesPtr, numIndices)
+
+  # def Split(self, indexPtr, firstPtr, secondPtr, splitIteration, indexMapPtr):
+  #     self.runtime_lib.Schedule_Split(self.schedulePtr, indexPtr, firstPtr, secondPtr, splitIteration, indexMapPtr)
+
+  def Pipeline(self, index, stepSize):
+      treebeardAPI.Schedule_Pipeline(self.schedulePtr, index.indexVarPtr, stepSize)
+  
+  def Simdize(self, index):
+      treebeardAPI.Schedule_Simdize(self.schedulePtr, index.indexVarPtr)
+
+  def Parallel(self, index):
+      treebeardAPI.Schedule_Parallel(self.schedulePtr, index.indexVarPtr)
+
+  def Unroll(self, index):
+      treebeardAPI.Schedule_Unroll(self.schedulePtr, index.indexVarPtr)
+
+  def PeelWalk(self, index, numberOfIterations):
+      treebeardAPI.Schedule_PeelWalk(self.schedulePtr, index.indexVarPtr, ctypes.c_int32(numberOfIterations))
+
+  def Cache(self, index):
+      treebeardAPI.Schedule_Cache(self.schedulePtr, index.indexVarPtr)
+
+  def GetRootIndex(self):
+      return IndexVariable("root", treebeardAPI.Schedule_GetRootIndex(self.schedulePtr))
+
+  def GetBatchIndex(self):
+      return IndexVariable("batch", treebeardAPI.Schedule_GetBatchIndex(self.schedulePtr))
+
+  def GetTreeIndex(self):
+      return IndexVariable("batch", treebeardAPI.Schedule_GetTreeIndex(self.schedulePtr))
+
+  # def Schedule_PrintToString(self, schedPtr, string, strLen):
+  #     return self.runtime_lib.Schedule_PrintToString(schedPtr, string, strLen)
+
+  def GetBatchSize(self):
+      return treebeardAPI.Schedule_GetBatchSize(self.schedulePtr)
+
+  def GetForestSize(self):
+      return treebeardAPI.Schedule_GetForestSize(self.schedulePtr)
+
+  def IsDefaultSchedule(self):
+      return treebeardAPI.Schedule_IsDefaultSchedule(self.schedulePtr)
+
+  def Finalize(self):
+      treebeardAPI.Schedule_Finalize(self.schedulePtr)
+
 
 class TreebeardContext:
   def __init__(self, model_filepath :str, globals_file_path : str, options : CompilerOptions) -> None:
@@ -365,6 +426,17 @@ class TreebeardContext:
   def GetSchedule(self):
     schedulePtr = treebeardAPI.GetScheduleFromTBContext(self.tbcontextPtr)
     return Schedule(schedulePtr)
+
+  def BuildHIRRepresentation(self):
+    treebeardAPI.runtime_lib.BuildHIRRepresentation(self.tbcontextPtr)
+
+  def ConstructInferenceRunnerFromHIR(self):
+    inferenceRunner = TreebeardInferenceRunner()
+    inferenceRunner.inferenceRunner = int(treebeardAPI.runtime_lib.ConstructInferenceRunnerFromHIR(self.tbcontextPtr))
+    inferenceRunner.rowSize = treebeardAPI.GetRowSize(inferenceRunner.inferenceRunner)
+    inferenceRunner.batchSize = treebeardAPI.GetBatchSize(inferenceRunner.inferenceRunner)
+    return inferenceRunner
+
 
 class TreebeardInferenceRunner:
   def __init__(self) -> None:

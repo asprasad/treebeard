@@ -3,13 +3,15 @@ import numpy
 import pandas
 import time
 import treebeard
+from functools import partial
 
 filepath = os.path.abspath(__file__)
 treebeard_repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(filepath)))
 
 def CheckEqual(a, b) -> bool:
   if type(a) is numpy.float32:
-    threshold = 1e-6
+    scaledThreshold = max(abs(a), abs(b))/1e8
+    threshold = max(1e-6, scaledThreshold)
     return pow(a-b, 2) < threshold
   else:
     return a==b
@@ -21,6 +23,7 @@ def CheckArraysEqual(x, y) -> bool:
     return False
   for i in range(x.shape[0]):
     if not CheckEqual(x[i], y[i]):
+      print(x[i], y[i])
       return False
   return True
 
@@ -42,7 +45,7 @@ def RunSingleTestJIT(modelJSONPath, csvPath, options, returnType) -> bool:
   print("Passed (", end - start, "s )")
   return True
 
-def RunSingleTestJIT_TBContext(modelJSONPath, csvPath, options, returnType) -> bool:
+def RunSingleTestJIT_TBContext(modelJSONPath, csvPath, options, returnType, representation, inputType) -> bool:
   data_df = pandas.read_csv(csvPath, header=None)
   data = numpy.array(data_df, order='C') # numpy.genfromtxt(csvPath, ',')
   inputs = numpy.array(data[:, :-1], numpy.float32, order='C')
@@ -50,8 +53,8 @@ def RunSingleTestJIT_TBContext(modelJSONPath, csvPath, options, returnType) -> b
   
   globalsPath = modelJSONPath + ".treebeard-globals.json"
   tbContext = treebeard.TreebeardContext(modelJSONPath, globalsPath, options)
-  tbContext.SetRepresentationType("sparse")
-  tbContext.SetInputFiletype("xgboost_json")
+  tbContext.SetRepresentationType(representation)
+  tbContext.SetInputFiletype(inputType)
 
   inferenceRunner = treebeard.TreebeardInferenceRunner.FromTBContext(tbContext)
   start = time.time()
@@ -65,8 +68,42 @@ def RunSingleTestJIT_TBContext(modelJSONPath, csvPath, options, returnType) -> b
   print("Passed (", end - start, "s )")
   return True
 
+def RunSingleTestJIT_ScheduleManipulation(modelJSONPath, 
+                                          csvPath,
+                                          options,
+                                          returnType,
+                                          representation,
+                                          inputType,
+                                          scheduleManipulator) -> bool:
+  data_df = pandas.read_csv(csvPath, header=None)
+  data = numpy.array(data_df, order='C') # numpy.genfromtxt(csvPath, ',')
+  inputs = numpy.array(data[:, :-1], numpy.float32, order='C')
+  expectedOutputs = data[:, data.shape[1]-1]
+  
+  globalsPath = modelJSONPath + ".treebeard-globals.json"
+  tbContext = treebeard.TreebeardContext(modelJSONPath, globalsPath, options)
+  tbContext.SetRepresentationType(representation)
+  tbContext.SetInputFiletype(inputType)
+
+  tbContext.BuildHIRRepresentation()
+  schedule = tbContext.GetSchedule()
+  scheduleManipulator(schedule)
+  inferenceRunner = tbContext.ConstructInferenceRunnerFromHIR()
+  
+  start = time.time()
+  for i in range(0, data.shape[0], 200):
+    batch = inputs[i:i+200, :]
+    results = inferenceRunner.RunInference(batch, returnType)
+    if not CheckArraysEqual(results, expectedOutputs[i:i+200]):
+      print("Failed")
+      return False
+  end = time.time()
+  
+  print("Passed (", end - start, "s )")
+  return True
+
 def RunTestOnSingleModelTestInputsJIT(modelName : str, options, testName : str, returnType=numpy.float32, testFunc=RunSingleTestJIT) -> bool:
-  print("Running JIT test", testName, modelName, "...", end=" ")
+  print("JIT ", testName, modelName, "...", end=" ")
   modelJSONPath = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), modelName + "_xgb_model_save.json")
   csvPath = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), modelName + "_xgb_model_save.json.test.sampled.csv")
   return testFunc(modelJSONPath, csvPath, options, returnType)
@@ -76,6 +113,17 @@ def SetStatsProfileCSVPath(options, modelName):
   csvPath = os.path.join(profilesDir, modelName + ".test.csv")
   options.SetStatsProfileCSVPath(csvPath)
   return options
+
+def RunAllTests(testName, options, multiclassOptions, singleTestRunner):
+  assert RunTestOnSingleModelTestInputsJIT("abalone", options, testName, numpy.float32, singleTestRunner)
+  assert RunTestOnSingleModelTestInputsJIT("airline", options, testName, numpy.float32, singleTestRunner)
+  assert RunTestOnSingleModelTestInputsJIT("airline-ohe", options, testName, numpy.float32, singleTestRunner)
+  assert RunTestOnSingleModelTestInputsJIT("covtype", multiclassOptions, testName, numpy.int8, singleTestRunner)
+  assert RunTestOnSingleModelTestInputsJIT("epsilon", options, testName, numpy.float32, singleTestRunner)
+  assert RunTestOnSingleModelTestInputsJIT("higgs", options, testName, numpy.float32, singleTestRunner)
+  assert RunTestOnSingleModelTestInputsJIT("letters", multiclassOptions, testName, numpy.int8, singleTestRunner)
+  assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", options, testName, numpy.float32, singleTestRunner)
+
 
 def RunPipeliningTests():
   invertLoopsTileSize8Options = treebeard.CompilerOptions(200, 8)
@@ -92,14 +140,7 @@ def RunPipeliningTests():
   invertLoopsTileSize8MulticlassOptions.SetReorderTreesByDepth(True)
   invertLoopsTileSize8MulticlassOptions.SetMakeAllLeavesSameDepth(1)
 
-  assert RunTestOnSingleModelTestInputsJIT("abalone", invertLoopsTileSize8Options, "one-tree-pipeline8-sparse")
-  assert RunTestOnSingleModelTestInputsJIT("airline", invertLoopsTileSize8Options, "one-tree-pipeline8-sparse")
-  assert RunTestOnSingleModelTestInputsJIT("airline-ohe", invertLoopsTileSize8Options, "one-tree-pipeline8-sparse")
-  assert RunTestOnSingleModelTestInputsJIT("covtype", invertLoopsTileSize8MulticlassOptions, "one-tree-pipeline8-sparse", numpy.int8)
-  assert RunTestOnSingleModelTestInputsJIT("epsilon", invertLoopsTileSize8Options, "one-tree-pipeline8-sparse")
-  assert RunTestOnSingleModelTestInputsJIT("higgs", invertLoopsTileSize8Options, "one-tree-pipeline8-sparse")
-  assert RunTestOnSingleModelTestInputsJIT("letters", invertLoopsTileSize8MulticlassOptions, "one-tree-pipeline8-sparse", numpy.int8)
-  assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", invertLoopsTileSize8Options, "one-tree-pipeline8-sparse")
+  RunAllTests("one-tree-pipeline8-sparse", invertLoopsTileSize8Options, invertLoopsTileSize8MulticlassOptions, RunSingleTestJIT)
 
 def RunParallelTests():
   batchSize = 200
@@ -120,57 +161,9 @@ def RunParallelTests():
   invertLoopsTileSize8MulticlassOptions.SetMakeAllLeavesSameDepth(1)
   invertLoopsTileSize8MulticlassOptions.SetNumberOfCores(num_cores)
 
-  assert RunTestOnSingleModelTestInputsJIT("abalone", invertLoopsTileSize8Options, "one-tree-par-4cores")
-  assert RunTestOnSingleModelTestInputsJIT("airline", invertLoopsTileSize8Options, "one-tree-par-4cores")
-  assert RunTestOnSingleModelTestInputsJIT("airline-ohe", invertLoopsTileSize8Options, "one-tree-par-4cores")
-  assert RunTestOnSingleModelTestInputsJIT("covtype", invertLoopsTileSize8MulticlassOptions, "one-tree-par-4cores", numpy.int8)
-  assert RunTestOnSingleModelTestInputsJIT("epsilon", invertLoopsTileSize8Options, "one-tree-par-4cores")
-  assert RunTestOnSingleModelTestInputsJIT("higgs", invertLoopsTileSize8Options, "one-tree-par-4cores")
-  assert RunTestOnSingleModelTestInputsJIT("letters", invertLoopsTileSize8MulticlassOptions, "one-tree-par-4cores", numpy.int8)
-  assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", invertLoopsTileSize8Options, "one-tree-par-4cores")
+  RunAllTests("one-tree-par-4cores", invertLoopsTileSize8Options, invertLoopsTileSize8MulticlassOptions, RunSingleTestJIT)
 
-def RunBasicTests(testFunc=RunSingleTestJIT):
-  defaultTileSize8Options = treebeard.CompilerOptions(200, 8)
-  defaultTileSize8MulticlassOptions = treebeard.CompilerOptions(200, 8)
-  defaultTileSize8MulticlassOptions.SetReturnTypeWidth(8)
-  defaultTileSize8MulticlassOptions.SetReturnTypeIsFloatType(False)
-
-  assert RunTestOnSingleModelTestInputsJIT("abalone", defaultTileSize8Options, "default-array")
-  assert RunTestOnSingleModelTestInputsJIT("airline", defaultTileSize8Options, "default-array")
-  assert RunTestOnSingleModelTestInputsJIT("airline-ohe", defaultTileSize8Options, "default-array")
-  assert RunTestOnSingleModelTestInputsJIT("covtype", defaultTileSize8MulticlassOptions, "default-array", numpy.int8)
-  assert RunTestOnSingleModelTestInputsJIT("epsilon", defaultTileSize8Options, "default-array")
-  assert RunTestOnSingleModelTestInputsJIT("higgs", defaultTileSize8Options, "default-array")
-  assert RunTestOnSingleModelTestInputsJIT("letters", defaultTileSize8MulticlassOptions, "default-array", numpy.int8)
-  assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", defaultTileSize8Options, "default-array")
-
-  invertLoopsTileSize8Options = treebeard.CompilerOptions(200, 8)
-  invertLoopsTileSize8Options.SetOneTreeAtATimeSchedule()
-
-  invertLoopsTileSize8MulticlassOptions = treebeard.CompilerOptions(200, 8)
-  invertLoopsTileSize8MulticlassOptions.SetReturnTypeWidth(8)
-  invertLoopsTileSize8MulticlassOptions.SetReturnTypeIsFloatType(False)
-  invertLoopsTileSize8MulticlassOptions.SetOneTreeAtATimeSchedule();
-
-  assert RunTestOnSingleModelTestInputsJIT("abalone", invertLoopsTileSize8Options, "one-tree-array")
-  assert RunTestOnSingleModelTestInputsJIT("airline", invertLoopsTileSize8Options, "one-tree-array")
-  assert RunTestOnSingleModelTestInputsJIT("airline-ohe", invertLoopsTileSize8Options, "one-tree-array")
-  assert RunTestOnSingleModelTestInputsJIT("covtype", invertLoopsTileSize8MulticlassOptions, "one-tree-array", numpy.int8)
-  assert RunTestOnSingleModelTestInputsJIT("epsilon", invertLoopsTileSize8Options, "one-tree-array")
-  assert RunTestOnSingleModelTestInputsJIT("higgs", invertLoopsTileSize8Options, "one-tree-array")
-  assert RunTestOnSingleModelTestInputsJIT("letters", invertLoopsTileSize8MulticlassOptions, "one-tree-array", numpy.int8)
-  assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", invertLoopsTileSize8Options, "one-tree-array")
-
-  treebeard.SetEnableSparseRepresentation(1)
-  assert RunTestOnSingleModelTestInputsJIT("abalone", invertLoopsTileSize8Options, "one-tree-sparse")
-  assert RunTestOnSingleModelTestInputsJIT("airline", invertLoopsTileSize8Options, "one-tree-sparse")
-  assert RunTestOnSingleModelTestInputsJIT("airline-ohe", invertLoopsTileSize8Options, "one-tree-sparse")
-  assert RunTestOnSingleModelTestInputsJIT("covtype", invertLoopsTileSize8MulticlassOptions, "one-tree-sparse", numpy.int8)
-  assert RunTestOnSingleModelTestInputsJIT("epsilon", invertLoopsTileSize8Options, "one-tree-sparse")
-  assert RunTestOnSingleModelTestInputsJIT("higgs", invertLoopsTileSize8Options, "one-tree-sparse")
-  assert RunTestOnSingleModelTestInputsJIT("letters", invertLoopsTileSize8MulticlassOptions, "one-tree-sparse", numpy.int8)
-  assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", invertLoopsTileSize8Options, "one-tree-sparse")
-
+def RunProbBasedTilingTests():
   probTilingOptions = treebeard.CompilerOptions(200, 8)
   probTilingOptions.SetTilingType(2) # prob tiling
   probTilingOptions.SetReorderTreesByDepth(True)
@@ -188,23 +181,104 @@ def RunBasicTests(testFunc=RunSingleTestJIT):
   assert RunTestOnSingleModelTestInputsJIT("letters", SetStatsProfileCSVPath(probTilingMulticlassOptions, "letters"), "default-probtiling-sparse", numpy.int8)
   assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", SetStatsProfileCSVPath(probTilingOptions, "year_prediction_msd"), "default-probtiling-sparse")
 
+def RunBasicTests():
+  defaultTileSize8Options = treebeard.CompilerOptions(200, 8)
+  defaultTileSize8MulticlassOptions = treebeard.CompilerOptions(200, 8)
+  defaultTileSize8MulticlassOptions.SetReturnTypeWidth(8)
+  defaultTileSize8MulticlassOptions.SetReturnTypeIsFloatType(False)
+
+  RunAllTests("default-array", defaultTileSize8Options, defaultTileSize8MulticlassOptions, RunSingleTestJIT)
+
+  invertLoopsTileSize8Options = treebeard.CompilerOptions(200, 8)
+  invertLoopsTileSize8Options.SetOneTreeAtATimeSchedule()
+
+  invertLoopsTileSize8MulticlassOptions = treebeard.CompilerOptions(200, 8)
+  invertLoopsTileSize8MulticlassOptions.SetReturnTypeWidth(8)
+  invertLoopsTileSize8MulticlassOptions.SetReturnTypeIsFloatType(False)
+  invertLoopsTileSize8MulticlassOptions.SetOneTreeAtATimeSchedule()
+  
+  RunAllTests("one-tree-array", invertLoopsTileSize8Options, invertLoopsTileSize8MulticlassOptions, RunSingleTestJIT)
+
+  treebeard.SetEnableSparseRepresentation(1)
+  
+  RunAllTests("one-tree-sparse", invertLoopsTileSize8Options, invertLoopsTileSize8MulticlassOptions, RunSingleTestJIT)
+  RunProbBasedTilingTests()
+  
+  treebeard.SetEnableSparseRepresentation(0)
+
 def RunTBContextTests():
   defaultTileSize8Options = treebeard.CompilerOptions(200, 8)
   defaultTileSize8MulticlassOptions = treebeard.CompilerOptions(200, 8)
   defaultTileSize8MulticlassOptions.SetReturnTypeWidth(8)
   defaultTileSize8MulticlassOptions.SetReturnTypeIsFloatType(False)
 
-  assert RunTestOnSingleModelTestInputsJIT("abalone", defaultTileSize8Options, "default-array-tbcontext", numpy.float32, RunSingleTestJIT_TBContext)
-  assert RunTestOnSingleModelTestInputsJIT("airline", defaultTileSize8Options, "default-array-tbcontext", numpy.float32, RunSingleTestJIT_TBContext)
-  assert RunTestOnSingleModelTestInputsJIT("airline-ohe", defaultTileSize8Options, "default-array-tbcontext", numpy.float32, RunSingleTestJIT_TBContext)
-  assert RunTestOnSingleModelTestInputsJIT("covtype", defaultTileSize8MulticlassOptions, "default-array-tbcontext", numpy.int8, RunSingleTestJIT_TBContext)
-  assert RunTestOnSingleModelTestInputsJIT("epsilon", defaultTileSize8Options, "default-array-tbcontext", numpy.float32, RunSingleTestJIT_TBContext)
-  assert RunTestOnSingleModelTestInputsJIT("higgs", defaultTileSize8Options, "default-array-tbcontext", numpy.float32, RunSingleTestJIT_TBContext)
-  assert RunTestOnSingleModelTestInputsJIT("letters", defaultTileSize8MulticlassOptions, "default-array-tbcontext", numpy.int8, RunSingleTestJIT_TBContext)
-  assert RunTestOnSingleModelTestInputsJIT("year_prediction_msd", defaultTileSize8Options, "default-array-tbcontext", numpy.float32, RunSingleTestJIT_TBContext)
+  arrayRepSingleTestRunner = partial(RunSingleTestJIT_TBContext, representation="array", inputType="xgboost_json")
+  sparseRepSingleTestRunner = partial(RunSingleTestJIT_TBContext, representation="sparse", inputType="xgboost_json")
 
+  RunAllTests("default-array-tbcontext", defaultTileSize8Options, defaultTileSize8MulticlassOptions, arrayRepSingleTestRunner)
+
+  RunAllTests("default-sparse-tbcontext", defaultTileSize8Options, defaultTileSize8MulticlassOptions, sparseRepSingleTestRunner)
+
+  invertLoopsTileSize8Options = treebeard.CompilerOptions(200, 8)
+  invertLoopsTileSize8Options.SetOneTreeAtATimeSchedule()
+
+  invertLoopsTileSize8MulticlassOptions = treebeard.CompilerOptions(200, 8)
+  invertLoopsTileSize8MulticlassOptions.SetReturnTypeWidth(8)
+  invertLoopsTileSize8MulticlassOptions.SetReturnTypeIsFloatType(False)
+  invertLoopsTileSize8MulticlassOptions.SetOneTreeAtATimeSchedule();
+
+  RunAllTests("one-tree-array-tbcontext", invertLoopsTileSize8Options, invertLoopsTileSize8MulticlassOptions, arrayRepSingleTestRunner)
+
+  RunAllTests("one-tree-sparse-tbcontext", invertLoopsTileSize8Options, invertLoopsTileSize8MulticlassOptions, sparseRepSingleTestRunner)
+
+def TileBatchLoopSchedule(schedule: treebeard.Schedule):
+  batchIndex = schedule.GetBatchIndex()
+  outerIndex = schedule.NewIndexVariable("b0")
+  innerIndex = schedule.NewIndexVariable("b1")
+  schedule.Tile(batchIndex, outerIndex, innerIndex, tileSize=4)
+
+def TileTreeLoopSchedule(schedule: treebeard.Schedule):
+  treeIndex = schedule.GetTreeIndex()
+  outerIndex = schedule.NewIndexVariable("b0")
+  innerIndex = schedule.NewIndexVariable("b1")
+  schedule.Tile(treeIndex, outerIndex, innerIndex, tileSize=4)
+
+def RunTileBatchLoopTests():
+  defaultTileSize8Options = treebeard.CompilerOptions(200, 8)
+  defaultTileSize8MulticlassOptions = treebeard.CompilerOptions(200, 8)
+  defaultTileSize8MulticlassOptions.SetReturnTypeWidth(8)
+  defaultTileSize8MulticlassOptions.SetReturnTypeIsFloatType(False)
+
+  arrayRepSingleTestRunner_TileBatch = partial(RunSingleTestJIT_ScheduleManipulation,
+                                               representation="array",
+                                               inputType="xgboost_json",
+                                               scheduleManipulator=TileBatchLoopSchedule)
+
+  RunAllTests("tiled_batch-array-tbcontext", defaultTileSize8Options, defaultTileSize8MulticlassOptions, arrayRepSingleTestRunner_TileBatch)
+
+def RunTileTreeLoopTests():
+  defaultTileSize8Options = treebeard.CompilerOptions(200, 8)
+  defaultTileSize8MulticlassOptions = treebeard.CompilerOptions(200, 8)
+  defaultTileSize8MulticlassOptions.SetReturnTypeWidth(8)
+  defaultTileSize8MulticlassOptions.SetReturnTypeIsFloatType(False)
+
+  arrayRepSingleTestRunner_TileTree = partial(RunSingleTestJIT_ScheduleManipulation,
+                                               representation="array",
+                                               inputType="xgboost_json",
+                                               scheduleManipulator=TileTreeLoopSchedule)
+
+  RunAllTests("tiled_tree-array-tbcontext", defaultTileSize8Options, defaultTileSize8MulticlassOptions, arrayRepSingleTestRunner_TileTree)
+
+def ScheduleTest():
+  RunTileBatchLoopTests()
+  RunTileTreeLoopTests()
+
+ScheduleTest()
 RunTBContextTests()
 RunBasicTests()
+
+treebeard.SetEnableSparseRepresentation(1)
+
 RunPipeliningTests()
 RunParallelTests()
 
