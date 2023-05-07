@@ -42,16 +42,29 @@ namespace decisionforest
       return index;
     }
 
-    ScalarTraverseTileCodeGenerator:: ScalarTraverseTileCodeGenerator(Value rowMemref, Value node, 
-                                                                      Type resultType, 
-                                                                      std::shared_ptr<IRepresentation> representation,
-                                                                      Value tree) {
+    mlir::arith::CmpFPredicate negateComparisonPredicate(mlir::arith::CmpFPredicateAttr cmpPredAttr) {
+      auto cmpPred = cmpPredAttr.getValue();
+      if (cmpPred == arith::CmpFPredicate::ULT)
+        return arith::CmpFPredicate::UGE;
+      else if (cmpPred == arith::CmpFPredicate::ULE)
+        return arith::CmpFPredicate::UGT;
+      else
+        assert (false && "Unknown comparison predicate");
+      return arith::CmpFPredicate::ULT;
+    }
+
+    ScalarTraverseTileCodeGenerator::ScalarTraverseTileCodeGenerator(Value rowMemref, Value node, 
+                                                                     Type resultType, 
+                                                                     std::shared_ptr<IRepresentation> representation,
+                                                                     Value tree,
+                                                                     mlir::arith::CmpFPredicateAttr cmpPredicateAttr) {
       m_rowMemref = rowMemref;
       m_nodeToTraverse = node;
       m_resultType = resultType;
       m_state = kLoadThreshold;
       m_representation = representation;
       m_tree = tree;
+      m_cmpPredicateAttr = cmpPredicateAttr;
     }
 
     bool ScalarTraverseTileCodeGenerator::EmitNext(ConversionPatternRewriter& rewriter, Location& location) {
@@ -115,7 +128,7 @@ namespace decisionforest
             // TODO we need a cast here to make sure the threshold and the row element are the same type. The op expects both operands to be the same type.
             auto comparison = rewriter.create<arith::CmpFOp>(
                 location,
-                mlir::arith::CmpFPredicate::UGE,
+                negateComparisonPredicate(m_cmpPredicateAttr),
                 static_cast<Value>(m_loadFeatureOp),
                 static_cast<Value>(m_loadThresholdOp));
             m_comparisonUnsigned = rewriter.create<arith::ExtUIOp>(location, rewriter.getI32Type(), static_cast<Value>(comparison));
@@ -154,9 +167,13 @@ namespace decisionforest
       return results;
     }
 
-    VectorTraverseTileCodeGenerator::VectorTraverseTileCodeGenerator(Value tree, Value rowMemref, Value node, 
-                                                                     Type resultType, std::shared_ptr<IRepresentation> representation, 
-                                                                     std::function<Value(Value)> getLutFunc) {
+    VectorTraverseTileCodeGenerator::VectorTraverseTileCodeGenerator(Value tree,
+                                                                     Value rowMemref,
+                                                                     Value node, 
+                                                                     Type resultType,
+                                                                     std::shared_ptr<IRepresentation> representation, 
+                                                                     std::function<Value(Value)> getLutFunc,
+                                                                     mlir::arith::CmpFPredicateAttr cmpPredicateAttr) {
       m_tree = tree;
       m_rowMemref = rowMemref;
       m_nodeToTraverse = node;
@@ -164,6 +181,7 @@ namespace decisionforest
       m_state = kLoadThreshold;
       m_representation = representation;
       m_getLutFunc = getLutFunc;
+      m_cmpPredicateAttr = cmpPredicateAttr;
 
       auto featureIndexType = m_representation->GetIndexFieldType();
       m_featureIndexVectorType = featureIndexType.cast<VectorType>();
@@ -299,7 +317,11 @@ namespace decisionforest
           break;  
         case kCompare:
           {
-            auto comparison = rewriter.create<arith::CmpFOp>(location,  mlir::arith::CmpFPredicate::ULT, static_cast<Value>(m_features), static_cast<Value>(m_loadThresholdOp));
+            auto comparison = rewriter.create<
+                                        arith::CmpFOp>(location,
+                                                       m_cmpPredicateAttr.getValue(),
+                                                       static_cast<Value>(m_features),
+                                                       static_cast<Value>(m_loadThresholdOp));
             if (decisionforest::UseBitcastForComparisonOutcome)
               m_comparisonIndex = ReduceComparisonResultVectorToInt_Bitcast(comparison, m_tileSize, rewriter, location);
             else

@@ -280,7 +280,10 @@ def GetLeafTileValueOp : DecisionForest_Op<"getLeafTileValue", [Pure]> {
 def TraverseTreeTileOp : DecisionForest_Op<"traverseTreeTile", [Pure]> {
   let summary = "Traverse one tile of tree.";
   let description = "Traverse one tile of the tree passed as argument starting from the node passed as argument. Returns the resultant node.";
-  let arguments = (ins TreeType:$tree, NodeType:$node, InputDataType:$data);
+  let arguments = (ins Arith_CmpFPredicateAttr:$predicate, 
+                       TreeType:$tree,
+                       NodeType:$node,
+                       InputDataType:$data);
 
   let results = (outs NodeType);
 }
@@ -288,7 +291,10 @@ def TraverseTreeTileOp : DecisionForest_Op<"traverseTreeTile", [Pure]> {
 def InterleavedTraverseTreeTileOp : DecisionForest_Op<"interleavedTraverseTileOp", [Pure, SameVariadicOperandSize]> {
   let summary = "Traverse each <node, data> pair for the list of pairs that are passed in.";
   let description = "Traverse each element wise <node, data> from individual input arguments that are passed in.";
-  let arguments = (ins Variadic<TreeType>:$trees, Variadic<NodeType>:$nodes, Variadic<InputDataType>:$data);
+  let arguments = (ins Arith_CmpFPredicateAttr:$predicate,
+                       Variadic<TreeType>:$trees,
+                       Variadic<NodeType>:$nodes,
+                       Variadic<InputDataType>:$data);
 
   let results = (outs Variadic<NodeType>);
 }

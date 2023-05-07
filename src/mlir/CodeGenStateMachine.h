@@ -93,8 +93,13 @@ class ScalarTraverseTileCodeGenerator : public ICodeGeneratorStateMachine {
     Value m_result;
     std::vector<mlir::Value> m_extraLoads;
     Value m_tree;
+    mlir::arith::CmpFPredicateAttr m_cmpPredicateAttr;
   public:
-    ScalarTraverseTileCodeGenerator(Value rowMemref, Value node, Type resultType, std::shared_ptr<IRepresentation> representation, Value tree);
+    ScalarTraverseTileCodeGenerator(Value rowMemref, Value node, 
+                                    Type resultType,
+                                    std::shared_ptr<IRepresentation> representation,
+                                    Value tree,
+                                    mlir::arith::CmpFPredicateAttr cmpPredicateAttr);
     bool EmitNext(ConversionPatternRewriter& rewriter, Location& location) override;
     std::vector<Value> GetResult() override;
 };
@@ -124,10 +129,15 @@ class VectorTraverseTileCodeGenerator : public ICodeGeneratorStateMachine {
     std::vector<mlir::Value> m_extraLoads;
 
     std::function<Value(Value)> m_getLutFunc;
-
+    mlir::arith::CmpFPredicateAttr m_cmpPredicateAttr;
   public:
-    VectorTraverseTileCodeGenerator(Value tree, Value rowMemref, Value node, Type resultType, 
-                                    std::shared_ptr<IRepresentation> representation, std::function<Value(Value)> getLutFunc);
+    VectorTraverseTileCodeGenerator(Value tree, 
+                                    Value rowMemref,
+                                    Value node,
+                                    Type resultType, 
+                                    std::shared_ptr<IRepresentation> representation,
+                                    std::function<Value(Value)> getLutFunc,
+                                    mlir::arith::CmpFPredicateAttr cmpPredicateAttr);
     bool EmitNext(ConversionPatternRewriter& rewriter, Location& location) override;
     std::vector<Value> GetResult() override;
     };

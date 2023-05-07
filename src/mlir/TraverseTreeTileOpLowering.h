@@ -47,7 +47,8 @@ namespace decisionforest
                         node,
                         traverseTileOp.getResult(i).getType(),
                         m_representation,
-                        tree));
+                        tree,
+                        traverseTileOp.getPredicateAttr()));
                 }
                 else {
                     codeGenStateMachine.AddStateMachine(
@@ -57,7 +58,8 @@ namespace decisionforest
                         node,
                         traverseTileOp.getResult(i).getType(),
                         m_representation,
-                        m_getLutFromTree));
+                        m_getLutFromTree,
+                        traverseTileOp.getPredicateAttr()));
                 }
             }
 

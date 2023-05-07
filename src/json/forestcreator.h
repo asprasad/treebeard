@@ -123,6 +123,7 @@ protected:
     mlir::Type m_nodeIndexType;
     mlir::Type m_returnType;
     mlir::Type m_inputElementType;
+    mlir::arith::CmpFPredicate m_cmpPredicate; 
 
     std::shared_ptr<mlir::decisionforest::IModelSerializer> m_serializer;
 
@@ -149,6 +150,7 @@ protected:
     void SetNodeRightChild(int64_t node, int64_t child) { m_currentTree->SetNodeRightChild(node, child); }
     // Set left child of a node
     void SetNodeLeftChild(int64_t node, int64_t child) { m_currentTree->SetNodeLeftChild(node, child); }
+    void SetPredicateType(mlir::arith::CmpFPredicate value) { m_cmpPredicate = value; }
     mlir::Type GetInputRowType() {
         const auto& features = m_forest->GetFeatures();
         int64_t shape[] = { static_cast<int64_t>(features.size()) };
@@ -221,6 +223,7 @@ public:
         m_nodeIndexType(nodeIndexType),
         m_returnType(returnType),
         m_inputElementType(inputElementType),
+        m_cmpPredicate(mlir::arith::CmpFPredicate::ULT),
         m_serializer(std::move(serializer))
     {
         m_module = mlir::ModuleOp::create(m_builder.getUnknownLoc(), llvm::StringRef("MyModule"));
@@ -284,8 +287,7 @@ public:
         auto scheduleType = mlir::decisionforest::ScheduleType::get(&m_context);
         m_schedule = new mlir::decisionforest::Schedule(m_batchSize, m_forest->NumTrees());
         auto scheduleAttribute = mlir::decisionforest::ScheduleAttribute::get(scheduleType, m_schedule);
-        auto predicateAttribute = mlir::arith::CmpFPredicateAttr::get(&m_context, 
-                                                                      mlir::arith::CmpFPredicate::ULT);
+        auto predicateAttribute = mlir::arith::CmpFPredicateAttr::get(&m_context, m_cmpPredicate);
         auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(
             m_builder.getUnknownLoc(),
             GetFunctionResultType(),

@@ -277,7 +277,8 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
           traverseTileAdaptor.getNode(),
           traverseTileOp.getResult().getType(),
           m_representation,
-          traverseTileAdaptor.getTree()));
+          traverseTileAdaptor.getTree(),
+          traverseTileOp.getPredicateAttr()));
     else
       codeGenStateMachine.AddStateMachine(
         std::make_unique<decisionforest::VectorTraverseTileCodeGenerator>(
@@ -286,7 +287,8 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
           traverseTileAdaptor.getNode(),
           traverseTileOp.getResult().getType(),
           m_representation,
-          GetLUTFromTreeOperand));
+          GetLUTFromTreeOperand,
+          traverseTileOp.getPredicateAttr()));
     
     // Emit code.
     auto location = op->getLoc();

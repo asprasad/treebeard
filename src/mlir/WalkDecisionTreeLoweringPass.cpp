@@ -55,10 +55,11 @@ struct WalkDecisionTreeOpLowering: public ConversionPattern {
     {
         rewriter.setInsertionPointToStart(&whileLoop.getAfter().front());
         auto node = after->getArguments()[0];
-        
+        auto cmpPredicate = walkTreeOp.getPredicateAttr();
         auto traverseTile = rewriter.create<decisionforest::TraverseTreeTileOp>(
           location,
           nodeType,
+          cmpPredicate,
           tree,
           node,
           inputRow);
@@ -112,9 +113,11 @@ struct PipelinedWalkDecisionTreeOpLowering: public ConversionPattern {
       ValueRange nodeArgs = nodes;
 
       for (int32_t i = 0; i < unrollFactor - 1; i++) {
+        auto cmpPredicate = walkTreeOp.getPredicateAttr();
         auto traverseTile = rewriter.create<decisionforest::InterleavedTraverseTreeTileOp>(
           location,
           nodeTypes,
+          cmpPredicate,
           trees,
           nodeArgs,
           dataRows);
@@ -164,10 +167,11 @@ struct PipelinedWalkDecisionTreeOpLowering: public ConversionPattern {
       {
           rewriter.setInsertionPointToStart(&whileLoop.getAfter().front());
           auto nodeArgs = after->getArguments();
-          
+          auto cmpPredicate = walkTreeOp.getPredicateAttr();
           auto traverseTile = rewriter.create<decisionforest::InterleavedTraverseTreeTileOp>(
             location,
             nodeTypes,
+            cmpPredicate,
             trees,
             nodeArgs,
             dataRows);
@@ -213,9 +217,11 @@ struct WalkDecisionTreePeeledOpLowering: public ConversionPattern {
     assert (iterationsToPeel > 1);
     Value walkResult;
     for (int64_t iteration=0 ; iteration<iterationsToPeel-1 ; ++iteration) {
+      auto cmpPredicate = walkTreeOp.getPredicateAttr();
       node = rewriter.create<decisionforest::TraverseTreeTileOp>(
         location,
         nodeType,
+        cmpPredicate,
         tree,
         node,
         inputRow);
@@ -252,10 +258,11 @@ struct WalkDecisionTreePeeledOpLowering: public ConversionPattern {
     {
         rewriter.setInsertionPointToStart(&whileLoop.getAfter().front());
         auto node = after->getArguments()[0];
-        
+        auto cmpPredicate = walkTreeOp.getPredicateAttr();
         auto traverseTile = rewriter.create<decisionforest::TraverseTreeTileOp>(
           location,
           nodeType,
+          cmpPredicate,
           tree,
           node,
           inputRow);
