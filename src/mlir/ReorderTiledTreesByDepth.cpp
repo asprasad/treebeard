@@ -120,9 +120,13 @@ struct ReorderEnsembleConstants : public RewritePattern {
     forest.GetTrees() = reorderedTrees;
 
     auto newForestAttribute = decisionforest::DecisionForestAttribute::get(forestType, forest);
-    auto reorderedPredictForestOp = rewriter.create<decisionforest::PredictForestOp>(op->getLoc(), predictOp.getResult().getType(), 
-                                                                                 newForestAttribute, predictOp.getData(), 
-                                                                                 predictOp.getResult(), predictOp.getSchedule());
+    auto reorderedPredictForestOp = rewriter.create<decisionforest::PredictForestOp>(op->getLoc(), 
+                                                                                     predictOp.getResult().getType(), 
+                                                                                     newForestAttribute,
+                                                                                     predictOp.getPredicateAttr(), 
+                                                                                     predictOp.getData(),
+                                                                                     predictOp.getResult(),
+                                                                                     predictOp.getSchedule());
     rewriter.replaceOp(op, static_cast<Value>(reorderedPredictForestOp));
     return mlir::success();
   }

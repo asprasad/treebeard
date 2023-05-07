@@ -284,11 +284,13 @@ public:
         auto scheduleType = mlir::decisionforest::ScheduleType::get(&m_context);
         m_schedule = new mlir::decisionforest::Schedule(m_batchSize, m_forest->NumTrees());
         auto scheduleAttribute = mlir::decisionforest::ScheduleAttribute::get(scheduleType, m_schedule);
-
+        auto predicateAttribute = mlir::arith::CmpFPredicateAttr::get(&m_context, 
+                                                                      mlir::arith::CmpFPredicate::ULT);
         auto predictOp = m_builder.create<mlir::decisionforest::PredictForestOp>(
             m_builder.getUnknownLoc(),
             GetFunctionResultType(),
             forestAttribute,
+            predicateAttribute,
             static_cast<mlir::Value>(entryBlock.getArguments()[0]),
             entryBlock.getArguments()[1], scheduleAttribute);
 

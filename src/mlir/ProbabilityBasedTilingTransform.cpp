@@ -89,9 +89,13 @@ struct TileEnsembleAttribute : public RewritePattern {
                                                                forestType.getRowType(), forestType.getReductionType(), treeTypes.at(0));
 
     auto newForestAttribute = decisionforest::DecisionForestAttribute::get(newForestType, forest);
-    auto tiledPredictForestOp = rewriter.create<decisionforest::PredictForestOp>(op->getLoc(), predictForestOp.getResult().getType(), 
-                                                                                 newForestAttribute, predictForestOp.getData(), 
-                                                                                 predictForestOp.getResult(), predictForestOp.getSchedule());
+    auto tiledPredictForestOp = rewriter.create<decisionforest::PredictForestOp>(op->getLoc(),
+                                                                                 predictForestOp.getResult().getType(), 
+                                                                                 newForestAttribute, 
+                                                                                 predictForestOp.getPredicateAttr(),
+                                                                                 predictForestOp.getData(), 
+                                                                                 predictForestOp.getResult(),
+                                                                                 predictForestOp.getSchedule());
 
     rewriter.replaceOp(op, static_cast<Value>(tiledPredictForestOp));
     return mlir::success();

@@ -45,6 +45,7 @@ inline void LowerHIRModuleToLLVM(mlir::ModuleOp module, TreebeardContext &tbCont
     assert (!options.scheduleManipulator && "Cannot have a custom schedule manipulator and the inbuilt one together");
   }
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
+  // module->dump();
   mlir::decisionforest::LowerEnsembleToMemrefs(context, module, tbContext.serializer, tbContext.representation);
   mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();

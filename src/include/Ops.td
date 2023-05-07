@@ -10,6 +10,7 @@
 #ifndef TREE_HEAVY_OPS
 #define TREE_HEAVY_OPS
 
+include "mlir/Dialect/Arith/IR/ArithBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Interfaces/CallInterfaces.td"
 include "mlir/Interfaces/CastInterfaces.td"
@@ -123,7 +124,11 @@ def PredictForestOp : DecisionForest_Op<"predict_ensemble"> {
     let description = "Represents the actual inference computation on the forest. Takes a tensor operand and produces a result."
                       "Contains the actual forest as an attribute.";
 
-    let arguments = (ins DecisionForestAttr:$ensemble, InputDataType:$data, ReturnType:$result, ScheduleAttr:$schedule);
+    let arguments = (ins DecisionForestAttr:$ensemble, 
+                         Arith_CmpFPredicateAttr:$predicate,
+                         InputDataType:$data,
+                         ReturnType:$result,
+                         ScheduleAttr:$schedule);
 
     // Just returns its result argument after filling in the results
     let results = (outs ReturnType);
