@@ -154,7 +154,9 @@ def WalkDecisionTreeOp : DecisionForest_Op<"walk_decision_tree"> {
   let description = "Operation to walk the decision tree and generate a prediction."
                     "Takes input data and tree as input and produces prediction as output.";
 
-  let arguments = (ins TreeType:$tree, InputDataType:$data);
+  let arguments = (ins Arith_CmpFPredicateAttr:$predicate, 
+                       TreeType:$tree,
+                       InputDataType:$data);
 
   let results = (outs LeafNodeValueType);
 }
@@ -164,7 +166,10 @@ def PipelinedWalkDecisionTreeOp : DecisionForest_Op<"pipelined_walk_decision_tre
   let description = "Operation to walk multiple decision trees and data rows as element wise pairs."
                     "Pass in trees <t1,t2, ... tn> and <d1, d2, ... dn>. The op walks <(t1, d1), (t2, d2) .... (tn, dn)>";
 
-  let arguments = (ins UnrollLoopAttr:$UnrollLoopAttr, Variadic<TreeType>:$trees, Variadic<InputDataType>:$dataRows);
+  let arguments = (ins UnrollLoopAttr:$UnrollLoopAttr,
+                       Arith_CmpFPredicateAttr:$predicate,
+                       Variadic<TreeType>:$trees,
+                       Variadic<InputDataType>:$dataRows);
 
   let results = (outs Variadic<LeafNodeValueType>);
 }
@@ -175,7 +180,10 @@ def WalkDecisionTreePeeledOp : DecisionForest_Op<"walkDecisionTreePeeled"> {
                     "code with the first few iterations peeled."
                     "Takes input data and tree as input and produces prediction as output.";
 
-  let arguments = (ins TreeType:$tree, InputDataType:$data, I32Attr:$iterationsToPeel);
+  let arguments = (ins Arith_CmpFPredicateAttr:$predicate,
+                       TreeType:$tree,
+                       InputDataType:$data,
+                       I32Attr:$iterationsToPeel);
 
   let results = (outs LeafNodeValueType);
 } 

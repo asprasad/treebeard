@@ -95,6 +95,7 @@ typedef struct {
   // Decision Forest and Tree Stuff.
   mlir::decisionforest::TreeType treeType;
   mlir::Value forestConst;
+  mlir::arith::CmpFPredicateAttr cmpPredicate;
 } PredictOpLoweringState;
 
 
@@ -274,6 +275,7 @@ struct PredictForestOpLowering: public ConversionPattern {
 
     state.data = operands[0];
     state.dataMemrefType = dataMemrefType;
+    state.cmpPredicate = forestOp.getPredicateAttr();
   }
 
   Value GenSigmoid(ConversionPatternRewriter& rewriter, Value operand, Location location) const {
@@ -483,8 +485,14 @@ struct PredictForestOpLowering: public ConversionPattern {
     }
   }
 
-  Value GenerateTreeIndexLeafLoopBody(ConversionPatternRewriter &rewriter, Location location, const decisionforest::IndexVariable& indexVar, 
-                        std::list<Value> treeIndices, PredictOpLoweringState& state, Value row, Value rowIndex, Value prevAccumulatorValue) const {
+  Value GenerateTreeIndexLeafLoopBody(ConversionPatternRewriter &rewriter,
+                                      Location location,
+                                      const decisionforest::IndexVariable& indexVar,
+                                      std::list<Value> treeIndices,
+                                      PredictOpLoweringState& state,
+                                      Value row,
+                                      Value rowIndex,
+                                      Value prevAccumulatorValue) const {
    
     Value treeIndex = SumOfValues(rewriter, location, treeIndices);
 
@@ -498,12 +506,21 @@ struct PredictForestOpLowering: public ConversionPattern {
     Value walkOp;
     if (indexVar.PeelWalk()) {
       auto peelItersAttrib = rewriter.getI32IntegerAttr(indexVar.IterationsToPeel());
-      walkOp = rewriter.create<decisionforest::WalkDecisionTreePeeledOp>(location, treeType.getThresholdType(), tree, row, peelItersAttrib);
+      walkOp = rewriter.create<decisionforest::WalkDecisionTreePeeledOp>(location,
+                                                                         treeType.getThresholdType(),
+                                                                         state.cmpPredicate,
+                                                                         tree,
+                                                                         row,
+                                                                         peelItersAttrib);
     }
     else {
       // auto indexConst = rewriter.create<arith::ConstantIndexOp>(location, (int64_t)1);
       // walkOp = rewriter.create<memref::LoadOp>()
-      walkOp = rewriter.create<decisionforest::WalkDecisionTreeOp>(location, treeType.getThresholdType(), tree, row);
+      walkOp = rewriter.create<decisionforest::WalkDecisionTreeOp>(location, 
+                                                                   treeType.getThresholdType(),
+                                                                   state.cmpPredicate,
+                                                                   tree,
+                                                                   row);
       // auto printResult = rewriter.create<gpu::PrintfOp>(location, "Result [%d]: %lf\t", ValueRange{rowIndex, static_cast<Value>(walkOp)});
     }
     GenerateMultiClassAccumulate(rewriter, location, static_cast<Value>(walkOp), rowIndex, treeIndex, state);
@@ -558,7 +575,13 @@ struct PredictForestOpLowering: public ConversionPattern {
 
     // Walk the tree.
     auto unrollLoopAttr = decisionforest::UnrollLoopAttribute::get(treeType, -1);
-    auto walkOp = rewriter.create<decisionforest::PipelinedWalkDecisionTreeOp>(location, treeResultTypes, unrollLoopAttr, trees, rows);
+    auto walkOp = rewriter.create<
+                        decisionforest::PipelinedWalkDecisionTreeOp>(location,
+                                                                     treeResultTypes,
+                                                                     unrollLoopAttr,
+                                                                     state.cmpPredicate,
+                                                                     trees,
+                                                                     rows);
     
     for (size_t i = 0; i < trees.size(); i++) {
       if (state.isMultiClass) {
@@ -742,7 +765,13 @@ struct PredictForestOpLowering: public ConversionPattern {
 
     // Walk the tree
     auto unrollLoopAttr = decisionforest::UnrollLoopAttribute::get(treeType, indexVar.GetContainingLoop()->GetTreeWalkUnrollFactor());
-    auto walkOp = rewriter.create<decisionforest::PipelinedWalkDecisionTreeOp>(location, treeResultTypes, unrollLoopAttr, trees, rows);
+    auto walkOp = rewriter.create<
+                            decisionforest::PipelinedWalkDecisionTreeOp>(location,
+                                                                         treeResultTypes,
+                                                                         unrollLoopAttr,
+                                                                         state.cmpPredicate,
+                                                                         trees,
+                                                                         rows);
     for (size_t i = 0; i < rowIndices.size(); i++) {
       // Don't accumulate into memref in case of multiclass.
       if (state.isMultiClass) {
@@ -774,10 +803,19 @@ struct PredictForestOpLowering: public ConversionPattern {
     Value walkOp;
     if (indexVar.PeelWalk()) {
       auto peelItersAttrib = rewriter.getI32IntegerAttr(indexVar.IterationsToPeel());
-      walkOp = rewriter.create<decisionforest::WalkDecisionTreePeeledOp>(location, treeType.getThresholdType(), tree, row, peelItersAttrib);
+      walkOp = rewriter.create<decisionforest::WalkDecisionTreePeeledOp>(location,
+                                                                         treeType.getThresholdType(),
+                                                                         state.cmpPredicate,
+                                                                         tree,
+                                                                         row,
+                                                                         peelItersAttrib);
     }
     else {
-      walkOp = rewriter.create<decisionforest::WalkDecisionTreeOp>(location, treeType.getThresholdType(), tree, row);
+      walkOp = rewriter.create<decisionforest::WalkDecisionTreeOp>(location, 
+                                                                   treeType.getThresholdType(),
+                                                                   state.cmpPredicate,
+                                                                   tree,
+                                                                   row);
       // walkOp = rewriter.create<arith::ConstantFloatOp>(location, APFloat((double)0), treeType.getThresholdType().cast<FloatType>());
     }
     
