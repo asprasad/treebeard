@@ -1,5 +1,6 @@
 #include "Dialect.h"
 // #include "Passes.h"
+#include "OpLoweringUtils.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -84,7 +85,8 @@ typedef struct {
 
   Value data;
   MemRefType dataMemrefType;
-  
+  Value inputIndexOffset;
+
   // Indices
   arith::ConstantIndexOp numClassesConst;
   arith::ConstantIndexOp oneIndexConst;
@@ -98,29 +100,120 @@ typedef struct {
   mlir::arith::CmpFPredicateAttr cmpPredicate;
 } PredictOpLoweringState;
 
+Value SumOfValues(ConversionPatternRewriter &rewriter, Location location, std::list<Value>& values) {
+  assert (!values.empty());
+  if (values.size() == 1) {
+    return values.front();
+  }
+  auto iter = values.begin();
+  auto valueType = iter->getType();
+  auto lhs = *iter;
+  ++iter;
+  auto rhs = *iter;
+  ++iter;
+  auto accumulator = rewriter.create<arith::AddIOp>(location, valueType, lhs, rhs);
+  for (; iter!=values.end() ; ++iter) {
+    accumulator = rewriter.create<arith::AddIOp>(location, valueType, static_cast<Value>(accumulator), *iter);
+  }
+  return accumulator;
+}
+
+void AddLoopIndexVariableToValueList(Value loopIndex, 
+                                     const decisionforest::IndexVariable& indexVar,
+                                     std::list<Value>& batchIndexVars,
+                                     std::list<Value>& treeIndexVars) {
+  if (indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kBatch)
+    batchIndexVars.push_back(loopIndex);
+  else if(indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kTree)
+    treeIndexVars.push_back(loopIndex);
+  else
+    assert (false && "Unknown index variable type");
+}
+
+template<typename LoopIndexContainerType>
+void AddLoopIndexVariableToValueList(LoopIndexContainerType loopIndices, 
+                                     const std::list<const decisionforest::IndexVariable*> indexVars,
+                                     std::list<Value>& batchIndexVars,
+                                     std::list<Value>& treeIndexVars) {
+  auto indexZip = llvm::zip(loopIndices, indexVars);
+  for (auto indexPair : indexZip) {
+    AddLoopIndexVariableToValueList(std::get<0>(indexPair), *std::get<1>(indexPair), batchIndexVars, treeIndexVars);
+  }
+}
 
 template<typename LoopType>
 struct LoopConstructor {
   LoopType m_loop;
+  LoopType m_innerLoop;
+
   ConversionPatternRewriter& m_rewriter;
   PredictOpLoweringState& m_loweringState; 
   Value m_oldForestValue;
+
+  Value m_oldDataValue;
+  MemRefType m_oldDataMemrefType;
+  Value m_oldInputIndexOffset;
+
+  void InsertCacheRowsOpIfNeeded(const decisionforest::IndexVariable& indexVar,
+                                 PredictOpLoweringState& loweringState, 
+                                 Location location,
+                                 ConversionPatternRewriter &rewriter,
+                                 Value loopIndex,
+                                 Value step,
+                                 std::list<Value>& batchIndexVars) {
+    m_oldDataValue = loweringState.data;
+    m_oldDataMemrefType = loweringState.dataMemrefType;
+    if (indexVar.GetType() != decisionforest::IndexVariable::IndexVariableType::kBatch)
+      return;
+    if (!indexVar.Cache())
+      return;
+    
+    batchIndexVars.push_back(loopIndex);
+    
+    assert (loopIndex.getType().isa<IndexType>());
+    assert (step.getType().isa<IndexType>());
+    
+    auto startIndex = SumOfValues(rewriter, location, batchIndexVars);
+    auto endIndex = rewriter.create<arith::AddIOp>(location, startIndex, step);
+    auto inputType = loweringState.dataMemrefType;
+    auto numberOfRows = getConstantIntValue(step).value();
+    auto cachedType = MemRefType::get(llvm::ArrayRef<int64_t>{numberOfRows, inputType.getShape()[1]}, 
+                                      inputType.getElementType(),
+                                      {}, // Affine map
+                                      3); // Memory space ID
+
+    auto cacheRows = rewriter.create<decisionforest::CacheInputRowsOp>(location, 
+                                                                      cachedType,
+                                                                      loweringState.data,
+                                                                      startIndex,
+                                                                      static_cast<Value>(endIndex));
+    m_oldInputIndexOffset = loweringState.inputIndexOffset;
+    
+    loweringState.inputIndexOffset = startIndex;
+    loweringState.data = cacheRows;
+    loweringState.dataMemrefType = cachedType;
+  }
 
   void InsertCacheTreeOpIfNeeded(const decisionforest::IndexVariable& indexVar,
                                  PredictOpLoweringState& loweringState, 
                                  Location location,
                                  ConversionPatternRewriter &rewriter,
                                  Value loopIndex,
-                                 Value step) {
+                                 Value step,
+                                 std::list<Value>& treeIndexVars) {
     m_oldForestValue = loweringState.forestConst;
     if (indexVar.GetType() != decisionforest::IndexVariable::IndexVariableType::kTree)
       return;
     if (!indexVar.Cache())
       return;
     
+    treeIndexVars.push_back(loopIndex);
+    
     assert (loopIndex.getType().isa<IndexType>());
     assert (step.getType().isa<IndexType>());
-    auto endIndex = rewriter.create<arith::AddIOp>(location, loopIndex, step);
+    
+    auto startIndex = SumOfValues(rewriter, location, treeIndexVars);
+    auto endIndex = rewriter.create<arith::AddIOp>(location, startIndex, step);
     auto ensembleType = loweringState.forestConst.getType().cast<decisionforest::TreeEnsembleType>();
     assert (ensembleType.doAllTreesHaveSameType());
     auto cachedEnsembleType = decisionforest::TreeEnsembleType::get(ensembleType.getResultType(),
@@ -132,7 +225,7 @@ struct LoopConstructor {
     auto cacheTrees = rewriter.create<decisionforest::CacheTreesFromEnsembleOp>(location, 
                                                                                 cachedEnsembleType,
                                                                                 loweringState.forestConst,
-                                                                                loopIndex,
+                                                                                startIndex,
                                                                                 static_cast<Value>(endIndex));
     loweringState.forestConst = cacheTrees;
   }
@@ -143,17 +236,76 @@ struct LoopConstructor {
                   ConversionPatternRewriter &rewriter,
                   ValueRange start,
                   ValueRange end,
-                  ValueRange steps)
+                  ValueRange steps,
+                  std::list<Value>& batchIndexVars,
+                  std::list<Value>& treeIndexVars)
     : m_rewriter(rewriter), m_loweringState(loweringState)
   {
     m_loop = rewriter.create<LoopType>(location, start, end, steps);
     rewriter.setInsertionPointToStart(m_loop.getBody());
 
-    // TODO_Ashwin for now only supporting caching on the innermost loop. 
-    // How do we enable caching for the other indices in the range?
-    // Do we need to?
+    // This function should only be called with a single index variable.
+    // For the GPU case (where there are multiple index variables), the
+    // constructor below should be used.
+    assert (indexVars.size() == 1);
     auto numInductionVars = indexVars.size();
-    InsertCacheTreeOpIfNeeded(*indexVars.back(), loweringState, location, rewriter, m_loop.getInductionVars()[numInductionVars - 1], steps[numInductionVars - 1]);
+    
+    auto batchLoopIndices = batchIndexVars;
+    auto treeLoopIndices = treeIndexVars;
+    // AddLoopIndexVariableToValueList(m_loop.getInductionVars()[numInductionVars - 1], 
+    //                                 *indexVars.back(),
+    //                                 batchLoopIndices,
+    //                                 treeLoopIndices);
+    InsertCacheTreeOpIfNeeded(*indexVars.back(), loweringState, location, rewriter, m_loop.getInductionVars()[numInductionVars - 1], steps[numInductionVars - 1], treeLoopIndices);
+    InsertCacheRowsOpIfNeeded(*indexVars.back(), loweringState, location, rewriter, m_loop.getInductionVars()[numInductionVars - 1], steps[numInductionVars - 1], batchLoopIndices);
+  }
+
+  LoopConstructor(const std::list<const decisionforest::IndexVariable*>& indexVars,
+                  const std::list<const decisionforest::IndexVariable*>& innerIndexVars,
+                  PredictOpLoweringState& loweringState,
+                  Location location,
+                  ConversionPatternRewriter &rewriter,
+                  ValueRange gridStart,
+                  ValueRange gridEnd,
+                  ValueRange gridSteps,
+                  ValueRange blockStart,
+                  ValueRange blockEnd,
+                  ValueRange blockSteps,
+                  std::list<Value>& batchIndexVars,
+                  std::list<Value>& treeIndexVars)
+
+    : m_rewriter(rewriter), m_loweringState(loweringState)
+  {
+    auto oldDataValue = loweringState.data;
+    auto oldDataMemrefType = loweringState.dataMemrefType;
+    auto oldForestValue = loweringState.forestConst;
+
+    auto batchLoopIndices = batchIndexVars;
+    auto treeLoopIndices = treeIndexVars;
+
+    m_loop = rewriter.create<LoopType>(location, gridStart, gridEnd, gridSteps);
+    rewriter.setInsertionPointToStart(m_loop.getBody());
+    // AddLoopIndexVariableToValueList(m_loop.getInductionVars(), indexVars, batchLoopIndices, treeLoopIndices);
+
+    m_innerLoop = rewriter.create<LoopType>(location, blockStart, blockEnd, blockSteps);
+    rewriter.setInsertionPointToStart(m_innerLoop.getBody());
+    // AddLoopIndexVariableToValueList(m_innerLoop.getInductionVars(), innerIndexVars, batchLoopIndices, treeLoopIndices);
+
+    auto outerIndexIter = indexVars.begin();
+    for (size_t i=0 ; i<indexVars.size() ; ++i, ++outerIndexIter) {
+      InsertCacheTreeOpIfNeeded(**outerIndexIter, loweringState, location, rewriter, m_loop.getInductionVars()[i], gridSteps[i], treeLoopIndices);
+      InsertCacheRowsOpIfNeeded(**outerIndexIter, loweringState, location, rewriter, m_loop.getInductionVars()[i], gridSteps[i], batchLoopIndices);
+    }
+    
+    auto innerIndexIter = innerIndexVars.begin();
+    for (size_t i=0 ; i<innerIndexVars.size() ; ++i) {
+      InsertCacheTreeOpIfNeeded(**innerIndexIter, loweringState, location, rewriter, m_innerLoop.getInductionVars()[i], blockSteps[i], treeLoopIndices);
+      InsertCacheRowsOpIfNeeded(**innerIndexIter, loweringState, location, rewriter, m_innerLoop.getInductionVars()[i], blockSteps[i], batchLoopIndices);
+    }
+
+    m_oldDataValue = oldDataValue;
+    m_oldDataMemrefType = oldDataMemrefType;
+    m_oldForestValue = oldForestValue;
   }
 
   LoopConstructor(const decisionforest::IndexVariable& index,
@@ -163,12 +315,23 @@ struct LoopConstructor {
                   Value start,
                   Value end,
                   Value step,
-                  ValueRange loopArgs) 
+                  ValueRange loopArgs,
+                  std::list<Value>& batchIndexVars,
+                  std::list<Value>& treeIndexVars)
     : m_rewriter(rewriter), m_loweringState(loweringState)
   {
     m_loop = rewriter.create<LoopType>(location, start, end, step, loopArgs);
     rewriter.setInsertionPointToStart(m_loop.getBody());
-    InsertCacheTreeOpIfNeeded(index, loweringState, location, rewriter, m_loop.getInductionVar(), step);
+    
+    auto batchLoopIndices = batchIndexVars;
+    auto treeLoopIndices = treeIndexVars;
+    // AddLoopIndexVariableToValueList(m_loop.getInductionVar(),
+    //                                 index,
+    //                                 batchLoopIndices,
+    //                                 treeLoopIndices);
+
+    InsertCacheTreeOpIfNeeded(index, loweringState, location, rewriter, m_loop.getInductionVar(), step, batchLoopIndices);
+    InsertCacheRowsOpIfNeeded(index, loweringState, location, rewriter, m_loop.getInductionVar(), step, treeLoopIndices);
   }
 
   LoopConstructor(const decisionforest::IndexVariable& index,
@@ -177,20 +340,35 @@ struct LoopConstructor {
                   ConversionPatternRewriter &rewriter,
                   Value start,
                   Value end,
-                  Value step) 
+                  Value step,
+                  std::list<Value>& batchIndexVars,
+                  std::list<Value>& treeIndexVars)
     : m_rewriter(rewriter), m_loweringState(loweringState)
   {
     m_loop = rewriter.create<LoopType>(location, start, end, step);
     rewriter.setInsertionPointToStart(m_loop.getBody());
-    InsertCacheTreeOpIfNeeded(index, loweringState, location, rewriter, m_loop.getInductionVar(), step);
+    
+    auto batchLoopIndices = batchIndexVars;
+    auto treeLoopIndices = treeIndexVars;
+    // AddLoopIndexVariableToValueList(m_loop.getInductionVar(),
+    //                                 index,
+    //                                 batchLoopIndices,
+    //                                 treeLoopIndices);
+
+    InsertCacheTreeOpIfNeeded(index, loweringState, location, rewriter, m_loop.getInductionVar(), step, treeLoopIndices);
+    InsertCacheRowsOpIfNeeded(index, loweringState, location, rewriter, m_loop.getInductionVar(), step, batchLoopIndices);
   }
 
   ~LoopConstructor() {
     m_loweringState.forestConst = m_oldForestValue;
+    m_loweringState.data = m_oldDataValue;
+    m_loweringState.dataMemrefType = m_oldDataMemrefType;
+    m_loweringState.inputIndexOffset = m_oldInputIndexOffset;
     m_rewriter.setInsertionPointAfter(m_loop);
   }
 
   LoopType GetLoop() { return m_loop; }
+  LoopType GetInnerLoop() { return m_innerLoop; }
 };
 
 struct PredictForestOpLowering: public ConversionPattern {
@@ -451,24 +629,6 @@ struct PredictForestOpLowering: public ConversionPattern {
     rewriter.setInsertionPointAfter(batchLoop);
   }
 
-  Value SumOfValues(ConversionPatternRewriter &rewriter, Location location, std::list<Value>& values) const {
-    assert (!values.empty());
-    if (values.size() == 1) {
-      return values.front();
-    }
-    auto iter = values.begin();
-    auto valueType = iter->getType();
-    auto lhs = *iter;
-    ++iter;
-    auto rhs = *iter;
-    ++iter;
-    auto accumulator = rewriter.create<arith::AddIOp>(location, valueType, lhs, rhs);
-    for (; iter!=values.end() ; ++iter) {
-      accumulator = rewriter.create<arith::AddIOp>(location, valueType, static_cast<Value>(accumulator), *iter);
-    }
-    return accumulator;
-  }
-  
   void GenerateMultiClassAccumulate(ConversionPatternRewriter& rewriter, Location location, Value result, Value rowIndex, Value index, PredictOpLoweringState& state) const {
     if (state.isMultiClass) {
       auto batchTreeClassMemref = GetRow(rewriter, location, state.treeClassesMemref, rowIndex, state.treeClassesMemrefType);
@@ -608,6 +768,8 @@ struct PredictForestOpLowering: public ConversionPattern {
     assert (indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kTree);
     
     Value rowIndex = SumOfValues(rewriter, location, batchIndices);
+    if (state.inputIndexOffset)
+      rowIndex = rewriter.create<arith::SubIOp>(location, rowIndex, state.inputIndexOffset);
     
     // Get the current row
     Value row = GetRow(rewriter, location, state.data, rowIndex, state.dataMemrefType);
@@ -643,7 +805,16 @@ struct PredictForestOpLowering: public ConversionPattern {
 
       scf::ForOp loop;
       {
-        LoopConstructor<scf::ForOp> loopConstructor(indexVar, state, location, rewriter, startConst, stopConst, stepConst, ValueRange{ zeroConst });
+        LoopConstructor<scf::ForOp> loopConstructor(indexVar,
+                                                    state,
+                                                    location,
+                                                    rewriter,
+                                                    startConst,
+                                                    stopConst,
+                                                    stepConst,
+                                                    ValueRange{ zeroConst },
+                                                    batchIndices,
+                                                    treeIndices);
         loop = loopConstructor.GetLoop();
         treeIndices.push_back(loop.getInductionVar());
         auto accumulatedValue = GeneratePipelinedTreeIndexLeafLoopBody(rewriter, 
@@ -679,7 +850,9 @@ struct PredictForestOpLowering: public ConversionPattern {
                                                             startConst,
                                                             stopConst,
                                                             stepConst,
-                                                            ValueRange{ zeroConst });
+                                                            ValueRange{ zeroConst },
+                                                            batchIndices,
+                                                            treeIndices);
           peeledLoop = peeledLoopConstructor.GetLoop();
           
           treeIndices.pop_back();
@@ -714,7 +887,7 @@ struct PredictForestOpLowering: public ConversionPattern {
 
       Value loopResult;
       {
-        LoopConstructor<scf::ForOp> loopConstructor(indexVar, state, location, rewriter, startConst, stopConst, stepConst, ValueRange{ zeroConst });
+        LoopConstructor<scf::ForOp> loopConstructor(indexVar, state, location, rewriter, startConst, stopConst, stepConst, ValueRange{ zeroConst }, batchIndices, treeIndices);
         scf::ForOp loop = loopConstructor.GetLoop();
         rewriter.setInsertionPointToStart(loop.getBody());
         treeIndices.push_back(loop.getInductionVar());
@@ -754,7 +927,9 @@ struct PredictForestOpLowering: public ConversionPattern {
     for (int32_t i = 0; i < stepSize; i++) {
       batchIndices.push_back(rewriter.create<arith::ConstantIndexOp>(location, i));
       auto rowIndex = SumOfValues(rewriter, location, batchIndices);
-      
+      if (state.inputIndexOffset)
+        rowIndex = rewriter.create<arith::SubIOp>(location, rowIndex, state.inputIndexOffset);
+
       rows.push_back(GetRow(rewriter, location, state.data, rowIndex, state.dataMemrefType));
       rowIndices.push_back(rowIndex);
       trees.push_back(tree);
@@ -795,7 +970,9 @@ struct PredictForestOpLowering: public ConversionPattern {
                         std::list<Value> batchIndices, decisionforest::TreeType treeType, Value tree, Value treeIndex,
                         PredictOpLoweringState& state) const {
     Value rowIndex = SumOfValues(rewriter, location, batchIndices);
-    
+    if (state.inputIndexOffset)
+      rowIndex = rewriter.create<arith::SubIOp>(location, rowIndex, state.inputIndexOffset);
+
     // Get the current row
     Value row = GetRow(rewriter, location, state.data, rowIndex, state.dataMemrefType);
 
@@ -871,7 +1048,7 @@ struct PredictForestOpLowering: public ConversionPattern {
       auto stepConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_step);
       
       {
-        LoopConstructor<scf::ForOp> loopConstructor(indexVar, state, location, rewriter, startConst, stopConst, stepConst);
+        LoopConstructor<scf::ForOp> loopConstructor(indexVar, state, location, rewriter, startConst, stopConst, stepConst, batchIndices, treeIndices);
         auto loop = loopConstructor.GetLoop();
         batchIndices.push_back(loop.getInductionVar());
         GeneratePipelinedBatchIndexLeafLoopBody(rewriter, location, indexVar, range.m_step, batchIndices, treeType, tree, treeIndex, state);
@@ -882,7 +1059,7 @@ struct PredictForestOpLowering: public ConversionPattern {
         startConst = rewriter.create<arith::ConstantIndexOp>(location, peeledLoopStart);
         stepConst = rewriter.create<arith::ConstantIndexOp>(location, peeledLoopStep);
 
-        LoopConstructor<scf::ForOp> peeledLoopConstructor(indexVar, state, location, rewriter, startConst, stopConst, stepConst);
+        LoopConstructor<scf::ForOp> peeledLoopConstructor(indexVar, state, location, rewriter, startConst, stopConst, stepConst, batchIndices, treeIndices);
         auto peeledLoop = peeledLoopConstructor.GetLoop();
 
         batchIndices.pop_back();
@@ -898,7 +1075,7 @@ struct PredictForestOpLowering: public ConversionPattern {
       auto startConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_start);
       auto stepConst = rewriter.create<arith::ConstantIndexOp>(location, range.m_step);
 
-      LoopConstructor<scf::ForOp> loopConstructor(indexVar, state, location, rewriter, startConst, stopConst, stepConst);
+      LoopConstructor<scf::ForOp> loopConstructor(indexVar, state, location, rewriter, startConst, stopConst, stepConst, batchIndices, treeIndices);
       scf::ForOp loop = loopConstructor.GetLoop();
       rewriter.setInsertionPointToStart(loop.getBody());
       batchIndices.push_back(loop.getInductionVar());
@@ -956,7 +1133,8 @@ struct PredictForestOpLowering: public ConversionPattern {
       LoopConstructor<scf::ParallelOp> loopConstructor(std::list<const decisionforest::IndexVariable*>{&indexVar}, state, location, rewriter, 
                                                        ValueRange{startConst},
                                                        ValueRange{stopConst},
-                                                       ValueRange{stepConst});
+                                                       ValueRange{stepConst},
+                                                       batchIndices, treeIndices);
       auto i = loopConstructor.GetLoop().getInductionVars()[0];
 
       if (indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kBatch)
@@ -971,7 +1149,7 @@ struct PredictForestOpLowering: public ConversionPattern {
       }
     }
     else {
-      LoopConstructor<scf::ForOp> loopConstructor(indexVar, state, location, rewriter, startConst, stopConst, stepConst);
+      LoopConstructor<scf::ForOp> loopConstructor(indexVar, state, location, rewriter, startConst, stopConst, stepConst, batchIndices, treeIndices);
       auto i = loopConstructor.GetLoop().getInductionVar();
 
       if (indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kBatch)
@@ -1042,23 +1220,20 @@ struct PredictForestOpLowering: public ConversionPattern {
     GenerateBoundsConstants(rewriter, location, gridIndexVariables, gridStart, gridStop, gridStep);
     GenerateBoundsConstants(rewriter, location, blockIndexVariables, blockStart, blockStop, blockStep);
 
-    LoopConstructor<scf::ParallelOp> gridLoopConstructor(gridIndexVariables, 
+    LoopConstructor<scf::ParallelOp> gridLoopConstructor(gridIndexVariables,
+                                                         blockIndexVariables,  
                                                          state,
                                                          location,
                                                          rewriter,
                                                          ValueRange(gridStart),
                                                          ValueRange(gridStop),
-                                                         ValueRange(gridStep));
+                                                         ValueRange(gridStep),
+                                                         ValueRange(blockStart),
+                                                         ValueRange(blockStop),
+                                                         ValueRange(blockStep),
+                                                         batchIndices, treeIndices);
     auto gridLoop = gridLoopConstructor.GetLoop();
-
-    LoopConstructor<scf::ParallelOp> blockLoopConstructor(blockIndexVariables,
-                                                          state,
-                                                          location,
-                                                          rewriter,
-                                                          ValueRange(blockStart),
-                                                          ValueRange(blockStop),
-                                                          ValueRange(blockStep));
-    auto blockLoop = blockLoopConstructor.GetLoop();
+    auto blockLoop = gridLoopConstructor.GetInnerLoop();
 
     AddLoopInductionVariablesToIndexVariableLists(gridLoop, batchIndices, treeIndices, gridIndexVariables);
     AddLoopInductionVariablesToIndexVariableLists(blockLoop, batchIndices, treeIndices, blockIndexVariables);

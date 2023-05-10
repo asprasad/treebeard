@@ -228,6 +228,14 @@ def CacheTreesFromEnsembleOp : DecisionForest_Op<"cacheTrees", [Pure]> {
   let results = (outs TreeEnsembleType);
 }
 
+def CacheInputRowsOp : DecisionForest_Op<"cacheRows", [Pure]> {
+  let summary = "Cache rows from the input.";
+  let description = "Cache a subset of rows from the input. Takes three arguments -- input memref, and two integers to represent the range of rows to cache. Returns a memref value.";
+  let arguments = (ins InputDataType:$data, Index:$startIndex, Index:$endIndex);
+
+  let results = (outs InputDataType);
+}
+
 def GetTreeClassIdOp : DecisionForest_Op<"getTreeClassId", [Pure]> {
   let summary = "Get tree class from ensemble.";
   let description = "Index the forest and get the class Id of the tree at that index. Takes two arguments -- an ensemble and an integer and returns a tree value.";
