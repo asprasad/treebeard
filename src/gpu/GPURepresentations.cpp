@@ -169,6 +169,151 @@ void GenerateModelMemrefInitializerImpl(const std::string& funcName, ConversionP
   module.push_back(initModelMemrefFunc);
 }
 
+mlir::gpu::KernelDim3 GetThreadID(mlir::Operation* op) {
+  auto owningGPULaunchOp = op->getParentOfType<gpu::LaunchOp>();
+  assert (owningGPULaunchOp);
+  auto threadNum = owningGPULaunchOp.getThreadIds();
+  return threadNum;
+}
+
+void LowerCacheRowsOpToGPU(ConversionPatternRewriter &rewriter,
+                           mlir::Operation *op,
+                           ArrayRef<Value> operands) {
+  auto location = op->getLoc();
+  auto cacheRowsOp = AssertOpIsOfType<decisionforest::CacheInputRowsOp>(op);
+  // Add the required globals to the owning module
+  auto owningModule = cacheRowsOp->getParentOfType<mlir::ModuleOp>();
+  assert (owningModule);
+  
+  std::string globalCacheBufferName = std::string("inputRowCache_")+std::to_string(reinterpret_cast<long long>(op));
+  // TODO_Ashwin Use the right memory space ID
+  auto cacheBufferType = cacheRowsOp.getType().cast<MemRefType>();
+  {
+    SaveAndRestoreInsertionPoint saveAndRestoreInsertPoint(rewriter);
+    rewriter.setInsertionPoint(&owningModule.front());
+    rewriter.create<memref::GlobalOp>(location, globalCacheBufferName,
+                                  /*sym_visibility=*/rewriter.getStringAttr("private"),
+                                  /*type=*/cacheBufferType,
+                                  /*initial_value=*/rewriter.getUnitAttr(),
+                                  /*constant=*/false, 
+                                  /*alignment*/IntegerAttr());
+  }
+  
+  auto getGlobal = rewriter.create<memref::GetGlobalOp>(location, cacheBufferType, globalCacheBufferName);
+  // Load required rows from input memref into the shared memory 
+  
+  /*
+  startRow = ... [16] // The index of the first row that needs to be cached 
+  numElements = ... [40]
+  numThreads =  ... [8]
+  loopCount = ceil(numElements/numThreads) [5]
+  [tid = 0] [tid = 1]
+  offset = f(threadId.x, threadId.y) [0] [1]
+  for i = 0 : loopCount [0:5] 
+    baseOffset = i*numThreads [0, 8] [0, 8]
+    index = baseOffset + offset [0, 8] [1, 9]
+    if (index < numElements) {
+      i = index/num_columns [0, 1] [0, 1]
+      j = index%num_columns [0, 3] [1, 4]
+      cache[i][j] = input[i+startRow][j] [0,0 = 16,0: 1,3=17,3]
+    }
+  __syncthreads()
+  */
+  CacheInputRowsOpAdaptor cacheInputRowsAdaptor(operands);
+  auto startRow = cacheInputRowsAdaptor.getStartIndex();
+  auto numElements = rewriter.create<arith::ConstantIndexOp>(location, cacheBufferType.getShape()[0] * cacheBufferType.getShape()[1]);
+  
+  // TODO_Ashwin we know all these dimensions are compile time constants. Can we just const fold?
+  // Get the number of threads in the thread block
+  auto owningGPULaunchOp = cacheRowsOp->getParentOfType<gpu::LaunchOp>();
+  assert (owningGPULaunchOp);
+  auto numThreadsX = owningGPULaunchOp.getBlockSizeX();
+  auto numThreadsY = owningGPULaunchOp.getBlockSizeY();
+  auto threadNum = owningGPULaunchOp.getThreadIds();
+
+  // TODO_Ashwin everything below assumes that thread blocks are 2D!
+  auto numThreads = rewriter.create<arith::MulIOp>(location, numThreadsX, numThreadsY);
+    
+  // index = numThreadsX*threadNum.Y + threadNum.X
+  auto nxTimesTy = rewriter.create<arith::MulIOp>(location, numThreadsX, threadNum.y);
+  auto threadOffset = rewriter.create<arith::AddIOp>(location, static_cast<Value>(nxTimesTy), threadNum.x);
+  
+  // rewriter.create<gpu::PrintfOp>(location, "numThreads[%ld] = %ld\n", ValueRange{threadOffset, numThreads});
+
+  // loopCount = ceil(numElements/numThreads)
+  auto loopCount = rewriter.create<arith::CeilDivSIOp>(location, static_cast<Value>(numElements), static_cast<Value>(numThreads));
+
+  auto loopStart = rewriter.create<arith::ConstantIndexOp>(location, 0);
+  auto loopStep = rewriter.create<arith::ConstantIndexOp>(location, 1);
+
+  auto loop = rewriter.create<scf::ForOp>(location, 
+                                          static_cast<Value>(loopStart),
+                                          static_cast<Value>(loopCount),
+                                          static_cast<Value>(loopStep));
+  rewriter.setInsertionPointToStart(loop.getBody());
+  //   baseOffset = i*numThreads
+  auto baseOffset = rewriter.create<arith::MulIOp>(location, loop.getInductionVar(), static_cast<Value>(numThreads));
+
+  //   index = baseOffset + offset
+  auto index = rewriter.create<arith::AddIOp>(location, baseOffset.getResult(), threadOffset.getResult());
+
+  //   if (index < numElements) {
+  auto indexInRange = rewriter.create<arith::CmpIOp>(location, arith::CmpIPredicate::slt, index.getResult(), numElements.getResult());
+  auto ifIndexInRange = rewriter.create<scf::IfOp>(location, indexInRange.getResult(), false);
+  {
+    auto ifBodyBuilder = ifIndexInRange.getThenBodyBuilder();
+    auto numColumns = ifBodyBuilder.create<arith::ConstantIndexOp>(location, cacheBufferType.getShape()[1]);
+    //     i = index/num_columns
+    auto i = ifBodyBuilder.create<arith::FloorDivSIOp>(location, index.getResult(), numColumns.getResult());
+    //     j = index%num_columns
+    auto j = ifBodyBuilder.create<arith::RemSIOp>(location, index.getResult(), numColumns.getResult());
+    //     cache[i][j] = input[i+startRow][j]
+    auto iPlusStartRow = ifBodyBuilder.create<arith::AddIOp>(location, i.getResult(), startRow);
+    
+    auto inputValue = ifBodyBuilder.create<memref::LoadOp>(location, cacheRowsOp.getData(), ValueRange{iPlusStartRow.getResult(), j.getResult()});
+
+    // ifBodyBuilder.create<gpu::PrintfOp>(location, "ThreadID [%ld] reading element[%ld, %ld] = %lf\n", 
+    //                                     ValueRange{threadOffset.getResult(), iPlusStartRow.getResult(), j.getResult(), inputValue.getResult()});
+
+    ifBodyBuilder.create<memref::StoreOp>(location, inputValue.getResult(), getGlobal.getResult(), ValueRange{i.getResult(), j.getResult()});
+
+    // ifBodyBuilder.create<gpu::PrintfOp>(location, "ThreadID [%ld] storing element[%ld, %ld] = %lf\n", 
+    //                                     ValueRange{threadOffset.getResult(), i.getResult(), j.getResult(), inputValue.getResult()});
+    
+    // auto testLoad = ifBodyBuilder.create<memref::LoadOp>(location, getGlobal.getResult(), ValueRange{i.getResult(), j.getResult()});
+    // ifBodyBuilder.create<gpu::PrintfOp>(location, "ThreadID [%ld] read back element[%ld, %ld] = %lf\n", 
+    //                                     ValueRange{threadOffset.getResult(), i.getResult(), j.getResult(), testLoad.getResult()});
+
+  }
+  rewriter.setInsertionPointAfter(loop); 
+  
+  // __syncthreads()
+  rewriter.create<gpu::BarrierOp>(location);
+
+  // auto firstThread = rewriter.create<arith::CmpIOp>(location, arith::CmpIPredicate::eq, threadOffset.getResult(), loopStart);
+  // auto ifFirstThread = rewriter.create<scf::IfOp>(location, firstThread.getResult(), false);
+  // {
+  //   auto ifBodyBuilder = ifFirstThread.getThenBodyBuilder();
+  //   auto zero = ifBodyBuilder.create<arith::ConstantIndexOp>(location, 0);
+  //   auto one = ifBodyBuilder.create<arith::ConstantIndexOp>(location, 1);
+  //   auto five = ifBodyBuilder.create<arith::ConstantIndexOp>(location, 5);
+  //   auto eight = ifBodyBuilder.create<arith::ConstantIndexOp>(location, 8);
+
+  //   auto loop1 = ifBodyBuilder.create<scf::ForOp>(location, zero.getResult(), eight.getResult(), one.getResult());
+  //   ifBodyBuilder.setInsertionPointToStart(loop1.getBody());
+  //   auto loop2 = ifBodyBuilder.create<scf::ForOp>(location, zero.getResult(), five.getResult(), one.getResult());
+  //   ifBodyBuilder.setInsertionPointToStart(loop2.getBody());
+  //   auto i = loop1.getInductionVar();
+  //   auto j = loop2.getInductionVar();
+  //   auto testLoad = ifBodyBuilder.create<memref::LoadOp>(location, getGlobal.getResult(), ValueRange{i, j});
+  //   ifBodyBuilder.create<gpu::PrintfOp>(location, "Element[%ld, %ld] = %lf\n", 
+  //                                       ValueRange{i, j, testLoad.getResult()});
+
+  //   ifBodyBuilder.setInsertionPointAfter(loop1);
+  // }
+  // rewriter.create<gpu::BarrierOp>(location);
+  rewriter.replaceOp(op, static_cast<Value>(getGlobal));
+}
 
 // ===---------------------------------------------------=== //
 // GPU array based representation
@@ -482,6 +627,11 @@ void GPUArrayBasedRepresentation::GenerateTreeMemref(mlir::ConversionPatternRewr
   getTreeOperationMap[op] = static_cast<Value>(treeMemref);
 }
 
+void GPUArrayBasedRepresentation::LowerCacheRowsOp(ConversionPatternRewriter &rewriter,
+                                                   mlir::Operation *op,
+                                                   ArrayRef<Value> operands) {
+  LowerCacheRowsOpToGPU(rewriter, op, operands);
+}
 
 std::shared_ptr<IRepresentation> ConstructGPUArrayBasedRepresentation() {
   return std::make_shared<GPUArrayBasedRepresentation>();
@@ -609,6 +759,13 @@ mlir::LogicalResult GPUSparseRepresentation::GenerateModelGlobals(Operation *op,
   };
   sparseEnsembleConstantToMemrefsMap[op] = info;
   return mlir::success();
+}
+
+
+void GPUSparseRepresentation::LowerCacheRowsOp(ConversionPatternRewriter &rewriter,
+                                               mlir::Operation *op,
+                                               ArrayRef<Value> operands) {
+  LowerCacheRowsOpToGPU(rewriter, op, operands);
 }
 
 std::shared_ptr<IRepresentation> ConstructGPUSparseRepresentation() {

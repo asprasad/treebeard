@@ -28,6 +28,7 @@
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
+#include "mlir/Dialect/Arith/Transforms/Passes.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -166,6 +167,7 @@ struct LowerGpuOpsToNVVMOpsPass
     populateGpuRewritePatterns(patterns);
     (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
 
+    arith::populateCeilFloorDivExpandOpsPatterns(llvmPatterns);
     arith::populateArithToLLVMConversionPatterns(converter, llvmPatterns);
     populateAffineToStdConversionPatterns(llvmPatterns);
     populateSCFToControlFlowConversionPatterns(llvmPatterns);
@@ -315,10 +317,12 @@ void LowerGPUToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module, std::shar
   // pm.addPass(createConvertSCFToCFPass());
   pm.addPass(createGpuKernelOutliningPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
+  // pm.addPass(std::make_unique<PrintModulePass>());
   // pm.addPass(createMemRefToLLVMPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createConvertGlobalsToWorkgroupAllocationsPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
   pm.addNestedPass<gpu::GPUModuleOp>(std::make_unique<LowerGpuOpsToNVVMOpsPass>(representation));
+  // pm.addPass(std::make_unique<PrintModulePass>());
   pm.addPass(createReconcileUnrealizedCastsPass());
   // pm.addPass(std::make_unique<PrintModulePass>());
   pm.addNestedPass<gpu::GPUModuleOp>(createGpuSerializeToCubinPass("nvptx64-nvidia-cuda", "sm_35", "+ptx60"));

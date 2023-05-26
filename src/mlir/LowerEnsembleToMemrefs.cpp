@@ -433,6 +433,21 @@ struct CacheTreesFromEnsembleOpLowering: public ConversionPattern {
   }
 };
 
+struct CacheRowsOpLowering: public ConversionPattern {
+  std::shared_ptr<decisionforest::IRepresentation> m_representation;
+  CacheRowsOpLowering(MLIRContext *ctx,
+                      std::shared_ptr<decisionforest::IRepresentation> representation) 
+  : ConversionPattern(mlir::decisionforest::CacheInputRowsOp::getOperationName(), 1 /*benefit*/, ctx),
+    m_representation(representation)
+  { }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    m_representation->LowerCacheRowsOp(rewriter, op, operands);
+    return mlir::success();
+  }
+};
+
 struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLoweringPass, OperationPass<mlir::func::FuncOp>> {
   std::shared_ptr<decisionforest::IModelSerializer> m_serializer;
   std::shared_ptr<decisionforest::IRepresentation> m_representation;
@@ -463,7 +478,8 @@ struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLowe
                         decisionforest::GetLeafValueOp,
                         decisionforest::GetLeafTileValueOp,
                         decisionforest::GetTreeClassIdOp,
-                        decisionforest::CacheTreesFromEnsembleOp>();
+                        decisionforest::CacheTreesFromEnsembleOp,
+                        decisionforest::CacheInputRowsOp>();
 
     RewritePatternSet patterns(&getContext());
     patterns.add<EnsembleConstantOpLowering>(patterns.getContext(), m_serializer, m_representation);
@@ -477,6 +493,7 @@ struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLowe
     patterns.add<IsLeafOpLowering>(patterns.getContext(), m_representation);
     patterns.add<IsLeafTileOpLowering>(patterns.getContext(), m_representation);
     patterns.add<CacheTreesFromEnsembleOpLowering>(patterns.getContext(), m_representation, m_serializer);
+    patterns.add<CacheRowsOpLowering>(patterns.getContext(), m_representation);
       
     if (failed(applyPartialConversion(getOperation(), target, std::move(patterns))))
         signalPassFailure();

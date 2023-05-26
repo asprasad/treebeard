@@ -790,6 +790,42 @@ void TahoeSharedForestStrategy(decisionforest::Schedule& schedule, int32_t rowsP
   schedule.Cache(t0);
 }
 
+// Here, each thread processes one input fully. However, in Tahoe, each thread processes one tree
+// and one thread block process one row.
+void TahoeSharedDataStrategy_Modified(decisionforest::Schedule& schedule, int32_t rowsPerThreadBlock) {
+  auto& batchIndex = schedule.GetBatchIndex();
+
+  auto& b0 = schedule.NewIndexVariable("b0");
+  auto& b1 = schedule.NewIndexVariable("b1");
+
+  schedule.Tile(batchIndex, b0, b1, rowsPerThreadBlock);
+  b0.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::Grid, decisionforest::IndexVariable::Dimension::X);
+  b1.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::ThreadBlock, decisionforest::IndexVariable::Dimension::X);
+  
+  schedule.Cache(b0);
+}
+
+void TahoeSharedDataStrategy(decisionforest::Schedule& schedule) {
+  /*
+    for b0 = 1:N_rows step 1 <Grid>
+      for tree = 1:N_trees step 1 <Block.x>
+        for b1 = 1:1 step 1 -- CacheRow
+          WalkDecisionTree
+  */  
+  
+  auto& batchIndex = schedule.GetBatchIndex();
+  auto& treeIndex = schedule.GetTreeIndex();
+  
+  auto& b0 = schedule.NewIndexVariable("b0");
+  auto& b1 = schedule.NewIndexVariable("b1");
+
+  schedule.Tile(batchIndex, b0, b1, 1);
+  b0.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::Grid, decisionforest::IndexVariable::Dimension::X);
+  treeIndex.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::ThreadBlock, decisionforest::IndexVariable::Dimension::X);
+  
+  schedule.Cache(b1);
+}
+
 void TahoeSharedPartialForestStrategy(decisionforest::Schedule& schedule,
                                       int32_t treesPerThreadBlock,
                                       int32_t rowsPerThreadBlock) {
@@ -822,7 +858,8 @@ bool Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize_AnyRep(TestArgs_t& args,
                                                             ForestConstructor_t forestConstructor,
                                                             std::shared_ptr<decisionforest::IModelSerializer> serializer,
                                                             std::shared_ptr<decisionforest::IRepresentation> representation,
-                                                            int32_t childIndexBitWidth=1) {
+                                                            int32_t childIndexBitWidth,
+                                                            std::function<void(decisionforest::Schedule&)> scheduleManipulator) {
   MLIRContext context;
   TreeBeard::InitializeMLIRContext(context);
 
@@ -837,17 +874,20 @@ bool Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize_AnyRep(TestArgs_t& args,
   auto module = irConstructor.GetEvaluationFunction();
 
   auto schedule = irConstructor.GetSchedule();
-  TahoeSharedForestStrategy(*schedule, 8);
+  // TahoeSharedForestStrategy(*schedule, 8);
+  scheduleManipulator(*schedule);
 
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
   // module->dump();
+  // return true;
 
   mlir::decisionforest::GreedilyMapParallelLoopsToGPU(module);
-  // // module->dump();
+  // module->dump();
 
   mlir::decisionforest::ConvertParallelLoopsToGPU(context, module);
   // module->dump();
-
+  //return true;
+  
   mlir::decisionforest::LowerEnsembleToMemrefs(context,
                                                module,
                                                serializer,
@@ -856,6 +896,7 @@ bool Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize_AnyRep(TestArgs_t& args,
   
   mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();
+  // return true;
 
   mlir::decisionforest::LowerGPUToLLVM(context, module, representation);
   // module->dump();
@@ -894,13 +935,31 @@ bool Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize(TestArgs_t& args,
                                                      int32_t childIndexBitWidth=1) {
 
   auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
-
+  std::function<void(decisionforest::Schedule&)> scheduleManipulator = std::bind(TahoeSharedForestStrategy, std::placeholders::_1, 8);
   return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize_AnyRep<ThresholdType, IndexType>(args, 
                                                                                           batchSize,
                                                                                           forestConstructor,
                                                                                           decisionforest::ConstructGPUModelSerializer(modelGlobalsJSONPath),
                                                                                           decisionforest::ConstructGPURepresentation(),
-                                                                                          childIndexBitWidth);
+                                                                                          childIndexBitWidth,
+                                                                                          scheduleManipulator);
+}
+
+template<typename ThresholdType, typename IndexType>
+bool Test_GPUCodeGen_InputShdMem_Scalar(TestArgs_t& args, 
+                                        const int32_t batchSize,
+                                        ForestConstructor_t forestConstructor,
+                                        int32_t childIndexBitWidth=1) {
+
+  auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
+  std::function<void(decisionforest::Schedule&)> scheduleManipulator = std::bind(TahoeSharedDataStrategy_Modified, std::placeholders::_1, 8);
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize_AnyRep<ThresholdType, IndexType>(args, 
+                                                                                          batchSize,
+                                                                                          forestConstructor,
+                                                                                          decisionforest::ConstructGPUModelSerializer(modelGlobalsJSONPath),
+                                                                                          decisionforest::ConstructGPURepresentation(),
+                                                                                          childIndexBitWidth,
+                                                                                          scheduleManipulator);
 }
 
 bool Test_SimpleSharedMem_LeftHeavy(TestArgs_t& args) {
@@ -909,6 +968,18 @@ bool Test_SimpleSharedMem_LeftHeavy(TestArgs_t& args) {
 
 bool Test_SimpleSharedMem_LeftRightAndBalanced(TestArgs_t& args) {
   return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<double, int32_t>(args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>);
+}
+
+bool Test_InputSharedMem_LeftHeavy(TestArgs_t& args) {
+  return Test_GPUCodeGen_InputShdMem_Scalar<double, int32_t>(args, 32, AddLeftHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_InputSharedMem_RightHeavy(TestArgs_t& args) {
+  return Test_GPUCodeGen_InputShdMem_Scalar<double, int32_t>(args, 32, AddRightHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_InputSharedMem_LeftRightAndBalanced(TestArgs_t& args) {
+  return Test_GPUCodeGen_InputShdMem_Scalar<double, int32_t>(args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>);
 }
 
 bool Test_GPUCodeGeneration_Covtype_ArrayRep_DoubleInt32_BatchSize32(TestArgs_t& args) {

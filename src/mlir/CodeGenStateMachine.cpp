@@ -7,12 +7,16 @@
 #include "OpLoweringUtils.h"
 #include "LIRLoweringHelpers.h"
 
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+
 using namespace mlir::decisionforest::helpers;
 
 namespace mlir
 {
 namespace decisionforest
 {
+    mlir::gpu::KernelDim3 GetThreadID(mlir::Operation* op);
+    
     Value ReduceComparisonResultVectorToInt(Value comparisonResult, int32_t tileSize, ConversionPatternRewriter &rewriter, Location location) {
         auto i32VectorType = VectorType::get(tileSize, rewriter.getI32Type());
         auto comparisonExtended = rewriter.create<arith::ExtUIOp>(location, i32VectorType, comparisonResult);
@@ -131,6 +135,12 @@ namespace decisionforest
                 negateComparisonPredicate(m_cmpPredicateAttr),
                 static_cast<Value>(m_loadFeatureOp),
                 static_cast<Value>(m_loadThresholdOp));
+            
+            // auto threadIdx = GetThreadID(traverseTileOpPtr);
+            // rewriter.create<gpu::PrintfOp>(location, 
+            //     "Thread %ld, %ld: Comparison %lf < %lf\n",
+            //      ValueRange{threadIdx.x, threadIdx.y, m_loadFeatureOp.getResult(), m_loadThresholdOp.getResult()});
+            
             m_comparisonUnsigned = rewriter.create<arith::ExtUIOp>(location, rewriter.getI32Type(), static_cast<Value>(comparison));
             m_state = kNextNode;
           }

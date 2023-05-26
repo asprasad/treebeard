@@ -59,6 +59,10 @@ public:
                                 mlir::Operation *op,
                                 ArrayRef<Value> operands,
                                 std::shared_ptr<decisionforest::IModelSerializer> m_serializer)=0;
+
+  virtual void LowerCacheRowsOp(ConversionPatternRewriter &rewriter,
+                                mlir::Operation *op,
+                                ArrayRef<Value> operands)=0;
 };
 
 class ArrayBasedRepresentation : public IRepresentation {
@@ -154,6 +158,10 @@ public:
                         mlir::Operation *op,
                         ArrayRef<Value> operands,
                         std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override { }
+  
+  void LowerCacheRowsOp(ConversionPatternRewriter &rewriter,
+                        mlir::Operation *op,
+                        ArrayRef<Value> operands) override { }
 };
 
 class SparseRepresentation : public IRepresentation {
@@ -252,6 +260,10 @@ public:
                         mlir::Operation *op,
                         ArrayRef<Value> operands,
                         std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override { }
+
+  void LowerCacheRowsOp(ConversionPatternRewriter &rewriter,
+                        mlir::Operation *op,
+                        ArrayRef<Value> operands) override { }                        
 };
 
 class RepresentationFactory {

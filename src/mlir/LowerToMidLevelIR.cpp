@@ -118,29 +118,6 @@ Value SumOfValues(ConversionPatternRewriter &rewriter, Location location, std::l
   return accumulator;
 }
 
-void AddLoopIndexVariableToValueList(Value loopIndex, 
-                                     const decisionforest::IndexVariable& indexVar,
-                                     std::list<Value>& batchIndexVars,
-                                     std::list<Value>& treeIndexVars) {
-  if (indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kBatch)
-    batchIndexVars.push_back(loopIndex);
-  else if(indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kTree)
-    treeIndexVars.push_back(loopIndex);
-  else
-    assert (false && "Unknown index variable type");
-}
-
-template<typename LoopIndexContainerType>
-void AddLoopIndexVariableToValueList(LoopIndexContainerType loopIndices, 
-                                     const std::list<const decisionforest::IndexVariable*> indexVars,
-                                     std::list<Value>& batchIndexVars,
-                                     std::list<Value>& treeIndexVars) {
-  auto indexZip = llvm::zip(loopIndices, indexVars);
-  for (auto indexPair : indexZip) {
-    AddLoopIndexVariableToValueList(std::get<0>(indexPair), *std::get<1>(indexPair), batchIndexVars, treeIndexVars);
-  }
-}
-
 template<typename LoopType>
 struct LoopConstructor {
   LoopType m_loop;
@@ -404,8 +381,18 @@ struct PredictForestOpLowering: public ConversionPattern {
     auto zeroIndexAttr = rewriter.getIndexAttr(0);
     auto oneIndexAttr = rewriter.getIndexAttr(1);
     auto rowSizeAttr = rewriter.getIndexAttr(rowType.getShape()[0]);
+    // rewriter.create<gpu::PrintfOp>(location, "Reading row %d\n", ValueRange{rowIndex});
     auto row = rewriter.create<memref::SubViewOp>(location, static_cast<Value>(data), ArrayRef<OpFoldResult>({rowIndex, zeroIndexAttr}),
                                                   ArrayRef<OpFoldResult>({oneIndexAttr, rowSizeAttr}), ArrayRef<OpFoldResult>({oneIndexAttr, oneIndexAttr}));
+    // std::vector<Value> subviewElems;
+    // auto zeroIndex =  rewriter.create<arith::ConstantIndexOp>(location, 0);   
+    // for (int i=0 ; i<5; ++i) {
+    //     auto constIndex = rewriter.create<arith::ConstantIndexOp>(location, i);
+    //     auto val = rewriter.create<memref::LoadOp>(location, row.getResult(), ValueRange{zeroIndex.getResult(), constIndex.getResult()});
+    //     subviewElems.push_back(val);
+    // }
+    // rewriter.create<gpu::PrintfOp>(location, "Row %d: %lf, %lf, %lf, %lf, %lf\n", ValueRange{rowIndex, subviewElems[0], subviewElems[1], subviewElems[2], subviewElems[3], subviewElems[4]});
+
     if (decisionforest::InsertDebugHelpers) {
       rewriter.create<decisionforest::PrintInputRowOp>(location, row, rowIndex);
     }
@@ -768,11 +755,12 @@ struct PredictForestOpLowering: public ConversionPattern {
     assert (indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kTree);
     
     Value rowIndex = SumOfValues(rewriter, location, batchIndices);
+    Value rowIndexForRowRead = rowIndex;
     if (state.inputIndexOffset)
-      rowIndex = rewriter.create<arith::SubIOp>(location, rowIndex, state.inputIndexOffset);
+      rowIndexForRowRead = rewriter.create<arith::SubIOp>(location, rowIndex, state.inputIndexOffset);
     
     // Get the current row
-    Value row = GetRow(rewriter, location, state.data, rowIndex, state.dataMemrefType);
+    Value row = GetRow(rewriter, location, state.data, rowIndexForRowRead, state.dataMemrefType);
 
     if(indexVar.Unroll()) {
       auto range = indexVar.GetRange();
@@ -927,10 +915,11 @@ struct PredictForestOpLowering: public ConversionPattern {
     for (int32_t i = 0; i < stepSize; i++) {
       batchIndices.push_back(rewriter.create<arith::ConstantIndexOp>(location, i));
       auto rowIndex = SumOfValues(rewriter, location, batchIndices);
+      Value rowIndexForRowRead = rowIndex;
       if (state.inputIndexOffset)
-        rowIndex = rewriter.create<arith::SubIOp>(location, rowIndex, state.inputIndexOffset);
+        rowIndexForRowRead = rewriter.create<arith::SubIOp>(location, rowIndex, state.inputIndexOffset);
 
-      rows.push_back(GetRow(rewriter, location, state.data, rowIndex, state.dataMemrefType));
+      rows.push_back(GetRow(rewriter, location, state.data, rowIndexForRowRead, state.dataMemrefType));
       rowIndices.push_back(rowIndex);
       trees.push_back(tree);
       treeResultTypes.push_back(treeType.getThresholdType());
@@ -970,11 +959,12 @@ struct PredictForestOpLowering: public ConversionPattern {
                         std::list<Value> batchIndices, decisionforest::TreeType treeType, Value tree, Value treeIndex,
                         PredictOpLoweringState& state) const {
     Value rowIndex = SumOfValues(rewriter, location, batchIndices);
+    Value rowIndexForRowRead = rowIndex;
     if (state.inputIndexOffset)
-      rowIndex = rewriter.create<arith::SubIOp>(location, rowIndex, state.inputIndexOffset);
+      rowIndexForRowRead = rewriter.create<arith::SubIOp>(location, rowIndex, state.inputIndexOffset);
 
     // Get the current row
-    Value row = GetRow(rewriter, location, state.data, rowIndex, state.dataMemrefType);
+    Value row = GetRow(rewriter, location, state.data, rowIndexForRowRead, state.dataMemrefType);
 
     // Walk the tree
     Value walkOp;

@@ -488,6 +488,10 @@ bool Test_GPUCodeGeneration_Covtype_ArrayRep_DoubleInt32_BatchSize32(TestArgs_t&
 bool Test_GPUCodeGeneration_Covtype_SparseRep_DoubleInt32_BatchSize32(TestArgs_t& args);
 bool Test_GPUCodeGeneration_Covtype_ReorgRep_DoubleInt32_BatchSize32(TestArgs_t& args);
 
+bool Test_InputSharedMem_LeftRightAndBalanced(TestArgs_t& args);
+bool Test_InputSharedMem_LeftHeavy(TestArgs_t& args);
+bool Test_InputSharedMem_RightHeavy(TestArgs_t& args);
+
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
     vec[i] = (double)rand()/RAND_MAX;
@@ -1513,6 +1517,9 @@ TestDescriptor testList[] = {
   // Basic GPU caching tests
   TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
   TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy),
+  TEST_LIST_ENTRY(Test_InputSharedMem_LeftHeavy),
+  TEST_LIST_ENTRY(Test_InputSharedMem_RightHeavy),
+  TEST_LIST_ENTRY(Test_InputSharedMem_LeftRightAndBalanced),
 
   // XGBoost tests on GPU
   TEST_LIST_ENTRY(Test_GPUCodeGeneration_Covtype_ArrayRep_DoubleInt32_BatchSize32),
@@ -1524,8 +1531,11 @@ TestDescriptor testList[] = {
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
-  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy),
+  TEST_LIST_ENTRY(Test_InputSharedMem_LeftHeavy),
+  TEST_LIST_ENTRY(Test_InputSharedMem_RightHeavy),
+  TEST_LIST_ENTRY(Test_InputSharedMem_LeftRightAndBalanced),
+  // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
+  // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy),
   // GPU model buffer initialization tests (scalar)
   // TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_DoubleInt),
   // TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_DoubleInt),

@@ -467,6 +467,17 @@ void ReorgForestRepresentation::AddLLVMConversionPatterns(LLVMTypeConverter &con
                LoadTileThresholdOpLowering>(converter, m_numTrees);
 }
 
+// Definition in GPURepresentations.cpp
+void LowerCacheRowsOpToGPU(ConversionPatternRewriter &rewriter,
+                           mlir::Operation *op,
+                           ArrayRef<Value> operands);
+
+void ReorgForestRepresentation::LowerCacheRowsOp(ConversionPatternRewriter &rewriter,
+                                                 mlir::Operation *op,
+                                                 ArrayRef<Value> operands) {
+  LowerCacheRowsOpToGPU(rewriter, op, operands);
+}
+
 std::shared_ptr<IRepresentation> ConstructGPUReorgForestRepresentation() {
   return std::make_shared<ReorgForestRepresentation>();
 }

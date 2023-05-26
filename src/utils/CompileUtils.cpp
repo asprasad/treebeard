@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -164,6 +165,7 @@ void InitializeMLIRContext(mlir::MLIRContext& context) {
   context.getOrLoadDialect<mlir::arith::ArithDialect>();
   context.getOrLoadDialect<mlir::omp::OpenMPDialect>();
   context.getOrLoadDialect<mlir::func::FuncDialect>();
+  context.getOrLoadDialect<mlir::gpu::GPUDialect>();
 }
 
 void ConvertONNXModelToLLVMIR(TreebeardContext& tbContext, const std::string& llvmIRFilePath) {

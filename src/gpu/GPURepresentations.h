@@ -43,6 +43,10 @@ public:
                         mlir::Operation *op,
                         ArrayRef<Value> operands,
                         std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override;
+
+  void LowerCacheRowsOp(ConversionPatternRewriter &rewriter,
+                        mlir::Operation *op,
+                        ArrayRef<Value> operands) override;
 };
 
 class GPUSparseRepresentation : public SparseRepresentation {
@@ -67,6 +71,10 @@ public:
                         mlir::Operation *op,
                         ArrayRef<Value> operands,
                         std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override { assert(false); }
+
+  void LowerCacheRowsOp(ConversionPatternRewriter &rewriter,
+                        mlir::Operation *op,
+                        ArrayRef<Value> operands) override;
 };
 
 } // decisionforest

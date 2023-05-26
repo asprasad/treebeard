@@ -57,7 +57,10 @@ inline bool FPEqual(FPType a, FPType b) {
   const FPType scaledThreshold = std::max(std::fabs(a), std::fabs(b))/1e8;
   const FPType threshold = std::max(FPType(1e-6), scaledThreshold);
   auto sqDiff = (a-b) * (a-b);
-  return sqDiff < threshold;
+  bool ret = sqDiff < threshold;
+  if (!ret)
+    std::cout << a << " != " << b << std::endl;
+  return ret;
 }
 
 template <>
@@ -66,7 +69,10 @@ inline bool FPEqual<float>(float a, float b) {
   const FPType scaledThreshold = std::max(std::fabs(a), std::fabs(b))/1e8;
   const FPType threshold = std::max(FPType(1e-6), scaledThreshold);
   auto sqDiff = (a-b) * (a-b);
-  return sqDiff < threshold;
+  bool ret = sqDiff < threshold;
+  if (!ret)
+    std::cout << a << " != " << b << std::endl;
+  return ret;
 }
 
 template <>
