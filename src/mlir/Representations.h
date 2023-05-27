@@ -161,7 +161,7 @@ public:
   
   void LowerCacheRowsOp(ConversionPatternRewriter &rewriter,
                         mlir::Operation *op,
-                        ArrayRef<Value> operands) override { }
+                        ArrayRef<Value> operands) override;
 };
 
 class SparseRepresentation : public IRepresentation {
@@ -263,7 +263,7 @@ public:
 
   void LowerCacheRowsOp(ConversionPatternRewriter &rewriter,
                         mlir::Operation *op,
-                        ArrayRef<Value> operands) override { }                        
+                        ArrayRef<Value> operands) override;                       
 };
 
 class RepresentationFactory {

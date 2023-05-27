@@ -232,6 +232,44 @@ struct GetModelMemrefSizeOpLowering : public ConversionPattern {
     return mlir::success();
   }
 };
+
+// TODO_Ashwin This is just a hacky caching implementation. 
+// We can't just use a memref.subview since that would lead 
+// to the types of the cacheInputRowsOp and the replacement 
+// subview op not matching. Therefore, I'm allocating a new
+// buffer with the right type and copying the subview into 
+// it and replacing the cache op with the new allocation.
+void LowerCacheRowsOpToCPU(ConversionPatternRewriter &rewriter,
+                           mlir::Operation *op,
+                           ArrayRef<Value> operands) {
+  auto location = op->getLoc();
+  auto cacheInputOp = AssertOpIsOfType<decisionforest::CacheInputRowsOp>(op);
+  decisionforest::CacheInputRowsOpAdaptor cacheInputOpAdaptor(operands);
+  auto resultType = cacheInputOp.getResult().getType();
+  auto resultMemrefType = resultType.cast<MemRefType>();
+
+  auto zeroConst = rewriter.getIndexAttr(0);
+  auto oneConst = rewriter.getIndexAttr(1);
+  auto numRows = rewriter.getIndexAttr(resultMemrefType.getShape()[0]);
+  auto numCols = rewriter.getIndexAttr(resultMemrefType.getShape()[1]);
+  auto cacheSubview = rewriter.create<memref::SubViewOp>(location, 
+          cacheInputOpAdaptor.getData(),
+          ArrayRef<OpFoldResult>({cacheInputOpAdaptor.getStartIndex(), zeroConst}), // offsets
+          ArrayRef<OpFoldResult>({numRows, numCols}), // sizes
+          ArrayRef<OpFoldResult>({oneConst, oneConst}) // strides
+          );
+  // auto prefetchOp = rewriter.create<memref::PrefetchOp>(location, 
+  //         cacheSubview.getResult(),
+  //         ValueRange{zeroConst.getResult(), zeroConst.getResult()},
+  //         false, //isWrite
+  //         (uint32_t)3, // locality hint
+  //         true); // data cache
+  auto allocCache = rewriter.create<memref::AllocaOp>(location, resultMemrefType);
+  rewriter.create<memref::CopyOp>(location, cacheSubview.getResult(), allocCache.getResult());
+  rewriter.replaceOp(op, allocCache.getResult());
+}
+
+
 } // anonymous namespace
 
 namespace mlir
@@ -588,6 +626,12 @@ void ArrayBasedRepresentation::AddLLVMConversionPatterns(LLVMTypeConverter &conv
                LoadTileShapeOpLowering,
                InitTileOpLowering,
                GetModelMemrefSizeOpLowering>(converter);
+}
+
+void ArrayBasedRepresentation::LowerCacheRowsOp(ConversionPatternRewriter &rewriter,
+                                                mlir::Operation *op,
+                                                ArrayRef<Value> operands) {
+  LowerCacheRowsOpToCPU(rewriter, op, operands);
 }
 
 std::shared_ptr<IRepresentation> constructArrayBasedRepresentation() {
@@ -1029,6 +1073,12 @@ void SparseRepresentation::AddLLVMConversionPatterns(LLVMTypeConverter &converte
                LoadChildIndexOpLowering,
                InitSparseTileOpLowering,
                GetModelMemrefSizeOpLowering>(converter);
+}
+
+void SparseRepresentation::LowerCacheRowsOp(ConversionPatternRewriter &rewriter,
+                                            mlir::Operation *op,
+                                            ArrayRef<Value> operands) {
+  LowerCacheRowsOpToCPU(rewriter, op, operands);
 }
 
 std::shared_ptr<IRepresentation> constructSparseRepresentation() {

@@ -852,6 +852,49 @@ bool Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_UnrollTreeLoop(Tes
 }
 
 // ===----------------------------------------=== //
+// Basic CPU input caching schedule code gen tests
+// ===----------------------------------------=== //
+
+void BasicCachedSchedule(mlir::decisionforest::Schedule* schedule) {
+  auto& batchIndexVar = schedule->GetBatchIndex();
+
+  auto& b0 = schedule->NewIndexVariable("b0");
+  auto& b1 = schedule->NewIndexVariable("b1");
+  
+  schedule->Tile(batchIndexVar, b0, b1, 2);
+  schedule->Cache(b0);
+}
+
+void PopulateDataForBatchSize(std::vector<std::vector<double>>& inputData, int32_t batchSize, int32_t numBatches) {
+  for (int32_t i=0; i<numBatches ; ++i) {
+    inputData.emplace_back(std::vector<double>());
+    auto& firstVec = inputData.back();
+    for (int32_t j=0 ; j<batchSize/2 ; ++j) {
+      auto data=GetBatchSize2Data();
+      firstVec.insert(firstVec.end(), data.front().begin(), data.front().end());
+    }
+  }
+}
+
+bool Test_CodeGeneration_LeftHeavy_BatchSize8_CacheInputSchedule(TestArgs_t& args) {
+  std::vector<std::vector<double>> inputData;
+  PopulateDataForBatchSize(inputData, 8, 4);
+  return Test_ForestCodeGen_VariableBatchSize(args, AddLeftHeavyTree<DoubleInt32Tile>, 8, inputData, 1, BasicCachedSchedule);
+}
+
+bool Test_CodeGeneration_RightHeavy_BatchSize2_CacheInputSchedule(TestArgs_t& args) {
+  std::vector<std::vector<double>> inputData;
+  PopulateDataForBatchSize(inputData, 8, 4);
+  return Test_ForestCodeGen_VariableBatchSize(args, AddRightHeavyTree<DoubleInt32Tile>, 8, inputData, 1, BasicCachedSchedule);
+}
+
+bool Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_CacheInputSchedule(TestArgs_t& args) {
+  std::vector<std::vector<double>> inputData;
+  PopulateDataForBatchSize(inputData, 8, 4);
+  return Test_ForestCodeGen_VariableBatchSize(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 8, inputData, 1, BasicCachedSchedule);
+}
+
+// ===----------------------------------------=== //
 // Basic sparse code gen tests
 // ===----------------------------------------=== //
 
@@ -1290,6 +1333,9 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize2_XGBoostSchedule),
   TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize2_XGBoostSchedule),
   TEST_LIST_ENTRY(Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_XGBoostSchedule),
+  TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize8_CacheInputSchedule),
+  TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize2_CacheInputSchedule),
+  TEST_LIST_ENTRY(Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_CacheInputSchedule),
   TEST_LIST_ENTRY(Test_Scalar_Abalone_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_TileSize2_Abalone_OneTreeAtATimeSchedule),
   TEST_LIST_ENTRY(Test_TileSize3_Abalone_OneTreeAtATimeSchedule),
@@ -1531,6 +1577,9 @@ TestDescriptor testList[] = {
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
+  TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize8_CacheInputSchedule),
+  TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize2_CacheInputSchedule),
+  TEST_LIST_ENTRY(Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_CacheInputSchedule),
   TEST_LIST_ENTRY(Test_InputSharedMem_LeftHeavy),
   TEST_LIST_ENTRY(Test_InputSharedMem_RightHeavy),
   TEST_LIST_ENTRY(Test_InputSharedMem_LeftRightAndBalanced),
