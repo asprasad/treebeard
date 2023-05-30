@@ -57,23 +57,10 @@ InferenceRunnerBase::InferenceRunnerBase(std::shared_ptr<IModelSerializer> seria
 
 void InferenceRunnerBase::Init() {
   m_serializer->InitializeBuffers(this);
-  if (m_tileSize != 1) {
-    if (!m_gpu)
-      InitializeLUT();
-    else
+  if (m_tileSize != 1 && m_gpu) {
       InitializeGpuLut();
   }
   m_inferenceFuncPtr = GetFunctionAddress("Prediction_Function");
-}
-
-int32_t InferenceRunnerBase::InitializeLUT() {
-  typedef LUTMemrefType (*GetLUTFunc_t)();
-  
-  auto getLUTPtr = reinterpret_cast<GetLUTFunc_t>(GetFunctionAddress("Get_lookupTable"));
-  LUTMemrefType lutMemref = getLUTPtr();
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLookUpTable(lutMemref.alignedPtr, m_tileSize, 8);
-  m_lutMemref = lutMemref;
-  return 0;
 }
 
 int32_t InferenceRunnerBase::InitializeGpuLut() {

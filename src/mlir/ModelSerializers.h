@@ -13,19 +13,8 @@ namespace decisionforest
 class ArraySparseSerializerBase : public IModelSerializer {
 protected:
   bool m_sparseRepresentation;
-  template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType, typename ChildIndexType>
   int32_t CallInitMethod();
-  
-  template<typename ThresholdType, typename FeatureIndexType>
-  int32_t ResolveTileShapeType();
-
-  template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType>
-  int32_t ResolveChildIndexType();
-
-  int32_t InitializeLengthsArray();
-  int32_t InitializeOffsetsArray();
   int32_t InitializeModelArray();
-  void InitializeClassInformation();
 public:
   ArraySparseSerializerBase(const std::string& modelGlobalsJSONPath, bool sparseRep)
     :IModelSerializer(modelGlobalsJSONPath), m_sparseRepresentation(sparseRep)

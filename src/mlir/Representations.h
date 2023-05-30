@@ -2,6 +2,9 @@
 #define _REPRESENTATIONS_H_
 
 #include <vector>
+#include <type_traits>
+#include <cstddef>
+#include <cstdint>
 
 #include "mlir/Transforms/DialectConversion.h"
 #include "TreebeardContext.h"
@@ -68,6 +71,16 @@ public:
 
 class ArrayBasedRepresentation : public IRepresentation {
 protected:
+  // TODO the names of the model and offset global should be generated so they're unique for each ensemble constant
+  // TODO the getter function names need to be persisted with the actual tree values in the JSON so the runtime can call them. 
+  const std::string kModelMemrefName = "model";
+  const std::string kOffsetMemrefName = "offsets";
+  const std::string kLengthMemrefName = "lengths";
+  const std::string kClassInfoMemrefName = "treeClassInfo";
+  const std::string kThresholdsMemrefName = "thresholdValues";
+  const std::string kFeatureIndexMemrefName = "featureIndexValues";
+  const std::string kTileShapeMemrefName = "tileShapeValues";
+
   typedef struct Memrefs {
     mlir::Type model;
     mlir::Type offset;
@@ -106,14 +119,9 @@ protected:
     mlir::ModuleOp module,
     mlir::decisionforest::EnsembleConstantOp& ensembleConstOp,
     ConversionPatternRewriter &rewriter,
-    Location location,
-    const std::string& modelMemrefName,
-    const std::string& offsetMemrefName,
-    const std::string& lengthMemrefName,
-    const std::string& treeInfo,
-    std::shared_ptr<decisionforest::IModelSerializer> serializer);
+    Location location);
 
-  void AddModelMemrefInitFunction(mlir::ModuleOp module, std::string globalName, MemRefType memrefType, 
+  void AddModelMemrefInitFunction(mlir::decisionforest::EnsembleConstantOp& ensembleConstOp, mlir::ModuleOp module, std::string globalName, MemRefType memrefType, 
                                   ConversionPatternRewriter &rewriter, Location location);
 
   mlir::Value GetTreeMemref(mlir::Value treeValue);
@@ -169,6 +177,21 @@ public:
 
 class SparseRepresentation : public IRepresentation {
 protected:
+  // TODO the names of the model and offset global should be generated so they're unique for each ensemble constant
+  // TODO the getter function names need to be persisted with the actual tree values in the JSON so the runtime can call them.
+  const std::string kModelMemrefName = "model";
+  const std::string kOffsetMemrefName = "offsets";
+  const std::string kLengthMemrefName = "lengths";
+  const std::string kLeavesMemrefName = "leaves";
+  const std::string kLeavesLengthMemrefName = "leavesLengths";
+  const std::string kLeavesOffsetMemrefName = "leavesOffsets";
+  const std::string kClassInfoMemrefName = "treeClassInfo";
+  
+  const std::string kThresholdsMemrefName = "thresholdValues";
+  const std::string kFeatureIndexMemrefName = "featureIndexValues";
+  const std::string kChildIndexMemrefName = "childIndexValues";
+  const std::string kTileShapeMemrefName = "tileShapeValues";
+
   struct SparseEnsembleConstantLoweringInfo {
     mlir::Value modelGlobal;
     mlir::Value offsetGlobal;
@@ -215,12 +238,7 @@ public:
   mlir::LogicalResult GenerateModelGlobals(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter,
                                            std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override;
   std::tuple<Type, Type, Type, Type> AddGlobalMemrefs(mlir::ModuleOp module, mlir::decisionforest::EnsembleConstantOp& ensembleConstOp,
-                                                      ConversionPatternRewriter &rewriter, Location location,
-                                                      const std::string& modelMemrefName, const std::string& offsetMemrefName,
-                                                      const std::string& lengthMemrefName,
-                                                      const std::string& leavesMemrefName, const std::string& leavesLengthMemrefName,
-                                                      const std::string& leavesOffsetMemrefName, const std::string& treeInfo,
-                                                      std::shared_ptr<IModelSerializer> serializer);
+                                                      ConversionPatternRewriter &rewriter, Location location);
 
   void AddModelMemrefInitFunction(mlir::ModuleOp module, std::string globalName, MemRefType memrefType, 
                                   ConversionPatternRewriter &rewriter, Location location);
@@ -290,6 +308,70 @@ public:
 // global "UseSparseRepresentation"
 std::shared_ptr<IRepresentation> ConstructRepresentation();
 std::shared_ptr<IRepresentation> ConstructGPURepresentation();
+
+template<typename T>
+void createGlobalWithCorrectType(ConversionPatternRewriter &rewriter, Location location, const std::string& memrefName, mlir::MemRefType type, std::vector<T>&data);
+
+template<typename T>
+void createConstantGlobalOp(ConversionPatternRewriter &rewriter, Location location, const std::string& memrefName, mlir::MemRefType type, std::vector<T>&data)
+{
+  if (type.getElementType().isIndex()) {
+    if (sizeof(T) != sizeof(size_t)) {
+      return createGlobalWithCorrectType(rewriter, location, memrefName, type, data);
+    }
+  }
+  else if (type.getElementType().isIntOrFloat()) {
+    if (std::is_floating_point<T>::value && sizeof(T) * 8 != type.getElementTypeBitWidth()) {
+      return createGlobalWithCorrectType(rewriter, location, memrefName, type, data);
+    }
+    if (std::is_integral<T>::value && sizeof(T) * 8 != type.getElementTypeBitWidth()) {
+      return createGlobalWithCorrectType(rewriter, location, memrefName, type, data);
+    }
+  }
+  else {
+    assert(false && "Unsupported type");
+  }
+
+  mlir::ArrayRef<T> dataArrayRef(data.data(), data.size());
+  auto dataElementsAttribute = DenseElementsAttr::get(memref::getTensorTypeFromMemRefType(type), dataArrayRef);
+  rewriter.create<memref::GlobalOp>(location, memrefName, rewriter.getStringAttr("private"), type, dataElementsAttribute, true, IntegerAttr());
+}
+
+template<typename T>
+void createGlobalWithCorrectType(ConversionPatternRewriter &rewriter, Location location, const std::string& memrefName, mlir::MemRefType type, std::vector<T>&data)
+{
+  if(type.getElementType().isInteger(sizeof(int64_t) * 8)) {
+    std::vector<int64_t> int64Data(data.begin(), data.end());
+    createConstantGlobalOp<int64_t>(rewriter, location, memrefName, type, int64Data);
+  }
+  else if (type.getElementType().isInteger(sizeof(int32_t) * 8)) {
+    std::vector<int32_t> int32Data(data.begin(), data.end());
+    createConstantGlobalOp<int32_t>(rewriter, location, memrefName, type, int32Data);
+  }
+  else if (type.getElementType().isInteger(sizeof(int16_t) * 8)) {
+    std::vector<int16_t> int16Data(data.begin(), data.end());
+    createConstantGlobalOp<int16_t>(rewriter, location, memrefName, type, int16Data);
+  }
+  else if (type.getElementType().isInteger(sizeof(int8_t) * 8)) {
+    std::vector<int8_t> int8Data(data.begin(), data.end());
+    createConstantGlobalOp<int8_t>(rewriter, location, memrefName, type, int8Data);
+  }
+  else if (type.getElementType().isIndex()) {
+    std::vector<size_t> indexData(data.begin(), data.end());
+    createConstantGlobalOp<size_t>(rewriter, location, memrefName, type, indexData);
+  }
+  else if (type.getElementType().isF64()) {
+    std::vector<double> floatData(data.begin(), data.end());
+    createConstantGlobalOp<double>(rewriter, location, memrefName, type, floatData);
+  }
+  else if(type.getElementType().isF32()) {
+    std::vector<float> floatData(data.begin(), data.end());
+    createConstantGlobalOp<float>(rewriter, location, memrefName, type, floatData);
+  }
+  else {
+    assert(false && "Unsupported type");
+  }
+}
 
 } // decisionforest
 } // mlir

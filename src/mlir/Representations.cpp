@@ -1,3 +1,5 @@
+#include "DecisionForest.h"
+#include "TreeTilingUtils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -14,6 +16,12 @@
 #include "Logger.h"
 #include "OpLoweringUtils.h"
 #include "Representations.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributes.h"
+#include "TiledTree.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/Types.h"
+#include <cstdint>
 
 using namespace mlir;
 using namespace mlir::decisionforest::helpers;
@@ -291,39 +299,28 @@ mlir::LogicalResult ArrayBasedRepresentation::GenerateModelGlobals(Operation *op
 
     mlir::decisionforest::EnsembleConstantOp ensembleConstOp = llvm::dyn_cast<mlir::decisionforest::EnsembleConstantOp>(op);
     assert(ensembleConstOp);
-    assert(operands.size() == 0);
+    assert(operands.empty());
     if (!ensembleConstOp)
         return mlir::failure();
     
     auto location = op->getLoc();
     auto owningModule = op->getParentOfType<mlir::ModuleOp>();
     assert (owningModule);
-    
-    // TODO the names of the model and offset global should be generated so they're unique for each ensemble constant
-    // TODO the getter function names need to be persisted with the actual tree values in the JSON so the runtime can call them. 
-    std::string modelMemrefName = "model";
-    std::string offsetMemrefName = "offsets";
-    std::string lengthMemrefName = "lengths";
-    std::string classInfoMemrefName = "treeClassInfo";
-
 
     auto memrefTypes = AddGlobalMemrefs(
       owningModule,
       ensembleConstOp,
       rewriter,
-      location,
-      modelMemrefName,
-      offsetMemrefName,
-      lengthMemrefName,
-      classInfoMemrefName,
-      serializer);
+      location);
 
 
-    AddModelMemrefInitFunction(owningModule, modelMemrefName, memrefTypes.model.cast<MemRefType>(), rewriter, location);
-    auto getModelGlobal = rewriter.create<memref::GetGlobalOp>(location, memrefTypes.model, modelMemrefName);
-    auto getOffsetGlobal = rewriter.create<memref::GetGlobalOp>(location, memrefTypes.offset, offsetMemrefName);
-    auto getLengthGlobal = rewriter.create<memref::GetGlobalOp>(location, memrefTypes.offset, lengthMemrefName);
-    auto classInfoGlobal = rewriter.create<memref::GetGlobalOp>(location, memrefTypes.classInfo, classInfoMemrefName);
+    AddModelMemrefInitFunction(ensembleConstOp, owningModule, kModelMemrefName, memrefTypes.model.cast<MemRefType>(), rewriter, location);
+    auto getModelGlobal = rewriter.create<memref::GetGlobalOp>(location, memrefTypes.model, kModelMemrefName);
+    auto getOffsetGlobal = rewriter.create<memref::GetGlobalOp>(location, memrefTypes.offset, kOffsetMemrefName);
+    auto getLengthGlobal = rewriter.create<memref::GetGlobalOp>(location, memrefTypes.offset, kLengthMemrefName);
+    auto classInfoGlobal = ensembleConstOp.getForest().GetDecisionForest().IsMultiClassClassifier()
+                          ? rewriter.create<memref::GetGlobalOp>(location, memrefTypes.classInfo, kClassInfoMemrefName)
+                          : Value();
 
     EnsembleConstantLoweringInfo info 
     {
@@ -344,12 +341,7 @@ ArrayBasedRepresentation::GlobalMemrefTypes ArrayBasedRepresentation::AddGlobalM
   mlir::ModuleOp module,
   mlir::decisionforest::EnsembleConstantOp& ensembleConstOp,
   ConversionPatternRewriter &rewriter,
-  Location location,
-  const std::string& modelMemrefName,
-  const std::string& offsetMemrefName,
-  const std::string& lengthMemrefName,
-  const std::string& treeInfo,
-  std::shared_ptr<decisionforest::IModelSerializer> serializer) {
+  Location location) {
   mlir::decisionforest::DecisionForestAttribute forestAttribute = ensembleConstOp.getForest();
   mlir::decisionforest::DecisionForest& forest = forestAttribute.GetDecisionForest();
 
@@ -364,43 +356,83 @@ ArrayBasedRepresentation::GlobalMemrefTypes ArrayBasedRepresentation::AddGlobalM
   m_featureIndexType = treeType.getFeatureIndexType(); 
   auto tileSize = treeType.getTileSize();
   m_tileShapeType = treeType.getTileShapeType();
-  // assert (tileSize == 1);
   Type memrefElementType = decisionforest::TiledNumericalNodeType::get(m_thresholdType, m_featureIndexType, m_tileShapeType, tileSize);
   
   m_tileSize = tileSize;
-  serializer->Persist(forest, forestType);
   
-  auto modelMemrefSize = decisionforest::GetTotalNumberOfTiles();
+  std::vector<double> thresholds;
+  std::vector<int32_t> indices, tileShapeIDs, classIDs;
+  std::vector<int64_t> offsets, lengths;
+  int64_t currentOffset = 0;
+
+  if (tileSize > 1) {
+    for (size_t i = 0; i < forest.NumTrees(); i++) {
+      auto* tiledTree = forest.GetTree(i).GetTiledTree();
+      auto tiledTreeThresholds = tiledTree->SerializeThresholds();
+      auto tiledTreeIndices = tiledTree->SerializeFeatureIndices();
+      auto tiledTreeTileShapeIDs = tiledTree->SerializeTileShapeIDs();
+
+      thresholds.insert(thresholds.end(), tiledTreeThresholds.begin(), tiledTreeThresholds.end());
+      indices.insert(indices.end(), tiledTreeIndices.begin(), tiledTreeIndices.end());
+      tileShapeIDs.insert(tileShapeIDs.end(), tiledTreeTileShapeIDs.begin(), tiledTreeTileShapeIDs.end());
+
+      offsets.push_back(currentOffset);
+      lengths.push_back(tiledTree->GetNumberOfTiles());
+      currentOffset += tiledTree->GetNumberOfTiles();
+
+      if (forest.IsMultiClassClassifier()) {
+        classIDs.push_back(tiledTree->GetClassId());
+      }
+    }
+  }
+  else {
+    for (size_t i = 0; i < forest.NumTrees(); i++) {
+      auto& tree = forest.GetTree(i);
+      auto treeThresholds = tree.GetThresholdArray();
+      auto treeIndices = tree.GetFeatureIndexArray();
+
+      thresholds.insert(thresholds.end(), treeThresholds.begin(), treeThresholds.end());
+      indices.insert(indices.end(), treeIndices.begin(), treeIndices.end());
+
+      offsets.push_back(currentOffset);
+      lengths.push_back(tree.GetNumberOfTiles());
+      currentOffset += tree.GetNumberOfTiles();
+
+      if (forest.IsMultiClassClassifier()) {
+        classIDs.push_back(tree.GetClassId());
+      }
+    }
+  }
+
+  int64_t modelMemrefSize = currentOffset;
   auto modelMemrefType = MemRefType::get({modelMemrefSize}, memrefElementType);
-  rewriter.create<memref::GlobalOp>(location, modelMemrefName,
+  rewriter.create<memref::GlobalOp>(location, kModelMemrefName,
                                     /*sym_visibility=*/rewriter.getStringAttr("private"),
                                     /*type=*/modelMemrefType,
                                     /*initial_value=*/rewriter.getUnitAttr(),
                                     /*constant=*/false, IntegerAttr());
-  AddGlobalMemrefGetter(module, modelMemrefName, modelMemrefType, rewriter, location);
-  
+
+  auto thresholdArgType = MemRefType::get({ modelMemrefSize * tileSize }, m_thresholdType);
+  auto indexArgType = MemRefType::get({ modelMemrefSize * tileSize }, m_featureIndexType);
+  auto tileShapeIDArgType = MemRefType::get({modelMemrefSize}, m_tileShapeType);
+
+  createConstantGlobalOp(rewriter, location, kThresholdsMemrefName, thresholdArgType, thresholds);
+  createConstantGlobalOp(rewriter, location, kFeatureIndexMemrefName, indexArgType, indices);
+  if (tileSize > 1) {
+    createConstantGlobalOp(rewriter, location, kTileShapeMemrefName, tileShapeIDArgType, tileShapeIDs);
+  }
+
   auto offsetSize = (int32_t)forest.NumTrees();
   auto offsetMemrefType = MemRefType::get({offsetSize}, rewriter.getIndexType());
-  rewriter.create<memref::GlobalOp>(location, offsetMemrefName, rewriter.getStringAttr("private"),
-                                    offsetMemrefType, rewriter.getUnitAttr(), false, IntegerAttr());
-  AddGlobalMemrefGetter(module, offsetMemrefName, offsetMemrefType, rewriter, location);
+  createConstantGlobalOp(rewriter, location, kOffsetMemrefName, offsetMemrefType, offsets);
+  createConstantGlobalOp(rewriter, location, kLengthMemrefName, offsetMemrefType, lengths);
+
+
+  auto classInfoMemrefType = MemRefType::get({offsetSize}, treeType.getResultType());
+  if (forest.IsMultiClassClassifier()) {
+    createConstantGlobalOp(rewriter, location, kClassInfoMemrefName, classInfoMemrefType, classIDs);
+  }
   
-  rewriter.create<memref::GlobalOp>(location, lengthMemrefName, rewriter.getStringAttr("private"),
-                                    offsetMemrefType, rewriter.getUnitAttr(), false, IntegerAttr());
-  AddGlobalMemrefGetter(module, lengthMemrefName, offsetMemrefType, rewriter, location);
-
-  auto classInfoSize = forest.IsMultiClassClassifier() ? offsetSize : 0;
-  auto classInfoMemrefType = MemRefType::get({classInfoSize}, treeType.getResultType());
-  rewriter.create<memref::GlobalOp>(
-    location,
-    treeInfo,
-    rewriter.getStringAttr("public"),
-    classInfoMemrefType,
-    rewriter.getUnitAttr(),
-    false,
-    IntegerAttr());
-  AddGlobalMemrefGetter(module, treeInfo, classInfoMemrefType, rewriter, location);
-
   return GlobalMemrefTypes { modelMemrefType, offsetMemrefType, classInfoMemrefType };
 }
 
@@ -413,35 +445,35 @@ void ArrayBasedRepresentation::GenModelMemrefInitFunctionBody(MemRefType memrefT
   // index = tileSize * tileIndex
   auto tileSizeConst = builder.create<arith::ConstantIndexOp>(location, tileSize);
   auto tileSizeTimesi = builder.create<arith::MulIOp>(location, tileIndex, tileSizeConst);
-  
-  if (tileSize > 1) {
-    auto thresholdVec = CreateZeroVectorFPConst(builder, location, modelMemrefElementType.getThresholdElementType(), tileSize);
-    auto indexVec = CreateZeroVectorIntConst(builder, location, modelMemrefElementType.getIndexElementType(), tileSize);
+
+    if (tileSize > 1) {
+      auto thresholdVec = CreateZeroVectorFPConst(builder, location, modelMemrefElementType.getThresholdElementType(), tileSize);
+      auto indexVec = CreateZeroVectorIntConst(builder, location, modelMemrefElementType.getIndexElementType(), tileSize);
 
     // Load from index to index + (tileSize - 1) into a vector
     for (int32_t j = 0 ; j<tileSize ; ++j) {
       auto offset = builder.create<arith::ConstantIndexOp>(location, j);
       auto index =  builder.create<arith::AddIOp>(location, tileSizeTimesi, offset);
       auto thresholdVal = builder.create<memref::LoadOp>(location, thresholdMemref, static_cast<Value>(index));
-      auto jConst = builder.create<arith::ConstantIntOp>(location, j, builder.getI32Type());
-      thresholdVec = builder.create<vector::InsertElementOp>(location, thresholdVal, thresholdVec, jConst);
+        auto jConst = builder.create<arith::ConstantIntOp>(location, j, builder.getI32Type());
+        thresholdVec = builder.create<vector::InsertElementOp>(location, thresholdVal, thresholdVec, jConst);
       auto indexVal = builder.create<memref::LoadOp>(location, indexMemref, static_cast<Value>(index));
-      indexVec = builder.create<vector::InsertElementOp>(location, indexVal, indexVec, jConst);
-    }
+        indexVec = builder.create<vector::InsertElementOp>(location, indexVal, indexVec, jConst);
+      }
     auto tileShapeID = builder.create<memref::LoadOp>(location, tileShapeIdMemref, tileIndex);
-    builder.create<decisionforest::InitTileOp>(location, getGlobalMemref, tileIndex, thresholdVec, indexVec, tileShapeID);
-  }
-  else {
+      builder.create<decisionforest::InitTileOp>(location, getGlobalMemref, tileIndex, thresholdVec, indexVec, tileShapeID);
+    }
+    else {
     // Load from index to index + (tileSize - 1) into a vector
     auto thresholdVal = builder.create<memref::LoadOp>(location, thresholdMemref, static_cast<Value>(tileIndex));
     auto indexVal = builder.create<memref::LoadOp>(location, indexMemref, static_cast<Value>(tileIndex));
-    // TODO check how tileShapeID vector is created when tileSize = 1
-    auto tileShapeID = builder.create<arith::ConstantIntOp>(location, 0, builder.getI32Type());
-    builder.create<decisionforest::InitTileOp>(location, getGlobalMemref, tileIndex, thresholdVal, indexVal, tileShapeID);
+      // TODO check how tileShapeID vector is created when tileSize = 1
+      auto tileShapeID = builder.create<arith::ConstantIntOp>(location, 0, builder.getI32Type());
+      builder.create<decisionforest::InitTileOp>(location, getGlobalMemref, tileIndex, thresholdVal, indexVal, tileShapeID);
   }
 }
 
-void ArrayBasedRepresentation::AddModelMemrefInitFunction(mlir::ModuleOp module, std::string globalName, MemRefType memrefType, 
+void ArrayBasedRepresentation::AddModelMemrefInitFunction(mlir::decisionforest::EnsembleConstantOp& ensembleConstOp, mlir::ModuleOp module, std::string globalName, MemRefType memrefType, 
                                                           ConversionPatternRewriter &rewriter, Location location) {
   assert (memrefType.getShape().size() == 1);
   SaveAndRestoreInsertionPoint saveAndRestoreEntryPoint(rewriter);
@@ -450,15 +482,21 @@ void ArrayBasedRepresentation::AddModelMemrefInitFunction(mlir::ModuleOp module,
   auto thresholdArgType = MemRefType::get({ memrefType.getShape()[0] * tileSize }, modelMemrefElementType.getThresholdElementType());
   auto indexArgType = MemRefType::get({ memrefType.getShape()[0] * tileSize }, modelMemrefElementType.getIndexElementType());
   auto tileShapeIDArgType = MemRefType::get(memrefType.getShape(), modelMemrefElementType.getTileShapeType());
-  auto getMemrefFuncType = rewriter.getFunctionType(TypeRange{thresholdArgType, indexArgType, tileShapeIDArgType}, rewriter.getI32Type());
+  auto getMemrefFuncType = rewriter.getFunctionType({}, rewriter.getI32Type());
   std::string funcName = "Init_" + globalName;
   NamedAttribute visibilityAttribute{module.getSymVisibilityAttrName(), rewriter.getStringAttr("public")};
   auto initModelMemrefFunc = mlir::func::FuncOp::create(location, funcName, getMemrefFuncType, ArrayRef<NamedAttribute>(visibilityAttribute));
   auto &entryBlock = *initModelMemrefFunc.addEntryBlock();
   rewriter.setInsertionPointToStart(&entryBlock);
-
+  
   // for tileIndex = 0 : len
   auto getGlobalMemref = rewriter.create<memref::GetGlobalOp>(location, memrefType, globalName);
+
+  auto thresholdValueMemref = rewriter.create<memref::GetGlobalOp>(location, thresholdArgType, kThresholdsMemrefName);
+  auto indexValueMemref = rewriter.create<memref::GetGlobalOp>(location, indexArgType, kFeatureIndexMemrefName);
+  Value tileShapeIDMemref;
+  if (tileSize > 1)
+    tileShapeIDMemref = rewriter.create<memref::GetGlobalOp>(location, tileShapeIDArgType, kTileShapeMemrefName);
 
   auto zeroIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
   auto oneIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 1);
@@ -468,7 +506,7 @@ void ArrayBasedRepresentation::AddModelMemrefInitFunction(mlir::ModuleOp module,
   rewriter.setInsertionPointToStart(forLoop.getBody());
 
   GenModelMemrefInitFunctionBody(memrefType, getGlobalMemref, rewriter, location, tileIndex, 
-                                entryBlock.getArgument(0), entryBlock.getArgument(1), entryBlock.getArgument(2));
+                                thresholdValueMemref, indexValueMemref, tileShapeIDMemref);
 
   rewriter.setInsertionPointAfter(forLoop);
   
@@ -655,10 +693,10 @@ void SparseRepresentation::InitRepresentation() {
 }
 
 mlir::LogicalResult SparseRepresentation::GenerateModelGlobals(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter,
-                                                               std::shared_ptr<decisionforest::IModelSerializer> m_serializer) {
+                                                               std::shared_ptr<decisionforest::IModelSerializer> serializer) {
     mlir::decisionforest::EnsembleConstantOp ensembleConstOp = llvm::dyn_cast<mlir::decisionforest::EnsembleConstantOp>(op);
     assert(ensembleConstOp);
-    assert(operands.size() == 0);
+    assert(operands.empty());
     if (!ensembleConstOp)
         return mlir::failure();
     
@@ -666,28 +704,19 @@ mlir::LogicalResult SparseRepresentation::GenerateModelGlobals(Operation *op, Ar
     auto owningModule = op->getParentOfType<mlir::ModuleOp>();
     assert (owningModule);
     
-    // TODO the names of the model and offset global should be generated so they're unique for each ensemble constant
-    // TODO the getter function names need to be persisted with the actual tree values in the JSON so the runtime can call them. 
-    std::string modelMemrefName = "model";
-    std::string offsetMemrefName = "offsets";
-    std::string lengthMemrefName = "lengths";
-    std::string leavesMemrefName = "leaves";
-    std::string leavesLengthMemrefName = "leavesLengths";
-    std::string leavesOffsetMemrefName = "leavesOffsets";
-    std::string classInfoMemrefName = "treeClassInfo";
-
-    auto memrefTypes = AddGlobalMemrefs(owningModule, ensembleConstOp, rewriter, location, modelMemrefName, offsetMemrefName, lengthMemrefName, 
-                                        leavesMemrefName, leavesLengthMemrefName, leavesOffsetMemrefName, classInfoMemrefName, m_serializer);
-    AddModelMemrefInitFunction(owningModule, modelMemrefName, std::get<0>(memrefTypes).cast<MemRefType>(), rewriter, location);
+    auto memrefTypes = AddGlobalMemrefs(owningModule, ensembleConstOp, rewriter, location);
+    AddModelMemrefInitFunction(owningModule, kModelMemrefName, std::get<0>(memrefTypes).cast<MemRefType>(), rewriter, location);
     
     // Add getters for all the globals we've created
-    auto getModelGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<0>(memrefTypes), modelMemrefName);
-    auto getOffsetGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<1>(memrefTypes), offsetMemrefName);
-    auto getLengthGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<1>(memrefTypes), lengthMemrefName);
-    auto getLeavesGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<2>(memrefTypes), leavesMemrefName);
-    auto getLeavesOffsetGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<1>(memrefTypes), leavesOffsetMemrefName);
-    auto getLeavesLengthGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<1>(memrefTypes), leavesLengthMemrefName);
-    auto classInfoGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<3>(memrefTypes), classInfoMemrefName);
+    auto getModelGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<0>(memrefTypes), kModelMemrefName);
+    auto getOffsetGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<1>(memrefTypes), kOffsetMemrefName);
+    auto getLengthGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<1>(memrefTypes), kLengthMemrefName);
+    auto getLeavesGlobal = rewriter.create<memref::GetGlobalOp>(location, std::get<2>(memrefTypes), kLeavesMemrefName);
+    auto getLeavesOffsetGlobal = m_tileSize > 1 ? rewriter.create<memref::GetGlobalOp>(location, std::get<1>(memrefTypes), kLeavesOffsetMemrefName) : Value();
+    auto getLeavesLengthGlobal = m_tileSize > 1 ? rewriter.create<memref::GetGlobalOp>(location, std::get<1>(memrefTypes), kLeavesLengthMemrefName) : Value();
+    auto classInfoGlobal = ensembleConstOp.getForest().GetDecisionForest().IsMultiClassClassifier() 
+                          ? rewriter.create<memref::GetGlobalOp>(location, std::get<3>(memrefTypes), kClassInfoMemrefName)
+                          : Value();
     
     Type lookUpTableMemrefType;
     Value getLUT;
@@ -702,11 +731,7 @@ mlir::LogicalResult SparseRepresentation::GenerateModelGlobals(Operation *op, Ar
 }
 
 std::tuple<Type, Type, Type, Type> SparseRepresentation::AddGlobalMemrefs(mlir::ModuleOp module, mlir::decisionforest::EnsembleConstantOp& ensembleConstOp,
-                                        ConversionPatternRewriter &rewriter, Location location,
-                                        const std::string& modelMemrefName, const std::string& offsetMemrefName, const std::string& lengthMemrefName,
-                                        const std::string& leavesMemrefName, const std::string& leavesLengthMemrefName,
-                                        const std::string& leavesOffsetMemrefName, const std::string& treeInfo,
-                                        std::shared_ptr<IModelSerializer> serializer) {
+                                        ConversionPatternRewriter &rewriter, Location location) {
   mlir::decisionforest::DecisionForestAttribute forestAttribute = ensembleConstOp.getForest();
   mlir::decisionforest::DecisionForest& forest = forestAttribute.GetDecisionForest();
 
@@ -722,62 +747,106 @@ std::tuple<Type, Type, Type, Type> SparseRepresentation::AddGlobalMemrefs(mlir::
   m_tileSize = treeType.getTileSize();
   m_tileShapeType = treeType.getTileShapeType();
   auto childIndexType = treeType.getChildIndexType();
-  // assert (tileSize == 1);
   Type memrefElementType = decisionforest::TiledNumericalNodeType::get(m_thresholdType, m_featureIndexType, m_tileShapeType, 
                                                                        m_tileSize, childIndexType);
-  serializer->Persist(forest, forestType);
-  
-  auto modelMemrefSize = decisionforest::GetTotalNumberOfTiles();
+
+  std::vector<double> thresholds, leaves;
+  std::vector<int32_t> indices, tileShapeIDs, childIndices;
+  std::vector<int64_t> offsets, lengths, leafOffsets, leafLengths;
+  int64_t currentOffset = 0, currentLeafOffset = 0;
+  std::vector<int32_t> classIds;
+
+  if (m_tileSize > 1) {
+    for (size_t i = 0; i < forest.NumTrees(); i++) {
+      std::vector<double> tiledThresholds, tiledLeaves;
+      std::vector<int32_t> tiledFeatureIndices, tiledTreeShapeIDs, tiledTreechildIndices;
+      
+      auto* tiledTree = forest.GetTree(i).GetTiledTree();
+      tiledTree->GetSparseSerialization(tiledThresholds, tiledFeatureIndices, tiledTreeShapeIDs, tiledTreechildIndices, tiledLeaves);
+      
+      thresholds.insert(thresholds.end(), tiledThresholds.begin(), tiledThresholds.end());
+      indices.insert(indices.end(), tiledFeatureIndices.begin(), tiledFeatureIndices.end());
+      tileShapeIDs.insert(tileShapeIDs.end(), tiledTreeShapeIDs.begin(), tiledTreeShapeIDs.end());
+      childIndices.insert(childIndices.end(), tiledTreechildIndices.begin(), tiledTreechildIndices.end());
+      leaves.insert(leaves.end(), tiledLeaves.begin(), tiledLeaves.end());
+
+      offsets.push_back(currentOffset);
+      lengths.push_back(tiledTreeShapeIDs.size());
+      currentOffset += tiledTreeShapeIDs.size();
+
+      leafOffsets.push_back(currentLeafOffset);
+      leafLengths.push_back(tiledLeaves.size());
+      currentLeafOffset += tiledLeaves.size();
+
+      if (forest.IsMultiClassClassifier()) {
+        classIds.push_back(tiledTree->GetClassId());
+      }
+    }
+  }
+  else {
+    for (size_t i = 0; i < forest.NumTrees(); i++) {
+      auto& tree = forest.GetTree(i);
+      auto treeThresholds = tree.GetSparseThresholdArray();
+      auto treeIndices = tree.GetSparseFeatureIndexArray();
+      auto treeChildIndices = tree.GetChildIndexArray();
+
+      thresholds.insert(thresholds.end(), treeThresholds.begin(), treeThresholds.end());
+      indices.insert(indices.end(), treeIndices.begin(), treeIndices.end());
+      childIndices.insert(childIndices.end(), treeChildIndices.begin(), treeChildIndices.end());
+
+      offsets.push_back(currentOffset);
+      lengths.push_back(treeChildIndices.size());
+      currentOffset += treeChildIndices.size();
+      
+      if (forest.IsMultiClassClassifier()) {
+        classIds.push_back(tree.GetClassId());
+      }
+    }
+  }
+
+  int64_t modelMemrefSize = currentOffset;
   auto modelMemrefType = MemRefType::get({modelMemrefSize}, memrefElementType);
-  rewriter.create<memref::GlobalOp>(location, modelMemrefName,
+  rewriter.create<memref::GlobalOp>(location, kModelMemrefName,
                                     /*sym_visibility=*/rewriter.getStringAttr("private"),
                                     /*type=*/modelMemrefType,
                                     /*initial_value=*/rewriter.getUnitAttr(),
                                     /*constant=*/false, IntegerAttr());
-  AddGlobalMemrefGetter(module, modelMemrefName, modelMemrefType, rewriter, location);
-  
-  // Create offset memref
+
+  auto thresholdArgType = MemRefType::get({ modelMemrefSize * m_tileSize }, m_thresholdType);
+  auto indexArgType = MemRefType::get({ modelMemrefSize * m_tileSize }, m_featureIndexType);
+  auto tileShapeIDArgType = MemRefType::get({modelMemrefSize}, m_tileShapeType);
+  auto childrenIndexArgType = MemRefType::get({modelMemrefSize}, childIndexType);
+
+  createConstantGlobalOp(rewriter, location, kThresholdsMemrefName, thresholdArgType, thresholds);
+  createConstantGlobalOp(rewriter, location, kFeatureIndexMemrefName, indexArgType, indices);
+  createConstantGlobalOp(rewriter, location, kChildIndexMemrefName, childrenIndexArgType, childIndices);
+  if (m_tileSize > 1) {
+    createConstantGlobalOp(rewriter, location, kTileShapeMemrefName, tileShapeIDArgType, tileShapeIDs);
+  }
+
+  auto leavesMemrefSize = leaves.size();
+  auto leavesMemrefType = MemRefType::get({(int64_t)leavesMemrefSize}, m_thresholdType);
+  createConstantGlobalOp(rewriter, location, kLeavesMemrefName, leavesMemrefType, leaves);
+
   auto offsetSize = (int32_t)forest.NumTrees();
   auto offsetMemrefType = MemRefType::get({offsetSize}, rewriter.getIndexType());
-  rewriter.create<memref::GlobalOp>(location, offsetMemrefName, rewriter.getStringAttr("private"),
-                                    offsetMemrefType, rewriter.getUnitAttr(), false, IntegerAttr());
-  AddGlobalMemrefGetter(module, offsetMemrefName, offsetMemrefType, rewriter, location);
-  
-  // Create length memref
-  rewriter.create<memref::GlobalOp>(location, lengthMemrefName, rewriter.getStringAttr("private"),
-                                    offsetMemrefType, rewriter.getUnitAttr(), false, IntegerAttr());
-  AddGlobalMemrefGetter(module, lengthMemrefName, offsetMemrefType, rewriter, location);
+  createConstantGlobalOp(rewriter, location, kOffsetMemrefName, offsetMemrefType, offsets);
+  createConstantGlobalOp(rewriter, location, kLengthMemrefName, offsetMemrefType, lengths);
 
-  auto leavesMemrefSize = decisionforest::GetTotalNumberOfLeaves();
-  auto leavesMemrefType = MemRefType::get({leavesMemrefSize}, m_thresholdType);
-  rewriter.create<memref::GlobalOp>(location, leavesMemrefName, rewriter.getStringAttr("private"),
-                                    leavesMemrefType, rewriter.getUnitAttr(), false, IntegerAttr());
-  AddGlobalMemrefGetter(module, leavesMemrefName, leavesMemrefType, rewriter, location);
-  
   if (TreeBeard::Logging::loggingOptions.logGenCodeStats)
       TreeBeard::Logging::Log("Leaves memref size : " + std::to_string(leavesMemrefSize * (m_thresholdType.getIntOrFloatBitWidth()/8)));
 
-  // Create leaf offset memref
-  rewriter.create<memref::GlobalOp>(location, leavesOffsetMemrefName, rewriter.getStringAttr("private"),
-                                    offsetMemrefType, rewriter.getUnitAttr(), false, IntegerAttr());
-  AddGlobalMemrefGetter(module, leavesOffsetMemrefName, offsetMemrefType, rewriter, location);
+  if (m_tileSize > 1)
+  {
+    createConstantGlobalOp(rewriter, location, kLeavesOffsetMemrefName, offsetMemrefType, leafOffsets);
+    createConstantGlobalOp(rewriter, location, kLeavesLengthMemrefName, offsetMemrefType, leafLengths);
+  }
 
-  // Create leaf length memref
-  rewriter.create<memref::GlobalOp>(location, leavesLengthMemrefName, rewriter.getStringAttr("private"),
-                                    offsetMemrefType, rewriter.getUnitAttr(), false, IntegerAttr());
-  AddGlobalMemrefGetter(module, leavesLengthMemrefName, offsetMemrefType, rewriter, location);
-
-  auto classInfoSize = forest.IsMultiClassClassifier() ? offsetSize : 0;
-  auto classInfoMemrefType = MemRefType::get({classInfoSize}, treeType.getResultType());
-  rewriter.create<memref::GlobalOp>(
-    location,
-    treeInfo,
-    rewriter.getStringAttr("public"),
-    classInfoMemrefType,
-    rewriter.getUnitAttr(),
-    false,
-    IntegerAttr());
-  AddGlobalMemrefGetter(module, treeInfo, classInfoMemrefType, rewriter, location);
+  auto classInfoMemrefType = MemRefType::get({offsetSize}, treeType.getResultType());
+  if (forest.IsMultiClassClassifier())
+  {
+      createConstantGlobalOp(rewriter, location, kClassInfoMemrefName, classInfoMemrefType, classIds);
+  }
 
   return std::make_tuple(modelMemrefType, offsetMemrefType, leavesMemrefType, classInfoMemrefType);
 }
@@ -833,10 +902,7 @@ void SparseRepresentation::AddModelMemrefInitFunction(mlir::ModuleOp module, std
   auto tileShapeIDArgType = MemRefType::get(memrefType.getShape(), modelMemrefElementType.getTileShapeType());
   auto childrenIndexArgType = MemRefType::get(memrefType.getShape(), modelMemrefElementType.getChildIndexType());
   mlir::FunctionType initMemrefFuncType;
-  initMemrefFuncType = rewriter.getFunctionType(TypeRange{thresholdArgType, 
-                                                          indexArgType, tileShapeIDArgType, 
-                                                          childrenIndexArgType},
-                                                rewriter.getI32Type());
+  initMemrefFuncType = rewriter.getFunctionType({}, rewriter.getI32Type());
   std::string funcName = "Init_" + globalName;
   NamedAttribute visibilityAttribute{module.getSymVisibilityAttrName(), rewriter.getStringAttr("public")};
   auto initModelMemrefFunc = mlir::func::FuncOp::create(location, funcName, initMemrefFuncType, ArrayRef<NamedAttribute>(visibilityAttribute));
@@ -845,6 +911,14 @@ void SparseRepresentation::AddModelMemrefInitFunction(mlir::ModuleOp module, std
 
   // for tileIndex = 0 : len
   auto getGlobalMemref = rewriter.create<memref::GetGlobalOp>(location, memrefType, globalName);
+  auto thresholdValueMemref = rewriter.create<memref::GetGlobalOp>(location, thresholdArgType, kThresholdsMemrefName);
+  auto indexValueMemref = rewriter.create<memref::GetGlobalOp>(location, indexArgType, kFeatureIndexMemrefName);
+  auto childIndexMemref = rewriter.create<memref::GetGlobalOp>(location, childrenIndexArgType, kChildIndexMemrefName);
+  Value tileShapeIDMemref;
+  if (tileSize > 1)
+    tileShapeIDMemref = rewriter.create<memref::GetGlobalOp>(location, tileShapeIDArgType, kTileShapeMemrefName);
+
+
   auto zeroIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
   auto oneIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 1);
   auto lenIndexConst = rewriter.create<arith::ConstantIndexOp>(location, memrefType.getShape()[0]);
@@ -853,10 +927,10 @@ void SparseRepresentation::AddModelMemrefInitFunction(mlir::ModuleOp module, std
   rewriter.setInsertionPointToStart(forLoop.getBody());
   GenModelMemrefInitFunctionBody(memrefType, getGlobalMemref, 
                                  rewriter, location, tileIndex,
-                                 initModelMemrefFunc.getArgument(0),
-                                 initModelMemrefFunc.getArgument(1),
-                                 initModelMemrefFunc.getArgument(2),
-                                 initModelMemrefFunc.getArgument(3));
+                                 thresholdValueMemref,
+                                 indexValueMemref,
+                                 tileShapeIDMemref,
+                                 childIndexMemref);
   rewriter.setInsertionPointAfter(forLoop);
   
   auto modelSize = rewriter.create<decisionforest::GetModelMemrefSizeOp>(location, rewriter.getI32Type(), getGlobalMemref, lenIndexConst);

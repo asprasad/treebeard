@@ -1,5 +1,6 @@
 #include <iostream>
 #include <memory>
+#include <vector>
 #include "Dialect.h"
 // #include "Passes.h"
 
@@ -159,13 +160,9 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     // TODO We may need to implement something smarter here. We don't really need I8's for each outcome. We could store all outcomes
     // in a single int64 for tile size 4 for example (each entry needs 3 bits and there are 16 entries -- one for each outcome). 
     auto lutMemrefType = MemRefType::get({numberOfTileShapes, numberOfTileOutcomes}, rewriter.getI8Type());
-
-    rewriter.create<memref::GlobalOp>(location, lookupTableMemrefName,
-                                      /*sym_visibility=*/rewriter.getStringAttr("private"),
-                                      /*type=*/lutMemrefType,
-                                      /*initial_value=*/rewriter.getUnitAttr(),
-                                      /*constant=*/false, IntegerAttr());
-    AddGlobalMemrefGetter(module, lookupTableMemrefName, lutMemrefType, rewriter, location);
+    std::vector<int8_t> lutData(numberOfTileShapes * numberOfTileOutcomes);
+    mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLookUpTable(lutData.data(), tileSize, /*entryBitWidth*/8);
+    mlir::decisionforest::createConstantGlobalOp(rewriter, location, lookupTableMemrefName, lutMemrefType, lutData);
 
     return lutMemrefType;
   }
