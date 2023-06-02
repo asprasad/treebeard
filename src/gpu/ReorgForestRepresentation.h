@@ -98,7 +98,26 @@ protected:
   mlir::Value m_classInfoMemref;
 
   int32_t m_numTrees=-1;
+  struct CacheGlobalValues {
+    Value thresholdCache;
+    Value featureIndexCache;
+  };
+  CacheGlobalValues AddTreeCacheGlobals(ConversionPatternRewriter &rewriter, Operation* op, int32_t bufferLen);
 
+  struct TreeCacheInfo {
+    Value thresholdMemref;
+    Value featureIndexMemref;
+    int64_t numCachedTrees;
+  };
+  std::map<Operation*, TreeCacheInfo> m_treeCacheMap;
+
+  struct GetTreeInfo {
+    Value correctedIndex;
+  };
+  std::map<Operation*, GetTreeInfo> m_getTreeFromEnsembleMap;
+  // Map the defining operation of the tree index to the number of trees in the buffer 
+  // with that tree
+  std::map<Operation*, int32_t> m_numTreesMap; 
 public:
   ~ReorgForestRepresentation() { }
   void InitRepresentation() override { }
@@ -114,7 +133,7 @@ public:
                                               mlir::Value nodeIndex) override { return std::vector<mlir::Value>(); }
   mlir::Value GenerateMoveToChild(mlir::Location location, ConversionPatternRewriter &rewriter, mlir::Value nodeIndex, 
                                   mlir::Value childNumber, int32_t tileSize, std::vector<mlir::Value>& extraLoads) override;
-  void GenerateTreeMemref(mlir::ConversionPatternRewriter &rewriter, mlir::Operation *op, Value ensemble, Value treeIndex) override { }
+  void GenerateTreeMemref(mlir::ConversionPatternRewriter &rewriter, mlir::Operation *op, Value ensemble, Value treeIndex) override;
   mlir::Value GenerateGetTreeClassId(mlir::ConversionPatternRewriter &rewriter, mlir::Operation *op, Value ensemble, Value treeIndex) override;
   mlir::Value GenerateGetLeafValueOp(ConversionPatternRewriter &rewriter, mlir::Operation *op, mlir::Value treeValue, 
                                      mlir::Value nodeIndex) override;
@@ -134,8 +153,10 @@ public:
   // supports scalar code generation. Returning a default Type
   // object so that anyone trying to use it crashes.
   mlir::Type GetTileShapeType() override {
+    assert (false && "Unimplemented function ReorgForestRepresentation::GetTileShapeType()");
     return mlir::Type();
   }
+  mlir::Value GetTreeIndex(Value tree) override;
 
   void AddTypeConversions(mlir::MLIRContext& context, LLVMTypeConverter& typeConverter) override { }
   void AddLLVMConversionPatterns(LLVMTypeConverter &converter, RewritePatternSet &patterns) override;
@@ -143,11 +164,12 @@ public:
   void LowerCacheTreeOp(ConversionPatternRewriter &rewriter, 
                         mlir::Operation *op,
                         ArrayRef<Value> operands,
-                        std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override { assert(false); }
+                        std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override;
 
   void LowerCacheRowsOp(ConversionPatternRewriter &rewriter,
                         mlir::Operation *op,
                         ArrayRef<Value> operands) override;
+  int32_t GetNumberOfTrees(Value treeIndex);
 };
 
 }

@@ -547,7 +547,7 @@ mlir::Value ArrayBasedRepresentation::GenerateGetLeafValueOp(ConversionPatternRe
   // Load threshold
   // TODO Ideally, this should be a different op for when we deal with tile sizes != 1. We will then need to load 
   // a single threshold value and cast it the trees return type
-  Value treeIndex = GetTreeIndexValue(treeValue);
+  Value treeIndex = GetTreeIndex(treeValue);
   auto loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, 
                                                                                thresholdType,
                                                                                treeMemref,
@@ -574,7 +574,7 @@ mlir::Value ArrayBasedRepresentation::GenerateIsLeafOp(ConversionPatternRewriter
 
   auto treeTileType = treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
   auto featureIndexType = treeTileType.getIndexFieldType();
-  auto treeIndex = GetTreeIndexValue(treeValue);
+  auto treeIndex = GetTreeIndex(treeValue);
   auto loadFeatureIndexOp = rewriter.create<decisionforest::LoadTileFeatureIndicesOp>(location, 
                                                                                       featureIndexType,
                                                                                       treeMemref,
@@ -632,6 +632,10 @@ void ArrayBasedRepresentation::LowerCacheRowsOp(ConversionPatternRewriter &rewri
                                                 mlir::Operation *op,
                                                 ArrayRef<Value> operands) {
   LowerCacheRowsOpToCPU(rewriter, op, operands);
+}
+
+mlir::Value ArrayBasedRepresentation::GetTreeIndex(Value tree) {
+  return ::GetTreeIndexValue(tree);
 }
 
 std::shared_ptr<IRepresentation> constructArrayBasedRepresentation() {
@@ -967,7 +971,7 @@ mlir::Value SparseRepresentation::GenerateGetLeafValueOp(ConversionPatternRewrit
   }
 
   if (treeTileType.getTileSize() == 1) {
-    Value treeIndex = GetTreeIndexValue(treeValue);
+    Value treeIndex = GetTreeIndex(treeValue);
     auto loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, 
                                                                                  thresholdType,
                                                                                  treeMemref,
@@ -998,7 +1002,7 @@ mlir::Value SparseRepresentation::GenerateIsLeafOp(ConversionPatternRewriter &re
   if (treeTileType.getTileSize() == 1) {
     auto treeTileType = treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
     auto featureIndexType = treeTileType.getIndexFieldType();
-    auto treeIndex = GetTreeIndexValue(treeValue);
+    auto treeIndex = GetTreeIndex(treeValue);
     auto loadFeatureIndexOp = rewriter.create<decisionforest::LoadTileFeatureIndicesOp>(location, 
                                                                                         featureIndexType,
                                                                                         treeMemref,
@@ -1073,6 +1077,10 @@ void SparseRepresentation::AddLLVMConversionPatterns(LLVMTypeConverter &converte
                LoadChildIndexOpLowering,
                InitSparseTileOpLowering,
                GetModelMemrefSizeOpLowering>(converter);
+}
+
+mlir::Value SparseRepresentation::GetTreeIndex(Value tree) {
+  return ::GetTreeIndexValue(tree);
 }
 
 void SparseRepresentation::LowerCacheRowsOp(ConversionPatternRewriter &rewriter,

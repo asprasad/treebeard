@@ -89,7 +89,7 @@ namespace decisionforest
             if (decisionforest::InsertDebugHelpers) {
               rewriter.create<decisionforest::PrintTreeNodeOp>(location, m_nodeIndex);
             }
-            Value treeIndex = GetTreeIndexValue(m_tree);
+            Value treeIndex = m_representation->GetTreeIndex(m_tree);
             m_loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location,
                                                                                       thresholdType, 
                                                                                       m_representation->GetThresholdsMemref(m_tree),
@@ -100,7 +100,7 @@ namespace decisionforest
           break;
         case kLoadFeatureIndex:
           {
-            Value treeIndex = GetTreeIndexValue(m_tree);
+            Value treeIndex = m_representation->GetTreeIndex(m_tree);
             m_loadFeatureIndexOp = rewriter.create<decisionforest::LoadTileFeatureIndicesOp>(location,
                                                                                              featureIndexType,
                                                                                              m_representation->GetFeatureIndexMemref(m_tree),
@@ -220,7 +220,7 @@ namespace decisionforest
               rewriter.create<decisionforest::PrintTreeNodeOp>(location, m_nodeIndex);
             }
             // Load threshold
-            Value treeIndex = GetTreeIndexValue(m_tree);
+            Value treeIndex = m_representation->GetTreeIndex(m_tree);
             m_loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, 
                                                                                       m_thresholdVectorType,
                                                                                       m_representation->GetThresholdsMemref(m_tree),
@@ -239,7 +239,7 @@ namespace decisionforest
           break;
         case kLoadFeatureIndex:
           {
-            Value treeIndex = GetTreeIndexValue(m_tree);
+            Value treeIndex = m_representation->GetTreeIndex(m_tree);
             m_loadFeatureIndexOp = rewriter.create<decisionforest::LoadTileFeatureIndicesOp>(location, 
                                                                                              m_featureIndexVectorType,
                                                                                              m_representation->GetFeatureIndexMemref(m_tree),
@@ -259,7 +259,7 @@ namespace decisionforest
           break;
         case kLoadTileShape:
           {
-            Value treeIndex = GetTreeIndexValue(m_tree);
+            Value treeIndex = m_representation->GetTreeIndex(m_tree);
             auto loadTileShapeOp = rewriter.create<decisionforest::LoadTileShapeOp>(location, 
                                                                                     m_tileShapeType,
                                                                                     m_representation->GetTileShapeMemref(m_tree),

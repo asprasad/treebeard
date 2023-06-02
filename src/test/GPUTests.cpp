@@ -886,13 +886,14 @@ bool Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize_AnyRep(TestArgs_t& args,
 
   mlir::decisionforest::ConvertParallelLoopsToGPU(context, module);
   // module->dump();
-  //return true;
+  // return true;
   
   mlir::decisionforest::LowerEnsembleToMemrefs(context,
                                                module,
                                                serializer,
                                                representation);
   // module->dump();
+  // return true;
   
   mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();
@@ -932,15 +933,18 @@ template<typename ThresholdType, typename IndexType>
 bool Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize(TestArgs_t& args, 
                                                      const int32_t batchSize,
                                                      ForestConstructor_t forestConstructor,
+                                                     std::string rep = "gpu_array",
                                                      int32_t childIndexBitWidth=1) {
 
   auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
+  auto serializer = decisionforest::ModelSerializerFactory::Get().GetModelSerializer(rep, modelGlobalsJSONPath);
+  auto representation = decisionforest::RepresentationFactory::Get().GetRepresentation(rep);
   std::function<void(decisionforest::Schedule&)> scheduleManipulator = std::bind(TahoeSharedForestStrategy, std::placeholders::_1, 8);
   return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize_AnyRep<ThresholdType, IndexType>(args, 
                                                                                           batchSize,
                                                                                           forestConstructor,
-                                                                                          decisionforest::ConstructGPUModelSerializer(modelGlobalsJSONPath),
-                                                                                          decisionforest::ConstructGPURepresentation(),
+                                                                                          serializer,
+                                                                                          representation,
                                                                                           childIndexBitWidth,
                                                                                           scheduleManipulator);
 }
@@ -994,6 +998,15 @@ bool Test_GPUCodeGeneration_Covtype_SparseRep_DoubleInt32_BatchSize32(TestArgs_t
 bool Test_GPUCodeGeneration_Covtype_ReorgRep_DoubleInt32_BatchSize32(TestArgs_t& args) {
   return Test_GPUCodeGeneration_XGBoostModel_VariableBatchSize<float, int8_t, int32_t>(args, 32, "covtype_xgb_model_save.json", "gpu_reorg");
 }
+
+bool Test_SimpleSharedMem_LeftHeavy_ReorgRep(TestArgs_t& args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<double, int32_t>(args, 32, AddLeftHeavyTree<DoubleInt32Tile>, "gpu_reorg");
+}
+
+bool Test_SimpleSharedMem_LeftRightAndBalanced_Reorg(TestArgs_t& args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<double, int32_t>(args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>, "gpu_reorg");
+}
+
 
 }
 }

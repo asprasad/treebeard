@@ -483,6 +483,8 @@ bool Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32(Tes
 
 bool Test_SimpleSharedMem_LeftHeavy(TestArgs_t& args);
 bool Test_SimpleSharedMem_LeftRightAndBalanced(TestArgs_t& args);
+bool Test_SimpleSharedMem_LeftHeavy_ReorgRep(TestArgs_t& args);
+bool Test_SimpleSharedMem_LeftRightAndBalanced_Reorg(TestArgs_t& args);
 
 bool Test_GPUCodeGeneration_Covtype_ArrayRep_DoubleInt32_BatchSize32(TestArgs_t& args);
 bool Test_GPUCodeGeneration_Covtype_SparseRep_DoubleInt32_BatchSize32(TestArgs_t& args);
@@ -1563,6 +1565,8 @@ TestDescriptor testList[] = {
   // Basic GPU caching tests
   TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
   TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy),
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep),
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg),
   TEST_LIST_ENTRY(Test_InputSharedMem_LeftHeavy),
   TEST_LIST_ENTRY(Test_InputSharedMem_RightHeavy),
   TEST_LIST_ENTRY(Test_InputSharedMem_LeftRightAndBalanced),
@@ -1577,12 +1581,14 @@ TestDescriptor testList[] = {
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize8_CacheInputSchedule),
-  TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize2_CacheInputSchedule),
-  TEST_LIST_ENTRY(Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_CacheInputSchedule),
-  TEST_LIST_ENTRY(Test_InputSharedMem_LeftHeavy),
-  TEST_LIST_ENTRY(Test_InputSharedMem_RightHeavy),
-  TEST_LIST_ENTRY(Test_InputSharedMem_LeftRightAndBalanced),
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep),
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg),
+  // TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize8_CacheInputSchedule),
+  // TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize2_CacheInputSchedule),
+  // TEST_LIST_ENTRY(Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_CacheInputSchedule),
+  // TEST_LIST_ENTRY(Test_InputSharedMem_LeftHeavy),
+  // TEST_LIST_ENTRY(Test_InputSharedMem_RightHeavy),
+  // TEST_LIST_ENTRY(Test_InputSharedMem_LeftRightAndBalanced),
   // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
   // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy),
   // GPU model buffer initialization tests (scalar)

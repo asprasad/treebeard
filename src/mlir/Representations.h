@@ -43,6 +43,7 @@ public:
       else
           return mlir::VectorType::get({ GetTileSize() }, GetThresholdElementType());
   }
+  virtual mlir::Value GetTreeIndex(Value tree) = 0;
 
   virtual mlir::Type GetIndexFieldType() { 
       if (GetTileSize() == 1)
@@ -151,6 +152,8 @@ public:
   mlir::Type GetTileShapeType() override {
     return m_tileShapeType;
   }
+  mlir::Value GetTreeIndex(Value tree) override;
+
   void AddTypeConversions(mlir::MLIRContext& context, LLVMTypeConverter& typeConverter) override;
   void AddLLVMConversionPatterns(LLVMTypeConverter &converter, RewritePatternSet &patterns) override;
 
@@ -253,6 +256,8 @@ public:
   mlir::Type GetTileShapeType() override {
     return m_tileShapeType;
   }
+  mlir::Value GetTreeIndex(Value tree) override;
+  
   void AddTypeConversions(mlir::MLIRContext& context, LLVMTypeConverter& typeConverter) override;
   void AddLLVMConversionPatterns(LLVMTypeConverter &converter, RewritePatternSet &patterns) override;
 
