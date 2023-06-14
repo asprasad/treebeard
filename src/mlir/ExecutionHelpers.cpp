@@ -40,13 +40,11 @@ namespace decisionforest
 InferenceRunnerBase::InferenceRunnerBase(std::shared_ptr<IModelSerializer> serializer,
                                          int32_t tileSize,
                                          int32_t thresholdSize,
-                                         int32_t featureIndexSize,
-                                         bool gpu)
+                                         int32_t featureIndexSize)
   : m_serializer(serializer),
     m_tileSize(tileSize),
     m_thresholdSize(thresholdSize),
-    m_featureIndexSize(featureIndexSize),
-    m_gpu(gpu)
+    m_featureIndexSize(featureIndexSize)
 { 
   m_serializer->ReadData();
   m_batchSize = m_serializer->GetBatchSize();
@@ -57,28 +55,7 @@ InferenceRunnerBase::InferenceRunnerBase(std::shared_ptr<IModelSerializer> seria
 
 void InferenceRunnerBase::Init() {
   m_serializer->InitializeBuffers(this);
-  if (m_tileSize != 1 && m_gpu) {
-      InitializeGpuLut();
-  }
   m_inferenceFuncPtr = GetFunctionAddress("Prediction_Function");
-}
-
-int32_t InferenceRunnerBase::InitializeGpuLut() {
-  // auto functionType = FunctionType::get(rewriter.getContext(), {memrefType}, {memrefType});
-  // Init_LUT
-  auto numberOfTileOutcomes = static_cast<int>(std::pow(2, m_tileSize));
-  auto numberOfTileShapes = mlir::decisionforest::TileShapeToTileIDMap::NumberOfTileShapes(m_tileSize);
-  // auto lutMemrefType = MemRefType::get({numberOfTileShapes, numberOfTileOutcomes}, rewriter.getI8Type());
-  std::vector<int8_t> lutValues(numberOfTileShapes * numberOfTileOutcomes);
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLookUpTable(lutValues.data(), m_tileSize, 8);
-
-  typedef LUTMemrefType (*InitLUTFunc_t)(LUTEntryType*, LUTEntryType*, int64_t, int64_t, int64_t, int64_t, int64_t);
-  auto initLUTPtr = reinterpret_cast<InitLUTFunc_t>(GetFunctionAddress("Init_LUT"));
-
-  m_lutMemref = initLUTPtr(lutValues.data(), lutValues.data(), 0 /*offset*/, 
-                                             numberOfTileShapes, numberOfTileOutcomes, // dimension sizes
-                                             numberOfTileOutcomes, 1); // strides
-  return 0;
 }
 
 int32_t InferenceRunnerBase::RunInference_CustomImpl(double *input, double *returnValue) {

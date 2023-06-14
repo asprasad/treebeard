@@ -51,12 +51,11 @@ protected:
   int32_t m_batchSize;
   int32_t m_rowSize;
   void *m_inferenceFuncPtr;
-  bool m_gpu;
   LUTMemrefType m_lutMemref;
 
   virtual void* GetFunctionAddress(const std::string& functionName) = 0;
   
-  void Init();
+  virtual void Init();
   
   template<typename InputElementType, typename ReturnType>
   int32_t RunInference_Default(InputElementType *input, ReturnType *returnValue) {
@@ -83,14 +82,11 @@ protected:
     return 0;
   }
   
-  int32_t InitializeLUT();
-  int32_t InitializeGpuLut();
 public:
   InferenceRunnerBase(std::shared_ptr<IModelSerializer> serializer,
                       int32_t tileSize,
                       int32_t thresholdSize,
-                      int32_t featureIndexSize,
-                      bool gpu=false);
+                      int32_t featureIndexSize);
   virtual ~InferenceRunnerBase() { }
   
   int32_t GetBatchSize() { return m_batchSize; }
