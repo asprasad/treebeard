@@ -176,7 +176,7 @@ void ConvertONNXModelToLLVMIR(TreebeardContext& tbContext, const std::string& ll
   // Hardcoding to float because ONNX doesn't support double. Revisit this #TODOSampath
   auto onnxModelConverter = TreeBeard::ONNXModelConverter<float>(
       tbContext.serializer, context, parsedModel.baseValue,
-      parsedModel.predTransform, parsedModel.numNodes, parsedModel.treeIds,
+      parsedModel.predTransform, parsedModel.nodeMode, parsedModel.numNodes, parsedModel.treeIds,
       parsedModel.nodeIds, parsedModel.featureIds, parsedModel.thresholds,
       parsedModel.trueNodeIds, parsedModel.falseNodeIds,
       parsedModel.numberOfClasses, parsedModel.targetClassTreeId,

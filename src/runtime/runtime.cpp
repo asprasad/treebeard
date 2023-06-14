@@ -6,6 +6,7 @@
 #include <string>
 #include "DecisionForest.h"
 #include "Dialect.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "tbruntime.h"
 #include "ExecutionHelpers.h"
 #include "CompileUtils.h"
@@ -216,6 +217,7 @@ extern "C" intptr_t CreateInferenceRunnerForONNXModelInputs(
     context,
     baseValue,
     GetPredictionTransformation(predTransform),
+    mlir::arith::CmpFPredicate::ULE, // TODO - Hardcoded for now
     numNodes,
     treeIds,
     nodeIds,
@@ -240,6 +242,7 @@ extern "C" intptr_t CreateInferenceRunnerForONNXModelInputs(
     context,
     baseValue,
     GetPredictionTransformation(predTransform),
+    mlir::arith::CmpFPredicate::ULE, // TODO - Hardcoded for now
     numNodes,
     treeIds,
     nodeIds,

@@ -3,6 +3,7 @@
 #include "Dialect.h"
 #include "TreeTilingUtils.h"
 #include "TiledTree.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "schedule.h"
 #include "OpLoweringUtils.h"
 #include "LIRLoweringHelpers.h"
@@ -52,13 +53,20 @@ namespace decisionforest
 
     mlir::arith::CmpFPredicate negateComparisonPredicate(mlir::arith::CmpFPredicateAttr cmpPredAttr) {
       auto cmpPred = cmpPredAttr.getValue();
-      if (cmpPred == arith::CmpFPredicate::ULT)
-        return arith::CmpFPredicate::UGE;
-      else if (cmpPred == arith::CmpFPredicate::ULE)
-        return arith::CmpFPredicate::UGT;
-      else
-        assert (false && "Unknown comparison predicate");
-      return arith::CmpFPredicate::ULT;
+      switch (cmpPred)
+      {
+        case arith::CmpFPredicate::ULT:
+          return arith::CmpFPredicate::UGE;
+        case arith::CmpFPredicate::UGE:
+          return arith::CmpFPredicate::ULT;
+        case arith::CmpFPredicate::UGT:
+          return arith::CmpFPredicate::ULE;
+        case arith::CmpFPredicate::ULE:
+          return arith::CmpFPredicate::UGT;
+        default:
+          assert(false && "Unknown comparison predicate");
+          return arith::CmpFPredicate::ULT;
+      }
     }
 
 // ===---------------------------------------------------=== //
