@@ -39,7 +39,7 @@ public:
                      int32_t tileSize,
                      int32_t thresholdSize,
                      int32_t featureIndexSize)
-    : InferenceRunnerBase(serializer, tileSize, thresholdSize, featureIndexSize),
+    : InferenceRunnerBase(serializer, tileSize, thresholdSize, featureIndexSize, true),
       m_maybeEngine(CreateExecutionEngine(module)),
       m_engine(m_maybeEngine.get()), m_module(module) 
   { 

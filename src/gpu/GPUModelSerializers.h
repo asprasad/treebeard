@@ -68,18 +68,33 @@ public:
   void Persist(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
 };
 
+using LeafValueMemref = Memref<double, 1>;
+
 class GPUSparseRepresentationSerializer : public GPUArraySparseSerializerBase {
 protected:
+  LeafValueMemref m_leafValues;
+  OffsetMemrefType m_leafLengthsMemref;
+  OffsetMemrefType m_leafOffsetsMemref;
   // TODO This should also have a way to store the memref
   // for the leaves array
   int32_t InitializeLeafArrays();
+  int32_t InitializeLeafValues();
+  int32_t InitializeLeafLengths();
+  int32_t InitializeLeafOffsets();
   void InitializeBuffersImpl() override;
+
+  template<typename ThresholdType>
+  LeafValueMemref InitLeafValues(int32_t tileSize, int32_t thresholdBitWidth, int32_t featureIndexBitWidth);
 public:
   GPUSparseRepresentationSerializer(const std::string& modelGlobalsJSONPath)
     :GPUArraySparseSerializerBase(modelGlobalsJSONPath, true)
   { }
   ~GPUSparseRepresentationSerializer() {}
   void Persist(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
+  void CallPredictionMethod(void* predictFuncPtr,
+                            Memref<double, 2> inputs,
+                            Memref<double, 1> results) override;
+  void CleanupBuffers() override;
 };
 
 } // decisionforest

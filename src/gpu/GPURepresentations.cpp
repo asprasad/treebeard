@@ -668,6 +668,51 @@ void GPUSparseRepresentation::GenerateModelMemrefInitializer(const std::string& 
                                      });
 }
 
+Type GPUSparseRepresentation::GenerateLeafBuffers(ConversionPatternRewriter &rewriter, 
+                                                  Location location, 
+                                                  ModuleOp module,
+                                                  Operation* op,
+                                                  std::vector<Type>& cleanupArgs) {
+
+  // Generate a new function with the extra arguments that are needed
+  auto ensembleConstOp = AssertOpIsOfType<decisionforest::EnsembleConstantOp>(op);
+  auto func = op->getParentOfType<func::FuncOp>();
+  assert (func);
+
+  mlir::decisionforest::DecisionForestAttribute forestAttribute = ensembleConstOp.getForest();
+  mlir::decisionforest::DecisionForest& forest = forestAttribute.GetDecisionForest();
+  auto forestType = ensembleConstOp.getResult().getType().cast<decisionforest::TreeEnsembleType>();
+  assert (forestType.doAllTreesHaveSameTileSize()); // There is still an assumption here that all trees have the same tile size
+  auto treeType = forestType.getTreeType(0).cast<decisionforest::TreeType>();
+
+  auto thresholdType = treeType.getThresholdType();
+  auto tileSize = treeType.getTileSize();
+
+  // Add the leaves memref
+  auto leavesMemrefSize = decisionforest::GetTotalNumberOfLeaves();
+  auto leavesMemrefType = MemRefType::get({leavesMemrefSize}, m_thresholdType);
+  func.insertArgument(func.getNumArguments(), leavesMemrefType, mlir::DictionaryAttr(), location);
+  m_leavesMemrefArgIndex = func.getNumArguments() - 1;
+  cleanupArgs.push_back(leavesMemrefType);
+
+  auto offsetSize = (int32_t)forest.NumTrees();
+  auto offsetMemrefType = MemRefType::get({offsetSize}, rewriter.getIndexType());
+  func.insertArgument(func.getNumArguments(), offsetMemrefType, mlir::DictionaryAttr(), location);
+  m_leavesOffsetMemrefArgIndex = func.getNumArguments() - 1;
+  cleanupArgs.push_back(offsetMemrefType);
+
+  func.insertArgument(func.getNumArguments(), offsetMemrefType, mlir::DictionaryAttr(), location);
+  m_leavesLengthsMemrefArgIndex = func.getNumArguments() - 1;
+  cleanupArgs.push_back(offsetMemrefType);
+  
+  GenerateSimpleInitializer("Init_Leaves", rewriter, location, module, leavesMemrefType);
+  GenerateSimpleInitializer("Init_LeafOffsets", rewriter, location, module, offsetMemrefType);
+  GenerateSimpleInitializer("Init_LeafLengths", rewriter, location, module, offsetMemrefType);
+
+  return leavesMemrefType;
+}
+
+
 mlir::LogicalResult GPUSparseRepresentation::GenerateModelGlobals(Operation *op, 
                                                                   ArrayRef<Value> operands,
                                                                   ConversionPatternRewriter &rewriter,
@@ -734,6 +779,16 @@ mlir::LogicalResult GPUSparseRepresentation::GenerateModelGlobals(Operation *op,
     cleanupArgs.push_back(classInfoMemrefType);
   }
 
+  Value leavesMemref, leavesOffsetMemref, leavesLengthsMemref;
+  Type leavesMemrefType;
+  if (tileSize > 1) {
+    this->GenerateLeafBuffers(rewriter, location, module, op, cleanupArgs);
+    leavesMemref = func.getArgument(m_leavesMemrefArgIndex);
+    leavesOffsetMemref = func.getArgument(m_leavesOffsetMemrefArgIndex);
+    leavesLengthsMemref = func.getArgument(m_leavesLengthsMemrefArgIndex);
+    leavesMemrefType = leavesMemref.getType();
+  }
+
   GenerateCleanupProc("Dealloc_Buffers", 
                     rewriter, 
                     location,
@@ -746,15 +801,15 @@ mlir::LogicalResult GPUSparseRepresentation::GenerateModelGlobals(Operation *op,
     static_cast<Value>(func.getArgument(m_offsetMemrefArgIndex)),
     static_cast<Value>(func.getArgument(m_lengthMemrefArgIndex)),
     Value(), // LUT
-    Value(), // leaves 
-    Value(), // leavesOffset
-    Value(), // leavesLength
+    leavesMemref, // leaves 
+    leavesOffsetMemref, // leavesOffset
+    leavesLengthsMemref, // leavesLength
     static_cast<Value>(func.getArgument(m_classInfoMemrefArgIndex)),
     modelMemrefType,
     offsetMemrefType,
     offsetMemrefType,
     Type(), // LUT type
-    Type(), // Leaves type
+    leavesMemrefType, // Leaves type
     classInfoMemrefType,
   };
   sparseEnsembleConstantToMemrefsMap[op] = info;

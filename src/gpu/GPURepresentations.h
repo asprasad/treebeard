@@ -56,10 +56,18 @@ protected:
   int32_t m_offsetMemrefArgIndex;
   int32_t m_lengthMemrefArgIndex;
   int32_t m_classInfoMemrefArgIndex;
-
+  int32_t m_leavesMemrefArgIndex;
+  int32_t m_leavesOffsetMemrefArgIndex;
+  int32_t m_leavesLengthsMemrefArgIndex;
+  
   void GenerateModelMemrefInitializer(const std::string& funcName, ConversionPatternRewriter &rewriter, Location location, 
                                       ModuleOp module, MemRefType memrefType);
 
+  Type GenerateLeafBuffers(ConversionPatternRewriter &rewriter, 
+                           Location location, 
+                           ModuleOp module,
+                           Operation* op,
+                           std::vector<Type>& cleanupArgs);
 public:
   virtual ~GPUSparseRepresentation() { }
   void InitRepresentation() override { }

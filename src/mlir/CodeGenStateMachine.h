@@ -140,8 +140,49 @@ class VectorTraverseTileCodeGenerator : public ICodeGeneratorStateMachine {
                                     mlir::arith::CmpFPredicateAttr cmpPredicateAttr);
     bool EmitNext(ConversionPatternRewriter& rewriter, Location& location) override;
     std::vector<Value> GetResult() override;
-    };
-}
-}
+};
+
+#ifdef TREEBEARD_GPU_SUPPORT
+class GPUVectorTraverseTileCodeGenerator : public ICodeGeneratorStateMachine {
+  private:
+    enum TraverseState { kLoadThreshold, kLoadFeatureIndex, kLoadTileShape, kLoadChildIndex, kLoadFeature, kCompare, kNextNode, kDone };
+    std::shared_ptr<IRepresentation> m_representation;
+    TraverseState m_state;
+    Value m_tree;
+    Value m_rowMemref;
+    Type m_resultType;
+    VectorType m_featureIndexVectorType;
+    VectorType m_thresholdVectorType;
+    Type m_tileShapeType;
+    int32_t m_tileSize;
+
+    Value m_nodeToTraverse;
+    decisionforest::NodeToIndexOp m_nodeIndex;
+    decisionforest::LoadTileThresholdsOp m_loadThresholdOp;
+    decisionforest::LoadTileFeatureIndicesOp m_loadFeatureIndexOp;
+    arith::IndexCastOp m_loadTileShapeIndexOp;
+    arith::IndexCastOp m_leafBitMask;
+    vector::GatherOp m_features;
+    Value m_comparisonIndex;
+    Value m_result;
+    std::vector<mlir::Value> m_extraLoads;
+
+    std::function<Value(Value)> m_getLutFunc;
+    mlir::arith::CmpFPredicateAttr m_cmpPredicateAttr;
+  public:
+    GPUVectorTraverseTileCodeGenerator(Value tree, 
+                                    Value rowMemref,
+                                    Value node,
+                                    Type resultType, 
+                                    std::shared_ptr<IRepresentation> representation,
+                                    std::function<Value(Value)> getLutFunc,
+                                    mlir::arith::CmpFPredicateAttr cmpPredicateAttr);
+    bool EmitNext(ConversionPatternRewriter& rewriter, Location& location) override;
+    std::vector<Value> GetResult() override;
+};
+#endif
+
+} // namespace decisionforest
+} // namespace mlir
 
 #endif // CODEGEN_STATE_MACHINE

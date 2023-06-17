@@ -59,6 +59,14 @@ void DoProbabilityBasedTiling(mlir::MLIRContext& context, mlir::ModuleOp module,
 void DoHybridTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth);
 void DoReorderTreesByDepth(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t pipelineSize=-1, int32_t numCores=-1);
 
+#ifdef TREEBEARD_GPU_SUPPORT
+
+void LowerGPUEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module, 
+                               std::shared_ptr<IModelSerializer> serializer,
+                               std::shared_ptr<IRepresentation> representation);
+
+#endif // TREEBEARD_GPU_SUPPORT
+
 }
 }
 

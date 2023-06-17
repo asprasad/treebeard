@@ -68,7 +68,10 @@ struct SharedMemoryGlobalRewritePattern : public ConversionPattern {
     if (!globalType.isa<MemRefType>())
         return mlir::failure();
     auto globalMemrefType = globalType.cast<MemRefType>();
-    auto memorySpace = globalMemrefType.getMemorySpace().cast<IntegerAttr>().getValue().getSExtValue();
+    auto memorySpaceAttr = globalMemrefType.getMemorySpace();
+    if (!memorySpaceAttr)
+      return mlir::failure();
+    auto memorySpace = memorySpaceAttr.cast<IntegerAttr>().getValue().getSExtValue();
     if (memorySpace != 3) // not a shared memory buffer
       return mlir::failure();
     
@@ -132,7 +135,10 @@ struct DeleteSharedMemoryGlobalsPattern : public ConversionPattern {
     if (!globalType.isa<MemRefType>())
         return mlir::failure();
     auto globalMemrefType = globalType.cast<MemRefType>();
-    auto memorySpace = globalMemrefType.getMemorySpace().cast<IntegerAttr>().getValue().getSExtValue();
+    auto memorySpaceAttr = globalMemrefType.getMemorySpace();
+    if (!memorySpaceAttr)
+      return mlir::failure();
+    auto memorySpace = memorySpaceAttr.cast<IntegerAttr>().getValue().getSExtValue();
     if (memorySpace != 3) // not a shared memory buffer
       return mlir::failure();
     rewriter.eraseOp(op);

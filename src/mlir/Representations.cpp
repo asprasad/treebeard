@@ -5,6 +5,7 @@
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "Dialect.h"
@@ -913,10 +914,14 @@ mlir::Value SparseRepresentation::GenerateMoveToChild(mlir::Location location, C
   return newIndex;
 }
 
+mlir::gpu::KernelDim3 GetThreadID(mlir::Operation* op);
+
 void SparseRepresentation::GenerateTreeMemref(mlir::ConversionPatternRewriter &rewriter, mlir::Operation *op, Value ensemble, Value treeIndex) {
   auto location = op->getLoc();
   Operation* ensembleConstOp = ensemble.getDefiningOp();
   AssertOpIsOfType<mlir::decisionforest::EnsembleConstantOp>(ensembleConstOp);
+  // auto threadId = GetThreadID(op);
+  // rewriter.create<gpu::PrintfOp>(location, "ThreadID: (%ld, %ld, %ld), Starting Tree: %ld\n", ValueRange{threadId.x, threadId.y, threadId.z, treeIndex});
   
   auto mapIter = sparseEnsembleConstantToMemrefsMap.find(ensembleConstOp);
   assert (mapIter != sparseEnsembleConstantToMemrefsMap.end());
@@ -926,14 +931,21 @@ void SparseRepresentation::GenerateTreeMemref(mlir::ConversionPatternRewriter &r
   auto treeLength = rewriter.create<memref::LoadOp>(location, ensembleInfo.lengthGlobal, treeIndex);; // TODO Need to put this into the map too
   auto treeMemref = rewriter.create<memref::SubViewOp>(location, ensembleInfo.modelGlobal, ArrayRef<OpFoldResult>({static_cast<Value>(modelMemrefIndex)}),
                                                         ArrayRef<OpFoldResult>({static_cast<Value>(treeLength)}), ArrayRef<OpFoldResult>({rewriter.getIndexAttr(1)}));
+  // rewriter.create<gpu::PrintfOp>(location, "ThreadID: (%ld, %ld, %ld), Got Tree: %ld, Offset: %ld, Len: %ld\n", 
+  //                       ValueRange{threadId.x, threadId.y, threadId.z, treeIndex, modelMemrefIndex.getResult(), treeLength.getResult()});
 
   int32_t tileSize = ensembleInfo.modelGlobal.getType().cast<MemRefType>().getElementType().cast<decisionforest::TiledNumericalNodeType>().getTileSize();
   Value leavesMemref;
   if (tileSize > 1) {
     auto leavesMemrefIndex = rewriter.create<memref::LoadOp>(location, ensembleInfo.leavesOffsetGlobal, treeIndex);
+    // ensembleInfo.leavesOffsetGlobal.getType().dump();
+    // rewriter.create<gpu::PrintfOp>(location, "ThreadID: (%ld, %ld, %ld), Getting Leaves: %ld, Offset: %ld\n", 
+    //                     ValueRange{threadId.x, threadId.y, threadId.z, treeIndex, leavesMemrefIndex.getResult()});
     auto leavesLength = rewriter.create<memref::LoadOp>(location, ensembleInfo.leavesLengthGlobal, treeIndex);; // TODO Need to put this into the map too
     leavesMemref = rewriter.create<memref::SubViewOp>(location, ensembleInfo.leavesGlobal, ArrayRef<OpFoldResult>({static_cast<Value>(leavesMemrefIndex)}),
-                                                        ArrayRef<OpFoldResult>({static_cast<Value>(leavesLength)}), ArrayRef<OpFoldResult>({rewriter.getIndexAttr(1)}));
+                                                      ArrayRef<OpFoldResult>({static_cast<Value>(leavesLength)}), ArrayRef<OpFoldResult>({rewriter.getIndexAttr(1)}));
+    // rewriter.create<gpu::PrintfOp>(location, "ThreadID: (%ld, %ld, %ld), Got Leaves: %ld, Offset: %ld, Len: %ld\n", 
+    //                     ValueRange{threadId.x, threadId.y, threadId.z, treeIndex, leavesMemrefIndex.getResult(), leavesLength.getResult()});
   }   
   // if (decisionforest::InsertDebugHelpers) {
   //   rewriter.create<decisionforest::PrintTreeToDOTFileOp>(location, treeMemref, treeIndex);

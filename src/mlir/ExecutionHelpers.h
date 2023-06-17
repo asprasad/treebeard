@@ -34,6 +34,9 @@ using OffsetMemrefType = Memref<int64_t, 1>;
 using ClassMemrefType = Memref<int8_t, 1>;
 using ModelMemrefType = Memref<Tile, 1>;
 
+using LUTEntryType = int8_t;
+using LUTMemrefType = Memref<LUTEntryType, 2>;
+
 // using ResultMemrefType = Memref<double, 1>;
 
 class InferenceRunnerBase {
@@ -48,7 +51,9 @@ protected:
   int32_t m_batchSize;
   int32_t m_rowSize;
   void *m_inferenceFuncPtr;
-  
+  bool m_gpu;
+  LUTMemrefType m_lutMemref;
+
   virtual void* GetFunctionAddress(const std::string& functionName) = 0;
   
   void Init();
@@ -77,15 +82,17 @@ protected:
                             reinterpret_cast<double*>(returnValue));
     return 0;
   }
+  
+  int32_t InitializeLUT();
+  int32_t InitializeGpuLut();
 public:
   InferenceRunnerBase(std::shared_ptr<IModelSerializer> serializer,
                       int32_t tileSize,
                       int32_t thresholdSize,
-                      int32_t featureIndexSize);
+                      int32_t featureIndexSize,
+                      bool gpu=false);
   virtual ~InferenceRunnerBase() { }
   
-  int32_t InitializeLUT();
-
   int32_t GetBatchSize() { return m_batchSize; }
   int32_t GetTileSize() { return m_tileSize; }
   int32_t GetRowSize() { return m_rowSize; }
@@ -93,7 +100,7 @@ public:
   int32_t GetFeatureIndexWidth() { return m_featureIndexSize; }
   int32_t GetInputElementBitWidth() { return m_inputElementBitWidth; }
   int32_t GetReturnTypeBitWidth() { return m_returnTypeBitWidth; }
-  
+  LUTMemrefType GetLUTMemref() { return m_lutMemref; }
   template<typename InputElementType, typename ReturnType>
   int32_t RunInference(InputElementType *input, ReturnType *returnValue) {
     if (SerializerHasCustomPredictionMethod()) {
