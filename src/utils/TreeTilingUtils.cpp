@@ -107,6 +107,7 @@ void ForestJSONReader::ParseJSONFile() {
     m_childIndexBitWidth = m_json["ChildIndexBitWidth"];
     m_tileShapeBitWidth = m_json["TileShapeBitWidth"];
     m_numberOfClasses = m_json["NumberOfClasses"];
+    decisionforest::UseSparseTreeRepresentation = m_json["SparseRepresentation"];
 
     std::list<SingleTileSizeEntry> newEntries;
     for (auto& tileSizeEntryJSON : m_json["TileSizeEntries"]) {

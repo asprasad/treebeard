@@ -65,6 +65,20 @@ bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1(TestArgs_t& args);
 bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize(TestArgs_t& args);
 bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize(TestArgs_t& args);
 
+// Tiled Init Tests
+bool Test_ModelInit_LeftHeavy(TestArgs_t& args);
+bool Test_ModelInit_RightHeavy(TestArgs_t& args);
+bool Test_ModelInit_RightAndLeftHeavy(TestArgs_t& args);
+bool Test_ModelInit_Balanced(TestArgs_t& args);
+bool Test_ModelInit_LeftHeavy_Int8TileShape(TestArgs_t& args);
+bool Test_ModelInit_LeftHeavy_Int16TileShape(TestArgs_t& args);
+bool Test_ModelInit_RightHeavy_Int8TileShape(TestArgs_t& args);
+bool Test_ModelInit_RightHeavy_Int16TileShape(TestArgs_t& args);
+bool Test_ModelInit_Balanced_Int8TileShape(TestArgs_t& args);
+bool Test_ModelInit_Balanced_Int16TileShape(TestArgs_t& args);
+bool Test_ModelInit_RightAndLeftHeavy_Int8TileShape(TestArgs_t& args);
+bool Test_ModelInit_RightAndLeftHeavy_Int16TileShape(TestArgs_t& args);
+
 // Uniform Tiling Tests
 bool Test_UniformTiling_LeftHeavy_BatchSize1(TestArgs_t& args);
 bool Test_UniformTiling_RightHeavy_BatchSize1(TestArgs_t &args);
@@ -932,6 +946,87 @@ bool Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx(TestArgs
   return Test_ForestCodeGen_VariableBatchSize(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 2, data, 32);
 }
 
+// Tests for Tiled Buffer Initialization
+template<typename ThresholdType, typename IndexType>
+bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t forestConstructor, std::vector<int32_t>& tileIDs) {
+  using VectorTileType = NumericalVectorTileType_Packed<ThresholdType, IndexType, 3>;
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
+  mlir::OpBuilder builder(&context);
+  mlir::decisionforest::DecisionForest forest;
+  forestConstructor(forest);
+
+  // Construct basic tree types for the tree
+  // (Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type thresholdType, Type featureIndexType
+  auto thresholdType = TreeBeard::GetMLIRType(ThresholdType(), builder);
+  auto indexType = TreeBeard::GetMLIRType(IndexType(), builder);
+  
+  int32_t tileSize = 3;
+  decisionforest::TreeTilingDescriptor tilingDescriptor(tileSize /*tile size*/, 4 /*num tiles*/, tileIDs, decisionforest::TilingType::kRegular);
+  forest.GetTree(0).SetTilingDescriptor(tilingDescriptor);
+
+  auto treeType = mlir::decisionforest::TreeType::get(thresholdType, tilingDescriptor.MaxTileSize(), thresholdType, indexType);
+  //(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType, Type treeType)
+  std::vector<Type> treeTypes = {treeType};
+  auto forestType = mlir::decisionforest::TreeEnsembleType::get(thresholdType, 1, thresholdType /*HACK type doesn't matter for this test*/,
+                                                                mlir::decisionforest::ReductionType::kAdd, treeTypes);
+  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
+  decisionforest::ConstructModelSerializer(GetGlobalJSONNameForTests())->Persist(forest, forestType);
+  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
+  mlir::decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
+
+  mlir::decisionforest::TiledTree tiledTree(forest.GetTree(0));
+  auto numTiles = tiledTree.GetNumberOfTiles();
+  std::vector<VectorTileType> serializedTree(numTiles);
+  auto thresholds = tiledTree.SerializeThresholds();
+  auto featureIndices = tiledTree.SerializeFeatureIndices();
+  auto tileShapeIDs = tiledTree.SerializeTileShapeIDs();
+
+  std::vector<int32_t> offsets(1, -1);
+  int32_t thresholdSize = sizeof(ThresholdType)*8;
+  int32_t indexSize = sizeof(IndexType)*8;
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeBuffer(serializedTree.data(), tileSize, thresholdSize, indexSize, offsets);
+  for(int32_t i=0 ; i<numTiles ; ++i) {
+    for (int32_t j=0 ; j<tileSize ; ++j) {
+      Test_ASSERT(FPEqual(serializedTree[i].threshold[j], thresholds[i*tileSize + j]));
+      Test_ASSERT(serializedTree[i].index[j] == featureIndices[i*tileSize + j]);
+    }
+    // std::cout << tileShapeIDs[i] << std::endl;
+    Test_ASSERT(tileShapeIDs[i] == serializedTree[i].tileShapeID);
+  }
+  Test_ASSERT(offsets[0] == 0);
+  
+  std::vector<int64_t> offsetVec(1, -1);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(offsetVec.data(), tileSize, thresholdSize, indexSize);
+  Test_ASSERT(offsetVec[0] == 0);
+  
+  std::vector<int64_t> lengthVec(1, -1);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthVec.data(), tileSize, thresholdSize, indexSize);
+  Test_ASSERT(lengthVec[0] == numTiles);
+
+  return true;
+}
+
+bool Test_BufferInitializationWithOneTree_RightHeavy_Tiled(TestArgs_t& args) {
+  using TileType = NumericalTileType_Packed<double, int32_t>;
+  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 3 }; // The root and one of its children are in one tile and all leaves are in separate tiles
+  return Test_BufferInit_SingleTree_Tiled<double, int32_t>(args, AddRightHeavyTree<TileType>, tileIDs);
+}
+
+bool Test_BufferInitializationWithOneTree_LeftHeavy_Tiled(TestArgs_t& args) {
+  using TileType = NumericalTileType_Packed<double, int32_t>;
+  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 3 }; // The root and one of its children are in one tile and all leaves are in separate tiles
+  return Test_BufferInit_SingleTree_Tiled<double, int32_t>(args, AddLeftHeavyTree<TileType>, tileIDs);
+}
+
+bool Test_BufferInitializationWithOneTree_Balanced_Tiled(TestArgs_t& args) {
+  using TileType = NumericalTileType_Packed<double, int32_t>;
+  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 0, 3, 4 };
+  return Test_BufferInit_SingleTree_Tiled<double, int32_t>(args, AddBalancedTree<TileType>, tileIDs);
+}
+
 // ===-------------------------------------------------------------=== //
 // Tiled Tree Tests
 // ===-------------------------------------------------------------=== //
@@ -1063,6 +1158,9 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize1_Float),
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize2_Float),
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float),
+  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Tiled),
+  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy_Tiled),
+  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_Balanced_Tiled),
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_RightHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_BalancedTree_BatchSize1),
@@ -1073,6 +1171,18 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape),
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize),
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize),
+  TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy),
+  TEST_LIST_ENTRY(Test_ModelInit_RightHeavy),
+  TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy),
+  TEST_LIST_ENTRY(Test_ModelInit_Balanced),
+  TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy_Int8TileShape),
+  TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy_Int16TileShape),
+  TEST_LIST_ENTRY(Test_ModelInit_RightHeavy_Int8TileShape),
+  TEST_LIST_ENTRY(Test_ModelInit_RightHeavy_Int16TileShape),
+  TEST_LIST_ENTRY(Test_ModelInit_Balanced_Int8TileShape),
+  TEST_LIST_ENTRY(Test_ModelInit_Balanced_Int16TileShape),
+  TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy_Int8TileShape),
+  TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy_Int16TileShape),
   TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1),
