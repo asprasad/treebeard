@@ -401,6 +401,7 @@ namespace decisionforest
       return results;
     }
 
+#ifdef TREEBEARD_GPU_SUPPORT
 // ===---------------------------------------------------=== //
 // GPUVectorTraverseTileCodeGenerator Methods
 // ===---------------------------------------------------=== //
@@ -607,6 +608,6 @@ namespace decisionforest
       results.push_back(m_result);
       return results;
     }
-
+#endif // TREEBEARD_GPU_SUPPORT
 }
 }
