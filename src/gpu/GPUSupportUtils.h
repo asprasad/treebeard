@@ -11,6 +11,7 @@ namespace mlir
 namespace decisionforest
 {
 
+void RunCanonicalizerPass(mlir::MLIRContext& context, mlir::ModuleOp module);
 void GreedilyMapParallelLoopsToGPU(mlir::ModuleOp module);
 void ConvertParallelLoopsToGPU(mlir::MLIRContext& context, mlir::ModuleOp module);
 void OutlineGPUKernels(mlir::MLIRContext& context, mlir::ModuleOp module);

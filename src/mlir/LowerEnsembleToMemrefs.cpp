@@ -202,7 +202,7 @@ struct EnsembleConstantOpGPULowering: public ConversionPattern {
     // Type lookUpTableMemrefType;
     // Value getLUT;
     if (firstTreeTileSize > 1) {
-      auto lookUpTableMemrefType = AddChildIndexLookUpTable(owningModule, ensembleConstOp, rewriter, location);
+      AddChildIndexLookUpTable(owningModule, ensembleConstOp, rewriter, location);
     }
 
     rewriter.eraseOp(op);
@@ -299,6 +299,30 @@ struct GetRootOpLowering: public ConversionPattern {
     // [TODO_Ashwin] We're just getting some memref here to pass as an argument to 
     // the IndexToNodeOp. Maybe we should just get rid of that argument?
     auto treeMemref = m_representation->GetThresholdsMemref(operands[0]);
+    auto nodeType = getRootOp.getResult().getType();
+    auto node = rewriter.create<decisionforest::IndexToNodeOp>(op->getLoc(), nodeType, treeMemref, static_cast<Value>(nodeIndexConst));
+    rewriter.replaceOp(op, static_cast<Value>(node));
+    return mlir::success();
+  }
+};
+
+struct GPUGetRootOpLowering: public ConversionPattern {
+  std::shared_ptr<mlir::decisionforest::IRepresentation> m_representation;
+  GPUGetRootOpLowering(MLIRContext *ctx, std::shared_ptr<mlir::decisionforest::IRepresentation> representation)
+   : ConversionPattern(mlir::decisionforest::GetRootOp::getOperationName(), 1 /*benefit*/, ctx), m_representation(representation) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    auto getRootOp = AssertOpIsOfType<mlir::decisionforest::GetRootOp>(op);
+    Value treeValue = operands[0];
+    
+    m_representation->GenerateTreeIndexBuffers(rewriter, op, treeValue);
+
+    auto nodeIndexConst = rewriter.create<arith::ConstantIndexOp>(op->getLoc(), 0);
+
+    // [TODO_Ashwin] We're just getting some memref here to pass as an argument to 
+    // the IndexToNodeOp. Maybe we should just get rid of that argument?
+    auto treeMemref = m_representation->GetThresholdsMemref(treeValue);
     auto nodeType = getRootOp.getResult().getType();
     auto node = rewriter.create<decisionforest::IndexToNodeOp>(op->getLoc(), nodeType, treeMemref, static_cast<Value>(nodeIndexConst));
     rewriter.replaceOp(op, static_cast<Value>(node));
@@ -627,7 +651,7 @@ struct MidLevelIRToGPUMemrefLoweringPass: public PassWrapper<MidLevelIRToGPUMemr
     patterns.add<EnsembleConstantOpGPULowering>(patterns.getContext(), m_serializer, m_representation);
     patterns.add<TraverseTreeTileOpLowering>(patterns.getContext(), m_representation);
     patterns.add<InterleavedTraverseTreeTileOpLowering>(patterns.getContext(), m_representation);
-    patterns.add<GetRootOpLowering>(patterns.getContext(), m_representation);
+    patterns.add<GPUGetRootOpLowering>(patterns.getContext(), m_representation);
     patterns.add<GetTreeOpLowering>(patterns.getContext(), m_representation);
     patterns.add<GetTreeClassIdOpLowering>(patterns.getContext(), m_representation);
     patterns.add<GetLeafValueOpLowering>(patterns.getContext(), m_representation);

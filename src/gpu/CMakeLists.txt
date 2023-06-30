@@ -6,7 +6,8 @@ LowerGPUToLLVM.cpp
 GPUExecutionHelper.cpp
 ReorgForestRepresentation.cpp
 GPUModelSerializers.cpp
-SharedMemUtils.cpp)
+SharedMemUtils.cpp
+GPUSimtPass.cpp)
 
 target_sources(treebeard-runtime 
 PRIVATE
@@ -16,4 +17,5 @@ LowerGPUToLLVM.cpp
 GPUExecutionHelper.cpp
 ReorgForestRepresentation.cpp
 GPUModelSerializers.cpp
-SharedMemUtils.cpp)
+SharedMemUtils.cpp
+GPUSimtPass.cpp)

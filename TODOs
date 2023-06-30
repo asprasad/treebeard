@@ -4,11 +4,19 @@
 * GPU Support
     - [Done] Lowering of cacheTreesOp or ReorgForest
     - Tiling support
+        - [Assumption] Successive threads process the same tree
+        - [Assumption] Successive threads process successive rows
         - No changes until LowerEnsembleToMemrefs (?)
             - May need to mark whether the thread index is tree or rows
         - [Done] Fix the LUT generation for GPUs
-        - Changes to CodeGenStateMachine [Only lowers TraverseTile]
-            - Write a new state machine class for GPU -- Can we reuse any part of the current one?
+        - GetRoot
+            - Allocate shared memory buffers that are needed
+            - Initialize the shared memory buffers
+        - TraverseTile
+            - Changes to CodeGenStateMachine [Only lowers TraverseTile]
+                - Write a new state machine class for GPU -- Can we reuse any part of the current one?
+            - Add extra index to "loadTile*" ops so that each thread can load the required vector element
+
         - Changes to GPU representations
             - GPU Sparse representation
                 - [Done] Ensemble lowering

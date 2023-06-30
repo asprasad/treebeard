@@ -307,6 +307,17 @@ def InterleavedTraverseTreeTileOp : DecisionForest_Op<"interleavedTraverseTileOp
   let results = (outs Variadic<NodeType>);
 }
 
+def CooperativeTraverseTreeTileOp : DecisionForest_Op<"cooperativeTraverseTileOp", [Pure, SameVariadicOperandSize]> {
+  let summary = "Multiple threads cooperate to traverse a set of tiles";
+  let description = "Traverse different (tile, row) pairs cooperatively across GPU threads";
+  let arguments = (ins Arith_CmpFPredicateAttr:$predicate,
+                       TreeType:$trees,
+                       NodeType:$nodes,
+                       Variadic<InputDataType>:$data);
+
+  let results = (outs NodeType);
+}
+
 def TraverseTileOfConstTreeOp : DecisionForest_Op<"traverseTileOfConstTree", [Pure]> {
   let summary = "Traverse one tile of a constant tree.";
   let description = "Traverse one tile of a constant tree stored as an attribute starting from the node passed as argument. Returns the resultant node.";
@@ -328,17 +339,23 @@ def TileShapeMemrefType : AnyTypeOf<[MemRefOf<[TiledNumericalNodeType]>, MemRefO
 def LoadTileThresholdsOp : DecisionForest_Op<"loadTileThresholds", [Pure]> {
   let summary = "Load the thresholds from a tree tile.";
   let description = "Load all the thresholds from a tile in a tree memref. Takes a memref and an index into the memref and returns a vector of floating point values.";
-  let arguments = (ins ThresholdMemrefType:$treeMemref, Index:$nodeIndex, Index:$treeIndex);
+  let arguments = (ins ThresholdMemrefType:$treeMemref, Index:$nodeIndex, Index:$treeIndex, Optional<Index>:$elementIndex);
 
   let results = (outs TileOfThresholdTypes);
+  let builders = [OpBuilder<(ins "Type":$resultType, "Value":$treeMemref, "Value":$nodeIndex, "Value":$treeIndex), [{
+      build($_builder, $_state, resultType, treeMemref, nodeIndex, treeIndex, Value());
+    }]>];
 }
 
 def LoadTileFeatureIndicesOp : DecisionForest_Op<"loadTileFeatureIndices", [Pure]> {
   let summary = "Load the feature indices from a tree tile.";
   let description = "Load all the feature indices from a tile in a tree memref. Takes a memref and an index into the memref and returns a vector of floating point values.";
-  let arguments = (ins FeatureIndexMemrefType:$treeMemref, Index:$nodeIndex, Index:$treeIndex);
+  let arguments = (ins FeatureIndexMemrefType:$treeMemref, Index:$nodeIndex, Index:$treeIndex, Optional<Index>:$elementIndex);
 
   let results = (outs TileOfFeatureIndices);
+  let builders = [OpBuilder<(ins "Type":$resultType, "Value":$treeMemref, "Value":$nodeIndex, "Value":$treeIndex), [{
+      build($_builder, $_state, resultType, treeMemref, nodeIndex, treeIndex, Value());
+    }]>];
 }
 
 def LoadTileShapeOp : DecisionForest_Op<"loadTileShape", [Pure]> {

@@ -139,6 +139,8 @@ public:
                                      mlir::Value nodeIndex) override;
   mlir::Value GenerateIsLeafOp(ConversionPatternRewriter &rewriter, mlir::Operation *op, mlir::Value treeValue, mlir::Value nodeIndex) override;
   mlir::Value GenerateIsLeafTileOp(ConversionPatternRewriter &rewriter, mlir::Operation *op, mlir::Value treeValue, mlir::Value nodeIndex) override;
+  
+  void GenerateTreeIndexBuffers(ConversionPatternRewriter &rewriter, mlir::Operation *op, mlir::Value treeValue) override  { }
 
   int32_t GetTileSize() override {
     assert (m_tileSize != -1 && "Tile size is not initialized");

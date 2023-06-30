@@ -1,5 +1,6 @@
 #ifdef TREEBEARD_GPU_SUPPORT
 
+#include <vector>
 #include "Dialect.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -14,10 +15,12 @@
 #include "mlir/Dialect/GPU/Transforms/ParallelLoopMapper.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
-#include "GPUSupportUtils.h"
+#include "mlir/Transforms/Passes.h"
+
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Casting.h"
-#include <vector>
+
+#include "GPUSupportUtils.h"
 
 using namespace mlir;
 
@@ -182,7 +185,7 @@ void GreedilyMapParallelLoopsToGPU(mlir::ModuleOp module) {
   optPM.addPass(createGpuMapParallelLoopsPass());
 
   if (mlir::failed(pm.run(module))) {
-    llvm::errs() << "Lowering to mid level IR failed.\n";
+    llvm::errs() << "Map parallel loops to GPU failed.\n";
   }
 }
 
@@ -192,7 +195,7 @@ void ConvertParallelLoopsToGPU(mlir::MLIRContext& context, mlir::ModuleOp module
   optPM.addPass(createParallelLoopToGpuPass());
 
   if (mlir::failed(pm.run(module))) {
-    llvm::errs() << "Lowering to mid level IR failed.\n";
+    llvm::errs() << "Convert parallel loops to GPULaunchOp pass failed.\n";
   }
   // Insert required GPU allocations and transfers to and from the gpu memory.
   // Replace the uses of the function arguments with the new gpu allocations.
@@ -204,7 +207,16 @@ void OutlineGPUKernels(mlir::MLIRContext& context, mlir::ModuleOp module) {
   pm.addPass(createGpuKernelOutliningPass());
 
   if (mlir::failed(pm.run(module))) {
-    llvm::errs() << "Lowering to mid level IR failed.\n";
+    llvm::errs() << "Running GPU Outlining pass failed.\n";
+  }
+}
+
+void RunCanonicalizerPass(mlir::MLIRContext& context, mlir::ModuleOp module) {
+  mlir::PassManager pm(&context);
+  pm.addPass(createCanonicalizerPass());
+
+  if (mlir::failed(pm.run(module))) {
+    llvm::errs() << "Canonicalizer pass failed.\n";
   }
 }
 

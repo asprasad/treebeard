@@ -1043,6 +1043,10 @@ bool VerifyGPUCodeGenerationOutput_Tiled_VariableBatchSize_AnyRep(TestArgs_t& ar
   // module->dump();
 
   mlir::decisionforest::ConvertParallelLoopsToGPU(context, module);
+  
+  // module->dump();
+  decisionforest::RunCanonicalizerPass(context, module);
+  // module->dump();
 
   mlir::decisionforest::LowerGPUEnsembleToMemrefs(context,
                                                   module,

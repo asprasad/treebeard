@@ -5,6 +5,7 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/Matchers.h"
 #include "GPURepresentations.h"
 #include "LIRLoweringHelpers.h"
 
@@ -681,12 +682,6 @@ Type GPUSparseRepresentation::GenerateLeafBuffers(ConversionPatternRewriter &rew
 
   mlir::decisionforest::DecisionForestAttribute forestAttribute = ensembleConstOp.getForest();
   mlir::decisionforest::DecisionForest& forest = forestAttribute.GetDecisionForest();
-  auto forestType = ensembleConstOp.getResult().getType().cast<decisionforest::TreeEnsembleType>();
-  assert (forestType.doAllTreesHaveSameTileSize()); // There is still an assumption here that all trees have the same tile size
-  auto treeType = forestType.getTreeType(0).cast<decisionforest::TreeType>();
-
-  auto thresholdType = treeType.getThresholdType();
-  auto tileSize = treeType.getTileSize();
 
   // Add the leaves memref
   auto leavesMemrefSize = decisionforest::GetTotalNumberOfLeaves();
@@ -821,6 +816,75 @@ void GPUSparseRepresentation::LowerCacheRowsOp(ConversionPatternRewriter &rewrit
                                                mlir::Operation *op,
                                                ArrayRef<Value> operands) {
   LowerCacheRowsOpToGPU(rewriter, op, operands);
+}
+
+int64_t GetConstantIntValueFromMLIRValue(Value val) {
+  auto definingOp = val.getDefiningOp();
+  APInt constIntVal;
+  mlir::detail::constant_int_op_binder binder(&constIntVal);
+  bool match = binder.match(definingOp);
+  assert (match);
+  return constIntVal.getLimitedValue();
+}
+
+// NOTE : Assumes Canonicalization pass has been run!
+int64_t GetNumberOfThreadsInThreadBlock(gpu::LaunchOp gpuLaunchOp) {
+  auto threadBlockSizeX = GetConstantIntValueFromMLIRValue(gpuLaunchOp.getBlockSizeX());
+  auto threadBlockSizeY = GetConstantIntValueFromMLIRValue(gpuLaunchOp.getBlockSizeY());
+  auto threadBlockSizeZ = GetConstantIntValueFromMLIRValue(gpuLaunchOp.getBlockSizeZ());
+  return threadBlockSizeX*threadBlockSizeY*threadBlockSizeZ;
+}
+
+Value GenerateLocalThreadId(ConversionPatternRewriter &rewriter, 
+                            Location location,
+                            gpu::LaunchOp launchOp) {
+  auto numThreadsX = launchOp.getBlockSizeX();
+  auto threadNum = launchOp.getThreadIds();
+
+  // TODO_Ashwin everything below assumes that thread blocks are 2D!
+    
+  // index = numThreadsX*threadNum.Y + threadNum.X
+  auto nxTimesTy = rewriter.create<arith::MulIOp>(location, numThreadsX, threadNum.y);
+  auto index = rewriter.create<arith::AddIOp>(location, static_cast<Value>(nxTimesTy), threadNum.x);
+  return index;
+}
+void GPUSparseRepresentation::GenerateTreeIndexBuffers(ConversionPatternRewriter &rewriter, 
+                                                       mlir::Operation *op,
+                                                       mlir::Value treeValue) {
+  auto getRootOp = AssertOpIsOfType<decisionforest::GetRootOp>(op);
+  auto treeType = getRootOp.getTree().getType().cast<decisionforest::TreeType>();
+  auto tileSize = treeType.getTileSize();
+  if (tileSize == 1) {
+    return;
+  }
+  
+  // Add shared memory buffer that is the size of numThreads
+  // Initialize every element to zero
+  // __syncthreads()
+  auto owningModule = op->getParentOfType<mlir::ModuleOp>();
+  auto gpuLaunchOp = op->getParentOfType<gpu::LaunchOp>();
+  auto location = op->getLoc();
+
+  auto numThreads = GetNumberOfThreadsInThreadBlock(gpuLaunchOp);
+
+  std::string globalBufferName = "__nodeIndexBuffer_" + std::to_string(reinterpret_cast<int64_t>(op));
+  auto globalBufferType = MemRefType::get({numThreads}, rewriter.getIndexType(), {}, 3);
+  // create a global for shared memory
+  {
+    SaveAndRestoreInsertionPoint saveAndRestoreInsertPoint(rewriter);
+    rewriter.setInsertionPoint(&owningModule.front());
+    rewriter.create<memref::GlobalOp>(location, globalBufferName,
+                                  /*sym_visibility=*/rewriter.getStringAttr("private"),
+                                  /*type=*/globalBufferType,
+                                  /*initial_value=*/rewriter.getUnitAttr(),
+                                  /*constant=*/false, 
+                                  /*alignment*/IntegerAttr());
+  }
+  auto globalRef = rewriter.create<memref::GetGlobalOp>(location, globalBufferType, globalBufferName);
+  auto threadIndex = GenerateLocalThreadId(rewriter, location, gpuLaunchOp);
+  auto zeroConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
+  rewriter.create<memref::StoreOp>(location, zeroConst.getResult(), globalRef.getResult(), ValueRange{threadIndex});
+  rewriter.create<gpu::BarrierOp>(location);
 }
 
 std::shared_ptr<IRepresentation> ConstructGPUSparseRepresentation() {
