@@ -178,6 +178,9 @@ class TreebeardAPI:
 
       self.runtime_lib.BuildHIRRepresentation.argtypes = [ctypes.c_int64]
 
+      self.runtime_lib.LowerToLLVMAndDumpIR.restype = ctypes.c_bool
+      self.runtime_lib.LowerToLLVMAndDumpIR.argtypes = [ctypes.c_int64, ctypes.c_char_p]
+
       self.runtime_lib.ConstructInferenceRunnerFromHIR.restype = ctypes.c_int64
       self.runtime_lib.ConstructInferenceRunnerFromHIR.argtypes = [ctypes.c_int64]
 
@@ -275,6 +278,10 @@ class TreebeardAPI:
     file_type_ascii = file_type.encode('ascii')
     # print("TBContext_SetTypeAPI: ", treebeard_context_ptr, type(treebeard_context_ptr))
     self.runtime_lib.SetForestCreatorType(ctypes.c_int64(treebeard_context_ptr), file_type_ascii)
+
+  def LowerToLLVMAndDumpIR(self, treebeard_context_ptr, output_path):
+    output_path_utf8 = output_path.encode('utf-8')
+    self.runtime_lib.LowerToLLVMAndDumpIR(treebeard_context_ptr, output_path_utf8)
 
   def SetRepresentationAndSerializer(self, treebeard_context_ptr, rep_type):
     rep_type_ascii = rep_type.encode('ascii')

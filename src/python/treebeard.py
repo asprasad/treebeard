@@ -1,6 +1,7 @@
 import ctypes
 from treebeard_runtime_api import TreebeardAPI
 import numpy
+from typing import List
 
 treebeardAPI = TreebeardAPI()
 
@@ -85,7 +86,7 @@ class Schedule:
   def Tile(self, index, outerIndex, innerIndex, tileSize):
       treebeardAPI.Schedule_Tile(self.schedulePtr, index.indexVarPtr, outerIndex.indexVarPtr, innerIndex.indexVarPtr, tileSize)
 
-  def Reorder(self, indices: list[IndexVariable]):
+  def Reorder(self, indices: List[IndexVariable]):
     indices_array = numpy.zeros((len(indices)), numpy.int64)
     for i in range(len(indices)):
       indices_array[i] = indices[i].indexVarPtr
@@ -159,6 +160,10 @@ class TreebeardContext:
 
   def BuildHIRRepresentation(self):
     treebeardAPI.runtime_lib.BuildHIRRepresentation(self.tbcontextPtr)
+
+  def DumpLLVMIR(self, path: str):
+    self.BuildHIRRepresentation()
+    treebeardAPI.LowerToLLVMAndDumpIR(self.tbcontextPtr, path)
 
   def ConstructInferenceRunnerFromHIR(self):
     inferenceRunner = TreebeardInferenceRunner()

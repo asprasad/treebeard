@@ -245,7 +245,9 @@ int dumpLLVMIR(mlir::ModuleOp module, bool dumpAsm) {
   // Init LLVM targets
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
+  
   mlir::registerLLVMDialectTranslation(*module->getContext());
+  mlir::registerOpenMPDialectTranslation(*module->getContext());
 
   // Convert the module to LLVM IR in a new LLVM IR Context
   llvm::LLVMContext llvmContext;
@@ -269,7 +271,9 @@ int dumpLLVMIRToFile(mlir::ModuleOp module, const std::string& filename) {
   // Init LLVM targets
   llvm::InitializeNativeTarget();
   llvm::InitializeNativeTargetAsmPrinter();
+
   mlir::registerLLVMDialectTranslation(*module->getContext());
+  mlir::registerOpenMPDialectTranslation(*module->getContext());
 
   // Convert the module to LLVM IR in a new LLVM IR Context
   llvm::LLVMContext llvmContext;

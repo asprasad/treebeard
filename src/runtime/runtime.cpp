@@ -352,15 +352,26 @@ extern "C" void* GetScheduleFromTBContext(intptr_t tbContext) {
 extern "C" void BuildHIRRepresentation(void* tbContext) {
   TreeBeard::TreebeardContext* tbContextPtr = reinterpret_cast<TreeBeard::TreebeardContext*>(tbContext);
   TreeBeard::BuildHIRModule(*tbContextPtr, *tbContextPtr->forestConstructor);
-  return;
 }
 
-extern "C" void* ConstructInferenceRunnerFromHIR(void *tbContext) {
+inline mlir::ModuleOp LowerToLLVM(void* tbContext) {
   TreeBeard::TreebeardContext* tbContextPtr = reinterpret_cast<TreeBeard::TreebeardContext*>(tbContext);
   auto module = tbContextPtr->forestConstructor->GetModule();
   TreeBeard::DoTilingTransformation(module, *tbContextPtr);
   TreeBeard::LowerHIRModuleToLLVM(module, *tbContextPtr);
-  auto inferenceRunner = new mlir::decisionforest::InferenceRunner(tbContextPtr->serializer,
+
+  return module;
+}
+
+extern "C" bool LowerToLLVMAndDumpIR(void* tbContext, const char* fileName) {
+  auto module = LowerToLLVM(tbContext);
+  return mlir::decisionforest::dumpLLVMIRToFile(module, fileName) == 0;
+}
+
+extern "C" void* ConstructInferenceRunnerFromHIR(void *tbContext) {
+  TreeBeard::TreebeardContext* tbContextPtr = reinterpret_cast<TreeBeard::TreebeardContext*>(tbContext);
+  auto module = LowerToLLVM(tbContext);
+  auto *inferenceRunner = new mlir::decisionforest::InferenceRunner(tbContextPtr->serializer,
                                                                    module, 
                                                                    tbContextPtr->options.tileSize,
                                                                    tbContextPtr->options.thresholdTypeWidth,

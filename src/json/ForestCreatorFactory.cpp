@@ -15,7 +15,7 @@ REGISTER_FOREST_CREATOR(onnx_file, ConstructONNXFileParser)
 std::shared_ptr<ForestCreator> ForestCreatorFactory::GetForestCreator(const std::string& name,
                                                                       TreeBeard::TreebeardContext& tbContext) {
   auto mapIter = m_constructionMap.find(name);
-  assert (mapIter != m_constructionMap.end() && "Unknown representation name!");
+  assert (mapIter != m_constructionMap.end() && "Unknown forest creator name!");
   return mapIter->second(tbContext);
 }
 
