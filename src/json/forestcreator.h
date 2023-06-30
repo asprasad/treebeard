@@ -21,6 +21,8 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "llvm/ADT/STLExtras.h"
 
+#include "LIRLoweringHelpers.h"
+
 using json = nlohmann::json;
 
 /*
@@ -159,8 +161,6 @@ protected:
     mlir::Type GetFunctionArgumentType() {
         const auto& features = m_forest->GetFeatures();
         int64_t shape[] = { m_batchSize, static_cast<int64_t>(features.size())};
-        // TODO This needs to be moved elsewhere. Seems too obscure a place for this!
-            m_serializer->SetRowSize(features.size());
         return mlir::MemRefType::get(shape, m_inputElementType);
     }
     mlir::Type GetFunctionResultType() {
@@ -179,6 +179,25 @@ protected:
         auto predictionFunction = m_builder.create<mlir::func::FuncOp>(location, std::string("Prediction_Function"), functionType);
         predictionFunction.setPublic();
         return predictionFunction;
+    }
+
+    void AddConstIntegerGetFunction(const std::string& functionName, int32_t value) {
+        auto location = m_builder.getUnknownLoc();
+        auto int32Type = m_builder.getI32Type();
+        auto functionType = m_builder.getFunctionType({ }, int32Type);
+        auto func = m_builder.create<mlir::func::FuncOp>(location, functionName, functionType);
+        func.setPublic();
+        
+        auto insertPoint = m_builder.saveInsertionPoint();
+        
+        auto &entryBlock = *func.addEntryBlock();
+        m_builder.setInsertionPointToStart(&entryBlock);
+        auto constVal = m_builder.create<mlir::arith::ConstantIntOp>(location, value, int32Type);
+        m_builder.create<mlir::func::ReturnOp>(location, constVal.getResult());
+
+        m_builder.restoreInsertionPoint(insertPoint);
+
+        m_module.push_back(func);
     }
 
     virtual mlir::decisionforest::TreeEnsembleType GetEnsembleType() {
@@ -227,9 +246,6 @@ public:
         m_serializer(std::move(serializer))
     {
         m_module = mlir::ModuleOp::create(m_builder.getUnknownLoc(), llvm::StringRef("MyModule"));
-        m_serializer->SetBatchSize(batchSize);
-        m_serializer->SetInputTypeBitWidth(m_inputElementType.getIntOrFloatBitWidth());
-        m_serializer->SetReturnTypeBitWidth(m_returnType.getIntOrFloatBitWidth());
     }
 
     ForestCreator(const std::shared_ptr<mlir::decisionforest::IModelSerializer>& serializer,
@@ -271,6 +287,12 @@ public:
     mlir::ModuleOp GetEvaluationFunction() {
         if (m_statsProfileCSV != "")
             TreeBeard::Profile::ReadProbabilityProfile(*m_forest, m_statsProfileCSV);
+
+        // Add getters for some constants we rely on at runtime
+        AddConstIntegerGetFunction("GetBatchSize", m_batchSize);
+        AddConstIntegerGetFunction("GetRowSize", m_forest->GetFeatures().size());
+        AddConstIntegerGetFunction("GetInputTypeBitWidth", m_inputElementType.getIntOrFloatBitWidth());
+        AddConstIntegerGetFunction("GetReturnTypeBitWidth", m_returnType.getIntOrFloatBitWidth());
 
         mlir::func::FuncOp function(GetFunctionPrototype());
         if (!function)

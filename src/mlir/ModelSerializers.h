@@ -22,11 +22,6 @@ public:
   ~ArraySparseSerializerBase() { }
 
   void ReadData() override;
-
-  void SetBatchSize(int32_t value) override;
-  void SetRowSize(int32_t value) override;
-  void SetInputTypeBitWidth(int32_t value) override;
-  void SetReturnTypeBitWidth(int32_t value) override;
 };
 
 class ArrayRepresentationSerializer : public ArraySparseSerializerBase {
@@ -42,7 +37,6 @@ public:
 
 class SparseRepresentationSerializer : public ArraySparseSerializerBase {
 protected:
-  int32_t InitializeLeafArrays();
   void InitializeBuffersImpl() override;
 public:
   SparseRepresentationSerializer(const std::string& modelGlobalsJSONPath)

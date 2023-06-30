@@ -44,7 +44,8 @@ public:
     : InferenceRunnerBase(serializer, tileSize, thresholdSize, featureIndexSize),
       m_maybeEngine(CreateExecutionEngine(module)),
       m_engine(m_maybeEngine.get()), m_module(module) 
-  { 
+  {
+    m_serializer->ReadData(); 
     // Okay to call virtual fn here, it's final.
     Init();
   }

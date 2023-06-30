@@ -1117,19 +1117,24 @@ bool Test_SplitSchedule(TestArgs_t& args) {
 #ifdef RUN_ALL_TESTS
 TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_ONNX_TileSize8_Abalone),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Int16),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Int8),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Float),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_FloatInt16),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_FloatInt8),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_Int16),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_Int8),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_Float),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_FloatInt16),
-  TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_FloatInt8),
+  
+  // [Ashwin] These tests are exercising a part of the code that 
+  // we intend to remove. Commenting them out to allow assertions 
+  // that Serializer::Persist is never called.
+  // TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy),
+  // TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Int16),
+  // TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Int8),
+  // TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Float),
+  // TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_FloatInt16),
+  // TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_FloatInt8),
+  // TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy),
+  // TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees),
+  // TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_Int16),
+  // TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_Int8),
+  // TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_Float),
+  // TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_FloatInt16),
+  // TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_FloatInt8),
+
   TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_CodeGeneration_RightAndLeftHeavy_BatchSize1),
@@ -1158,10 +1163,12 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize1_Float),
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize2_Float),
   TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float),
+  
   // #TODO - Re-enable these tests
   // TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Tiled),
   // TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy_Tiled),
   // TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_Balanced_Tiled),
+  
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_RightHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_BalancedTree_BatchSize1),
@@ -1172,6 +1179,7 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape),
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize),
   TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize),
+  
   // #TODO - Re-enable these tests
   // TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy),
   // TEST_LIST_ENTRY(Test_ModelInit_RightHeavy),
@@ -1185,6 +1193,7 @@ TestDescriptor testList[] = {
   // TEST_LIST_ENTRY(Test_ModelInit_Balanced_Int16TileShape),
   // TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy_Int8TileShape),
   // TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy_Int16TileShape),
+  
   TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
   TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1),
@@ -1603,14 +1612,96 @@ TestDescriptor testList[] = {
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_DblI32_B32_TSz2),
-  TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_DblI32_B32_TSz2),
-  TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_DblI32_B32_TSz2),
-  TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
-  TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_FltI16_B32_TSz2),
-  TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_FltI16_B32_TSz2),
-  TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_FltI16_B32_TSz2),
-  TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
+  TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize1),
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_DblI32_B32_TSz2),
+
+  // TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_DoubleInt),
+  // TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_DoubleInt),
+  // TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_DoubleInt),
+  // TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_DoubleInt),
+  // TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_FloatInt),
+  // TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_FloatInt),
+  // TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_FloatInt),
+  // TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt),
+  // TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_FloatInt16),
+  // TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_FloatInt16),
+  // TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_FloatInt16),
+  // TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt16),
+
+  // TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Reorg_DoubleInt),
+  // TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Reorg_DoubleInt),
+  // TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Reorg_DoubleInt),
+  // TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Reorg_DoubleInt),
+  // TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Reorg_FloatInt),
+  // TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Reorg_FloatInt),
+  // TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Reorg_FloatInt),
+  // TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt),
+  // TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Reorg_FloatInt16),
+  // TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Reorg_FloatInt16),
+  // TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Reorg_FloatInt16),
+  // TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt16),
+
+  // // Basic Array Scalar GPU Codegen Tests
+  // TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_GPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_GPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32),
+  // TEST_LIST_ENTRY(Test_GPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32),
+  // TEST_LIST_ENTRY(Test_GPUCodeGeneration_Balanced_FloatInt16_BatchSize32),
+  // TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32),
+
+  // // Basic scalar sparse GPU codegen tests
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_LeftHeavy_FloatInt16_ChI16_BatchSize32),
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_RightHeavy_FloatInt16_ChI16_BatchSize32),
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_Balanced_FloatInt16_ChI16_BatchSize32),
+  // TEST_LIST_ENTRY(Test_SparseGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_ChI16_BatchSize32),
+
+  // // Basic reorg forest tests
+  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32),
+  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32),
+  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32),
+  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32),
+
+  // // Basic GPU caching tests
+  // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
+  // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy),
+  // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep),
+  // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg),
+  // TEST_LIST_ENTRY(Test_InputSharedMem_LeftHeavy),
+  // TEST_LIST_ENTRY(Test_InputSharedMem_RightHeavy),
+  // TEST_LIST_ENTRY(Test_InputSharedMem_LeftRightAndBalanced),
+
+  // // XGBoost tests on GPU
+  // TEST_LIST_ENTRY(Test_GPUCodeGeneration_Covtype_ArrayRep_DoubleInt32_BatchSize32),
+  // TEST_LIST_ENTRY(Test_GPUCodeGeneration_Covtype_SparseRep_DoubleInt32_BatchSize32),
+  // // TEST_LIST_ENTRY(Test_GPUCodeGeneration_Covtype_ReorgRep_DoubleInt32_BatchSize32), - Currently not supported
+
+  // // Simple GPU Tiling tests
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_DblI32_B32_TSz2),
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_DblI32_B32_TSz2),
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_DblI32_B32_TSz2),
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_FltI16_B32_TSz2),
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_FltI16_B32_TSz2),
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_FltI16_B32_TSz2),
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
+
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_DblI32_B32_TSz2),
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_DblI32_B32_TSz2),
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_FltI16_B32_TSz2),
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_FltI16_B32_TSz2),
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_FltI16_B32_TSz2),
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
   // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg),
   // TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize8_CacheInputSchedule),
   // TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize2_CacheInputSchedule),

@@ -46,16 +46,21 @@ InferenceRunnerBase::InferenceRunnerBase(std::shared_ptr<IModelSerializer> seria
     m_thresholdSize(thresholdSize),
     m_featureIndexSize(featureIndexSize)
 { 
-  m_serializer->ReadData();
-  m_batchSize = m_serializer->GetBatchSize();
-  m_rowSize = m_serializer->GetRowSize();
-  m_inputElementBitWidth = m_serializer->GetInputTypeBitWidth();
-  m_returnTypeBitWidth = m_serializer->GetReturnTypeBitWidth();
+}
+
+void InferenceRunnerBase::InitIntegerField(const std::string& functionName, int32_t& field) {
+  using GetFunc_t = int32_t(*)();
+  auto get = reinterpret_cast<GetFunc_t>(GetFunctionAddress(functionName));
+  field = get();
 }
 
 void InferenceRunnerBase::Init() {
   m_serializer->InitializeBuffers(this);
   m_inferenceFuncPtr = GetFunctionAddress("Prediction_Function");
+  InitIntegerField("GetBatchSize", m_batchSize);
+  InitIntegerField("GetRowSize", m_rowSize);
+  InitIntegerField("GetInputTypeBitWidth", m_inputElementBitWidth);
+  InitIntegerField("GetReturnTypeBitWidth", m_returnTypeBitWidth);
 }
 
 int32_t InferenceRunnerBase::RunInference_CustomImpl(double *input, double *returnValue) {

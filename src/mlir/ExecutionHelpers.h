@@ -54,6 +54,7 @@ protected:
   LUTMemrefType m_lutMemref;
 
   virtual void* GetFunctionAddress(const std::string& functionName) = 0;
+  void InitIntegerField(const std::string& functionName, int32_t& field);
   
   virtual void Init();
   

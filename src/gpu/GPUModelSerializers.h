@@ -48,12 +48,7 @@ public:
                             Memref<double, 1> results) override;
   bool HasCustomPredictionMethod() override { return true; }
   void CleanupBuffers() override;
-
-  void SetBatchSize(int32_t value) override;
-  void SetRowSize(int32_t value) override;
-  void SetInputTypeBitWidth(int32_t value) override;
-  void SetReturnTypeBitWidth(int32_t value) override;
-
+  
   ModelMemrefType GetModelMemref() { return m_modelMemref; }    
 };
 

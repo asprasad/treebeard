@@ -171,10 +171,6 @@ void ReorgForestSerializer::ReadData() {
   fin >> m_json;
   fin.close();
 
-  m_inputTypeBitWidth = m_json["InputElementBitWidth"];
-  m_returnTypeBitwidth = m_json["ReturnTypeBitWidth"];
-  m_rowSize = m_json["RowSize"];
-  m_batchSize = m_json["BatchSize"];
   m_numberOfTrees = m_json["NumberOfTrees"];
   m_numberOfClasses = m_json["NumberOfClasses"];
 
@@ -193,10 +189,6 @@ void ReorgForestSerializer::WriteJSONFile() {
   assert (m_filepath != "");
   m_json.clear();
 
-  m_json["InputElementBitWidth"] = m_inputTypeBitWidth;
-  m_json["ReturnTypeBitWidth"] = m_returnTypeBitwidth;
-  m_json["RowSize"] = m_rowSize;
-  m_json["BatchSize"] = m_batchSize;
   m_json["NumberOfTrees"] = m_numberOfTrees;
   m_json["NumberOfClasses"] = m_numberOfClasses;
 
@@ -213,7 +205,6 @@ void ReorgForestSerializer::WriteJSONFile() {
 void ReorgForestSerializer::Persist(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType) {
   m_numberOfTrees = forestType.getNumberOfTrees();
   m_numberOfClasses = forest.IsMultiClassClassifier() ? forest.GetNumClasses() : 1;
-  m_rowSize = forestType.getRowType().cast<MemRefType>().getShape()[0];
   auto treeType = forestType.getTreeType(0).cast<decisionforest::TreeType>();
   m_thresholdBitWidth = treeType.getThresholdType().getIntOrFloatBitWidth();
   m_featureIndexBitWidth = treeType.getFeatureIndexType().getIntOrFloatBitWidth();
