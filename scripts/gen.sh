@@ -9,7 +9,7 @@ echo "Using LLVM rooted at : $LLVM_DIR"
 
 CMAKE="cmake"
 MLIR_BUILD="build"
-CONFIG="Debug"
+CONFIG="Release"
 
 while getopts "d:m:c:" opt
 do
@@ -25,4 +25,10 @@ echo "Using MLIR_BUILD : $MLIR_BUILD"
 echo "Using configuration : $CONFIG"
 
 # run this from the build directory
-$CMAKE -G Ninja .. -DCMAKE_EXPORT_COMPILE_COMMANDS=1 -DMLIR_DIR=$LLVM_DIR/$MLIR_BUILD/lib/cmake/mlir -DLLVM_BUILD_DIRECTORY=$LLVM_DIR/$MLIR_BUILD/ -DCMAKE_BUILD_TYPE=$CONFIG -DCMAKE_POLICY_DEFAULT_CMP0116=OLD
+$CMAKE -G Ninja .. -DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
+       -DMLIR_DIR=$LLVM_DIR/$MLIR_BUILD/lib/cmake/mlir \
+       -DLLVM_BUILD_DIRECTORY=$LLVM_DIR/$MLIR_BUILD/ \
+       -DCMAKE_BUILD_TYPE=$CONFIG
+#      -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+#      -DLLVM_ENABLE_LLD=ON
+#      -DCMAKE_CXX_FLAGS="-std=c++17"

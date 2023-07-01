@@ -182,7 +182,6 @@ struct TreeTypeKey {
     Type thresholdType;
     Type featureIndexType;
     Type tileShapeType;
-    bool sparseRepresentation;
     Type childIndexType;
     Type classIdType;
     bool operator==(const TreeTypeKey& that) const
@@ -192,8 +191,6 @@ struct TreeTypeKey {
                 && this->thresholdType==that.thresholdType
                 && this->featureIndexType==that.featureIndexType
                 && this->tileShapeType==that.tileShapeType
-                && this->sparseRepresentation==that.sparseRepresentation
-                && (this->sparseRepresentation ? this->childIndexType==that.childIndexType : true)
                 && this->childIndexType == that.childIndexType
                 && this->classIdType == that.classIdType;
     }
@@ -201,14 +198,13 @@ struct TreeTypeKey {
 
 struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
     TreeTypeStorage(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType, 
-                    Type tileShapeType, bool sparseRep, Type childIndexType, Type classIdType)
+                    Type tileShapeType, Type childIndexType, Type classIdType)
         :
         m_resultType(resultType),
         m_tileSize(tileSize),
         m_thresholdType(thresholdType),
         m_featureIndexType(featureIndexType),
         m_tileShapeType(tileShapeType),
-        m_sparseRepresentation(sparseRep),
         m_childIndexType(childIndexType),
         m_classIdType(classIdType) {}
 
@@ -222,7 +218,6 @@ struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
             m_thresholdType,
             m_featureIndexType,
             m_tileShapeType,
-            m_sparseRepresentation,
             m_childIndexType,
             m_classIdType
         };
@@ -237,7 +232,6 @@ struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
             key.thresholdType,
             key.featureIndexType,
             key.tileShapeType,
-            key.sparseRepresentation,
             key.childIndexType,
             key.classIdType);
     }
@@ -251,7 +245,6 @@ struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
             thresholdType, 
             featureIndexType, 
             IntegerType::get(context, 32),
-            false, 
             IntegerType::get(context, 32),
             IntegerType::get(context, 8)
         };
@@ -266,13 +259,12 @@ struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
             thresholdType, 
             featureIndexType, 
             tileShapeType, 
-            false, 
             IntegerType::get(context, 32),
             IntegerType::get(context, 8)
         };
     }
 
-    static KeyTy getKey(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType, Type tileShapeType, bool sparseRep, Type childIndexType) {
+    static KeyTy getKey(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType, Type tileShapeType, Type childIndexType) {
         return KeyTy
         {
             resultType, 
@@ -280,13 +272,12 @@ struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
             thresholdType, 
             featureIndexType, 
             tileShapeType, 
-            sparseRep, 
             childIndexType,
             IntegerType::get(resultType.getContext(), 8) // #TODO Tree-Beard#19
         };
     }
 
-    static KeyTy getKey(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType, Type tileShapeType, bool sparseRep, Type childIndexType, Type classIdType) {
+    static KeyTy getKey(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType, Type tileShapeType, Type childIndexType, Type classIdType) {
         return KeyTy
         {
             resultType, 
@@ -294,7 +285,6 @@ struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
             thresholdType, 
             featureIndexType, 
             tileShapeType, 
-            sparseRep, 
             childIndexType,
             classIdType, 
         };
@@ -308,7 +298,6 @@ struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
             key.thresholdType,
             key.featureIndexType,
             key.tileShapeType,
-            key.sparseRepresentation,
             key.childIndexType,
             key.classIdType);
     }
@@ -318,7 +307,6 @@ struct TreeTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
     Type m_thresholdType;
     Type m_featureIndexType;
     Type m_tileShapeType;
-    bool m_sparseRepresentation;
     Type m_childIndexType;
     Type m_classIdType;
 public:
@@ -340,9 +328,9 @@ public:
         return Base::get(ctx, resultType, tileSize, thresholdType, featureIndexType, tileShapeType);
     }
 
-    static TreeType get(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType, Type tileShapeType, bool sparseRep, Type childIndexType) {
+    static TreeType get(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType, Type tileShapeType, Type childIndexType) {
         mlir::MLIRContext *ctx = resultType.getContext();
-        return Base::get(ctx, resultType, tileSize, thresholdType, featureIndexType, tileShapeType, sparseRep, childIndexType);
+        return Base::get(ctx, resultType, tileSize, thresholdType, featureIndexType, tileShapeType, childIndexType);
     }
 
     mlir::Type getResultType() const { return getImpl()->m_resultType; }
@@ -350,7 +338,6 @@ public:
     mlir::Type getThresholdType() const { return getImpl()->m_thresholdType; }
     mlir::Type getFeatureIndexType() const { return getImpl()->m_featureIndexType; }
     mlir::Type getTileShapeType() const { return getImpl()->m_tileShapeType; }
-    bool isSparseRepresentation() const { return getImpl()->m_sparseRepresentation; }
     mlir::Type getChildIndexType() const { return getImpl()->m_childIndexType; }
     mlir::Type getClassIdType() const { return getImpl()-> m_classIdType; }
 
@@ -361,7 +348,8 @@ public:
 // Tree Ensemble Type
 //===----------------------------------------------------------------------===//
 
-// TODO Should we store the input row type (apart from the batch size) here?
+// TODO_Ashwin Making this type also represent subset ensembles is too much of an 
+// overload. We need to fix this.
 struct TreeEnsembleTypeKey {
     Type resultType;
     size_t numberOfTrees;
@@ -370,6 +358,9 @@ struct TreeEnsembleTypeKey {
     bool sameTypeTrees;
     Type treeType;
     std::vector<Type> treeTypes;
+
+    // For ensemble subsets
+    bool ensembleSubset;
 
     bool operator==(const TreeEnsembleTypeKey& that) const
     {
@@ -381,7 +372,10 @@ struct TreeEnsembleTypeKey {
         bool treesHaveSameType = sameTypeTrees ? treeType==that.treeType : treeTypes==that.treeTypes;
         if (!treesHaveSameType)
             return false;
-         
+        
+        if (ensembleSubset != that.ensembleSubset)
+            return false;
+        
         return this->resultType == that.resultType && 
                this->numberOfTrees == that.numberOfTrees && 
                this->rowType == that.rowType && 
@@ -390,40 +384,49 @@ struct TreeEnsembleTypeKey {
 };
 
 struct TreeEnsembleTypeStorage : public TypeStorage, IDecisionForestTypePrintInterface {
-    TreeEnsembleTypeStorage(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType, 
-                            bool treesHaveSameType, Type treeType, const std::vector<Type>& treeTypes)
+    TreeEnsembleTypeStorage(Type resultType, size_t numTrees, 
+                            Type rowType, ReductionType reductionType, 
+                            bool treesHaveSameType, Type treeType,
+                            const std::vector<Type>& treeTypes,
+                            bool ensembleSubset)
         : m_resultType(resultType), m_numTrees(numTrees), m_rowType(rowType), m_reductionType(reductionType),
-          m_treesHaveSameType(treesHaveSameType), m_treeType(treeType), m_treeTypes(treeTypes) 
+          m_treesHaveSameType(treesHaveSameType), m_treeType(treeType), m_treeTypes(treeTypes),
+          m_ensembleSubset(ensembleSubset)
          {}
 
     using KeyTy = TreeEnsembleTypeKey;
 
     bool operator==(const KeyTy &key) const {
-        KeyTy myKey{ m_resultType, m_numTrees, m_rowType, m_reductionType, m_treesHaveSameType, m_treeType, m_treeTypes };
+        KeyTy myKey{ m_resultType, m_numTrees, m_rowType, m_reductionType, m_treesHaveSameType, m_treeType, m_treeTypes, m_ensembleSubset };
         return key == myKey;
     }
 
     static llvm::hash_code hashKey(const KeyTy &key) {
         std::vector<Type> treeTypes = key.sameTypeTrees ? std::vector<Type>(key.numberOfTrees, key.treeType) :
                                                               key.treeTypes;
-        return llvm::hash_combine(key.resultType, key.numberOfTrees, key.rowType, key.reductionType, treeTypes);
+        return llvm::hash_combine(key.resultType, key.numberOfTrees, key.rowType, key.reductionType, treeTypes, key.ensembleSubset);
     }
 
     static KeyTy getKey(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType,
                         Type treeType) {
-        return KeyTy{ resultType, numTrees, rowType, reductionType, true, treeType, std::vector<Type>()};
+        return KeyTy{ resultType, numTrees, rowType, reductionType, true, treeType, std::vector<Type>(), false};
     }
 
     static KeyTy getKey(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType,
                         const std::vector<Type>& treeTypes) {
-        return KeyTy{ resultType, numTrees, rowType, reductionType, false, Type(), treeTypes};
+        return KeyTy{ resultType, numTrees, rowType, reductionType, false, Type(), treeTypes, false };
+    }
+
+    static KeyTy getKey(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType,
+                        Type treeType, bool subset) {
+        return KeyTy{ resultType, numTrees, rowType, reductionType, true, treeType, std::vector<Type>(), subset};
     }
 
     static TreeEnsembleTypeStorage *construct(TypeStorageAllocator &allocator,
                                               const KeyTy &key) {
         return new (allocator.allocate<TreeEnsembleTypeStorage>())
                     TreeEnsembleTypeStorage(key.resultType, key.numberOfTrees, key.rowType, key.reductionType,
-                                            key.sameTypeTrees, key.treeType, key.treeTypes);
+                                            key.sameTypeTrees, key.treeType, key.treeTypes, key.ensembleSubset);
     }
 
     Type m_resultType;
@@ -433,6 +436,7 @@ struct TreeEnsembleTypeStorage : public TypeStorage, IDecisionForestTypePrintInt
     bool m_treesHaveSameType;
     Type m_treeType;
     std::vector<Type> m_treeTypes;
+    bool m_ensembleSubset;
 public:
     void print(mlir::DialectAsmPrinter &printer) override;
 };
@@ -451,6 +455,11 @@ public:
                                 const std::vector<Type>& treeTypes) {
         mlir::MLIRContext *ctx = resultType.getContext();
         return Base::get(ctx, resultType, numTrees, rowType, reductionType, treeTypes);
+    }
+
+    static TreeEnsembleType get(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType, Type treeType, bool subset) {
+        mlir::MLIRContext *ctx = resultType.getContext();
+        return Base::get(ctx, resultType, numTrees, rowType, reductionType, treeType, subset);
     }
 
     mlir::Type getResultType() const { return getImpl()->m_resultType; }
@@ -476,6 +485,7 @@ public:
         }
         return true;
     }
+    bool isSubsetEnsemble() const { return getImpl()->m_ensembleSubset; }
     void print(mlir::DialectAsmPrinter &printer) { getImpl()->print(printer); }
 };
 

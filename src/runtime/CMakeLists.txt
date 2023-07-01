@@ -1,10 +1,11 @@
 add_llvm_library(treebeard-runtime SHARED
-                 runtime.cpp)
+                 runtime.cpp tbruntime.h)
 
 add_dependencies(treebeard-runtime DecisionForestGen)
 
 llvm_update_compile_flags(treebeard-runtime)
-target_link_libraries(treebeard-runtime PRIVATE ${LIBS})
+target_link_libraries(treebeard-runtime PRIVATE ${TREEBEARD_DEPENDENCY_LIBS})
+configure_file(tbruntime.h ${CMAKE_BINARY_DIR}/include/tbruntime.h COPYONLY)
 
 include_directories(../include)
 include_directories(../json)

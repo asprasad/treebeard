@@ -18,13 +18,11 @@ namespace detail
 struct ScheduleAttrStorage : public ::mlir::AttributeStorage
 {
     ScheduleAttrStorage(::mlir::Type type, mlir::decisionforest::Schedule* schedule)
-      : ::mlir::AttributeStorage(type), m_schedule(schedule) { }
+      : m_schedule(schedule) { }
 
     using KeyTy = std::tuple<::mlir::Type, mlir::decisionforest::Schedule*>;
 
     bool operator==(const KeyTy &tblgenKey) const {
-        if (!(getType() == std::get<0>(tblgenKey)))
-            return false;
         if (!(m_schedule == std::get<1>(tblgenKey)))
             return false;
         return true;
@@ -48,13 +46,11 @@ struct ScheduleAttrStorage : public ::mlir::AttributeStorage
 struct UnrollLoopAttrStorage : public ::mlir::AttributeStorage
 {
     UnrollLoopAttrStorage(::mlir::Type type, int32_t unrollFactor)
-      : ::mlir::AttributeStorage(type), m_unrollFactor(unrollFactor) { }
+      : m_unrollFactor(unrollFactor) { }
 
     using KeyTy = std::tuple<::mlir::Type, int32_t>;
 
     bool operator==(const KeyTy &tblgenKey) const {
-        if (!(getType() == std::get<0>(tblgenKey)))
-            return false;
         if (!(m_unrollFactor == std::get<1>(tblgenKey)))
             return false;
         return true;

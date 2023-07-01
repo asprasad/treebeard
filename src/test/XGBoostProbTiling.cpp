@@ -9,9 +9,9 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Verifier.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "llvm/ADT/STLExtras.h"
 
 #include "xgboostparser.h"
@@ -47,7 +47,7 @@ struct SetAndResetPeelTreeWalk {
   }
 };
 
-void InitializeRandomLeafHitCounts(decisionforest::DecisionForest<>& forest) {
+void InitializeRandomLeafHitCounts(decisionforest::DecisionForest& forest) {
   for (size_t i=0 ; i<forest.NumTrees() ; ++i) {
     auto& tree = forest.GetTree(i);
     auto& nodes = tree.GetNodes();
@@ -61,16 +61,16 @@ void InitializeRandomLeafHitCounts(decisionforest::DecisionForest<>& forest) {
       if (!node.IsLeaf())
         continue;
       if (leafIndex < hitLeaves)
-        const_cast<decisionforest::DecisionTree<>::Node&>(node).hitCount = 100;
+        const_cast<decisionforest::DecisionTree::Node&>(node).hitCount = 100;
       else
-        const_cast<decisionforest::DecisionTree<>::Node&>(node).hitCount = 0;
+        const_cast<decisionforest::DecisionTree::Node&>(node).hitCount = 0;
       
       ++leafIndex;
     }
   }
 }
 
-void InitializeLeafHitCountsForUnifAndProb(decisionforest::DecisionForest<>& forest) {
+void InitializeLeafHitCountsForUnifAndProb(decisionforest::DecisionForest& forest) {
   size_t numUnifTrees = forest.NumTrees()/2;
 
   // Make half the trees uniformly tiled (not skewed)
@@ -78,7 +78,7 @@ void InitializeLeafHitCountsForUnifAndProb(decisionforest::DecisionForest<>& for
     auto& tree = forest.GetTree(i);
     auto& nodes = tree.GetNodes();
     for (auto& node : nodes) {
-      const_cast<decisionforest::DecisionTree<>::Node&>(node).hitCount = 1;
+      const_cast<decisionforest::DecisionTree::Node&>(node).hitCount = 1;
     }
   }
 
@@ -96,9 +96,9 @@ void InitializeLeafHitCountsForUnifAndProb(decisionforest::DecisionForest<>& for
       if (!node.IsLeaf())
         continue;
       if (leafIndex < hitLeaves)
-        const_cast<decisionforest::DecisionTree<>::Node&>(node).hitCount = 100;
+        const_cast<decisionforest::DecisionTree::Node&>(node).hitCount = 100;
       else
-        const_cast<decisionforest::DecisionTree<>::Node&>(node).hitCount = 0;
+        const_cast<decisionforest::DecisionTree::Node&>(node).hitCount = 0;
       ++leafIndex;
     }
   }
@@ -115,10 +115,18 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
                                      floatTypeBitWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth,
                                      TreeBeard::TilingType::kHybrid, false /*makeAllLeavesSameDepth*/, true, nullptr);
   
-  auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
-  // auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType>(args.context, modelJsonPath, modelGlobalsJSONFilePath, options);
-  TreeBeard::XGBoostJSONParser<FloatType, ResultType, FeatureIndexType, NodeIndexType, FloatType> xgBoostParser(args.context, modelJsonPath, modelGlobalsJSONFilePath, options.batchSize);
-  xgBoostParser.Parse();
+  auto modelGlobalsJSONFilePath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
+  auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONFilePath);
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+  
+  TreeBeard::XGBoostJSONParser<FloatType, 
+                               ResultType,
+                               FeatureIndexType,
+                               NodeIndexType,
+                               FloatType> xgBoostParser(context, modelJsonPath, serializer, options.batchSize);
+  xgBoostParser.ConstructForest();
   xgBoostParser.SetChildIndexBitWidth(options.childIndexBitWidth);
 
   if (allTreesBiased) {
@@ -130,16 +138,20 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
   }
   auto module = xgBoostParser.GetEvaluationFunction();
 
-  mlir::decisionforest::DoHybridTiling(args.context, module, options.tileSize, options.tileShapeBitWidth);
-  mlir::decisionforest::DoReorderTreesByDepth(args.context, module, -1);
-  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), decisionforest::ConstructRepresentation());
-  mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  mlir::decisionforest::DoHybridTiling(context, module, options.tileSize, options.tileShapeBitWidth);
+  mlir::decisionforest::DoReorderTreesByDepth(context, module, -1);
+  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
+  auto representation = decisionforest::ConstructRepresentation();
+  mlir::decisionforest::LowerEnsembleToMemrefs(context, 
+                                               module,
+                                               serializer,
+                                               representation);
+  mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();
-  mlir::decisionforest::LowerToLLVM(args.context, module);
+  mlir::decisionforest::LowerToLLVM(context, module, representation);
 
 
-  decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
+  decisionforest::InferenceRunner inferenceRunner(serializer, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
   
   std::vector<std::vector<FloatType>> inputData;
   std::vector<std::vector<FloatType>> xgBoostPredictions;
@@ -156,12 +168,11 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
     inputData.push_back(batch);
     xgBoostPredictions.push_back(preds);
   }
-  size_t rowSize = csvReader.GetRow(0).size() - 1; // The last entry is the xgboost prediction
   auto currentPredictionsIter = xgBoostPredictions.begin();
   for(auto& batch : inputData) {
     assert (batch.size() % batchSize == 0);
     std::vector<ResultType> result(batchSize, -1);
-    inferenceRunner.RunInference<FloatType, ResultType>(batch.data(), result.data(), rowSize, batchSize);
+    inferenceRunner.RunInference<FloatType, ResultType>(batch.data(), result.data());
     for(int64_t rowIdx=0 ; rowIdx<batchSize ; ++rowIdx) {
       ResultType expectedResult = (*currentPredictionsIter)[rowIdx];
       Test_ASSERT(FPEqual<ResultType>(result[rowIdx], expectedResult));
@@ -253,23 +264,34 @@ bool TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int
                                      floatTypeBitWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth,
                                      TreeBeard::TilingType::kHybrid, false /*makeAllLeavesSameDepth*/, true, nullptr);
   
-  auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
-  // auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType>(args.context, modelJsonPath, modelGlobalsJSONFilePath, options);
-  TreeBeard::XGBoostJSONParser<FloatType, ResultType, FeatureIndexType, NodeIndexType, FloatType>
-                               xgBoostParser(args.context, modelJsonPath, modelGlobalsJSONFilePath, statsProfileCSV, options.batchSize);
-  xgBoostParser.Parse();
+  auto modelGlobalsJSONFilePath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
+  auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONFilePath);
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
+  TreeBeard::XGBoostJSONParser<FloatType, 
+                               ResultType,
+                               FeatureIndexType,
+                               NodeIndexType,
+                               FloatType> xgBoostParser(context, modelJsonPath, serializer, statsProfileCSV, options.batchSize);
+  xgBoostParser.ConstructForest();
   xgBoostParser.SetChildIndexBitWidth(options.childIndexBitWidth);
   auto module = xgBoostParser.GetEvaluationFunction();
 
-  mlir::decisionforest::DoHybridTiling(args.context, module, options.tileSize, options.tileShapeBitWidth);
-  mlir::decisionforest::DoReorderTreesByDepth(args.context, module, -1);
-  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
-  mlir::decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), decisionforest::ConstructRepresentation());
-  mlir::decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  mlir::decisionforest::DoHybridTiling(context, module, options.tileSize, options.tileShapeBitWidth);
+  mlir::decisionforest::DoReorderTreesByDepth(context, module, -1);
+  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
+  auto representation = decisionforest::ConstructRepresentation();
+  mlir::decisionforest::LowerEnsembleToMemrefs(context,
+                                               module,
+                                               serializer,
+                                               representation);
+  mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();
-  mlir::decisionforest::LowerToLLVM(args.context, module);
+  mlir::decisionforest::LowerToLLVM(context, module, representation);
 
-  decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
+  decisionforest::InferenceRunner inferenceRunner(serializer, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
   
   std::vector<std::vector<FloatType>> inputData;
   std::vector<std::vector<FloatType>> xgBoostPredictions;
@@ -287,12 +309,11 @@ bool TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int
     xgBoostPredictions.push_back(preds);
   }
 
-  size_t rowSize = csvReader.GetRow(0).size() - 1; // The last entry is the xgboost prediction
   auto currentPredictionsIter = xgBoostPredictions.begin();
   for(auto& batch : inputData) {
     assert (batch.size() % batchSize == 0);
     std::vector<ResultType> result(batchSize, -1);
-    inferenceRunner.RunInference<FloatType, ResultType>(batch.data(), result.data(), rowSize, batchSize);
+    inferenceRunner.RunInference<FloatType, ResultType>(batch.data(), result.data());
     for(int64_t rowIdx=0 ; rowIdx<batchSize ; ++rowIdx) {
       ResultType expectedResult = (*currentPredictionsIter)[rowIdx];
       Test_ASSERT(FPEqual<ResultType>(expectedResult, result[rowIdx]));

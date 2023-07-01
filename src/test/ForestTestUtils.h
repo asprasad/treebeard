@@ -1,6 +1,7 @@
 #ifndef _FORESTTESTUTILS_H_
 #define _FORESTTESTUTILS_H_
 
+#include "forestcreator.h"
 using namespace mlir;
 
 // Some utlities that are used by the tests
@@ -41,7 +42,7 @@ struct NumericalVectorTileType_Packed {
 
 
 template<typename TileType>
-std::vector<TileType> AddLeftHeavyTree(mlir::decisionforest::DecisionForest<>& forest) {
+std::vector<TileType> AddLeftHeavyTree(mlir::decisionforest::DecisionForest& forest) {
   // Add tree one
   auto& firstTree = forest.NewTree();
   auto rootNode = firstTree.NewNode(0.5, 2);
@@ -74,7 +75,7 @@ std::vector<TileType> AddLeftHeavyTree(mlir::decisionforest::DecisionForest<>& f
   return expectedArray;
 }
 
-inline void InitializeRightHeavyTree(decisionforest::DecisionTree<>& firstTree) {
+inline void InitializeRightHeavyTree(decisionforest::DecisionTree& firstTree) {
   auto rootNode = firstTree.NewNode(0.5, 2);
   // Add right child
   {
@@ -103,7 +104,7 @@ inline void InitializeRightHeavyTree(decisionforest::DecisionTree<>& firstTree) 
 }
 
 template<typename TileType>
-std::vector<TileType> AddRightHeavyTree(mlir::decisionforest::DecisionForest<>& forest) {
+std::vector<TileType> AddRightHeavyTree(mlir::decisionforest::DecisionForest& forest) {
   // Add tree one
   auto& firstTree = forest.NewTree();
   InitializeRightHeavyTree(firstTree);
@@ -112,7 +113,7 @@ std::vector<TileType> AddRightHeavyTree(mlir::decisionforest::DecisionForest<>& 
   return expectedArray;
 }
 
-inline void InitializeBalancedTree(decisionforest::DecisionTree<>& firstTree) {
+inline void InitializeBalancedTree(decisionforest::DecisionTree& firstTree) {
   auto rootNode = firstTree.NewNode(0.5, 2);
   // Add right child
   {
@@ -153,7 +154,7 @@ inline void InitializeBalancedTree(decisionforest::DecisionTree<>& firstTree) {
 }
 
 template<typename TileType>
-std::vector<TileType> AddBalancedTree(mlir::decisionforest::DecisionForest<>& forest) {
+std::vector<TileType> AddBalancedTree(mlir::decisionforest::DecisionForest& forest) {
   // Add tree one
   auto& firstTree = forest.NewTree();
   InitializeBalancedTree(firstTree);
@@ -163,7 +164,7 @@ std::vector<TileType> AddBalancedTree(mlir::decisionforest::DecisionForest<>& fo
 }
 
 template<typename TileType>
-std::vector<TileType> AddRightAndLeftHeavyTrees(decisionforest::DecisionForest<>& forest) {
+std::vector<TileType> AddRightAndLeftHeavyTrees(decisionforest::DecisionForest& forest) {
   auto expectedArray = AddRightHeavyTree<TileType>(forest);
   auto expectedArray2 = AddLeftHeavyTree<TileType>(forest);
   expectedArray.insert(std::end(expectedArray), std::begin(expectedArray2), std::end(expectedArray2));
@@ -171,7 +172,17 @@ std::vector<TileType> AddRightAndLeftHeavyTrees(decisionforest::DecisionForest<>
 }
 
 template<typename TileType>
-void AddFeaturesToForest(decisionforest::DecisionForest<>& forest, std::vector<TileType>& serializedForest, std::string featureType) {
+std::vector<TileType> AddRightLeftAndBalancedTrees(decisionforest::DecisionForest& forest) {
+  auto expectedArray = AddRightHeavyTree<TileType>(forest);
+  auto expectedArray2 = AddLeftHeavyTree<TileType>(forest);
+  auto expectedArray3 = AddBalancedTree<TileType>(forest);
+  expectedArray.insert(std::end(expectedArray), std::begin(expectedArray2), std::end(expectedArray2));
+  expectedArray.insert(std::end(expectedArray), std::begin(expectedArray3), std::end(expectedArray3));
+  return expectedArray;
+}
+
+template<typename TileType>
+void AddFeaturesToForest(decisionforest::DecisionForest& forest, std::vector<TileType>& serializedForest, std::string featureType) {
   int32_t numFeatures = -1;
   for (auto& tile : serializedForest) {
     if (tile.index > numFeatures)
@@ -186,33 +197,43 @@ void AddFeaturesToForest(decisionforest::DecisionForest<>& forest, std::vector<T
 }
 
 using DoubleInt32Tile = NumericalTileType_Packed<double, int32_t>;
-typedef std::vector<DoubleInt32Tile> (*ForestConstructor_t)(decisionforest::DecisionForest<>& forest);
+typedef std::vector<DoubleInt32Tile> (*ForestConstructor_t)(decisionforest::DecisionForest& forest);
 
 template<typename ThresholdType=double, typename ReturnType=double, 
          typename FeatureIndexType=int32_t, typename NodeIndexType=int32_t, typename InputElementType=double>
-class FixedTreeIRConstructor : public TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType> {
+class FixedTreeIRConstructor : public TreeBeard::ForestCreator {
   std::vector<DoubleInt32Tile> m_treeSerialization;
   ForestConstructor_t m_constructForest;
 public:
-  FixedTreeIRConstructor(MLIRContext& context, int32_t batchSize, ForestConstructor_t constructForest)
-    : TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(TreeBeard::test::GetGlobalJSONNameForTests(), 
-                                 TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests()),
-                                 context, batchSize), m_constructForest(constructForest)
-  {  }
-  void Parse() override {
+  FixedTreeIRConstructor(
+      MLIRContext &context,
+      std::shared_ptr<decisionforest::IModelSerializer> serializer,
+      int32_t batchSize, ForestConstructor_t constructForest)
+      : TreeBeard::ForestCreator(
+            serializer, context, batchSize,
+            TreeBeard::GetMLIRType(ThresholdType(), context),
+            TreeBeard::GetMLIRType(FeatureIndexType(), context),
+            TreeBeard::GetMLIRType(NodeIndexType(), context),
+            TreeBeard::GetMLIRType(ReturnType(), context),
+            TreeBeard::GetMLIRType(InputElementType(), context)),
+        m_constructForest(constructForest) {}
+
+  void ConstructForest() override {
     m_treeSerialization = m_constructForest(*this->m_forest);
     this->m_forest->SetPredictionTransformation(decisionforest::PredictionTransformation::kIdentity);
     AddFeaturesToForest(*this->m_forest, m_treeSerialization, "float");
   }
-  decisionforest::DecisionForest<>& GetForest() { return *this->m_forest; }
+  
+  decisionforest::DecisionForest& GetForest() { return *this->m_forest; }
 };
 
-class InferenceRunnerForTest : public decisionforest::InferenceRunner {
+template <typename BaseClass>
+class InferenceRunnerForTestTemplate : public BaseClass {
 public:
-  using decisionforest::InferenceRunner::InferenceRunner;
+  using BaseClass::BaseClass;
 
   int32_t ExecuteFunction(const std::string& funcName, std::vector<void*>& args) {
-    auto& engine = m_engine;
+    auto& engine = this->m_engine;
     auto invocationResult = engine->invokePacked(funcName, args);
     if (invocationResult) {
       llvm::errs() << "JIT invocation failed\n";
@@ -222,5 +243,23 @@ public:
     return 0;
   }
 };
+
+using InferenceRunnerForTest = InferenceRunnerForTestTemplate<decisionforest::InferenceRunner>;
+
+template<typename T>
+decisionforest::Memref<T, 1> VectorToMemref(std::vector<T>& vec) {
+  return decisionforest::Memref<T, 1>{vec.data(), vec.data(), 0, {static_cast<int64_t>(vec.size())}, {1}};
+}
+
+namespace TreeBeard
+{
+namespace test
+{
+
+std::vector<std::vector<double>> GetBatchSize1Data();
+std::vector<std::vector<double>> GetBatchSize2Data();
+
+} // namespace test
+} // namespace Treebeard
 
 #endif // _FORESTTESTUTILS_H_

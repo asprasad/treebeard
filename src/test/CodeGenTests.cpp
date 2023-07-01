@@ -3,15 +3,16 @@
 #include "Dialect.h"
 #include "TestUtilsCommon.h"
 
+#include "forestcreator.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Verifier.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "llvm/ADT/STLExtras.h"
 
 #include "xgboostparser.h"
@@ -34,7 +35,9 @@ namespace test
 bool Test_LoadTileThresholdOp_DoubleInt32_TileSize1(TestArgs_t& args) {
   using TestTileType = NumericalTileType_Natural<double, int32_t>;
   
-  auto& context = args.context;
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
   mlir::OpBuilder builder(&context);
   auto location = builder.getUnknownLoc();
   auto module = mlir::ModuleOp::create(location, llvm::StringRef("Test_LoadTileThresholdOp_DoubleInt32_TileSize1"));
@@ -46,7 +49,8 @@ bool Test_LoadTileThresholdOp_DoubleInt32_TileSize1(TestArgs_t& args) {
   auto outputMemrefType = MemRefType::get(shape, builder.getF64Type());
   auto functionType = builder.getFunctionType({inputMemrefType, outputMemrefType}, builder.getI32Type());
 
-  auto func = builder.create<mlir::func::FuncOp>(location, std::string("TestFunction"), functionType, builder.getStringAttr("public"));
+  auto func = builder.create<mlir::func::FuncOp>(location, std::string("TestFunction"), functionType);
+  func.setPublic();
   auto &entryBlock = *(func.addEntryBlock());
   builder.setInsertionPointToStart(&entryBlock);
 
@@ -60,7 +64,11 @@ bool Test_LoadTileThresholdOp_DoubleInt32_TileSize1(TestArgs_t& args) {
 
   auto inputMemref = func.getArgument(0);
   auto outputMemref = func.getArgument(1);
-  auto threshold = builder.create<decisionforest::LoadTileThresholdsOp>(location, builder.getF64Type(), static_cast<Value>(inputMemref), static_cast<Value>(i));
+  auto threshold = builder.create<decisionforest::LoadTileThresholdsOp>(location, 
+                                                                        builder.getF64Type(),
+                                                                        static_cast<Value>(inputMemref),
+                                                                        static_cast<Value>(i),
+                                                                        static_cast<Value>(zeroConst));
 
   builder.create<memref::StoreOp>(location, TypeRange({ }), static_cast<Value>(threshold), outputMemref, i);
 
@@ -70,7 +78,7 @@ bool Test_LoadTileThresholdOp_DoubleInt32_TileSize1(TestArgs_t& args) {
 
   module.push_back(func);
   // module.dump();
-  decisionforest::LowerToLLVM(context, module);
+  decisionforest::LowerToLLVM(context, module, ConstructRepresentation());
   // module.dump();
 
   auto maybeEngine = mlir::decisionforest::InferenceRunner::CreateExecutionEngine(module);
@@ -102,7 +110,9 @@ bool Test_LoadTileThresholdOp_DoubleInt32_TileSize1(TestArgs_t& args) {
 bool Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1(TestArgs_t& args) {
   using TestTileType = NumericalTileType_Natural<double, int32_t>;
   
-  auto& context = args.context;
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
   mlir::OpBuilder builder(&context);
   auto location = builder.getUnknownLoc();
   auto module = mlir::ModuleOp::create(location, llvm::StringRef("Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1"));
@@ -114,7 +124,8 @@ bool Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1(TestArgs_t& args) {
   auto outputMemrefType = MemRefType::get(shape, builder.getI32Type());
   auto functionType = builder.getFunctionType({inputMemrefType, outputMemrefType}, builder.getI32Type());
 
-  auto func = builder.create<mlir::func::FuncOp>(location, std::string("TestFunction"), functionType, builder.getStringAttr("public"));
+  auto func = builder.create<mlir::func::FuncOp>(location, std::string("TestFunction"), functionType);
+  func.setPublic();
   auto &entryBlock = *(func.addEntryBlock());
   builder.setInsertionPointToStart(&entryBlock);
 
@@ -128,7 +139,11 @@ bool Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1(TestArgs_t& args) {
 
   auto inputMemref = func.getArgument(0);
   auto outputMemref = func.getArgument(1);
-  auto featureIndex = builder.create<decisionforest::LoadTileFeatureIndicesOp>(location, builder.getI32Type(), static_cast<Value>(inputMemref), static_cast<Value>(i));
+  auto featureIndex = builder.create<decisionforest::LoadTileFeatureIndicesOp>(location, 
+                                                                               builder.getI32Type(),
+                                                                               static_cast<Value>(inputMemref),
+                                                                               static_cast<Value>(i),
+                                                                               static_cast<Value>(zeroConst));
 
   builder.create<memref::StoreOp>(location, TypeRange({ }), static_cast<Value>(featureIndex), outputMemref, i);
 
@@ -138,7 +153,7 @@ bool Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1(TestArgs_t& args) {
 
   module.push_back(func);
   // module.dump();
-  decisionforest::LowerToLLVM(context, module);
+  decisionforest::LowerToLLVM(context, module, ConstructRepresentation());
   // module.dump();
 
   auto maybeEngine = mlir::decisionforest::InferenceRunner::CreateExecutionEngine(module);
@@ -170,7 +185,9 @@ bool Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1(TestArgs_t& args) {
 bool Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args) {
   using TestTileType = NumericalTileType_Natural<double, int32_t>;
   
-  auto& context = args.context;
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
   mlir::OpBuilder builder(&context);
   auto location = builder.getUnknownLoc();
   auto module = mlir::ModuleOp::create(location, llvm::StringRef("Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1"));
@@ -184,7 +201,8 @@ bool Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args) {
   auto outputMemrefType = MemRefType::get(outputShape, builder.getF64Type());
   auto functionType = builder.getFunctionType({inputMemrefType, outputMemrefType}, builder.getI32Type());
 
-  auto func = builder.create<mlir::func::FuncOp>(location, std::string("TestFunction"), functionType, builder.getStringAttr("public"));
+  auto func = builder.create<mlir::func::FuncOp>(location, std::string("TestFunction"), functionType);
+  func.setPublic();
   auto &entryBlock = *(func.addEntryBlock());
   builder.setInsertionPointToStart(&entryBlock);
 
@@ -202,7 +220,11 @@ bool Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args) {
   builder.setInsertionPointToStart(batchLoop.getBody());
   auto i = batchLoop.getInductionVar();
 
-  auto threshold = builder.create<decisionforest::LoadTileThresholdsOp>(location, builder.getF64Type(), static_cast<Value>(memrefSubview), static_cast<Value>(i));
+  auto threshold = builder.create<decisionforest::LoadTileThresholdsOp>(location,
+                                                                        builder.getF64Type(),
+                                                                        static_cast<Value>(memrefSubview),
+                                                                        static_cast<Value>(i),
+                                                                        static_cast<Value>(zeroConst));
 
   builder.create<memref::StoreOp>(location, TypeRange({ }), static_cast<Value>(threshold), outputMemref, i);
 
@@ -212,7 +234,7 @@ bool Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args) {
 
   module.push_back(func);
   // module.dump();
-  decisionforest::LowerToLLVM(context, module);
+  decisionforest::LowerToLLVM(context, module, ConstructRepresentation());
   // module.dump();
 
   auto maybeEngine = mlir::decisionforest::InferenceRunner::CreateExecutionEngine(module);
@@ -244,7 +266,9 @@ bool Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args) {
 bool Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args) {
   using TestTileType = NumericalTileType_Natural<double, int32_t>;
   
-  auto& context = args.context;
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
   mlir::OpBuilder builder(&context);
   auto location = builder.getUnknownLoc();
   auto module = mlir::ModuleOp::create(location, llvm::StringRef("Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1"));
@@ -258,7 +282,8 @@ bool Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1(TestArgs_t& arg
   auto outputMemrefType = MemRefType::get(outputShape, builder.getI32Type());
   auto functionType = builder.getFunctionType({inputMemrefType, outputMemrefType}, builder.getI32Type());
 
-  auto func = builder.create<mlir::func::FuncOp>(location, std::string("TestFunction"), functionType, builder.getStringAttr("public"));
+  auto func = builder.create<mlir::func::FuncOp>(location, std::string("TestFunction"), functionType);
+  func.setPublic();
   auto &entryBlock = *(func.addEntryBlock());
   builder.setInsertionPointToStart(&entryBlock);
 
@@ -276,7 +301,11 @@ bool Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1(TestArgs_t& arg
   builder.setInsertionPointToStart(batchLoop.getBody());
   auto i = batchLoop.getInductionVar();
 
-  auto featureIndex = builder.create<decisionforest::LoadTileFeatureIndicesOp>(location, builder.getI32Type(), static_cast<Value>(memrefSubview), static_cast<Value>(i));
+  auto featureIndex = builder.create<decisionforest::LoadTileFeatureIndicesOp>(location, 
+                                                                               builder.getI32Type(),
+                                                                               static_cast<Value>(memrefSubview),
+                                                                               static_cast<Value>(i),
+                                                                               static_cast<Value>(zeroConst));
 
   builder.create<memref::StoreOp>(location, TypeRange({ }), static_cast<Value>(featureIndex), outputMemref, i);
 
@@ -286,7 +315,7 @@ bool Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1(TestArgs_t& arg
 
   module.push_back(func);
   // module.dump();
-  decisionforest::LowerToLLVM(context, module);
+  decisionforest::LowerToLLVM(context, module, ConstructRepresentation());
   // module.dump();
 
   auto maybeEngine = mlir::decisionforest::InferenceRunner::CreateExecutionEngine(module);
@@ -321,7 +350,7 @@ bool Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1(TestArgs_t& arg
 // ---------------------------------------------------
 
 template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType, typename InputElementType>
-class FixedTiledTreeIRConstructor : public TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType> {
+class FixedTiledTreeIRConstructor : public TreeBeard::ForestCreator {
   std::vector<DoubleInt32Tile> m_treeSerialization;
   ForestConstructor_t m_constructForest;
   std::vector<decisionforest::TreeTilingDescriptor>& m_tilingDescriptors;
@@ -348,19 +377,28 @@ class FixedTiledTreeIRConstructor : public TreeBeard::ModelJSONParser<ThresholdT
 
   }
 public:
-  FixedTiledTreeIRConstructor(mlir::MLIRContext& context, int32_t batchSize, ForestConstructor_t constructForest,
-                              std::vector<decisionforest::TreeTilingDescriptor>& tilingDescriptors, int32_t tileShapeBitWidth,
-                              bool probTiling=false, int32_t levelsToUnroll=-1)
-    : TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(GetGlobalJSONNameForTests(),
-                                TreeBeard::ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>::ModelGlobalJSONFilePathFromJSONFilePath(GetGlobalJSONNameForTests()),
-                                context, batchSize),
-      m_constructForest(constructForest), m_tilingDescriptors(tilingDescriptors), m_tileShapeBitWidth(tileShapeBitWidth),
-      m_probabilisticTiled(probTiling), m_levelsToUnroll(levelsToUnroll)
-  {
+  FixedTiledTreeIRConstructor(
+      mlir::MLIRContext &context,
+      std::shared_ptr<decisionforest::IModelSerializer> serializer,
+      int32_t batchSize, ForestConstructor_t constructForest,
+      std::vector<decisionforest::TreeTilingDescriptor> &tilingDescriptors,
+      int32_t tileShapeBitWidth, bool probTiling = false,
+      int32_t levelsToUnroll = -1)
+      : TreeBeard::ForestCreator(
+            serializer, context, batchSize,
+            TreeBeard::GetMLIRType(ThresholdType(), context),
+            TreeBeard::GetMLIRType(FeatureIndexType(), context),
+            TreeBeard::GetMLIRType(NodeIndexType(), context),
+            TreeBeard::GetMLIRType(ReturnType(), context),
+            TreeBeard::GetMLIRType(InputElementType(), context)),
+        m_constructForest(constructForest),
+        m_tilingDescriptors(tilingDescriptors),
+        m_tileShapeBitWidth(tileShapeBitWidth),
+        m_probabilisticTiled(probTiling), m_levelsToUnroll(levelsToUnroll) {
     // Only for tiled scenarios
-    assert (m_tilingDescriptors.at(0).MaxTileSize() > 1);
+    assert(m_tilingDescriptors.at(0).MaxTileSize() > 1);
   }
-  void Parse() override {
+  void ConstructForest() override {
     m_treeSerialization = m_constructForest(*this->m_forest);
     AddFeaturesToForest(*this->m_forest, m_treeSerialization, "float");
     assert (m_tilingDescriptors.size() == this->m_forest->NumTrees());
@@ -394,7 +432,8 @@ public:
     auto tileShapeIDMemrefType = MemRefType::get(shape, tileShapeType);
     auto functionType = builder.getFunctionType({inputMemrefType, outputMemrefType, featureIndexMemrefType, tileShapeIDMemrefType}, builder.getI32Type());
 
-    auto func = builder.create<mlir::func::FuncOp>(location, std::string("Get_ModelValues"), functionType, builder.getStringAttr("public"));
+    auto func = builder.create<mlir::func::FuncOp>(location, std::string("Get_ModelValues"), functionType);
+    func.setPublic();
     auto &entryBlock = *(func.addEntryBlock());
     builder.setInsertionPointToStart(&entryBlock);
 
@@ -412,13 +451,13 @@ public:
     auto tileShapeMemref = func.getArgument(3);
     auto thresholdVectorType = mlir::VectorType::get({ tileSize }, GetMLIRType(ThresholdType(), this->m_builder));
     auto threshold = builder.create<decisionforest::LoadTileThresholdsOp>(location, thresholdVectorType,
-                                                                          static_cast<Value>(inputMemref), static_cast<Value>(i));
+                                                                          static_cast<Value>(inputMemref), static_cast<Value>(i), static_cast<Value>(zeroConst));
     auto featureIndexVectorType = mlir::VectorType::get({ tileSize }, GetMLIRType(FeatureIndexType(), this->m_builder));
     auto index = builder.create<decisionforest::LoadTileFeatureIndicesOp>(location, featureIndexVectorType,
-                                                                          static_cast<Value>(inputMemref), static_cast<Value>(i));
+                                                                          static_cast<Value>(inputMemref), static_cast<Value>(i), static_cast<Value>(zeroConst));
 
     auto tileShape = builder.create<decisionforest::LoadTileShapeOp>(location, tileShapeType,
-                                                                     static_cast<Value>(inputMemref), static_cast<Value>(i));
+                                                                     static_cast<Value>(inputMemref), static_cast<Value>(i), static_cast<Value>(zeroConst));
 
     auto tileSizeConst = builder.create<arith::ConstantIndexOp>(location, tileSize);
     auto outputMemrefOffset = builder.create<mlir::arith::MulIOp>(location, builder.getIndexType(), i, tileSizeConst);
@@ -438,7 +477,7 @@ public:
 
     this->m_module.push_back(func);
   }
-  decisionforest::DecisionForest<>& GetForest() { return *this->m_forest; }
+  decisionforest::DecisionForest& GetForest() { return *this->m_forest; }
 };
 
 // ===---------------------------------------------------=== //
@@ -459,30 +498,39 @@ bool Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(TestArgs_t& args, Fore
     tilingDescriptors.push_back(tilingDescriptor);
   }
   
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
   auto tileShapeBitWidth = sizeof(TileShapeType)*8;
+  auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
+  auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);
   FixedTiledTreeIRConstructor<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>
-                              irGenerator(args.context, 1, forestConstructor, tilingDescriptors, tileShapeBitWidth);
-  irGenerator.Parse();
+                              irGenerator(context, serializer, 1, forestConstructor, tilingDescriptors, tileShapeBitWidth);
+  irGenerator.ConstructForest();
   irGenerator.SetChildIndexBitWidth(childIndexBitWidth);
   auto module = irGenerator.GetEvaluationFunction();
   if (scheduleManipulator)
     scheduleManipulator(irGenerator.GetSchedule());
-  decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
   // module->dump();
-  decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), decisionforest::ConstructRepresentation());
-  decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  auto representation = decisionforest::ConstructRepresentation();
+  decisionforest::LowerEnsembleToMemrefs(context, 
+                                         module,
+                                         serializer,
+                                         representation);
+  decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();
-  decisionforest::LowerToLLVM(args.context, module);
+  decisionforest::LowerToLLVM(context, module, representation);
   
   // module->dump();
   // decisionforest::dumpLLVMIR(module);
-  decisionforest::InferenceRunner inferenceRunner(irGenerator.GetModelGlobalsJSONFilePath(), module, tileSize, sizeof(ThresholdType)*8, sizeof(FeatureIndexType)*8);
+  decisionforest::InferenceRunner inferenceRunner(serializer, module, tileSize, sizeof(ThresholdType)*8, sizeof(FeatureIndexType)*8);
   
   auto inputData = GetBatchSize1Data();
   for(auto& row : inputData) {
     ThresholdType result = -1;
     std::vector<InputElementType> inputRow(row.begin(), row.end());
-    inferenceRunner.RunInference<InputElementType, ReturnType>(inputRow.data(), &result, inputRow.size(), 1);
+    inferenceRunner.RunInference<InputElementType, ReturnType>(inputRow.data(), &result);
     ThresholdType expectedResult = irGenerator.GetForest().Predict(row);
     Test_ASSERT(FPEqual(result, expectedResult));
   }
@@ -724,22 +772,32 @@ bool Test_ModelInitialization(TestArgs_t& args, ForestConstructor_t forestConstr
   }
 
   auto tileShapeBitWidth = sizeof(TileShapeType)*8;
+  auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
+  auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
   FixedTiledTreeIRConstructor<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType> 
-                              irGenerator(args.context, 1, forestConstructor, tilingDescriptors, tileShapeBitWidth);
-  irGenerator.Parse();
+                              irGenerator(context, serializer, 1, forestConstructor, tilingDescriptors, tileShapeBitWidth);
+  irGenerator.ConstructForest();
   auto module = irGenerator.GetEvaluationFunction();
 
-  decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
-  decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), decisionforest::ConstructRepresentation());
-  decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
+  auto representation = decisionforest::ConstructRepresentation();
+  decisionforest::LowerEnsembleToMemrefs(context,
+                                         module,
+                                         serializer,
+                                         representation);
+  decisionforest::ConvertNodeTypeToIndexType(context, module);
   irGenerator.AddThresholdGetter();  
   // module->dump();
-  decisionforest::LowerToLLVM(args.context, module);
+  decisionforest::LowerToLLVM(context, module, representation);
   // module->dump();
   // decisionforest::dumpLLVMIR(module);
   int32_t thresholdSize = sizeof(ThresholdType)*8;
   int32_t featureIndexSize = sizeof(FeatureIndexType)*8;
-  InferenceRunnerForTest inferenceRunner(irGenerator.GetModelGlobalsJSONFilePath(), module, tileSize, thresholdSize, featureIndexSize);
+  InferenceRunnerForTest inferenceRunner(serializer, module, tileSize, thresholdSize, featureIndexSize);
   
   std::vector<ThresholdType> thresholds;
   std::vector<FeatureIndexType> featureIndices;
@@ -1145,26 +1203,44 @@ bool Test_ModelInit_RightAndLeftHeavy_Int16TileShape(TestArgs_t& args) {
 // --------------------------------------------------------------------------
 template<typename ThresholdType=double, typename ReturnType=double, 
          typename FeatureIndexType=int32_t, typename NodeIndexType=int32_t, typename InputElementType=double>
-bool Test_UniformTiling_BatchSize1(TestArgs_t& args, ForestConstructor_t forestConstructor, int32_t tileSize, int32_t tileShapeBitWidth, bool makeAllLeavesSameDepth) {
-  FixedTreeIRConstructor<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType> irGenerator(args.context, 1, forestConstructor);
-  irGenerator.Parse();
+bool Test_UniformTiling_BatchSize1(TestArgs_t& args,
+                                   ForestConstructor_t forestConstructor,
+                                   int32_t tileSize,
+                                   int32_t tileShapeBitWidth,
+                                   bool makeAllLeavesSameDepth) {
+  auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
+  auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
+  FixedTreeIRConstructor<ThresholdType,
+                         ReturnType,
+                         FeatureIndexType,
+                         NodeIndexType,
+                         InputElementType> irGenerator(context, serializer, 1, forestConstructor);
+  irGenerator.ConstructForest();
   auto module = irGenerator.GetEvaluationFunction();
-  decisionforest::DoUniformTiling(args.context, module, tileSize, tileShapeBitWidth, makeAllLeavesSameDepth);
-  decisionforest::LowerFromHighLevelToMidLevelIR(args.context, module);
+  decisionforest::DoUniformTiling(context, module, tileSize, tileShapeBitWidth, makeAllLeavesSameDepth);
+  decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
   // module->dump();
-  decisionforest::LowerEnsembleToMemrefs(args.context, module, decisionforest::ConstructModelSerializer(), decisionforest::ConstructRepresentation());
-  decisionforest::ConvertNodeTypeToIndexType(args.context, module);
+  auto representation = decisionforest::ConstructRepresentation();
+  decisionforest::LowerEnsembleToMemrefs(context,
+                                         module,
+                                         serializer,
+                                         representation);
+  decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();
-  decisionforest::LowerToLLVM(args.context, module);
+  decisionforest::LowerToLLVM(context, module, representation);
   // module->dump();
   // decisionforest::dumpLLVMIR(module);
-  decisionforest::InferenceRunner inferenceRunner(irGenerator.GetModelGlobalsJSONFilePath(), module, tileSize, sizeof(ThresholdType)*8, sizeof(FeatureIndexType)*8);
+  decisionforest::InferenceRunner inferenceRunner(serializer, module, tileSize, sizeof(ThresholdType)*8, sizeof(FeatureIndexType)*8);
   
   auto inputData = GetBatchSize1Data();
   for(auto& row : inputData) {
     ThresholdType result = -1;
     std::vector<InputElementType> inputRow(row.begin(), row.end());
-    inferenceRunner.RunInference<InputElementType, ReturnType>(inputRow.data(), &result, inputRow.size(), 1);
+    inferenceRunner.RunInference<InputElementType, ReturnType>(inputRow.data(), &result);
     ThresholdType expectedResult = irGenerator.GetForest().Predict(row);
     Test_ASSERT(FPEqual(result, expectedResult));
   }

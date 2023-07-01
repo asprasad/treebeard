@@ -7,9 +7,9 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 
 #include "mlir/Transforms/DialectConversion.h"
@@ -37,7 +37,7 @@ struct ReorderEnsembleConstants : public RewritePattern {
     : RewritePattern(mlir::decisionforest::PredictForestOp::getOperationName(), 1 /*benefit*/, ctx)
   {}
 
-  bool AreTreesSorted(decisionforest::DecisionForest<>& forest) const {
+  bool AreTreesSorted(decisionforest::DecisionForest& forest) const {
     auto trees = forest.GetTrees();
     bool sorted = true;
     size_t i = 0;
@@ -75,7 +75,7 @@ struct ReorderEnsembleConstants : public RewritePattern {
     if (!predictOp)
          return mlir::failure();
 
-    auto forestAttribute = predictOp.ensemble();
+    auto forestAttribute = predictOp.getEnsemble();
     auto forest = forestAttribute.GetDecisionForest();
     auto forestType = forestAttribute.getType().cast<decisionforest::TreeEnsembleType>();
     auto tilingDescriptor = forest.GetTree(0).TilingDescriptor();
@@ -87,7 +87,7 @@ struct ReorderEnsembleConstants : public RewritePattern {
       return mlir::failure();
     
     auto trees = forest.GetTrees();
-    std::vector<std::shared_ptr<decisionforest::DecisionTree<>>> uniformTiledTrees, probTiledTrees, reorderedTrees;
+    std::vector<std::shared_ptr<decisionforest::DecisionTree>> uniformTiledTrees, probTiledTrees, reorderedTrees;
     std::vector<int32_t> depths, peelDepths;
     for (int64_t i=0 ; i<(int64_t)forest.NumTrees() ; ++i) {
       assert (probTiledTrees.size() == peelDepths.size());
@@ -120,9 +120,13 @@ struct ReorderEnsembleConstants : public RewritePattern {
     forest.GetTrees() = reorderedTrees;
 
     auto newForestAttribute = decisionforest::DecisionForestAttribute::get(forestType, forest);
-    auto reorderedPredictForestOp = rewriter.create<decisionforest::PredictForestOp>(op->getLoc(), predictOp.getResult().getType(), 
-                                                                                 newForestAttribute, predictOp.data(), 
-                                                                                 predictOp.result(), predictOp.schedule());
+    auto reorderedPredictForestOp = rewriter.create<decisionforest::PredictForestOp>(op->getLoc(), 
+                                                                                     predictOp.getResult().getType(), 
+                                                                                     newForestAttribute,
+                                                                                     predictOp.getPredicateAttr(), 
+                                                                                     predictOp.getData(),
+                                                                                     predictOp.getResult(),
+                                                                                     predictOp.getSchedule());
     rewriter.replaceOp(op, static_cast<Value>(reorderedPredictForestOp));
     return mlir::success();
   }
@@ -153,7 +157,7 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
       m_pipelineSize(pipelineSize), m_numberOfCores(numCores)
   {}
 
-  void SplitTreeLoopForProbAndUniformTiling(decisionforest::Schedule* schedule, decisionforest::DecisionForest<>& forest,
+  void SplitTreeLoopForProbAndUniformTiling(decisionforest::Schedule* schedule, decisionforest::DecisionForest& forest,
                                             decisionforest::IndexVariable* &probTreeIndex, decisionforest::IndexVariable* &probBatchIndex,
                                             decisionforest::IndexVariable* &unifTreeIndex, decisionforest::IndexVariable* &unifBatchIndex,
                                             decisionforest::IndexVariable* currentTreeIndex, decisionforest::IndexVariable* currentBatchIndex) const {
@@ -191,7 +195,7 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
     unifBatchIndex = mapIter->second.second;
   }
 
-  void SplitTreeLoopForUniformTiling(decisionforest::Schedule *schedule, decisionforest::DecisionForest<>& forest,
+  void SplitTreeLoopForUniformTiling(decisionforest::Schedule *schedule, decisionforest::DecisionForest& forest,
                                      decisionforest::IndexVariable* batchIndexPtr, 
                                      decisionforest::IndexVariable* treeIndexPtr) const {
     if (batchIndexPtr==nullptr && treeIndexPtr==nullptr)
@@ -221,7 +225,7 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
 
       // No need to split if we're splitting the last index.
       if (intervalEnd == indexToSplit->GetRange().m_stop) {
-        indexToSplit->SetUnrollFactor(currDepth);
+        indexToSplit->SetTreeWalkUnrollFactor(currDepth);
         break;
       }
 
@@ -231,14 +235,14 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
       
       assert (indexToSplit->GetRange().m_start == currTreeIndex);
       schedule->Split(*indexToSplit, firstIndex, secondIndex, intervalEnd, indexMap);
-      firstIndex.SetUnrollFactor(currDepth);
+      firstIndex.SetTreeWalkUnrollFactor(currDepth);
 
       indexToSplit = &secondIndex;
       currTreeIndex = intervalEnd;
     }
   }
 
-  void SplitTreeLoopForProbabilityBasedTiling(decisionforest::Schedule *schedule, decisionforest::DecisionForest<>& forest,
+  void SplitTreeLoopForProbabilityBasedTiling(decisionforest::Schedule *schedule, decisionforest::DecisionForest& forest,
                                               decisionforest::IndexVariable* batchIndexPtr, 
                                               decisionforest::IndexVariable* treeIndexPtr) const {
     if (batchIndexPtr==nullptr && treeIndexPtr==nullptr)
@@ -292,9 +296,9 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
     if (!predictOp)
          return mlir::failure();
 
-    auto scheduleAttribute = predictOp.schedule();
+    auto scheduleAttribute = predictOp.getSchedule();
     auto schedule = scheduleAttribute.GetSchedule();
-    auto forestAttribute = predictOp.ensemble();
+    auto forestAttribute = predictOp.getEnsemble();
     auto& forest = forestAttribute.GetDecisionForest();
     
     // Don't match if we've already modified the schedule on this op. Prevents

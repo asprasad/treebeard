@@ -9,9 +9,9 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Verifier.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "llvm/ADT/STLExtras.h"
 
 #include "xgboostparser.h"
@@ -41,8 +41,6 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
                                            int32_t tileSize, int32_t tileShapeBitWidth, int32_t childIndexBitWidth,
                                            bool makeAllLeavesSameDepth, bool reorderTrees, ScheduleManipulator_t scheduleManipulatorFunc=nullptr,
                                            int32_t pipelineSize = -1) {
-  TestCSVReader csvReader(csvPath);
-
   using NodeIndexType = int32_t;
   int32_t floatTypeBitWidth = sizeof(FloatType)*8;
   ScheduleManipulationFunctionWrapper scheduleManipulator(scheduleManipulatorFunc);
@@ -52,52 +50,19 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
                                      scheduleManipulatorFunc ? &scheduleManipulator : nullptr);
 
   options.SetPipelineSize(pipelineSize);
-  auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
+  auto modelGlobalsJSONFilePath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
   
-  TreeBeard::TreebeardContext tbContext{modelJsonPath, modelGlobalsJSONFilePath, options, 
+  TreeBeard::TreebeardContext tbContext(modelJsonPath, modelGlobalsJSONFilePath, options, 
                                         mlir::decisionforest::ConstructRepresentation(),
-                                        mlir::decisionforest::ConstructModelSerializer()};
-  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType>(args.context, tbContext);
+                                        mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONFilePath),
+                                        nullptr /*TODO_ForestCreator*/);
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType>(tbContext);
 
-  decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
+  decisionforest::InferenceRunner inferenceRunner(tbContext.serializer, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
   
   // inferenceRunner.PrintLengthsArray();
   // inferenceRunner.PrintOffsetsArray();
-  std::vector<std::vector<FloatType>> inputData;
-  std::vector<std::vector<FloatType>> xgBoostPredictions;
-  for (size_t i=batchSize  ; i<csvReader.NumberOfRows()-1 ; i += batchSize) {
-    std::vector<FloatType> batch, preds;
-    for (int32_t j=0 ; j<batchSize ; ++j) {
-      auto rowIndex = (i-batchSize) + j;
-      auto row = csvReader.GetRowOfType<FloatType>(rowIndex);
-      auto xgBoostPrediction = row.back();
-      row.pop_back();
-      preds.push_back(xgBoostPrediction);
-      batch.insert(batch.end(), row.begin(), row.end());
-    }
-    inputData.push_back(batch);
-    xgBoostPredictions.push_back(preds);
-  }
-  size_t rowSize = csvReader.GetRow(0).size() - 1; // The last entry is the xgboost prediction
-  auto currentPredictionsIter = xgBoostPredictions.begin();
-  for(auto& batch : inputData) {
-    assert (batch.size() % batchSize == 0);
-    std::vector<ResultType> result(batchSize, -1);
-    inferenceRunner.RunInference<FloatType, ResultType>(batch.data(), result.data(), rowSize, batchSize);
-    for(int64_t rowIdx=0 ; rowIdx<batchSize ; ++rowIdx) {
-      // This needs to be a vector of doubles because the type is hardcoded for Forest::Predict
-      // std::vector<double> row(batch.begin() + rowIdx*rowSize, batch.begin() + (rowIdx+1)*rowSize);
-      ResultType expectedResult = (*currentPredictionsIter)[rowIdx];
-      
-      // FloatType forestPrediction = xgBoostParser.GetForest()->Predict_Float(row);
-      // Test_ASSERT(FPEqual<ResultType>(forestPrediction, expectedResult));
-
-      Test_ASSERT(FPEqual<ResultType>(result[rowIdx], expectedResult));
-      // std::cout << forestPrediction << "\t" << result[rowIdx] << "\t" << expectedResult << std::endl;
-    }
-    ++currentPredictionsIter;
-  }
-  return true;
+  return ValidateModuleOutputAgainstCSVdata<FloatType, ResultType>(inferenceRunner, csvPath, batchSize);
 }
 
 template<typename FloatType>
@@ -2307,14 +2272,15 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
                                      floatTypeBitWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth,
                                      TreeBeard::TilingType::kHybrid, false, false, scheduleManipulatorFunc ? &scheduleManipulator : nullptr);
 
-  auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, FloatType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
+  auto modelGlobalsJSONFilePath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
 
-  TreeBeard::TreebeardContext tbContext{modelJsonPath, modelGlobalsJSONFilePath, options, 
+  TreeBeard::TreebeardContext tbContext(modelJsonPath, modelGlobalsJSONFilePath, options, 
                                         mlir::decisionforest::ConstructRepresentation(),
-                                        mlir::decisionforest::ConstructModelSerializer()};
-  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType, int32_t, FloatType>(args.context, tbContext);
+                                        mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONFilePath),
+                                        nullptr  /*TODO_ForestCreator*/);
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ResultType, FeatureIndexType, int32_t, FloatType>(tbContext);
 
-  decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
+  decisionforest::InferenceRunner inferenceRunner(tbContext.serializer, module, tileSize, sizeof(FloatType)*8, sizeof(FeatureIndexType)*8);
   
   // inferenceRunner.PrintLengthsArray();
   // inferenceRunner.PrintOffsetsArray();
@@ -2333,12 +2299,11 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
     inputData.push_back(batch);
     xgBoostPredictions.push_back(preds);
   }
-  size_t rowSize = csvReader.GetRow(0).size() - 1; // The last entry is the xgboost prediction
   auto currentPredictionsIter = xgBoostPredictions.begin();
   for(auto& batch : inputData) {
     assert (batch.size() % batchSize == 0);
     std::vector<ResultType> result(batchSize, -1);
-    inferenceRunner.RunInference<FloatType, ResultType>(batch.data(), result.data(), rowSize, batchSize);
+    inferenceRunner.RunInference<FloatType, ResultType>(batch.data(), result.data());
     for(int64_t rowIdx=0 ; rowIdx<batchSize ; ++rowIdx) {
       // This needs to be a vector of doubles because the type is hardcoded for Forest::Predict
       // std::vector<double> row(batch.begin() + rowIdx*rowSize, batch.begin() + (rowIdx+1)*rowSize);

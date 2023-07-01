@@ -1,10 +1,13 @@
-#include "TestUtilsCommon.h"
 #include <sstream>
 #include <fstream>
 #include <unistd.h>
 #include <libgen.h>
 #include <climits>
 #include <cstring>
+#include <filesystem>
+
+#include "ExecutionHelpers.h"
+#include "TestUtilsCommon.h"
 
 namespace TreeBeard
 {
@@ -53,6 +56,13 @@ std::string GetTreeBeardRepoPath() {
   return repoPath;
 }
 
+std::string GetXGBoostModelPath(const std::string& modelFileName) {
+  std::filesystem::path tbRepoPath(GetTreeBeardRepoPath());
+  tbRepoPath.append("xgb_models").append(modelFileName);
+  auto xgboostModelPath = tbRepoPath.string();
+  return xgboostModelPath;
+}
+
 std::string GetTempFilePath() {
   char filename[] = "treebeard_temp_XXXXXX";
   auto fd = mkstemp(filename);
@@ -68,6 +78,5 @@ std::string GetGlobalJSONNameForTests() {
   char *execDir = dirname(exePath);
   return std::string(execDir) + "/treebeard_test.json";
 }
-
 } // test 
 } // TreeBeard

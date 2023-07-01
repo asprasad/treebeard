@@ -16,7 +16,7 @@ namespace test
 {
 namespace
 {
-int32_t GenerateRandomTreeHelper(DecisionTree<>& tree, int32_t numFeatures, int32_t depth, int32_t maxDepth, 
+int32_t GenerateRandomTreeHelper(DecisionTree& tree, int32_t numFeatures, int32_t depth, int32_t maxDepth, 
                              RandomIntGenerator& featureIdxGen, RandomRealGenerator& thresholdGen, RandomRealGenerator& nodeTypeGen, double leafCutoff) {
   bool isLeaf = nodeTypeGen() < leafCutoff || depth == maxDepth;
 
@@ -45,8 +45,8 @@ int32_t GenerateRandomTreeHelper(DecisionTree<>& tree, int32_t numFeatures, int3
 }
 }
 
-DecisionTree<> GenerateRandomTree(int32_t numFeatures, double thresholdMin, double thresholdMax, int32_t maxDepth) {
-  DecisionTree<> tree;
+DecisionTree GenerateRandomTree(int32_t numFeatures, double thresholdMin, double thresholdMax, int32_t maxDepth) {
+  DecisionTree tree;
   RandomIntGenerator featureIdxGen = [=]() { return GetRandomInt(0, numFeatures-1); };
   RandomRealGenerator thresholdGen = [=]() { return GetRandomReal(thresholdMin, thresholdMax); };
   RandomRealGenerator nodeTypeGen = [=]() { return GetRandomReal(0.0, 1.0); };
@@ -54,8 +54,8 @@ DecisionTree<> GenerateRandomTree(int32_t numFeatures, double thresholdMin, doub
   return tree;
 }
 
-DecisionForest<> GenerateRandomDecisionForest(int32_t numTrees, int32_t numFeatures, double thresholdMin, double thresholdMax, int32_t maxDepth) {
-  DecisionForest<> forest;
+DecisionForest GenerateRandomDecisionForest(int32_t numTrees, int32_t numFeatures, double thresholdMin, double thresholdMax, int32_t maxDepth) {
+  DecisionForest forest;
   for (int32_t i=0; i<numFeatures ; ++i)
     forest.AddFeature(std::to_string(i) /*name*/, "float" /*type*/);
   for (int32_t i=0 ; i<numTrees ; ++i) {
@@ -65,7 +65,7 @@ DecisionForest<> GenerateRandomDecisionForest(int32_t numTrees, int32_t numFeatu
   return forest;
 }
 
-json CreateTreeJSON(DecisionTree<>& tree, int32_t id, int32_t numFeatures) {
+json CreateTreeJSON(DecisionTree& tree, int32_t id, int32_t numFeatures) {
   json treeJSON;
   treeJSON["id"] = id;
   treeJSON["tree_param"]["num_deleted"] = "0";
@@ -95,7 +95,7 @@ json CreateTreeJSON(DecisionTree<>& tree, int32_t id, int32_t numFeatures) {
     else
       splitIndices.push_back(0);
     splitConditions.push_back(node.threshold);
-    if (node.parent == DecisionTree<>::INVALID_NODE_INDEX)
+    if (node.parent == DecisionTree::INVALID_NODE_INDEX)
       parents.push_back(2147483647); //Some XGBoost weirdness for the parent of the root
     else
       parents.push_back(node.parent);
@@ -109,7 +109,7 @@ json CreateTreeJSON(DecisionTree<>& tree, int32_t id, int32_t numFeatures) {
   return treeJSON;
 }
 
-json CreateModelJSON(DecisionForest<>& forest) {
+json CreateModelJSON(DecisionForest& forest) {
   json modelJSON;
   modelJSON["gbtree_model_param"]["num_trees"] = std::to_string(forest.NumTrees());
   modelJSON["gbtree_model_param"]["size_leaf_vector"] = "0";
@@ -119,7 +119,7 @@ json CreateModelJSON(DecisionForest<>& forest) {
   return modelJSON;
 }
 
-void SaveToXGBoostJSON(DecisionForest<>& forest, const std::string& filename) {
+void SaveToXGBoostJSON(DecisionForest& forest, const std::string& filename) {
   json forestJSON;
   forestJSON["version"] = { 1, 4, 0 };
 

@@ -3,9 +3,9 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Pass/Pass.h"
@@ -55,10 +55,11 @@ struct WalkDecisionTreeOpLowering: public ConversionPattern {
     {
         rewriter.setInsertionPointToStart(&whileLoop.getAfter().front());
         auto node = after->getArguments()[0];
-        
+        auto cmpPredicate = walkTreeOp.getPredicateAttr();
         auto traverseTile = rewriter.create<decisionforest::TraverseTreeTileOp>(
           location,
           nodeType,
+          cmpPredicate,
           tree,
           node,
           inputRow);
@@ -84,9 +85,9 @@ struct PipelinedWalkDecisionTreeOpLowering: public ConversionPattern {
     if (!walkTreeOp)
         return mlir::failure();
 
-    auto trees = walkTreeOp.trees();
-    auto dataRows = walkTreeOp.dataRows();
-    auto unrollLoopAttr = walkTreeOp.UnrollLoopAttr();
+    auto trees = walkTreeOp.getTrees();
+    auto dataRows = walkTreeOp.getDataRows();
+    auto unrollLoopAttr = walkTreeOp.getUnrollLoopAttr();
     assert(trees.size() == dataRows.size());
 
     auto location = op->getLoc();
@@ -112,9 +113,11 @@ struct PipelinedWalkDecisionTreeOpLowering: public ConversionPattern {
       ValueRange nodeArgs = nodes;
 
       for (int32_t i = 0; i < unrollFactor - 1; i++) {
+        auto cmpPredicate = walkTreeOp.getPredicateAttr();
         auto traverseTile = rewriter.create<decisionforest::InterleavedTraverseTreeTileOp>(
           location,
           nodeTypes,
+          cmpPredicate,
           trees,
           nodeArgs,
           dataRows);
@@ -164,10 +167,11 @@ struct PipelinedWalkDecisionTreeOpLowering: public ConversionPattern {
       {
           rewriter.setInsertionPointToStart(&whileLoop.getAfter().front());
           auto nodeArgs = after->getArguments();
-          
+          auto cmpPredicate = walkTreeOp.getPredicateAttr();
           auto traverseTile = rewriter.create<decisionforest::InterleavedTraverseTreeTileOp>(
             location,
             nodeTypes,
+            cmpPredicate,
             trees,
             nodeArgs,
             dataRows);
@@ -201,7 +205,7 @@ struct WalkDecisionTreePeeledOpLowering: public ConversionPattern {
 
     auto tree = operands[0];
     auto inputRow = operands[1];
-    auto iterationsToPeelAttr = walkTreeOp.iterationsToPeelAttr();
+    auto iterationsToPeelAttr = walkTreeOp.getIterationsToPeelAttr();
     auto iterationsToPeel = iterationsToPeelAttr.getValue().getSExtValue();
 
     auto location = op->getLoc();
@@ -213,9 +217,11 @@ struct WalkDecisionTreePeeledOpLowering: public ConversionPattern {
     assert (iterationsToPeel > 1);
     Value walkResult;
     for (int64_t iteration=0 ; iteration<iterationsToPeel-1 ; ++iteration) {
+      auto cmpPredicate = walkTreeOp.getPredicateAttr();
       node = rewriter.create<decisionforest::TraverseTreeTileOp>(
         location,
         nodeType,
+        cmpPredicate,
         tree,
         node,
         inputRow);
@@ -252,10 +258,11 @@ struct WalkDecisionTreePeeledOpLowering: public ConversionPattern {
     {
         rewriter.setInsertionPointToStart(&whileLoop.getAfter().front());
         auto node = after->getArguments()[0];
-        
+        auto cmpPredicate = walkTreeOp.getPredicateAttr();
         auto traverseTile = rewriter.create<decisionforest::TraverseTreeTileOp>(
           location,
           nodeType,
+          cmpPredicate,
           tree,
           node,
           inputRow);
@@ -281,7 +288,7 @@ struct WalkDecisionTreeOpLoweringPass: public PassWrapper<WalkDecisionTreeOpLowe
     ConversionTarget target(getContext());
 
     target.addLegalDialect<memref::MemRefDialect, scf::SCFDialect, 
-                           decisionforest::DecisionForestDialect, math::MathDialect, arith::ArithmeticDialect>();
+                           decisionforest::DecisionForestDialect, math::MathDialect, arith::ArithDialect>();
     target.addIllegalOp<decisionforest::WalkDecisionTreeOp, decisionforest::WalkDecisionTreePeeledOp>();
 
     RewritePatternSet patterns(&getContext());
@@ -303,7 +310,7 @@ struct PipelinedWalkDecisionTreeOpLoweringPass: public PassWrapper<PipelinedWalk
     ConversionTarget target(getContext());
 
     target.addLegalDialect<memref::MemRefDialect, scf::SCFDialect, 
-                           decisionforest::DecisionForestDialect, math::MathDialect, arith::ArithmeticDialect>();
+                           decisionforest::DecisionForestDialect, math::MathDialect, arith::ArithDialect>();
     target.addIllegalOp<decisionforest::PipelinedWalkDecisionTreeOp>();
 
     RewritePatternSet patterns(&getContext());

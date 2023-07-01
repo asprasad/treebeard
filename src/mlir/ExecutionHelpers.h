@@ -13,51 +13,36 @@
 #include "llvm/Support/TargetSelect.h"
 
 #include "TreeTilingUtils.h"
+#include "TypeDefinitions.h"
 
 namespace mlir
 {
 namespace decisionforest
 {
 
-#pragma pack(push, 1)
-template<typename ThresholdType, typename FeatureIndexType, int32_t TileSize>
-struct TileType_Packed {
-  ThresholdType thresholds[TileSize];
-  FeatureIndexType featureIndices[TileSize];
-  bool operator==(const TileType_Packed<ThresholdType, IndexType, TileSize>& other) const {
-    for (int32_t i=0 ; i<TileSize ; ++i)
-      if (thresholds[i] != other.thresholds[i])
-        return false;
-    return index==other.index;
-  }
-};
-#pragma pack(pop)
+class IModelSerializer;
 
-template<typename ThresholdType, typename FeatureIndexType, int32_t TileSize>
-struct TileType_Natural {
-  ThresholdType thresholds[TileSize];
-  FeatureIndexType featureIndices[TileSize];
-};
+// This is just a place holder type for documentation.
+// We don't really want to intrepret this type on the CPU. 
+struct Tile {
 
-template<typename T, int32_t Rank>
-struct Memref {
-  T *bufferPtr;
-  T *alignedPtr;
-  int64_t offset;
-  int64_t lengths[Rank];
-  int64_t strides[Rank];
 };
 
 using LengthMemrefType = Memref<int64_t, 1>;
 using OffsetMemrefType = Memref<int64_t, 1>;
 // #TODO Tree-Beard#19
 using ClassMemrefType = Memref<int8_t, 1>;
+using ModelMemrefType = Memref<Tile, 1>;
+
+using LUTEntryType = int8_t;
+using LUTMemrefType = Memref<LUTEntryType, 2>;
 
 // using ResultMemrefType = Memref<double, 1>;
 
 class InferenceRunnerBase {
+  friend class IModelSerializer;
 protected:
-  std::string m_modelGlobalsJSONFilePath;
+  std::shared_ptr<IModelSerializer> m_serializer;
   int32_t m_inputElementBitWidth;
   int32_t m_returnTypeBitWidth;
   int32_t m_tileSize;
@@ -66,70 +51,62 @@ protected:
   int32_t m_batchSize;
   int32_t m_rowSize;
   void *m_inferenceFuncPtr;
-  
-  template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType, typename ChildIndexType>
-  int32_t CallInitMethod();
-  
-  template<typename ThresholdType, typename FeatureIndexType>
-  int32_t ResolveTileShapeType();
-
-  template<typename ThresholdType, typename FeatureIndexType, typename TileShapeType>
-  int32_t ResolveChildIndexType();
+  LUTMemrefType m_lutMemref;
 
   virtual void* GetFunctionAddress(const std::string& functionName) = 0;
+  void InitIntegerField(const std::string& functionName, int32_t& field);
   
-  void Init();
-public:
-  InferenceRunnerBase(const std::string& modelGlobalsJSONFilePath, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize)
-    : m_modelGlobalsJSONFilePath(modelGlobalsJSONFilePath), m_tileSize(tileSize), m_thresholdSize(thresholdSize), m_featureIndexSize(featureIndexSize) 
-  { 
-    decisionforest::ForestJSONReader::GetInstance().SetFilePath(modelGlobalsJSONFilePath);
-    decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
-    // TODO read the thresholdSize and featureIndexSize from the JSON!
-    m_batchSize = decisionforest::ForestJSONReader::GetInstance().GetBatchSize();
-    m_rowSize = decisionforest::ForestJSONReader::GetInstance().GetRowSize();
-    m_inputElementBitWidth = decisionforest::ForestJSONReader::GetInstance().GetInputElementBitWidth();
-    m_returnTypeBitWidth = decisionforest::ForestJSONReader::GetInstance().GetReturnTypeBitWidth();
-  }
-  virtual ~InferenceRunnerBase() { }
+  virtual void Init();
   
-  int32_t InitializeLengthsArray();
-  int32_t InitializeOffsetsArray();
-  int32_t InitializeModelArray();
-  int32_t InitializeLUT();
-  int32_t InitializeLeafArrays();
-  void InitializeClassInformation();
-
-  int32_t GetBatchSize() { return m_batchSize; }
-  int32_t GetRowSize() { return m_rowSize; }
-  int32_t GetThresholdWidth() { return m_thresholdSize; }
-  int32_t GetInputElementBitWidth() { return m_inputElementBitWidth; }
-  int32_t GetReturnTypeBitWidth() { return m_returnTypeBitWidth; }
-  
-  void PrintLengthsArray();
-  void PrintOffsetsArray();
-  void PrintModelArray();
-
   template<typename InputElementType, typename ReturnType>
-  int32_t RunInference(InputElementType *input, ReturnType *returnValue, int32_t inputRowSize, int32_t batchSize) {
-    assert (batchSize == m_batchSize);
-    assert (inputRowSize == m_rowSize);
-
+  int32_t RunInference_Default(InputElementType *input, ReturnType *returnValue) {
+    
     typedef Memref<ReturnType, 1> (*InferenceFunc_t)(InputElementType*, InputElementType*, int64_t, int64_t, int64_t, int64_t, int64_t, 
                                                      ReturnType*, ReturnType*, int64_t, int64_t, int64_t);
     auto inferenceFuncPtr = reinterpret_cast<InferenceFunc_t>(m_inferenceFuncPtr);
     InputElementType *ptr = input, *alignedPtr = input;
-    int64_t rowSize = inputRowSize, offset = 0, stride = 1;
+    int64_t rowSize = m_rowSize, offset = 0, stride = 1;
     ReturnType *resultPtr = returnValue, *resultAlignedPtr = returnValue;
-    int64_t resultLen = batchSize;
-    inferenceFuncPtr(ptr, alignedPtr, offset, batchSize, rowSize, rowSize /*stride by rowSize to move from one row to the next*/, stride, 
+    int64_t resultLen = m_batchSize;
+    inferenceFuncPtr(ptr, alignedPtr, offset, m_batchSize, rowSize, rowSize /*stride by rowSize to move from one row to the next*/, stride, 
                      resultPtr, resultAlignedPtr, offset, resultLen, stride);
     return 0;
   }
 
+  bool SerializerHasCustomPredictionMethod();
+  int32_t RunInference_CustomImpl(double *input, double* returnValue);
+
+  template<typename InputElementType, typename ReturnType>
+  int32_t RunInference_Custom(InputElementType *input, ReturnType *returnValue) {
+    RunInference_CustomImpl(reinterpret_cast<double*>(input),
+                            reinterpret_cast<double*>(returnValue));
+    return 0;
+  }
+  
+public:
+  InferenceRunnerBase(std::shared_ptr<IModelSerializer> serializer,
+                      int32_t tileSize,
+                      int32_t thresholdSize,
+                      int32_t featureIndexSize);
+  virtual ~InferenceRunnerBase() { }
+  
+  int32_t GetBatchSize() { return m_batchSize; }
+  int32_t GetTileSize() { return m_tileSize; }
+  int32_t GetRowSize() { return m_rowSize; }
+  int32_t GetThresholdWidth() { return m_thresholdSize; }
+  int32_t GetFeatureIndexWidth() { return m_featureIndexSize; }
+  int32_t GetInputElementBitWidth() { return m_inputElementBitWidth; }
+  int32_t GetReturnTypeBitWidth() { return m_returnTypeBitWidth; }
+  LUTMemrefType GetLUTMemref() { return m_lutMemref; }
   template<typename InputElementType, typename ReturnType>
   int32_t RunInference(InputElementType *input, ReturnType *returnValue) {
-    return RunInference<InputElementType, ReturnType>(input, returnValue, m_rowSize, m_batchSize);
+    if (SerializerHasCustomPredictionMethod()) {
+      return RunInference_Custom(input, returnValue);
+    }
+    else {
+      return RunInference_Default(input, returnValue);
+    }
+    return 0;
   }
 };
 
@@ -142,8 +119,11 @@ protected:
   void* GetFunctionAddress(const std::string& functionName) override;
 public:
   static llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> CreateExecutionEngine(mlir::ModuleOp module);
-  InferenceRunner(const std::string& modelGlobalsJSONFilePath, mlir::ModuleOp module, int32_t tileSize, 
-                  int32_t thresholdSize, int32_t featureIndexSize);
+  InferenceRunner(std::shared_ptr<IModelSerializer> serializer, 
+                  mlir::ModuleOp module,
+                  int32_t tileSize, 
+                  int32_t thresholdSize,
+                  int32_t featureIndexSize);
 };
 
 class SharedObjectInferenceRunner : public InferenceRunnerBase{
@@ -151,7 +131,11 @@ class SharedObjectInferenceRunner : public InferenceRunnerBase{
 protected:
   void* GetFunctionAddress(const std::string& functionName) override;
 public:
-  SharedObjectInferenceRunner(const std::string& modelGlobalsJSONFilePath, const std::string& soPath, int32_t tileSize, int32_t thresholdSize, int32_t featureIndexSize);
+  SharedObjectInferenceRunner(std::shared_ptr<IModelSerializer> serializer,
+                              const std::string& soPath,
+                              int32_t tileSize,
+                              int32_t thresholdSize,
+                              int32_t featureIndexSize);
   ~SharedObjectInferenceRunner();
 };
 
