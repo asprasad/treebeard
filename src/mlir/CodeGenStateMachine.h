@@ -8,10 +8,10 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 
 #include "mlir/Transforms/DialectConversion.h"
@@ -82,10 +82,8 @@ class ScalarTraverseTileCodeGenerator : public ICodeGeneratorStateMachine {
     enum TraverseState { kLoadThreshold, kLoadFeatureIndex, kLoadFeature, kCompare, kNextNode, kDone };
     std::shared_ptr<IRepresentation> m_representation;
     TraverseState m_state;
-    Value m_treeMemref;
     Value m_rowMemref;
     Type m_resultType;
-    MemRefType m_treeMemrefType;
     Value m_nodeToTraverse;
     decisionforest::NodeToIndexOp m_nodeIndex;
     decisionforest::LoadTileThresholdsOp m_loadThresholdOp;
@@ -94,8 +92,14 @@ class ScalarTraverseTileCodeGenerator : public ICodeGeneratorStateMachine {
     arith::ExtUIOp m_comparisonUnsigned;
     Value m_result;
     std::vector<mlir::Value> m_extraLoads;
+    Value m_tree;
+    mlir::arith::CmpFPredicateAttr m_cmpPredicateAttr;
   public:
-    ScalarTraverseTileCodeGenerator(Value treeMemref, Value rowMemref, Value node, Type resultType, std::shared_ptr<IRepresentation> representation);
+    ScalarTraverseTileCodeGenerator(Value rowMemref, Value node, 
+                                    Type resultType,
+                                    std::shared_ptr<IRepresentation> representation,
+                                    Value tree,
+                                    mlir::arith::CmpFPredicateAttr cmpPredicateAttr);
     bool EmitNext(ConversionPatternRewriter& rewriter, Location& location) override;
     std::vector<Value> GetResult() override;
 };
@@ -106,16 +110,13 @@ class VectorTraverseTileCodeGenerator : public ICodeGeneratorStateMachine {
     std::shared_ptr<IRepresentation> m_representation;
     TraverseState m_state;
     Value m_tree;
-    Value m_treeMemref;
     Value m_rowMemref;
     Type m_resultType;
     VectorType m_featureIndexVectorType;
     VectorType m_thresholdVectorType;
     Type m_tileShapeType;
-    decisionforest::TiledNumericalNodeType m_treeTileType;
     int32_t m_tileSize;
 
-    MemRefType m_treeMemrefType;
     Value m_nodeToTraverse;
     decisionforest::NodeToIndexOp m_nodeIndex;
     decisionforest::LoadTileThresholdsOp m_loadThresholdOp;
@@ -128,14 +129,60 @@ class VectorTraverseTileCodeGenerator : public ICodeGeneratorStateMachine {
     std::vector<mlir::Value> m_extraLoads;
 
     std::function<Value(Value)> m_getLutFunc;
-
+    mlir::arith::CmpFPredicateAttr m_cmpPredicateAttr;
   public:
-    VectorTraverseTileCodeGenerator(Value tree, Value treeMemref, Value rowMemref, Value node, Type resultType, 
-                                    std::shared_ptr<IRepresentation> representation, std::function<Value(Value)> getLutFunc);
+    VectorTraverseTileCodeGenerator(Value tree, 
+                                    Value rowMemref,
+                                    Value node,
+                                    Type resultType, 
+                                    std::shared_ptr<IRepresentation> representation,
+                                    std::function<Value(Value)> getLutFunc,
+                                    mlir::arith::CmpFPredicateAttr cmpPredicateAttr);
     bool EmitNext(ConversionPatternRewriter& rewriter, Location& location) override;
     std::vector<Value> GetResult() override;
-    };
-}
-}
+};
+
+#ifdef TREEBEARD_GPU_SUPPORT
+class GPUVectorTraverseTileCodeGenerator : public ICodeGeneratorStateMachine {
+  private:
+    enum TraverseState { kLoadThreshold, kLoadFeatureIndex, kLoadTileShape, kLoadChildIndex, kLoadFeature, kCompare, kNextNode, kDone };
+    std::shared_ptr<IRepresentation> m_representation;
+    TraverseState m_state;
+    Value m_tree;
+    Value m_rowMemref;
+    Type m_resultType;
+    VectorType m_featureIndexVectorType;
+    VectorType m_thresholdVectorType;
+    Type m_tileShapeType;
+    int32_t m_tileSize;
+
+    Value m_nodeToTraverse;
+    decisionforest::NodeToIndexOp m_nodeIndex;
+    decisionforest::LoadTileThresholdsOp m_loadThresholdOp;
+    decisionforest::LoadTileFeatureIndicesOp m_loadFeatureIndexOp;
+    arith::IndexCastOp m_loadTileShapeIndexOp;
+    arith::IndexCastOp m_leafBitMask;
+    vector::GatherOp m_features;
+    Value m_comparisonIndex;
+    Value m_result;
+    std::vector<mlir::Value> m_extraLoads;
+
+    std::function<Value(Value)> m_getLutFunc;
+    mlir::arith::CmpFPredicateAttr m_cmpPredicateAttr;
+  public:
+    GPUVectorTraverseTileCodeGenerator(Value tree, 
+                                    Value rowMemref,
+                                    Value node,
+                                    Type resultType, 
+                                    std::shared_ptr<IRepresentation> representation,
+                                    std::function<Value(Value)> getLutFunc,
+                                    mlir::arith::CmpFPredicateAttr cmpPredicateAttr);
+    bool EmitNext(ConversionPatternRewriter& rewriter, Location& location) override;
+    std::vector<Value> GetResult() override;
+};
+#endif
+
+} // namespace decisionforest
+} // namespace mlir
 
 #endif // CODEGEN_STATE_MACHINE

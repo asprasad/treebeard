@@ -5,9 +5,9 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 
 #include "mlir/Transforms/DialectConversion.h"
@@ -142,7 +142,7 @@ struct ConvertNodeTypeToIndexTypePass : public PassWrapper<ConvertNodeTypeToInde
 
     target.addLegalDialect<AffineDialect, memref::MemRefDialect, tensor::TensorDialect, 
                            scf::SCFDialect, decisionforest::DecisionForestDialect,
-                           math::MathDialect, arith::ArithmeticDialect, func::FuncDialect>();
+                           math::MathDialect, arith::ArithDialect, func::FuncDialect>();
 
     target.addIllegalOp<decisionforest::EnsembleConstantOp,
                         decisionforest::GetTreeFromEnsembleOp,

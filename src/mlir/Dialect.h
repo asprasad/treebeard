@@ -1,10 +1,12 @@
 #ifndef _DIALECT_H_
 #define _DIALECT_H_
+#include <optional>
 
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectInterface.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Interfaces/CastInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -25,6 +27,7 @@ namespace mlir
 
 class RewritePatternSet;
 class LLVMTypeConverter;
+class Pass;
 
 namespace decisionforest
 {
@@ -46,7 +49,7 @@ void populateDebugOpLoweringPatterns(RewritePatternSet& patterns, LLVMTypeConver
 void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext& context, mlir::ModuleOp module);
 void LowerEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module, std::shared_ptr<IModelSerializer> serializer, std::shared_ptr<IRepresentation> representation);
 void ConvertNodeTypeToIndexType(mlir::MLIRContext& context, mlir::ModuleOp module);
-void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module);
+void LowerToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module, std::shared_ptr<IRepresentation> representation);
 int dumpLLVMIR(mlir::ModuleOp module, bool dumpAsm = false);
 int dumpLLVMIRToFile(mlir::ModuleOp module, const std::string& filename);
 
@@ -55,6 +58,14 @@ void DoUniformTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t 
 void DoProbabilityBasedTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth);
 void DoHybridTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth);
 void DoReorderTreesByDepth(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t pipelineSize=-1, int32_t numCores=-1);
+
+#ifdef TREEBEARD_GPU_SUPPORT
+
+void LowerGPUEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module, 
+                               std::shared_ptr<IModelSerializer> serializer,
+                               std::shared_ptr<IRepresentation> representation);
+
+#endif // TREEBEARD_GPU_SUPPORT
 
 }
 }

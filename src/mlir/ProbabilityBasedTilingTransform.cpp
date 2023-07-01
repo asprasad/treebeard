@@ -1,14 +1,14 @@
 // Implementation of a transformation to tile all trees in a forest based on edge probabilities. 
 // The tile needs to be constant across trees.
-
+#include <optional>
 #include "Dialect.h"
 // #include "Passes.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 
 #include "mlir/Transforms/DialectConversion.h"
@@ -46,7 +46,7 @@ struct TileEnsembleAttribute : public RewritePattern {
     if (!predictForestOp)
          return mlir::failure();
 
-    auto forestAttribute = predictForestOp.ensemble();
+    auto forestAttribute = predictForestOp.getEnsemble();
     auto forest = forestAttribute.GetDecisionForest();
     auto forestType = forestAttribute.getType().cast<decisionforest::TreeEnsembleType>();
     auto tilingDescriptor = forest.GetTree(0).TilingDescriptor();
@@ -76,7 +76,9 @@ struct TileEnsembleAttribute : public RewritePattern {
       auto treeType = forestType.getTreeType(i).cast<decisionforest::TreeType>();
       auto newTreeType = decisionforest::TreeType::get(treeType.getResultType(), forest.GetTree(i).TilingDescriptor().MaxTileSize(), 
                                                        treeType.getThresholdType(), treeType.getFeatureIndexType(), m_tileShapeType, 
-                                                       treeType.isSparseRepresentation(), treeType.getChildIndexType());
+                                                       treeType.getChildIndexType());
+      if (i!=0)
+        assert (treeTypes.at(0) == newTreeType);                                                       
       treeTypes.push_back(newTreeType);
     }
     // std::cout << std::endl;
@@ -84,18 +86,22 @@ struct TileEnsembleAttribute : public RewritePattern {
     TreeBeard::Logging::Log("Number of trees tiled probabilistically : " + std::to_string(numTreesTiledProbabilistically));
     // Tile this forest uniformly
     auto newForestType = decisionforest::TreeEnsembleType::get(forestType.getResultType(), forestType.getNumberOfTrees(),
-                                                               forestType.getRowType(), forestType.getReductionType(), treeTypes);
+                                                               forestType.getRowType(), forestType.getReductionType(), treeTypes.at(0));
 
     auto newForestAttribute = decisionforest::DecisionForestAttribute::get(newForestType, forest);
-    auto tiledPredictForestOp = rewriter.create<decisionforest::PredictForestOp>(op->getLoc(), predictForestOp.getResult().getType(), 
-                                                                                 newForestAttribute, predictForestOp.data(), 
-                                                                                 predictForestOp.result(), predictForestOp.schedule());
+    auto tiledPredictForestOp = rewriter.create<decisionforest::PredictForestOp>(op->getLoc(),
+                                                                                 predictForestOp.getResult().getType(), 
+                                                                                 newForestAttribute, 
+                                                                                 predictForestOp.getPredicateAttr(),
+                                                                                 predictForestOp.getData(), 
+                                                                                 predictForestOp.getResult(),
+                                                                                 predictForestOp.getSchedule());
 
     rewriter.replaceOp(op, static_cast<Value>(tiledPredictForestOp));
     return mlir::success();
   }
 
-  void DoTileTraversalForNode_Uniform(const std::vector<decisionforest::DecisionTree<>::Node>& nodes, 
+  void DoTileTraversalForNode_Uniform(const std::vector<decisionforest::DecisionTree::Node>& nodes, 
                               int32_t currentNode, int32_t tileID, std::vector<int32_t>& tileIDs) const {
     std::queue<int32_t> nodeQ;
     nodeQ.push(currentNode);
@@ -106,15 +112,15 @@ struct TileEnsembleAttribute : public RewritePattern {
       ++numNodes;
       tileIDs.at(node) = tileID;
       auto leftChild = nodes.at(node).leftChild;
-      if (leftChild != decisionforest::DecisionTree<>::INVALID_NODE_INDEX && !nodes.at(leftChild).IsLeaf())
+      if (leftChild != decisionforest::DecisionTree::INVALID_NODE_INDEX && !nodes.at(leftChild).IsLeaf())
         nodeQ.push(leftChild);
       auto rightChild = nodes.at(node).rightChild;
-      if (rightChild != decisionforest::DecisionTree<>::INVALID_NODE_INDEX && !nodes.at(rightChild).IsLeaf())
+      if (rightChild != decisionforest::DecisionTree::INVALID_NODE_INDEX && !nodes.at(rightChild).IsLeaf())
         nodeQ.push(rightChild);
     }
   }
 
-  void DoTileTraversalForNode(const std::vector<decisionforest::DecisionTree<>::Node>& nodes, 
+  void DoTileTraversalForNode(const std::vector<decisionforest::DecisionTree::Node>& nodes, 
                               int32_t currentNode, int32_t tileID, std::vector<int32_t>& tileIDs) const {
     auto& currNode = nodes.at(currentNode);
     auto& rootNode = nodes.at(0);
@@ -132,14 +138,14 @@ struct TileEnsembleAttribute : public RewritePattern {
       int32_t maxProbabilityNode = -1;
       for (auto nodeIndex : tileNodes) {
         auto& node = nodes.at(nodeIndex);
-        if (node.leftChild != decisionforest::DecisionTree<>::INVALID_NODE_INDEX) {
+        if (node.leftChild != decisionforest::DecisionTree::INVALID_NODE_INDEX) {
           auto &child = nodes.at(node.leftChild);
           if (!child.IsLeaf() && child.hitCount > maxHitCount && tileNodes.find(node.leftChild)==tileNodes.end()) {
             maxHitCount = child.hitCount;
             maxProbabilityNode = node.leftChild;
           }
         }
-        if (node.rightChild != decisionforest::DecisionTree<>::INVALID_NODE_INDEX) {
+        if (node.rightChild != decisionforest::DecisionTree::INVALID_NODE_INDEX) {
           auto &child = nodes.at(node.rightChild);
           if (!child.IsLeaf() && child.hitCount > maxHitCount && tileNodes.find(node.rightChild)==tileNodes.end()) {
             maxHitCount = child.hitCount;
@@ -156,9 +162,9 @@ struct TileEnsembleAttribute : public RewritePattern {
     }
   }
 
-  void ConstructTileIDVector(const std::vector<decisionforest::DecisionTree<>::Node>& nodes,
+  void ConstructTileIDVector(const std::vector<decisionforest::DecisionTree::Node>& nodes,
                              int32_t currentNode, int32_t& tileID, std::vector<int32_t>& tileIDs, bool skewed) const {
-    if (currentNode == decisionforest::DecisionTree<>::INVALID_NODE_INDEX)
+    if (currentNode == decisionforest::DecisionTree::INVALID_NODE_INDEX)
       return;
     if (tileIDs.at(currentNode) == -1) {
       if (skewed)
@@ -171,14 +177,14 @@ struct TileEnsembleAttribute : public RewritePattern {
     ConstructTileIDVector(nodes, nodes.at(currentNode).rightChild, tileID, tileIDs, skewed);
   }
 
-  bool IsDecisionTreeSkewed(decisionforest::DecisionTree<>& tree) const {
+  bool IsDecisionTreeSkewed(decisionforest::DecisionTree& tree) const {
     auto& root = tree.GetNodes().at(0);
-    std::vector<mlir::decisionforest::DecisionTree<>::Node> leaves;
+    std::vector<mlir::decisionforest::DecisionTree::Node> leaves;
     for (auto& node : tree.GetNodes()) {
       if (node.IsLeaf())
         leaves.push_back(node);
     }
-    std::sort(leaves.begin(), leaves.end(), [](mlir::decisionforest::DecisionTree<>::Node& n1, mlir::decisionforest::DecisionTree<>::Node& n2) {
+    std::sort(leaves.begin(), leaves.end(), [](mlir::decisionforest::DecisionTree::Node& n1, mlir::decisionforest::DecisionTree::Node& n2) {
       return n1.hitCount > n2.hitCount;
     });
     double fractionOfLeaves=0.10, threshold=0.9;
@@ -190,7 +196,7 @@ struct TileEnsembleAttribute : public RewritePattern {
     return (double)hits/(double)root.hitCount > threshold;
   }
 
-  bool TileSingleDecisionTree(decisionforest::DecisionTree<>& tree) const {
+  bool TileSingleDecisionTree(decisionforest::DecisionTree& tree) const {
     const auto& nodes = tree.GetNodes();
     std::vector<int32_t> tileIDs(nodes.size(), -1);
     int32_t tileID = 0;

@@ -1,3 +1,5 @@
+#include <optional>
+
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -19,13 +21,15 @@ bool mlir::decisionforest::UseSparseTreeRepresentation = false;
 bool mlir::decisionforest::PeeledCodeGenForProbabiltyBasedTiling = false;
 
 void TreeTypeStorage::print(mlir::DialectAsmPrinter &printer) {
-    printer << "TreeType(returnType:" << m_resultType << ", tileSize:" << m_tileSize 
-            << ", tileShapeType:" << m_tileShapeType << ", sparse:" << m_sparseRepresentation 
+    printer << "TreeType(returnType:" << m_resultType 
+            << ", tileSize:" << m_tileSize 
+            << ", tileShapeType:" << m_tileShapeType  
             << ", childIndexType:" << m_childIndexType << "))";
 }
 
 void TreeEnsembleTypeStorage::print(mlir::DialectAsmPrinter &printer) {
-    printer << "TreeEnsembleType(#Trees:" << m_numTrees << ", rowType:" << m_rowType 
+    std::string ensembleType = m_ensembleSubset ? "TreeEnsembleSubsetType" : "TreeEnsembleType";
+    printer << ensembleType << "(#Trees:" << m_numTrees << ", rowType:" << m_rowType 
             << ", resultType:" << m_resultType << ", reductionType:" << (int32_t)m_reductionType << ")";
 }
 

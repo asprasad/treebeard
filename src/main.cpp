@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include "json/xgboostparser.h"
+#include "TreebeardContext.h"
 #include "include/TreeTilingUtils.h"
 #include "mlir/ExecutionHelpers.h"
 #include "TestUtilsCommon.h"
@@ -15,6 +16,10 @@ namespace test
 {
 void TestTileStringGen();
 }
+}
+
+bool EqualsString(char *arg, const std::string& str) {
+  return (std::string(arg) == str);
 }
 
 bool ContainsString(char *arg, const std::string& str) {
@@ -90,26 +95,34 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
     }
   if (!dumpLLVMToFile)
     return false;
-  std::string jsonFile, llvmIRFile, modelGlobalsJSONFile, compilerConfigJSONFile;
+  std::string xgboostFile, llvmIRFile, modelGlobalsJSONFile, compilerConfigJSONFile, onnxModelFile;
   int32_t thresholdTypeWidth=32, returnTypeWidth=32, featureIndexTypeWidth=16, tileShapeBitWidth=16, childIndexBitWidth=16;
   int32_t nodeIndexTypeWidth=32, inputElementTypeWidth=32, batchSize=4, tileSize=1;
   bool invertLoops = false, isReturnTypeFloat=true;
   for (int32_t i=0 ; i<argc ; ) {
-    if (ContainsString(argv[i], "-o")) {
+    if (EqualsString(argv[i], "-o")) {
       assert ((i+1) < argc);
-      assert (llvmIRFile == "");
+      assert (llvmIRFile.empty());
       llvmIRFile = argv[i+1];
       i += 2;
     }
-    else if (ContainsString(argv[i], "-json")) {
+    else if (ContainsString(argv[i], "-xgboost")) {
       assert ((i+1) < argc);
-      assert (jsonFile == "");
-      jsonFile = argv[i+1];
+      assert (xgboostFile.empty());
+      assert (onnxModelFile.empty());
+      xgboostFile = argv[i+1];
+      i += 2;
+    }
+    else if (ContainsString(argv[i], "-onnx")) {
+      assert ((i+1) < argc);
+      assert (onnxModelFile.empty());
+      assert (xgboostFile.empty());
+      onnxModelFile = argv[i+1];
       i += 2;
     }
     else if (ContainsString(argv[i], "-globalValuesJSON")) {
       assert ((i+1) < argc);
-      assert (modelGlobalsJSONFile == "");
+      assert (modelGlobalsJSONFile.empty());
       modelGlobalsJSONFile = argv[i+1];
       i += 2;
     }
@@ -160,26 +173,43 @@ bool DumpLLVMIfNeeded(int argc, char *argv[]) {
     else
       ++i;
   }
-  assert (jsonFile != "" && llvmIRFile != "");
+  assert ((!xgboostFile.empty() || !onnxModelFile.empty()) && !llvmIRFile.empty());
   mlir::decisionforest::ScheduleManipulationFunctionWrapper scheduleManipulator(mlir::decisionforest::OneTreeAtATimeSchedule);
   // TreeBeard::test::ScheduleManipulationFunctionWrapper scheduleManipulator(TreeBeard::test::TileTreeDimensionSchedule<10>);
-  
-  if (compilerConfigJSONFile != "") {
+
+  TreeBeard::TreebeardContext tbContext;
+  if (!compilerConfigJSONFile.empty()) {
     TreeBeard::CompilerOptions options(compilerConfigJSONFile);
-    TreeBeard::TreebeardContext tbContext{jsonFile, modelGlobalsJSONFile, options, 
-                                          mlir::decisionforest::ConstructRepresentation(),
-                                          mlir::decisionforest::ConstructModelSerializer()};
+    tbContext.options = options;
+    tbContext.representation = mlir::decisionforest::ConstructRepresentation();
+    tbContext.serializer = mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONFile);
+    tbContext.modelGlobalsJSONPath = modelGlobalsJSONFile;
+    tbContext.forestConstructor = nullptr;  /*TODO_ForestCreator*/ 
+  }
+  else {
+    TreeBeard::CompilerOptions options(
+        thresholdTypeWidth, returnTypeWidth, isReturnTypeFloat,
+        featureIndexTypeWidth, nodeIndexTypeWidth, inputElementTypeWidth,
+        batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth,
+        TreeBeard::TilingType::kUniform, false, false,
+        invertLoops ? &scheduleManipulator : nullptr);
+
+    tbContext.options = options;
+    tbContext.representation = mlir::decisionforest::ConstructRepresentation();
+    tbContext.serializer = mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONFile);
+    tbContext.modelGlobalsJSONPath = modelGlobalsJSONFile;
+    tbContext.forestConstructor = nullptr;  /*TODO_ForestCreator*/ 
+  }
+
+  if (!xgboostFile.empty()) {
+    tbContext.modelPath = xgboostFile;
     TreeBeard::ConvertXGBoostJSONToLLVMIR(tbContext, llvmIRFile);
   }
   else {
-    TreeBeard::CompilerOptions options(thresholdTypeWidth, returnTypeWidth, isReturnTypeFloat, featureIndexTypeWidth,
-                                       nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, childIndexBitWidth, 
-                                       TreeBeard::TilingType::kUniform, false, false, invertLoops ? &scheduleManipulator : nullptr);
-    TreeBeard::TreebeardContext tbContext{jsonFile, modelGlobalsJSONFile, options, 
-                                          mlir::decisionforest::ConstructRepresentation(),
-                                          mlir::decisionforest::ConstructModelSerializer()};
-    TreeBeard::ConvertXGBoostJSONToLLVMIR(tbContext, llvmIRFile);
+    tbContext.modelPath = onnxModelFile;
+    TreeBeard::ConvertONNXModelToLLVMIR(tbContext, llvmIRFile);
   }
+
   return true;
 }
 
@@ -201,19 +231,13 @@ bool RunInferenceFromSO(int argc, char *argv[]) {
   for (int32_t i=0 ; i<argc ; ) {
     if (ContainsString(argv[i], "-so")) {
       assert ((i+1) < argc);
-      assert (soPath == "");
+      assert (soPath.empty());
       soPath = argv[i+1];
-      i += 2;
-    }
-    else if (ContainsString(argv[i], "-json")) {
-      assert ((i+1) < argc);
-      assert (jsonFile == "");
-      jsonFile = argv[i+1];
       i += 2;
     }
     else if (ContainsString(argv[i], "-globalValuesJSON")) {
       assert ((i+1) < argc);
-      assert (modelGlobalsJSONFile == "");
+      assert (modelGlobalsJSONFile.empty());
       modelGlobalsJSONFile = argv[i+1];
       i += 2;
     }
@@ -223,7 +247,7 @@ bool RunInferenceFromSO(int argc, char *argv[]) {
     }
     else if (ContainsString(argv[i], "-i")) {
       assert ((i+1) < argc);
-      assert (inputCSVFile == "");
+      assert (inputCSVFile.empty());
       inputCSVFile = argv[i+1];
       i += 2;
     }
@@ -261,12 +285,12 @@ bool RunInferenceFromSO(int argc, char *argv[]) {
     else
       ++i;
   }
-  assert (jsonFile != "" && soPath != "");
+  assert (!soPath.empty());
   // TODO all these options are not needed here! We only need the information that is required to infer types.
   TreeBeard::CompilerOptions options(thresholdTypeWidth, returnTypeWidth, isReturnTypeFloat, featureIndexTypeWidth,
                                      nodeIndexTypeWidth, inputElementTypeWidth, batchSize, tileSize, tileShapeBitWidth, 
                                      childIndexBitWidth, TreeBeard::TilingType::kUniform, false, false, nullptr);
-  TreeBeard::RunInferenceUsingSO(jsonFile, soPath, modelGlobalsJSONFile, inputCSVFile, options);
+  TreeBeard::RunInferenceUsingSO(soPath, modelGlobalsJSONFile, inputCSVFile, options);
   return true;
 }
 
@@ -284,13 +308,13 @@ bool ComputeInferenceStatsIfNeeded(int argc, char *argv[]) {
   int32_t numRows = -1;
   for (int32_t i=0 ; i<argc ; ) {
     if (ContainsString(argv[i], "-model")) {
-      assert (modelName == "");
+      assert (modelName.empty());
       assert (i+1 < argc);
       modelName = argv[i+1];
       i += 2;
     }
     else if (ContainsString(argv[i], "-csv")) {
-      assert (csvPath == "");
+      assert (csvPath.empty());
       assert (i+1 < argc);
       csvPath = argv[i+1];
       i += 2;
@@ -302,7 +326,7 @@ bool ComputeInferenceStatsIfNeeded(int argc, char *argv[]) {
       ++i;
 
   }
-  if (csvPath == "") {
+  if (csvPath.empty()) {
     TreeBeard::Profile::ComputeForestInferenceStatsOnSampledTestInput(modelName, numRows);
   }
   else {
@@ -325,19 +349,19 @@ bool ComputeProbabilityProfileIfNeeded(int argc, char *argv[]) {
   int32_t numRows = -1;
   for (int32_t i=0 ; i<argc ; ) {
     if (ContainsString(argv[i], "-model")) {
-      assert (modelName == "");
+      assert (modelName.empty());
       assert (i+1 < argc);
       modelName = argv[i+1];
       i += 2;
     }
     else if (ContainsString(argv[i], "-csv")) {
-      assert (csvPath == "");
+      assert (csvPath.empty());
       assert (i+1 < argc);
       csvPath = argv[i+1];
       i += 2;
     }
     else if (ContainsString(argv[i], "-o")) {
-      assert (outputCSVPath == "");
+      assert (outputCSVPath.empty());
       assert (i+1 < argc);
       outputCSVPath = argv[i+1];
       i += 2;
@@ -348,7 +372,7 @@ bool ComputeProbabilityProfileIfNeeded(int argc, char *argv[]) {
     else
       ++i;
   }
-  assert(modelName != "" && csvPath != "" && outputCSVPath != "");
+  assert(!modelName.empty() && !csvPath.empty() && !outputCSVPath.empty());
   TreeBeard::Profile::ComputeForestProbabilityProfileForXGBoostModel(modelName, csvPath, outputCSVPath, numRows);
   return true;
 }

@@ -1,15 +1,16 @@
 #include <iostream>
 #include <memory>
+#include <vector>
 #include "Dialect.h"
 // #include "Passes.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Pass/Pass.h"
@@ -74,20 +75,23 @@ Plan and issues
 */
 using namespace mlir;
 
+namespace mlir
+{
+namespace decisionforest
+{
+// Definition in GPURepresentations.cpp
+// Add a simple initialization function that initializes a GPU buffer by 
+// transferring values in a CPU buffer to the GPU buffer (single data transfer)
+void GenerateSimpleInitializer(const std::string& funcName, ConversionPatternRewriter &rewriter, Location location, 
+                               ModuleOp module, MemRefType memrefType);
+ 
+}
+}
+
 
 Value getLUT;
 
 namespace {
-
-void ClearGlobalMaps() {
-  ensembleConstantToMemrefsMap.clear();
-  getTreeOperationMap.clear();
-}
-
-void ClearSparseGlobalMaps() {
-  sparseEnsembleConstantToMemrefsMap.clear();
-  sparseGetTreeOperationMap.clear();
-}
 
 struct EnsembleConstantOpLowering: public ConversionPattern {
   std::shared_ptr<decisionforest::IModelSerializer> m_serializer;
@@ -156,17 +160,93 @@ struct EnsembleConstantOpLowering: public ConversionPattern {
     // TODO We may need to implement something smarter here. We don't really need I8's for each outcome. We could store all outcomes
     // in a single int64 for tile size 4 for example (each entry needs 3 bits and there are 16 entries -- one for each outcome). 
     auto lutMemrefType = MemRefType::get({numberOfTileShapes, numberOfTileOutcomes}, rewriter.getI8Type());
-
-    rewriter.create<memref::GlobalOp>(location, lookupTableMemrefName,
-                                      /*sym_visibility=*/rewriter.getStringAttr("private"),
-                                      /*type=*/lutMemrefType,
-                                      /*initial_value=*/rewriter.getUnitAttr(),
-                                      /*constant=*/false, IntegerAttr());
-    AddGlobalMemrefGetter(module, lookupTableMemrefName, lutMemrefType, rewriter, location);
+    std::vector<int8_t> lutData(numberOfTileShapes * numberOfTileOutcomes);
+    mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLookUpTable(lutData.data(), tileSize, /*entryBitWidth*/8);
+    mlir::decisionforest::createConstantGlobalOp(rewriter, location, lookupTableMemrefName, lutMemrefType, lutData);
 
     return lutMemrefType;
   }
   
+};
+
+struct EnsembleConstantOpGPULowering: public ConversionPattern {
+  std::shared_ptr<decisionforest::IModelSerializer> m_serializer;
+  std::shared_ptr<decisionforest::IRepresentation> m_representation;
+
+  EnsembleConstantOpGPULowering(MLIRContext *ctx, std::shared_ptr<decisionforest::IModelSerializer> serializer,
+                             std::shared_ptr<decisionforest::IRepresentation> representation)
+   : ConversionPattern(mlir::decisionforest::EnsembleConstantOp::getOperationName(), 1 /*benefit*/, ctx), 
+      m_serializer(serializer), m_representation(representation) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    mlir::decisionforest::EnsembleConstantOp ensembleConstOp = llvm::dyn_cast<mlir::decisionforest::EnsembleConstantOp>(op);
+    assert(ensembleConstOp);
+    assert(operands.size() == 0);
+    if (!ensembleConstOp)
+        return mlir::failure();
+    
+    auto location = op->getLoc();
+    auto owningModule = op->getParentOfType<mlir::ModuleOp>();
+    assert (owningModule);
+    
+    auto ret = m_representation->GenerateModelGlobals(op, operands, rewriter, m_serializer);
+    if (ret.failed()) {
+      return ret;
+    }
+
+    auto forestType = ensembleConstOp.getResult().getType().cast<decisionforest::TreeEnsembleType>();
+    auto firstTreeType = forestType.getTreeType(0).cast<mlir::decisionforest::TreeType>();
+    auto firstTreeTileSize = firstTreeType.getTileSize();
+
+    // Type lookUpTableMemrefType;
+    // Value getLUT;
+    if (firstTreeTileSize > 1) {
+      AddChildIndexLookUpTable(owningModule, ensembleConstOp, rewriter, location);
+    }
+
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+
+  Type AddChildIndexLookUpTable(mlir::ModuleOp module,
+                                mlir::decisionforest::EnsembleConstantOp& ensembleConstOp,
+                                ConversionPatternRewriter &rewriter,
+                                Location location) const {
+
+    auto func = ensembleConstOp->getParentOfType<func::FuncOp>();
+    assert (func);
+
+    SaveAndRestoreInsertionPoint saveAndRestoreInsertPoint(rewriter);
+    rewriter.setInsertionPoint(&module.front());
+
+    auto forestType = ensembleConstOp.getResult().getType().cast<decisionforest::TreeEnsembleType>();
+    // We will assume that all trees have the same tile size
+    auto numTrees = static_cast<int32_t>(forestType.getNumberOfTrees());
+    assert(numTrees > 0);
+    auto firstTreeType = forestType.getTreeType(0).cast<mlir::decisionforest::TreeType>();
+    auto firstTreeTileSize = firstTreeType.getTileSize();
+    for (int32_t i=1 ; i<numTrees ; ++i) {
+      auto treeType = forestType.getTreeType(i).cast<mlir::decisionforest::TreeType>();
+      auto tileSize = treeType.getTileSize();
+      assert (firstTreeTileSize == tileSize && "All tree's should have the same tile size");
+    }
+    auto tileSize = firstTreeTileSize;
+    if (tileSize == 1)
+      return Type(); // We don't need a lookup table if the tile size is 1
+    
+    auto numberOfTileOutcomes = static_cast<int>(std::pow(2, tileSize));
+    auto numberOfTileShapes = mlir::decisionforest::TileShapeToTileIDMap::NumberOfTileShapes(tileSize);
+    // TODO We may need to implement something smarter here. We don't really need I8's for each outcome. We could store all outcomes
+    // in a single int64 for tile size 4 for example (each entry needs 3 bits and there are 16 entries -- one for each outcome). 
+    auto lutMemrefType = MemRefType::get({numberOfTileShapes, numberOfTileOutcomes}, rewriter.getI8Type());
+
+    func.insertArgument(func.getNumArguments(), lutMemrefType, mlir::DictionaryAttr(), location);
+
+    decisionforest::GenerateSimpleInitializer("Init_LUT", rewriter, location, module, lutMemrefType);
+    getLUT = func.getArgument(func.getNumArguments() - 1);
+    return lutMemrefType;
+  }
 };
 
 struct GetTreeOpLowering: public ConversionPattern {
@@ -216,7 +296,33 @@ struct GetRootOpLowering: public ConversionPattern {
     auto getRootOp = AssertOpIsOfType<mlir::decisionforest::GetRootOp>(op);
     auto nodeIndexConst = rewriter.create<arith::ConstantIndexOp>(op->getLoc(), 0);
 
-    auto treeMemref = m_representation->GetTreeMemref(operands[0]);
+    // [TODO_Ashwin] We're just getting some memref here to pass as an argument to 
+    // the IndexToNodeOp. Maybe we should just get rid of that argument?
+    auto treeMemref = m_representation->GetThresholdsMemref(operands[0]);
+    auto nodeType = getRootOp.getResult().getType();
+    auto node = rewriter.create<decisionforest::IndexToNodeOp>(op->getLoc(), nodeType, treeMemref, static_cast<Value>(nodeIndexConst));
+    rewriter.replaceOp(op, static_cast<Value>(node));
+    return mlir::success();
+  }
+};
+
+struct GPUGetRootOpLowering: public ConversionPattern {
+  std::shared_ptr<mlir::decisionforest::IRepresentation> m_representation;
+  GPUGetRootOpLowering(MLIRContext *ctx, std::shared_ptr<mlir::decisionforest::IRepresentation> representation)
+   : ConversionPattern(mlir::decisionforest::GetRootOp::getOperationName(), 1 /*benefit*/, ctx), m_representation(representation) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    auto getRootOp = AssertOpIsOfType<mlir::decisionforest::GetRootOp>(op);
+    Value treeValue = operands[0];
+    
+    m_representation->GenerateTreeIndexBuffers(rewriter, op, treeValue);
+
+    auto nodeIndexConst = rewriter.create<arith::ConstantIndexOp>(op->getLoc(), 0);
+
+    // [TODO_Ashwin] We're just getting some memref here to pass as an argument to 
+    // the IndexToNodeOp. Maybe we should just get rid of that argument?
+    auto treeMemref = m_representation->GetThresholdsMemref(treeValue);
     auto nodeType = getRootOp.getResult().getType();
     auto node = rewriter.create<decisionforest::IndexToNodeOp>(op->getLoc(), nodeType, treeMemref, static_cast<Value>(nodeIndexConst));
     rewriter.replaceOp(op, static_cast<Value>(node));
@@ -232,7 +338,6 @@ struct IsLeafOpLowering: public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     
-    // Create a subview of the model memref corresponding to this ensemble with the index equal to offsetMemref[treeIndex]
     mlir::decisionforest::IsLeafOp isLeafOp = AssertOpIsOfType<mlir::decisionforest::IsLeafOp>(op);
     assert(operands.size() == 2);
     if (!isLeafOp)
@@ -240,7 +345,7 @@ struct IsLeafOpLowering: public ConversionPattern {
     
     auto location = op->getLoc();
     
-    auto treeMemref = m_representation->GetTreeMemref(operands[0]);
+    auto treeMemref = m_representation->GetThresholdsMemref(operands[0]);
     auto treeMemrefType = treeMemref.getType().cast<MemRefType>();
     assert (treeMemrefType);
     auto nodeIndex = rewriter.create<decisionforest::NodeToIndexOp>(location, rewriter.getIndexType(), treeMemref, operands[1]); // Convert the node to an index
@@ -273,34 +378,31 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     auto traverseTileOp = AssertOpIsOfType<mlir::decisionforest::TraverseTreeTileOp>(op);
+    auto traverseTileAdaptor = decisionforest::TraverseTreeTileOpAdaptor(traverseTileOp);
     assert(operands.size() == 3);
     if (!traverseTileOp)
         return mlir::failure();
     
-    auto treeMemref = m_representation->GetTreeMemref(operands[0]);
-    auto treeMemrefType = treeMemref.getType().cast<MemRefType>();
-    assert (treeMemrefType);
-
-    auto treeTileType = treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
     decisionforest::InterleavedCodeGenStateMachine codeGenStateMachine;
-    if (treeTileType.getTileSize() == 1)
+    if (m_representation->GetTileSize() == 1)
       codeGenStateMachine.AddStateMachine(
         std::make_unique<decisionforest::ScalarTraverseTileCodeGenerator>(
-          treeMemref,
-          operands[2],
-          operands[1],
+          traverseTileAdaptor.getData(),
+          traverseTileAdaptor.getNode(),
           traverseTileOp.getResult().getType(),
-          m_representation));
+          m_representation,
+          traverseTileAdaptor.getTree(),
+          traverseTileOp.getPredicateAttr()));
     else
       codeGenStateMachine.AddStateMachine(
         std::make_unique<decisionforest::VectorTraverseTileCodeGenerator>(
-          operands[0],
-          treeMemref,
-          operands[2],
-          operands[1],
+          traverseTileAdaptor.getTree(),
+          traverseTileAdaptor.getData(),
+          traverseTileAdaptor.getNode(),
           traverseTileOp.getResult().getType(),
           m_representation,
-          GetLUTFromTreeOperand));
+          GetLUTFromTreeOperand,
+          traverseTileOp.getPredicateAttr()));
     
     // Emit code.
     auto location = op->getLoc();
@@ -325,7 +427,7 @@ struct GetLeafValueOpLowering : public ConversionPattern {
         return mlir::failure();
     auto location = op->getLoc();
 
-    auto treeMemref = m_representation->GetTreeMemref(operands[0]);
+    auto treeMemref = m_representation->GetThresholdsMemref(operands[0]);
     auto nodeIndex = rewriter.create<decisionforest::NodeToIndexOp>(location, rewriter.getIndexType(), treeMemref, operands[1]);
     if (decisionforest::InsertDebugHelpers) {
       rewriter.create<decisionforest::PrintTreeNodeOp>(location, nodeIndex);
@@ -350,16 +452,16 @@ struct GetLeafTileValueOpLowering : public ConversionPattern {
     assert(operands.size() == 2);
     if (!getLeafVal)
         return mlir::failure();
+    decisionforest::GetLeafTileValueOpAdaptor getLeafValAdaptor(getLeafVal);
     auto location = op->getLoc();
 
-    auto treeMemref = m_representation->GetTreeMemref(operands[0]);
-    auto treeMemrefType = treeMemref.getType().cast<MemRefType>();
-    assert (treeMemrefType);
-
-    auto treeTileType = treeMemrefType.getElementType().cast<decisionforest::TiledNumericalNodeType>();
-    auto thresholdType = treeTileType.getThresholdFieldType();
-    auto node = operands[1];
-    auto nodeIndex = rewriter.create<decisionforest::NodeToIndexOp>(location, rewriter.getIndexType(), treeMemref, node);
+    auto thresholdType = m_representation->GetThresholdFieldType();
+    auto node = getLeafValAdaptor.getNode();
+    auto tree = getLeafValAdaptor.getTree();
+    auto nodeIndex = rewriter.create<decisionforest::NodeToIndexOp>(location, 
+                                                                    rewriter.getIndexType(),
+                                                                    m_representation->GetThresholdsMemref(tree),
+                                                                    node);
     if (decisionforest::InsertDebugHelpers) {
       rewriter.create<decisionforest::PrintTreeNodeOp>(location, nodeIndex);
     }
@@ -367,18 +469,23 @@ struct GetLeafTileValueOpLowering : public ConversionPattern {
     // Load threshold
     // TODO Ideally, this should be a different op for when we deal with tile sizes != 1. We will then need to load 
     // a single threshold value and cast it the trees return type
-    auto loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, thresholdType, treeMemref, static_cast<Value>(nodeIndex));
+    Value treeIndex = m_representation->GetTreeIndex(tree);
+    auto loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, 
+                                                                                 thresholdType,
+                                                                                 m_representation->GetThresholdsMemref(tree),
+                                                                                 static_cast<Value>(nodeIndex),
+                                                                                 treeIndex);
     Value leafValue = loadThresholdOp;
-    
-    if (treeTileType.getTileSize() != 1) {
+    auto tileSize = m_representation->GetTileSize();
+    if (tileSize != 1) {
       auto thresholdVectorType = thresholdType.cast<VectorType>();
       if (decisionforest::InsertDebugHelpers) {
         Value vectorVal = loadThresholdOp;
         if (!thresholdVectorType.getElementType().isF64()) {
-          auto doubleVectorType = mlir::VectorType::get({ treeTileType.getTileSize() }, rewriter.getF64Type());
+          auto doubleVectorType = mlir::VectorType::get({ tileSize }, rewriter.getF64Type());
           vectorVal = rewriter.create<arith::ExtFOp>(location, doubleVectorType, loadThresholdOp);
         }
-        InsertPrintVectorOp(rewriter, location, 0, 64, treeTileType.getTileSize(), vectorVal);
+        InsertPrintVectorOp(rewriter, location, 0, 64, tileSize, vectorVal);
       }
       auto zeroConst = rewriter.create<arith::ConstantIntOp>(location, int64_t(0), rewriter.getI32Type());
       auto extractElement = rewriter.create<vector::ExtractElementOp>(location, static_cast<Value>(loadThresholdOp), zeroConst);
@@ -399,7 +506,6 @@ struct IsLeafTileOpLowering: public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     
-    // Create a subview of the model memref corresponding to this ensemble with the index equal to offsetMemref[treeIndex]
     mlir::decisionforest::IsLeafTileOp isLeafOp = AssertOpIsOfType<mlir::decisionforest::IsLeafTileOp>(op);
     assert(operands.size() == 2);
     if (!isLeafOp)
@@ -407,7 +513,7 @@ struct IsLeafTileOpLowering: public ConversionPattern {
     
     auto location = op->getLoc();
 
-    auto treeMemref = m_representation->GetTreeMemref(operands[0]);
+    auto treeMemref = m_representation->GetThresholdsMemref(operands[0]);
     auto treeMemrefType = treeMemref.getType().cast<MemRefType>();
     assert (treeMemrefType);
 
@@ -423,6 +529,39 @@ struct IsLeafTileOpLowering: public ConversionPattern {
   }
 };
 
+struct CacheTreesFromEnsembleOpLowering: public ConversionPattern {
+  std::shared_ptr<decisionforest::IRepresentation> m_representation;
+  std::shared_ptr<decisionforest::IModelSerializer> m_serializer;
+  CacheTreesFromEnsembleOpLowering(MLIRContext *ctx, 
+                                   std::shared_ptr<decisionforest::IRepresentation> representation,
+                                   std::shared_ptr<decisionforest::IModelSerializer> serializer) 
+  : ConversionPattern(mlir::decisionforest::CacheTreesFromEnsembleOp::getOperationName(), 1 /*benefit*/, ctx),
+    m_representation(representation),
+    m_serializer(serializer) { }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    m_representation->LowerCacheTreeOp(rewriter, op, operands, m_serializer);        
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
+
+struct CacheRowsOpLowering: public ConversionPattern {
+  std::shared_ptr<decisionforest::IRepresentation> m_representation;
+  CacheRowsOpLowering(MLIRContext *ctx,
+                      std::shared_ptr<decisionforest::IRepresentation> representation) 
+  : ConversionPattern(mlir::decisionforest::CacheInputRowsOp::getOperationName(), 1 /*benefit*/, ctx),
+    m_representation(representation)
+  { }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    m_representation->LowerCacheRowsOp(rewriter, op, operands);
+    return mlir::success();
+  }
+};
+
 struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLoweringPass, OperationPass<mlir::func::FuncOp>> {
   std::shared_ptr<decisionforest::IModelSerializer> m_serializer;
   std::shared_ptr<decisionforest::IRepresentation> m_representation;
@@ -433,17 +572,15 @@ struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLowe
     registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect>();
   }
   void runOnOperation() final {
-    // [BUG!!] TODO Since MLIR runs this pass multi-threaded, if multiple passes access these globals, they need to be protected!
-    
-    // Clear the global maps that store the mappings for the ensemble constants
-    ClearGlobalMaps();
-    ClearSparseGlobalMaps();
+    // [BUG!!] TODO Since MLIR runs this pass multi-threaded, if multiple passes access 
+    // the representation object need to be protected!
+    m_representation->InitRepresentation();
 
     ConversionTarget target(getContext());
 
     target.addLegalDialect<AffineDialect, memref::MemRefDialect, 
                            scf::SCFDialect, decisionforest::DecisionForestDialect, vector::VectorDialect,
-                           math::MathDialect, arith::ArithmeticDialect, func::FuncDialect>();
+                           math::MathDialect, arith::ArithDialect, func::FuncDialect, gpu::GPUDialect>();
 
     target.addIllegalOp<decisionforest::EnsembleConstantOp,
                         decisionforest::GetTreeFromEnsembleOp,
@@ -454,7 +591,9 @@ struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLowe
                         decisionforest::InterleavedTraverseTreeTileOp,
                         decisionforest::GetLeafValueOp,
                         decisionforest::GetLeafTileValueOp,
-                        decisionforest::GetTreeClassIdOp>();
+                        decisionforest::GetTreeClassIdOp,
+                        decisionforest::CacheTreesFromEnsembleOp,
+                        decisionforest::CacheInputRowsOp>();
 
     RewritePatternSet patterns(&getContext());
     patterns.add<EnsembleConstantOpLowering>(patterns.getContext(), m_serializer, m_representation);
@@ -467,12 +606,67 @@ struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLowe
     patterns.add<GetLeafTileValueOpLowering>(patterns.getContext(), m_representation);
     patterns.add<IsLeafOpLowering>(patterns.getContext(), m_representation);
     patterns.add<IsLeafTileOpLowering>(patterns.getContext(), m_representation);
+    patterns.add<CacheTreesFromEnsembleOpLowering>(patterns.getContext(), m_representation, m_serializer);
+    patterns.add<CacheRowsOpLowering>(patterns.getContext(), m_representation);
       
     if (failed(applyPartialConversion(getOperation(), target, std::move(patterns))))
         signalPassFailure();
   }
 };
-}
+
+struct MidLevelIRToGPUMemrefLoweringPass: public PassWrapper<MidLevelIRToGPUMemrefLoweringPass, OperationPass<mlir::func::FuncOp>> {
+  std::shared_ptr<decisionforest::IModelSerializer> m_serializer;
+  std::shared_ptr<decisionforest::IRepresentation> m_representation;
+  MidLevelIRToGPUMemrefLoweringPass(std::shared_ptr<decisionforest::IModelSerializer> serializer, std::shared_ptr<decisionforest::IRepresentation> representation)
+    :m_serializer(serializer), m_representation(representation) { }
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect>();
+  }
+  void runOnOperation() final {
+    // [BUG!!] TODO Since MLIR runs this pass multi-threaded, if multiple passes access 
+    // the representation object need to be protected!
+    m_representation->InitRepresentation();
+
+    ConversionTarget target(getContext());
+
+    target.addLegalDialect<AffineDialect, memref::MemRefDialect, 
+                           scf::SCFDialect, decisionforest::DecisionForestDialect, vector::VectorDialect,
+                           math::MathDialect, arith::ArithDialect, func::FuncDialect, gpu::GPUDialect>();
+
+    target.addIllegalOp<decisionforest::EnsembleConstantOp,
+                        decisionforest::GetTreeFromEnsembleOp,
+                        decisionforest::GetRootOp,
+                        decisionforest::IsLeafOp,
+                        decisionforest::IsLeafTileOp,
+                        decisionforest::TraverseTreeTileOp,
+                        decisionforest::InterleavedTraverseTreeTileOp,
+                        decisionforest::GetLeafValueOp,
+                        decisionforest::GetLeafTileValueOp,
+                        decisionforest::GetTreeClassIdOp,
+                        decisionforest::CacheTreesFromEnsembleOp,
+                        decisionforest::CacheInputRowsOp>();
+
+    RewritePatternSet patterns(&getContext());
+    patterns.add<EnsembleConstantOpGPULowering>(patterns.getContext(), m_serializer, m_representation);
+    patterns.add<TraverseTreeTileOpLowering>(patterns.getContext(), m_representation);
+    patterns.add<InterleavedTraverseTreeTileOpLowering>(patterns.getContext(), m_representation);
+    patterns.add<GPUGetRootOpLowering>(patterns.getContext(), m_representation);
+    patterns.add<GetTreeOpLowering>(patterns.getContext(), m_representation);
+    patterns.add<GetTreeClassIdOpLowering>(patterns.getContext(), m_representation);
+    patterns.add<GetLeafValueOpLowering>(patterns.getContext(), m_representation);
+    patterns.add<GetLeafTileValueOpLowering>(patterns.getContext(), m_representation);
+    patterns.add<IsLeafOpLowering>(patterns.getContext(), m_representation);
+    patterns.add<IsLeafTileOpLowering>(patterns.getContext(), m_representation);
+    patterns.add<CacheTreesFromEnsembleOpLowering>(patterns.getContext(), m_representation, m_serializer);
+    patterns.add<CacheRowsOpLowering>(patterns.getContext(), m_representation);
+      
+    if (failed(applyPartialConversion(getOperation(), target, std::move(patterns))))
+        signalPassFailure();
+  }
+};
+
+} // anonymous namespace
 
 namespace mlir
 {
@@ -482,6 +676,7 @@ namespace decisionforest
 void LowerEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module, 
                             std::shared_ptr<IModelSerializer> serializer,
                             std::shared_ptr<IRepresentation> representation) {
+  // llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
   mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
@@ -491,6 +686,24 @@ void LowerEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module,
     llvm::errs() << "Lowering to memrefs failed.\n";
   }
 }
+
+#ifdef TREEBEARD_GPU_SUPPORT
+
+void LowerGPUEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module, 
+                               std::shared_ptr<IModelSerializer> serializer,
+                               std::shared_ptr<IRepresentation> representation) {
+  // llvm::DebugFlag = true;
+  // Lower from high-level IR to mid-level IR
+  mlir::PassManager pm(&context);
+  mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
+  optPM.addPass(std::make_unique<MidLevelIRToGPUMemrefLoweringPass>(serializer, representation));
+
+  if (mlir::failed(pm.run(module))) {
+    llvm::errs() << "Lowering to memrefs failed.\n";
+  }
+}
+
+#endif // TREEBEARD_GPU_SUPPORT
 
 } // decisionforest
 } // mlir

@@ -3,21 +3,21 @@
 #include "TiledTree.h"
 #include "Logger.h"
 #include "ModelSerializers.h"
+#include "../gpu/GPUModelSerializers.h"
+#include "TreebeardContext.h"
 
-namespace mlir
+namespace 
 {
-namespace decisionforest
-{
 
-void LogLeafDepths(const std::vector<int32_t>& depths) {
-    std::string out;
-    for (auto depth : depths) {
-        out += std::to_string(depth) + ", ";
-    }
-    TreeBeard::Logging::Log(out);
-}
+// void LogLeafDepths(const std::vector<int32_t>& depths) {
+//     std::string out;
+//     for (auto depth : depths) {
+//         out += std::to_string(depth) + ", ";
+//     }
+//     TreeBeard::Logging::Log(out);
+// }
 
-void LogTreeStats(const std::vector<TiledTreeStats>& tiledTreeStats) {
+void LogTreeStats(const std::vector<mlir::decisionforest::TiledTreeStats>& tiledTreeStats) {
     int32_t numDummyNodes=0, numEmptyTiles=0, numLeafNodesInTiledTree=0, numLeavesInOrigModel=0, numTiles=0, numUniqueTiles=0;
     int32_t numNodesInOrigModel=0, numLeavesWithAllSiblingsLeaves=0;
     double_t averageDepth=0.0, avgOrigTreeDepth=0.0;
@@ -85,8 +85,42 @@ void LogTileShapeStats(std::vector<T>& numberOfTileShapes, const std::string& me
     TreeBeard::Logging::Log(logString);
 }
 
+}
+
+namespace mlir
+{
+namespace decisionforest
+{
+
+int32_t ArraySparseSerializerBase::CallInitMethod() {
+  int32_t returnValue = -1;
+  using InitModelPtr_t = int32_t (*)();
+
+  auto initModelPtr = GetFunctionAddress<InitModelPtr_t>("Init_model");
+
+  returnValue = initModelPtr();
+  if (TreeBeard::Logging::loggingOptions.logGenCodeStats) {
+    TreeBeard::Logging::Log("Model memref size : " + std::to_string(returnValue));
+  }
+
+  assert(returnValue != -1);
+  return returnValue;
+}
+
+int32_t ArraySparseSerializerBase::InitializeModelArray() {
+  return CallInitMethod();
+}
+
+void ArraySparseSerializerBase::ReadData() {
+  assert (false && "Shouldn't be persisting data in JSON on CPU!");
+}
+
+// ===---------------------------------------------------=== //
+// Persistence Helper Methods
+// ===---------------------------------------------------=== //
+
 template<typename PersistTreeScalarType, typename PersistTreeTiledType>
-void PersistDecisionForestImpl(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType,
+void PersistDecisionForestImpl(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType,
                                PersistTreeScalarType persistTreeScalar, PersistTreeTiledType persistTreeTiled) {
     
     mlir::decisionforest::ForestJSONReader::GetInstance().ClearAllData();
@@ -155,9 +189,9 @@ void PersistDecisionForestImpl(mlir::decisionforest::DecisionForest<>& forest, m
 // Ultimately, this will write a JSON file. For now, we're just 
 // storing it in memory assuming the compiler and inference 
 // will run in the same process. 
-void PersistDecisionForestArrayBased(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) {
+void PersistDecisionForestArrayBased(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType) {
     PersistDecisionForestImpl(forest, forestType,
-            [](DecisionTree<>& tree, int32_t treeNumber, decisionforest::TreeType treeType) {
+            [](DecisionTree& tree, int32_t treeNumber, decisionforest::TreeType treeType) {
                 std::vector<ThresholdType> thresholds = tree.GetThresholdArray();
                 std::vector<FeatureIndexType> featureIndices = tree.GetFeatureIndexArray();
                 std::vector<int32_t> tileShapeIDs = { };
@@ -192,9 +226,9 @@ void PersistDecisionForestArrayBased(mlir::decisionforest::DecisionForest<>& for
     );
 }
 
-void PersistDecisionForestSparse(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) {
+void PersistDecisionForestSparse(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType) {
     PersistDecisionForestImpl(forest, forestType,
-            [](DecisionTree<>& tree, int32_t treeNumber, decisionforest::TreeType treeType) {
+            [](DecisionTree& tree, int32_t treeNumber, decisionforest::TreeType treeType) {
                 std::vector<ThresholdType> thresholds = tree.GetSparseThresholdArray(), leaves;
                 std::vector<FeatureIndexType> featureIndices = tree.GetSparseFeatureIndexArray();
                 std::vector<int32_t> childIndices = tree.GetChildIndexArray();
@@ -228,30 +262,83 @@ void PersistDecisionForestSparse(mlir::decisionforest::DecisionForest<>& forest,
     );
 }
 
-void SparseRepresentationSerializer::Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) {
-  PersistDecisionForestSparse(forest, forestType);
+// ===---------------------------------------------------=== //
+// SparseRepresentationSerializer Methods
+// ===---------------------------------------------------=== //
+
+void SparseRepresentationSerializer::Persist(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType) {
+    assert (false && "We should no longer be persisting into a JSON on CPU!");
+    mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_filepath);
+    PersistDecisionForestSparse(forest, forestType);
 }
 
-void ArrayRepresentationSerializer::Persist(mlir::decisionforest::DecisionForest<>& forest, mlir::decisionforest::TreeEnsembleType forestType) {
-  PersistDecisionForestArrayBased(forest, forestType);
+void SparseRepresentationSerializer::InitializeBuffersImpl() {
+    InitializeModelArray();
 }
 
-// TODO Make this implementation more general by having some kind of registry
-std::shared_ptr<IModelSerializer> ModelSerializerFactory::GetModelSerializer(const std::string& name) {
-  if (name == "array")
-    return std::make_shared<ArrayRepresentationSerializer>();
-  else if (name == "sparse")
-    return std::make_shared<SparseRepresentationSerializer>();
-  
-  assert(false && "Unknown serialization format");
-  return nullptr;
+std::shared_ptr<IModelSerializer> ConstructSparseRepresentation(const std::string& jsonFilename) {
+  return std::make_shared<SparseRepresentationSerializer>(jsonFilename);
 }
 
-std::shared_ptr<IModelSerializer> ConstructModelSerializer() {
+REGISTER_SERIALIZER(sparse, ConstructSparseRepresentation)
+
+// ===---------------------------------------------------=== //
+// ArrayRepresentationSerializer Methods
+// ===---------------------------------------------------=== //
+
+void ArrayRepresentationSerializer::Persist(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType) {
+    assert (false && "We should no longer be persisting into a JSON on CPU!");
+    mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(m_filepath);
+    PersistDecisionForestArrayBased(forest, forestType);
+}
+
+void ArrayRepresentationSerializer::InitializeBuffersImpl() {
+    InitializeModelArray();
+}
+
+std::shared_ptr<IModelSerializer> ConstructArrayRepresentation(const std::string& jsonFilename) {
+  return std::make_shared<ArrayRepresentationSerializer>(jsonFilename);
+}
+
+REGISTER_SERIALIZER(array, ConstructArrayRepresentation)
+
+// ===---------------------------------------------------=== //
+// ModelSerializerFactory Methods
+// ===---------------------------------------------------=== //
+
+std::shared_ptr<IModelSerializer> ModelSerializerFactory::GetModelSerializer(const std::string& name, 
+                                                                             const std::string& modelGlobalsJSONPath) {
+  auto mapIter = m_constructionMap.find(name);
+  assert (mapIter != m_constructionMap.end() && "Unknown serializer name!");
+  return mapIter->second(modelGlobalsJSONPath);
+}
+
+ModelSerializerFactory& ModelSerializerFactory::Get() {
+  static std::unique_ptr<ModelSerializerFactory> s_instancePtr = nullptr;
+  if (s_instancePtr == nullptr)
+    s_instancePtr = std::make_unique<ModelSerializerFactory>();
+  return *s_instancePtr; 
+}
+
+bool ModelSerializerFactory::RegisterSerializer(const std::string& name,
+                                                SerializerConstructor_t constructionFunc) {
+  assert (m_constructionMap.find(name) == m_constructionMap.end());
+  m_constructionMap[name] = constructionFunc;
+  return true;
+}
+
+std::shared_ptr<IModelSerializer> ConstructModelSerializer(const std::string& modelGlobalsJSONPath) {
   if (decisionforest::UseSparseTreeRepresentation)
-    return ModelSerializerFactory::GetModelSerializer("sparse");
+    return ModelSerializerFactory::Get().GetModelSerializer("sparse", modelGlobalsJSONPath);
   else
-    return ModelSerializerFactory::GetModelSerializer("array");
+    return ModelSerializerFactory::Get().GetModelSerializer("array", modelGlobalsJSONPath);
+}
+
+std::shared_ptr<IModelSerializer> ConstructGPUModelSerializer(const std::string& modelGlobalsJSONPath) {
+  if (decisionforest::UseSparseTreeRepresentation)
+    return ModelSerializerFactory::Get().GetModelSerializer("gpu_sparse", modelGlobalsJSONPath);
+  else
+    return ModelSerializerFactory::Get().GetModelSerializer("gpu_array", modelGlobalsJSONPath);
 }
 
 }

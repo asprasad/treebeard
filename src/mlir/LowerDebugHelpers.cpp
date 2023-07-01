@@ -2,7 +2,7 @@
 
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
@@ -183,10 +183,10 @@ struct PrintTreeToDOTFileOpLowering: public ConversionPattern {
     // Get the pointer value
     // Extract the memref's aligned pointer
     auto extractMemrefBufferPointer = rewriter.create<LLVM::ExtractValueOp>(location, alignedPtrType, operands[kTreeMemrefOperandNum],
-                                                                            rewriter.getI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
+                                                                            rewriter.getDenseI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
 
     auto extractMemrefOffset = rewriter.create<LLVM::ExtractValueOp>(location, indexType, operands[kTreeMemrefOperandNum],
-                                                                    rewriter.getI64ArrayAttr(kOffsetIndexInMemrefStruct));
+                                                                    rewriter.getDenseI64ArrayAttr(kOffsetIndexInMemrefStruct));
 
     // Get a pointer to first tile in this tree
     auto elementPtr = rewriter.create<LLVM::GEPOp>(location, alignedPtrType, static_cast<Value>(extractMemrefBufferPointer), 
@@ -194,7 +194,7 @@ struct PrintTreeToDOTFileOpLowering: public ConversionPattern {
 
     // Get the length of this tree memref
     auto extractMemrefLength = rewriter.create<LLVM::ExtractValueOp>(location, indexType, operands[kTreeMemrefOperandNum],
-                                                                     rewriter.getI64ArrayAttr({ kLengthIndexInMemrefStruct, 0 }));
+                                                                     rewriter.getDenseI64ArrayAttr({ kLengthIndexInMemrefStruct, 0 }));
 
     // Create a tile size constant
     auto mlirModelMemrefType = op->getOperand(0).getType().cast<mlir::MemRefType>();
@@ -261,10 +261,10 @@ struct PrintInputRowOpLowering: public ConversionPattern {
     // Get the pointer value
     // Extract the memref's aligned pointer
     auto extractMemrefBufferPointer = rewriter.create<LLVM::ExtractValueOp>(location, alignedPtrType, operands[kRowMemrefOperandNum],
-                                                                            rewriter.getI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
+                                                                            rewriter.getDenseI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
 
     auto extractMemrefOffset = rewriter.create<LLVM::ExtractValueOp>(location, indexType, operands[kRowMemrefOperandNum],
-                                                                    rewriter.getI64ArrayAttr(kOffsetIndexInMemrefStruct));
+                                                                    rewriter.getDenseI64ArrayAttr(kOffsetIndexInMemrefStruct));
 
     // Get a pointer to the first element of this row
     auto elementPtr = rewriter.create<LLVM::GEPOp>(location, alignedPtrType, static_cast<Value>(extractMemrefBufferPointer), 
@@ -272,7 +272,7 @@ struct PrintInputRowOpLowering: public ConversionPattern {
 
     // Get the length of this memref (since its a 2D memref, get the second element of the length array to get number of cols)
     auto extractMemrefLength = rewriter.create<LLVM::ExtractValueOp>(location, indexType, operands[kRowMemrefOperandNum],
-                                                                     rewriter.getI64ArrayAttr({ kLengthIndexInMemrefStruct, 1 }));
+                                                                     rewriter.getDenseI64ArrayAttr({ kLengthIndexInMemrefStruct, 1 }));
 
     if (alignedPtrType.getElementType().isF64()) {
       auto printFunctionRef = getOrInsertPrintRow(rewriter, parentModule);

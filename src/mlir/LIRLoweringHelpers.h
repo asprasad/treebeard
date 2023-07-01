@@ -3,13 +3,14 @@
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
-
+#include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Transforms/DialectConversion.h"
+
+#include "OpLoweringUtils.h"
 
 namespace mlir
 {
@@ -47,7 +48,7 @@ inline void InsertPrintVectorOp(ConversionPatternRewriter &rewriter, Location lo
   rewriter.create<decisionforest::PrintVectorOp>(location, kindConst, bitWidthConst, tileSizeConst, ValueRange(vectorValues));
 }
 
-inline Value CreateZeroVectorFPConst(ConversionPatternRewriter &rewriter, Location location, Type fpType, int32_t tileSize) {
+inline Value CreateZeroVectorFPConst(mlir::OpBuilder &rewriter, Location location, Type fpType, int32_t tileSize) {
   Value zeroConst;
   auto vectorType = VectorType::get(tileSize, fpType);
   if (fpType.isa<mlir::Float64Type>())
@@ -60,7 +61,7 @@ inline Value CreateZeroVectorFPConst(ConversionPatternRewriter &rewriter, Locati
   return vectorValue;
 }
 
-inline Value CreateZeroVectorIntConst(ConversionPatternRewriter &rewriter, Location location, Type intType, int32_t tileSize) {
+inline Value CreateZeroVectorIntConst(mlir::OpBuilder &rewriter, Location location, Type intType, int32_t tileSize) {
   Value zeroConst = rewriter.create<arith::ConstantIntOp>(location, 0, intType);
   auto vectorType = VectorType::get(tileSize, intType);
   auto vectorValue = rewriter.create<vector::BroadcastOp>(location, vectorType, zeroConst);
@@ -89,6 +90,13 @@ inline void AddGlobalMemrefGetter(mlir::ModuleOp module, std::string globalName,
   module.push_back(getGlobalMemrefFunc);
 }
 
+inline Value GetTreeIndexValue(Value tree) {
+  auto definingOp = tree.getDefiningOp();
+  auto getTreeOp = AssertOpIsOfType<decisionforest::GetTreeFromEnsembleOp>(definingOp);
+  auto treeIndex = getTreeOp.getTreeIndex();
+  assert (treeIndex.getType().isa<mlir::IndexType>());
+  return treeIndex;
+}
 
 } // helpers
 } // decisionforest

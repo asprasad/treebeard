@@ -5,7 +5,7 @@
 #include "TestUtilsCommon.h"
 
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 
 #include "mlir/IR/Attributes.h"
@@ -14,9 +14,8 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Verifier.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
 #include "llvm/ADT/STLExtras.h"
 
 #include "CompileUtils.h"
@@ -66,7 +65,6 @@ double Test_CodeGenForJSON_ProbabilityBasedTiling(int64_t batchSize, const std::
   using FeatureIndexType = int16_t;
   using NodeIndexType = int16_t;
 
-  mlir::MLIRContext context;
   int32_t floatTypeBitWidth = sizeof(FloatType)*8;
   bool reorderTrees = probTiling || (numberOfCores!=-1) || pipelineSize > 1;
   TreeBeard::CompilerOptions options(floatTypeBitWidth, sizeof(ReturnType)*8, IsFloatType(ReturnType()), sizeof(FeatureIndexType)*8, sizeof(NodeIndexType)*8,
@@ -81,15 +79,15 @@ double Test_CodeGenForJSON_ProbabilityBasedTiling(int64_t batchSize, const std::
 
   if (numberOfCores != -1)
     options.numberOfCores = numberOfCores;
-  TreeBeard::InitializeMLIRContext(context);
-  auto modelGlobalsJSONFilePath = TreeBeard::ModelJSONParser<FloatType, ReturnType, int32_t, int32_t, FloatType>::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
+  auto modelGlobalsJSONFilePath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(modelJsonPath);
   
-  TreeBeard::TreebeardContext tbContext{modelJsonPath, modelGlobalsJSONFilePath, options, 
+  TreeBeard::TreebeardContext tbContext(modelJsonPath, modelGlobalsJSONFilePath, options, 
                                         mlir::decisionforest::ConstructRepresentation(),
-                                        mlir::decisionforest::ConstructModelSerializer()};
-  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ReturnType, FeatureIndexType, int32_t, FloatType>(context, tbContext);
+                                        mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONFilePath),
+                                        nullptr  /*TODO_ForestCreator*/);
+  auto module = TreeBeard::ConstructLLVMDialectModuleFromXGBoostJSON<FloatType, ReturnType, FeatureIndexType, int32_t, FloatType>(tbContext);
 
-  decisionforest::InferenceRunner inferenceRunner(modelGlobalsJSONFilePath, module, tileSize, floatTypeBitWidth, sizeof(FeatureIndexType)*8);
+  decisionforest::InferenceRunner inferenceRunner(tbContext.serializer, module, tileSize, floatTypeBitWidth, sizeof(FeatureIndexType)*8);
   
   TestCSVReader csvReader(modelJsonPath + ".test.sampled.csv", 2000 /*num lines*/);
   assert (csvReader.NumberOfRows() == 2000);
@@ -112,13 +110,12 @@ double Test_CodeGenForJSON_ProbabilityBasedTiling(int64_t batchSize, const std::
   std::cin >> ch;
 #endif
 
-  size_t rowSize = csvReader.GetRow(0).size() - 1; // The last entry is the xgboost prediction
   std::vector<ReturnType> result(batchSize, -1);
   std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
   for (int32_t trial=0 ; trial<NUM_RUNS ; ++trial) {
     for(auto& batch : inputData) {
       // assert (batch.size() % batchSize == 0);
-      inferenceRunner.RunInference<FloatType, ReturnType>(batch.data(), result.data(), rowSize, batchSize);
+      inferenceRunner.RunInference<FloatType, ReturnType>(batch.data(), result.data());
     }
   }
   std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();

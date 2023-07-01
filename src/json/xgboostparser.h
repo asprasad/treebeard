@@ -1,7 +1,8 @@
 #ifndef _XGBOOST_PARSER_H_
 #define _XGBOOST_PARSER_H_
 
-#include "modeljsonparser.h"
+#include "forestcreator.h"
+#include "ForestCreatorFactory.h"
 #include <fstream>
 
 namespace TreeBeard
@@ -9,7 +10,7 @@ namespace TreeBeard
 
 template<typename ThresholdType=double, typename ReturnType=double, typename FeatureIndexType=int32_t, 
          typename NodeIndexType=int32_t, typename InputElementType=double>
-class XGBoostJSONParser : public ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>
+class XGBoostJSONParser : public ForestCreator
 {
     json m_json;
     void ConstructSingleTree(json& treeJSON);
@@ -17,24 +18,49 @@ class XGBoostJSONParser : public ModelJSONParser<ThresholdType, ReturnType, Feat
     static constexpr double_t INITIAL_VALUE = 0;
 
 public:
-    XGBoostJSONParser(mlir::MLIRContext& context, const std::string& filename, const std::string& modelGlobalsJSONFilePath, int32_t batchSize)
-        :ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(filename, modelGlobalsJSONFilePath, context, batchSize, INITIAL_VALUE)
+    XGBoostJSONParser(mlir::MLIRContext& context, 
+                      const std::string& filename,
+                      std::shared_ptr<mlir::decisionforest::IModelSerializer> serializer,
+                      int32_t batchSize)
+        :ForestCreator(
+          serializer,
+          context,
+          batchSize,
+          INITIAL_VALUE,
+          GetMLIRType(ThresholdType(), context),
+          GetMLIRType(FeatureIndexType(), context),
+          GetMLIRType(NodeIndexType(), context),
+          GetMLIRType(ReturnType(), context),
+          GetMLIRType(InputElementType(), context))
     {
         std::ifstream fin(filename);
         assert (fin);
         fin >> m_json;
     }
     
-    XGBoostJSONParser(mlir::MLIRContext& context, const std::string& filename, 
-                     const std::string& modelGlobalsJSONFilePath, const std::string& statsProfileCSV, int32_t batchSize)
-        :ModelJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>(filename, modelGlobalsJSONFilePath, context, batchSize, INITIAL_VALUE, statsProfileCSV)
+    XGBoostJSONParser(mlir::MLIRContext& context,
+                     const std::string& filename, 
+                     std::shared_ptr<mlir::decisionforest::IModelSerializer> serializer,
+                     const std::string& statsProfileCSV,
+                     int32_t batchSize)
+        :ForestCreator(
+          serializer,
+          context,
+          batchSize,
+          INITIAL_VALUE,
+          statsProfileCSV,
+          GetMLIRType(ThresholdType(), context),
+          GetMLIRType(FeatureIndexType(), context),
+          GetMLIRType(NodeIndexType(), context),
+          GetMLIRType(ReturnType(), context),
+          GetMLIRType(InputElementType(), context))
     {
         std::ifstream fin(filename);
         assert (fin);
         fin >> m_json;
     }
 
-    void Parse() override;
+    void ConstructForest() override;
 };
 /*
 TOP LEVEL : 
@@ -88,7 +114,7 @@ inline mlir::decisionforest::PredictionTransformation GetPredictionTransformType
 }
 
 template<typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType, typename InputElementType>
-void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>::Parse()
+void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>::ConstructForest()
 {
     auto& learnerJSON = m_json["learner"];
     auto& featureNamesJSON = learnerJSON["feature_names"];
@@ -192,7 +218,9 @@ void XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexTyp
     }
 }
 
-}
+std::shared_ptr<ForestCreator> ConstructXGBoostJSONParser(TreebeardContext& tbContext);
+
+} // namespace TreeBeard
 
 
 #endif //_XGBOOST_PARSER_H_

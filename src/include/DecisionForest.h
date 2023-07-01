@@ -1,6 +1,7 @@
 #ifndef _DECISIONFOREST_H_
 #define _DECISIONFOREST_H_
 
+#include <cstdint>
 #include <vector>
 #include <set>
 #include <string>
@@ -11,6 +12,7 @@
 #include <queue>
 #include <map>
 #include <iostream>
+#include <fstream>
 #include "TreeTilingDescriptor.h"
 #include <numeric>
 #include <algorithm>
@@ -27,18 +29,17 @@ enum class PredictionTransformation { kIdentity, kSigmoid, kSoftMax, kUnknown };
 enum class ReductionType { kAdd, kVoting };
 enum class FeatureType { kNumerical, kCategorical };
 
-template <typename ThresholdType=double, typename ReturnType=double, typename FeatureIndexType=int32_t, typename NodeIndexType=int32_t>
 class DecisionTree
 {
 public:
-    static constexpr NodeIndexType INVALID_NODE_INDEX = -1;
+    static constexpr int64_t INVALID_NODE_INDEX = -1;
     struct Node
     {
-        ThresholdType threshold;
-        FeatureIndexType featureIndex;
-        NodeIndexType parent;
-        NodeIndexType leftChild;
-        NodeIndexType rightChild;
+        double threshold;
+        int32_t featureIndex;
+        int64_t parent;
+        int64_t leftChild;
+        int64_t rightChild;
         FeatureType featureType; // TODO For now assuming everything is numerical
         int32_t hitCount = 0;
         int32_t depth = -1;
@@ -54,17 +55,17 @@ public:
         }
     };
     void SetNumberOfFeatures(size_t numFeatures) { m_numFeatures = numFeatures; }
-    void SetTreeScalingFactor(ThresholdType scale) { m_scale = scale; }
+    void SetTreeScalingFactor(double scale) { m_scale = scale; }
 
     // Create a new node in the current tree
-    NodeIndexType NewNode(ThresholdType threshold, FeatureIndexType featureIndex)
+    int64_t NewNode(double threshold, int32_t featureIndex)
     { 
         Node node{threshold, featureIndex, INVALID_NODE_INDEX, INVALID_NODE_INDEX, INVALID_NODE_INDEX, FeatureType::kNumerical};
         m_nodes.push_back(node);
         return m_nodes.size() - 1;
     }
     // Create a new node in the current tree, and add it to a specified tile
-    NodeIndexType NewNode(ThresholdType threshold, FeatureIndexType featureIndex, int32_t tileID)
+    int64_t NewNode(double threshold, int32_t featureIndex, int32_t tileID)
     { 
         auto nodeIndex = NewNode(threshold, featureIndex);
         m_tilingDescriptor.TileIDs().push_back(tileID);
@@ -72,23 +73,23 @@ public:
     }
 
     // Set the parent of a node
-    void SetNodeParent(NodeIndexType node, NodeIndexType parent) { m_nodes[node].parent = parent; }
+    void SetNodeParent(int64_t node, int64_t parent) { m_nodes[node].parent = parent; }
     // Set right child of a node
-    void SetNodeRightChild(NodeIndexType node, NodeIndexType child) { m_nodes[node].rightChild = child; }
+    void SetNodeRightChild(int64_t node, int64_t child) { m_nodes[node].rightChild = child; }
     // Set left child of a node
-    void SetNodeLeftChild(NodeIndexType node, NodeIndexType child) { m_nodes[node].leftChild = child; }
+    void SetNodeLeftChild(int64_t node, int64_t child) { m_nodes[node].leftChild = child; }
 
     std::string Serialize() const;
     std::string PrintToString() const;
 
-    bool operator==(const DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>& that) const
+    bool operator==(const DecisionTree& that) const
     {
         return m_nodes==that.m_nodes && m_numFeatures==that.m_numFeatures 
                && m_scale==that.m_scale && m_tilingDescriptor==that.m_tilingDescriptor;
     }
 
-    ReturnType PredictTree(std::vector<ThresholdType>& data) const;
-    float PredictTree_Float(std::vector<ThresholdType>& data) const;
+    double PredictTree(std::vector<double>& data) const;
+    float PredictTree_Float(std::vector<float>& data) const;
 
     TreeTilingDescriptor& TilingDescriptor() { return m_tilingDescriptor; }
     const TreeTilingDescriptor& TilingDescriptor() const { return m_tilingDescriptor; }
@@ -106,12 +107,12 @@ public:
         return numNodes;
     }
 
-    std::vector<ThresholdType> GetThresholdArray();
-    std::vector<FeatureIndexType> GetFeatureIndexArray();
+    std::vector<double> GetThresholdArray();
+    std::vector<int32_t> GetFeatureIndexArray();
     
     // Helpers for sparse representation
-    std::vector<ThresholdType> GetSparseThresholdArray();
-    std::vector<FeatureIndexType> GetSparseFeatureIndexArray();
+    std::vector<double> GetSparseThresholdArray();
+    std::vector<int32_t> GetSparseFeatureIndexArray();
     std::vector<int32_t> GetChildIndexArray();
     
     int32_t GetNumberOfTiles();
@@ -131,7 +132,7 @@ public:
 private:
     std::vector<Node> m_nodes;
     size_t m_numFeatures = 0;
-    ThresholdType m_scale;
+    double m_scale;
     TreeTilingDescriptor m_tilingDescriptor;
     // TODO It looks like some tests aren't setting this property at all! 
     // Adding an initialization to make sure we aren't accessing unitialized memory
@@ -145,13 +146,11 @@ private:
     void GetNodeAttributeArray(std::vector<AttribType>& thresholdVec, size_t vecIndex, size_t nodeIndex, GetterType get);
 };
 
-template <typename ThresholdType=double, typename ReturnType=double, typename FeatureIndexType=int32_t, typename NodeIndexType=int32_t>
 class DecisionForest
 {
 public:
-    DecisionForest(ReturnType initialValue) : m_initialValue(initialValue), m_predictionTransform(PredictionTransformation::kUnknown), m_numClasses(0) {}
+    DecisionForest(double initialValue) : m_initialValue(initialValue), m_predictionTransform(PredictionTransformation::kUnknown), m_numClasses(0) {}
     DecisionForest() : DecisionForest(0.0) {}
-    // DecisionForest(const DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>&) = delete;
 
     struct Feature
     {
@@ -159,30 +158,29 @@ public:
         std::string type;
     };
 
-    using DecisionTreeType = DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>;
     void SetReductionType(ReductionType reductionType) { m_reductionType = reductionType; }
     void AddFeature(const std::string& featureName, const std::string& type)
     {
         Feature f{featureName, type};
         m_features.push_back(f);
     }
-    DecisionTreeType& NewTree()
+    DecisionTree& NewTree()
     { 
-        m_trees.push_back(std::make_shared<DecisionTreeType>());
+        m_trees.push_back(std::make_shared<DecisionTree>());
         return *(m_trees.back());
     }
     void EndTree() { }
     size_t NumTrees() { return m_trees.size(); }
-    DecisionTreeType& GetTree(int64_t index) { return *(m_trees.at(index)); }
+    DecisionTree& GetTree(int64_t index) { return *(m_trees.at(index)); }
     const std::vector<Feature>& GetFeatures() const { return m_features; }
-    ReturnType GetInitialOffset() const { return m_initialValue; }
-    void SetInitialOffset(ReturnType val) { m_initialValue = val; }
+    double GetInitialOffset() const { return m_initialValue; }
+    void SetInitialOffset(double val) { m_initialValue = val; }
     std::string Serialize() const;
     std::string PrintToString() const;
-    ReturnType Predict(std::vector<ThresholdType>& data) const;
-    float Predict_Float(std::vector<ThresholdType>& data) const;
+    double Predict(std::vector<double>& data) const;
+    float Predict_Float(std::vector<float>& data) const;
     
-    bool operator==(const DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>& that) const {
+    bool operator==(const DecisionForest& that) const {
         if (m_reductionType!=that.m_reductionType)
             return false;
         if (m_trees.size()!=that.m_trees.size())
@@ -200,18 +198,17 @@ public:
     int32_t GetNumClasses() { return m_numClasses; }
     bool IsMultiClassClassifier() { return m_numClasses > 0; }
 
-    std::vector<std::shared_ptr<DecisionTreeType>>& GetTrees() { return m_trees; }
+    std::vector<std::shared_ptr<DecisionTree>>& GetTrees() { return m_trees; }
 private:
     std::vector<Feature> m_features;
-    std::vector<std::shared_ptr<DecisionTreeType>> m_trees;
+    std::vector<std::shared_ptr<DecisionTree>> m_trees;
     ReductionType m_reductionType = ReductionType::kAdd;
-    ReturnType m_initialValue;
+    double m_initialValue;
     PredictionTransformation m_predictionTransform;
     int32_t m_numClasses;
 };
 
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-int32_t DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::GetTreeDepthHelper(size_t node) const
+inline int32_t DecisionTree::GetTreeDepthHelper(size_t node) const
 {
     const Node& n = this->m_nodes[node];
     if (n.IsLeaf())
@@ -219,9 +216,8 @@ int32_t DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>
     return 1 + std::max(GetTreeDepthHelper(n.leftChild), GetTreeDepthHelper(n.rightChild));
 }
 
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
 template <typename AttribType, typename GetterType>
-void DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::GetNodeAttributeArray(std::vector<AttribType>& attributeVec,
+void DecisionTree::GetNodeAttributeArray(std::vector<AttribType>& attributeVec,
                                                                                                      size_t vecIndex, size_t nodeIndex, GetterType get)
 {
     Node& node = m_nodes[nodeIndex];
@@ -236,32 +232,29 @@ void DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::G
     GetNodeAttributeArray<AttribType, GetterType>(attributeVec, 2*vecIndex+2, node.rightChild, get);
 }
 
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-std::vector<ThresholdType> DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::GetThresholdArray()
+inline std::vector<double> DecisionTree::GetThresholdArray()
 {
     int32_t depth = GetTreeDepth();
     size_t vectorLength = static_cast<size_t>(std::pow(2, depth)) - 1;
-    std::vector<ThresholdType> thresholdVec(vectorLength, 0.0);
+    std::vector<double> thresholdVec(vectorLength, 0.0);
     assert (m_tilingDescriptor.MaxTileSize() == 1 && "Only size 1 tiles currently supported");
 
     GetNodeAttributeArray(thresholdVec, 0, 0, [](Node& n) { return n.threshold; });
     return thresholdVec;
 }
 
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-std::vector<FeatureIndexType> DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::GetFeatureIndexArray()
+inline std::vector<int32_t> DecisionTree::GetFeatureIndexArray()
 {
     int32_t depth = GetTreeDepth();
     size_t vectorLength = static_cast<size_t>(std::pow(2, depth)) - 1;
-    std::vector<FeatureIndexType> featureIndexVec(vectorLength, -1);
+    std::vector<int32_t> featureIndexVec(vectorLength, -1);
     assert (m_tilingDescriptor.MaxTileSize() == 1 && "Only size 1 tiles currently supported");
 
     GetNodeAttributeArray(featureIndexVec, 0, 0, [](Node& n) { return n.IsLeaf() ? -1 : n.featureIndex; });
     return featureIndexVec;
 }
 
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-int32_t DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::GetNumberOfTiles()
+inline int32_t DecisionTree::GetNumberOfTiles()
 {
     assert (m_tilingDescriptor.MaxTileSize() == 1 && "Only size 1 tiles currently supported");
     int32_t depth = GetTreeDepth();
@@ -270,8 +263,7 @@ int32_t DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>
 }
 
 // TODO This needs to also include the tiling of the tree
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-std::string DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::Serialize() const
+inline std::string DecisionTree::Serialize() const
 {
     std::stringstream strStream;
     strStream << m_numFeatures << m_scale;
@@ -287,16 +279,14 @@ std::string DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexT
     return strStream.str();
 }
 
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-std::string DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::PrintToString() const
+inline std::string DecisionTree::PrintToString() const
 {
     std::stringstream strStream;
     strStream << "NumberOfFeatures = " << m_numFeatures << ", Scale = " << m_scale << ", NumberOfNodes = " << m_nodes.size();
     return strStream.str();
 }
 
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-ReturnType DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::PredictTree(std::vector<ThresholdType>& data) const
+inline double DecisionTree::PredictTree(std::vector<double>& data) const
 {
     // go over the features
     assert(m_nodes.size() > 0);
@@ -316,8 +306,7 @@ ReturnType DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexTy
     return node->threshold;
 }
 
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-float DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::PredictTree_Float(std::vector<ThresholdType>& data) const
+inline float DecisionTree::PredictTree_Float(std::vector<float>& data) const
 {
     // go over the features
     assert(m_nodes.size() > 0);
@@ -325,7 +314,7 @@ float DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::
     while (!node->IsLeaf())
     {
       // std::cout << "\tf" << node->featureIndex << "(" << data[node->featureIndex] << ")" << " < " << node->threshold << std::endl;
-      if ((float)data[node->featureIndex] < (float)node->threshold)
+      if (data[node->featureIndex] < (float)node->threshold)
         node = &m_nodes[node->leftChild];
       else
         node = &m_nodes[node->rightChild];
@@ -333,8 +322,7 @@ float DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::
     return (float)node->threshold;
 }
 
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-void DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::WriteToDOTFile(std::ostream& fout)
+inline void DecisionTree::WriteToDOTFile(std::ostream& fout)
 {
   fout << "digraph {\n";
   for (size_t i=0 ; i<m_nodes.size() ; ++i) {
@@ -349,15 +337,13 @@ void DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::W
   fout << "}\n";
 }
 
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-void DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::WriteToDOTFile(const std::string& filename)
+inline void DecisionTree::WriteToDOTFile(const std::string& filename)
 {
     std::ofstream fout(filename);
     WriteToDOTFile(fout);
 }
 
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-int32_t DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::NumFeatures()
+inline int32_t DecisionTree::NumFeatures()
 {
     std::set<int32_t> featureSet;
     for (auto& node : m_nodes) {
@@ -367,13 +353,11 @@ int32_t DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>
     return featureSet.size();
 }
 
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-void DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::InitializeInternalNodeHitCounts() {
+inline void DecisionTree::InitializeInternalNodeHitCounts() {
     GetSubtreeHitCount(0);
 }
 
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-int32_t DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::GetSubtreeHitCount(int32_t nodeIndex) {
+inline int32_t DecisionTree::GetSubtreeHitCount(int32_t nodeIndex) {
     Node& node = m_nodes.at(nodeIndex);
     if (node.IsLeaf())
         return node.hitCount;
@@ -381,8 +365,7 @@ int32_t DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>
     return node.hitCount;
 }
 
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-std::string DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::Serialize() const
+inline std::string DecisionForest::Serialize() const
 {
     std::stringstream strStream;
     strStream << (int32_t)m_reductionType << m_trees.size() << m_initialValue;
@@ -391,8 +374,7 @@ std::string DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeInde
     return strStream.str();
 }
 
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-std::string DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::PrintToString() const
+inline std::string DecisionForest::PrintToString() const
 {
     std::stringstream strStream;
     strStream << "ReductionType = " << (int32_t)m_reductionType << ", #Trees = " << m_trees.size() << ", InitialValue=" << m_initialValue;
@@ -425,10 +407,9 @@ ReturnType argmax(std::vector<FPType>& classProbabilities) {
     return std::distance(classProbabilities.begin(), std::max_element(classProbabilities.begin(), classProbabilities.end()));
 }
 
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-ReturnType DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::Predict(std::vector<ThresholdType>& data) const
+inline double DecisionForest::Predict(std::vector<double>& data) const
 {
-    std::map<int32_t, std::vector<ThresholdType>> predictions;
+    std::map<int32_t, std::vector<double>> predictions;
     for (auto& tree: m_trees) {
         auto prediction = tree->PredictTree(data);
         // std::cout << "Tree " << predictions.size() << " prediction : " << prediction << std::endl;
@@ -449,24 +430,23 @@ ReturnType DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndex
         return -1;
     }
     else {
-        std::vector<ThresholdType> classProbabilities(m_numClasses, 0);
+        std::vector<double> classProbabilities(m_numClasses, 0);
         std::for_each(
             predictions.begin(),
             predictions.end(),
-            [&](std::pair<const int32_t, std::vector<ThresholdType>>& pair) {
+            [&](std::pair<const int32_t, std::vector<double>>& pair) {
                 classProbabilities[pair.first] = std::accumulate(pair.second.begin(), pair.second.end(), m_initialValue);
             });
         
-        return argmax<ThresholdType, ReturnType>(classProbabilities);
+        return argmax<double, double>(classProbabilities);
     }
 }
 
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-float DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::Predict_Float(std::vector<ThresholdType>& data) const
+inline float DecisionForest::Predict_Float(std::vector<float>& data) const
 {
     std::map<int32_t, std::vector<float>> predictions;
     for (auto& tree: m_trees) {
-        auto prediction = tree->PredictTree(data);
+        auto prediction = tree->PredictTree_Float(data);
         // std::cout << "Tree " << predictions.size() << " prediction : " << prediction << std::endl;
         predictions[tree->GetClassId()].push_back(prediction);
     }
@@ -493,12 +473,12 @@ float DecisionForest<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>
                 classProbabilities[pair.first] = std::accumulate(pair.second.begin(), pair.second.end(), m_initialValue);
             });
         
-        return argmax<float, ReturnType>(classProbabilities);
+        return argmax<float, float>(classProbabilities);
     }
 }
 
 // Level Order Sorter
-using LevelOrderSorterNodeType = mlir::decisionforest::DecisionTree<>::Node;
+using LevelOrderSorterNodeType = mlir::decisionforest::DecisionTree::Node;
 
 class LevelOrderTraversal {
   using QueueEntry = std::pair<int32_t, LevelOrderSorterNodeType>;
@@ -507,7 +487,7 @@ class LevelOrderTraversal {
   std::map<int32_t, int32_t> m_nodeIndexMap;
   
   void DoLevelOrderTraversal(const std::vector<LevelOrderSorterNodeType>& nodes) {
-    int32_t invalidIndex = DecisionTree<>::INVALID_NODE_INDEX;
+    int32_t invalidIndex = DecisionTree::INVALID_NODE_INDEX;
     m_nodeIndexMap[invalidIndex] = invalidIndex;
     // Assume the root is the first node.
     assert (nodes[0].parent == -1);
@@ -522,9 +502,9 @@ class LevelOrderTraversal {
       m_nodeIndexMap[index] = m_levelOrder.size() - 1;
       if (node.IsLeaf())
         continue;
-      if (node.leftChild != DecisionTree<>::INVALID_NODE_INDEX)
+      if (node.leftChild != DecisionTree::INVALID_NODE_INDEX)
         m_queue.push(QueueEntry(node.leftChild, nodes.at(node.leftChild)));
-      if (node.rightChild != DecisionTree<>::INVALID_NODE_INDEX)
+      if (node.rightChild != DecisionTree::INVALID_NODE_INDEX)
         m_queue.push(QueueEntry(node.rightChild, nodes.at(node.rightChild)));
     }
   }
@@ -550,11 +530,10 @@ public:
   std::vector<LevelOrderSorterNodeType>& LevelOrderNodes() { return m_levelOrder; }
 };
 
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-std::vector<ThresholdType> DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::GetSparseThresholdArray() {
+inline std::vector<double> DecisionTree::GetSparseThresholdArray() {
     LevelOrderTraversal levelOrder(GetNodes());
     auto& sortedNodes = levelOrder.LevelOrderNodes();
-    std::vector<ThresholdType> thresholdVec(sortedNodes.size());
+    std::vector<double> thresholdVec(sortedNodes.size());
     size_t i=0;
     for (auto& node : sortedNodes) {
         thresholdVec.at(i) = node.threshold;
@@ -563,11 +542,10 @@ std::vector<ThresholdType> DecisionTree<ThresholdType, ReturnType, FeatureIndexT
     return thresholdVec;
 }
 
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-std::vector<FeatureIndexType> DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::GetSparseFeatureIndexArray() {
+inline std::vector<int32_t> DecisionTree::GetSparseFeatureIndexArray() {
     LevelOrderTraversal levelOrder(GetNodes());
     auto& sortedNodes = levelOrder.LevelOrderNodes();
-    std::vector<FeatureIndexType> featureIndexVec(sortedNodes.size());
+    std::vector<int32_t> featureIndexVec(sortedNodes.size());
     size_t i=0;
     for (auto& node : sortedNodes) {
         featureIndexVec.at(i) = node.IsLeaf() ? -1 : node.featureIndex;
@@ -576,8 +554,7 @@ std::vector<FeatureIndexType> DecisionTree<ThresholdType, ReturnType, FeatureInd
     return featureIndexVec;
 }
 
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-std::vector<int32_t> DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::GetChildIndexArray() {
+inline std::vector<int32_t> DecisionTree::GetChildIndexArray() {
     LevelOrderTraversal levelOrder(GetNodes());
     auto& sortedNodes = levelOrder.LevelOrderNodes();
     std::vector<int32_t> childIndexVec(sortedNodes.size());

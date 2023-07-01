@@ -2,24 +2,26 @@
 #define _COMPILEUTILS_H_
 
 #include "Dialect.h"
+#include "forestcreator.h"
 #include "xgboostparser.h"
 #include "TreebeardContext.h"
 
 namespace TreeBeard
 {
-
-template<typename ThresholdType=double, typename ReturnType=double, typename FeatureIndexType=int32_t, 
-         typename NodeIndexType=int32_t, typename InputElementType=ThresholdType>
-mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, TreebeardContext& tbContext) {
-  const std::string& modelJsonPath=tbContext.modelJSONPath;
-  const std::string& modelGlobalsJSONPath=tbContext.modelGlobalsJSONPath;
+inline mlir::ModuleOp BuildHIRModule(TreebeardContext &tbContext, ForestCreator &forestCreator) {
   const CompilerOptions& options=tbContext.options;
   
-  TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>
-                               xgBoostParser(context, modelJsonPath, modelGlobalsJSONPath, options.statsProfileCSVPath, options.batchSize);
-  xgBoostParser.Parse();
-  xgBoostParser.SetChildIndexBitWidth(options.childIndexBitWidth);
-  auto module = xgBoostParser.GetEvaluationFunction();
+  forestCreator.ConstructForest();
+  forestCreator.SetChildIndexBitWidth(options.childIndexBitWidth);
+  auto module = forestCreator.GetEvaluationFunction();
+  
+  return module;
+}
+
+inline void DoTilingTransformation(mlir::ModuleOp module,
+                                   TreebeardContext &tbContext) {
+  const CompilerOptions& options=tbContext.options;
+  auto& context = tbContext.context;
 
   // TODO maybe all the manipulation before the lowering to mid-level IR can be a single custom function?
   if (options.tilingType==TilingType::kUniform)
@@ -30,12 +32,11 @@ mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& cont
     mlir::decisionforest::DoHybridTiling(context, module, options.tileSize, options.tileShapeBitWidth);
   else
     assert (false && "Unknown tiling type");
-  
-  if (options.scheduleManipulator) {
-    auto schedule = xgBoostParser.GetSchedule();
-    options.scheduleManipulator->Run(schedule);
-    assert (!options.reorderTreesByDepth && "Cannot have a custom schedule manipulator and the inbuilt one together");
-  }
+}
+
+inline void LowerHIRModuleToLLVM(mlir::ModuleOp module, TreebeardContext &tbContext) {
+  const CompilerOptions& options=tbContext.options;
+  auto& context = tbContext.context;
 
   // TODO this needs to change to something that knows how to do all schedule manipulation
   if (options.reorderTreesByDepth) {
@@ -44,20 +45,52 @@ mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& cont
     assert (!options.scheduleManipulator && "Cannot have a custom schedule manipulator and the inbuilt one together");
   }
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
+  // module->dump();
   mlir::decisionforest::LowerEnsembleToMemrefs(context, module, tbContext.serializer, tbContext.representation);
   mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();
-  mlir::decisionforest::LowerToLLVM(context, module);
+  mlir::decisionforest::LowerToLLVM(context, module, tbContext.representation);
   // mlir::decisionforest::dumpLLVMIR(module, false);
+}
+
+inline mlir::ModuleOp ConstructLLVMDialectModuleFromForestCreator(
+    TreebeardContext &tbContext,
+    ForestCreator &forestCreator) {
+  
+  const CompilerOptions& options=tbContext.options;
+  
+  auto module = BuildHIRModule(tbContext, forestCreator);
+  DoTilingTransformation(module, tbContext);
+
+  if (options.scheduleManipulator) {
+    auto schedule = forestCreator.GetSchedule();
+    options.scheduleManipulator->Run(schedule);
+    assert (!options.reorderTreesByDepth && "Cannot have a custom schedule manipulator and the inbuilt one together");
+  }
+  LowerHIRModuleToLLVM(module, tbContext);
   return module;
+}
+
+template<typename ThresholdType=double, typename ReturnType=double, typename FeatureIndexType=int32_t, 
+         typename NodeIndexType=int32_t, typename InputElementType=ThresholdType>
+mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(TreebeardContext& tbContext) {
+  mlir::MLIRContext& context = tbContext.context;
+  const std::string& modelJsonPath=tbContext.modelPath;
+  const CompilerOptions& options=tbContext.options;
+  
+  TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType, InputElementType>
+                               xgBoostParser(context, modelJsonPath, tbContext.serializer, options.statsProfileCSVPath, options.batchSize);
+  
+  return ConstructLLVMDialectModuleFromForestCreator(tbContext, xgBoostParser);
 }
 
 void InitializeMLIRContext(mlir::MLIRContext& context);
 
-mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(mlir::MLIRContext& context, TreebeardContext& tbContext);
+mlir::ModuleOp ConstructLLVMDialectModuleFromXGBoostJSON(TreebeardContext& tbContext);
+void ConvertONNXModelToLLVMIR(TreebeardContext& tbContext, const std::string& llvmIRFilePath);
 void ConvertXGBoostJSONToLLVMIR(TreebeardContext& tbContext, const std::string& llvmIRFilePath);
 
-void RunInferenceUsingSO(const std::string&modelJsonPath, const std::string& soPath, const std::string& modelGlobalsJSONPath, 
+void RunInferenceUsingSO(const std::string& soPath, const std::string& modelGlobalsJSONPath, 
                          const std::string& csvPath, const CompilerOptions& options);
 }
 

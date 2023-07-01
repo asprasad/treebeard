@@ -5,7 +5,7 @@ runtime_test_binaries/
 test/python/treelite_generated_code
 .vscode/
 *.so
-*.so.*
+libtreebeard-runtime.so.*
 *.treebeard-globals.json
 *.pyc
 *.stats.csv
@@ -13,3 +13,4 @@ test/python/treelite_generated_code
 *.log
 *.gz
 docs/MICRO*2022/*.pdf
+.cache

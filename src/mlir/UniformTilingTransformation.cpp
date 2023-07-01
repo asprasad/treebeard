@@ -2,14 +2,13 @@
 // The "uniform" represents that assumption that all edge probabilities are the same. 
 // The tile size also needs to be constant across trees.
 
-#include "Dialect.h"
-// #include "Passes.h"
+#include <optional>
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 
 #include "mlir/Transforms/DialectConversion.h"
@@ -20,6 +19,7 @@
 #include <cassert>
 #include "TiledTree.h"
 #include "OpLoweringUtils.h"
+#include "Dialect.h"
 
 using namespace mlir;
 namespace {
@@ -40,7 +40,7 @@ struct TileEnsembleAttribute : public RewritePattern {
     if (!predictForestOp)
          return mlir::failure();
 
-    auto forestAttribute = predictForestOp.ensemble();
+    auto forestAttribute = predictForestOp.getEnsemble();
     auto forest = forestAttribute.GetDecisionForest();
     auto forestType = forestAttribute.getType().cast<decisionforest::TreeEnsembleType>();
     auto tilingDescriptor = forest.GetTree(0).TilingDescriptor();
@@ -56,8 +56,10 @@ struct TileEnsembleAttribute : public RewritePattern {
       auto treeType = forestType.getTreeType(i).cast<decisionforest::TreeType>();
       auto newTreeType = decisionforest::TreeType::get(treeType.getResultType(), forest.GetTree(i).TilingDescriptor().MaxTileSize(), 
                                                        treeType.getThresholdType(), treeType.getFeatureIndexType(), m_tileShapeType, 
-                                                       treeType.isSparseRepresentation(), treeType.getChildIndexType());
+                                                       treeType.getChildIndexType());
       treeTypes.push_back(newTreeType);
+      if (i != 0)
+        assert (treeTypes.at(0) == newTreeType);
 
       if (m_makeAllLeavesSameDepth) {
         forest.GetTree(i).GetTiledTree()->MakeAllLeavesSameDepth();
@@ -66,18 +68,22 @@ struct TileEnsembleAttribute : public RewritePattern {
     }
     // Tile this forest uniformly
     auto newForestType = decisionforest::TreeEnsembleType::get(forestType.getResultType(), forestType.getNumberOfTrees(),
-                                                               forestType.getRowType(), forestType.getReductionType(), treeTypes);
+                                                               forestType.getRowType(), forestType.getReductionType(), treeTypes.at(0));
 
     auto newForestAttribute = decisionforest::DecisionForestAttribute::get(newForestType, forest);
-    auto tiledPredictForestOp = rewriter.create<decisionforest::PredictForestOp>(op->getLoc(), predictForestOp.getResult().getType(), 
-                                                                                 newForestAttribute, predictForestOp.data(), 
-                                                                                 predictForestOp.result(), predictForestOp.schedule());
+    auto tiledPredictForestOp = rewriter.create<decisionforest::PredictForestOp>(op->getLoc(),
+                                                                                 predictForestOp.getResult().getType(), 
+                                                                                 newForestAttribute,
+                                                                                 predictForestOp.getPredicateAttr(),
+                                                                                 predictForestOp.getData(), 
+                                                                                 predictForestOp.getResult(),
+                                                                                 predictForestOp.getSchedule());
 
     rewriter.replaceOp(op, static_cast<Value>(tiledPredictForestOp));
     return mlir::success();
   }
 
-  void DoTileTraversalForNode(const std::vector<decisionforest::DecisionTree<>::Node>& nodes, 
+  void DoTileTraversalForNode(const std::vector<decisionforest::DecisionTree::Node>& nodes, 
                               int32_t currentNode, int32_t tileID, std::vector<int32_t>& tileIDs) const {
     std::queue<int32_t> nodeQ;
     nodeQ.push(currentNode);
@@ -88,17 +94,17 @@ struct TileEnsembleAttribute : public RewritePattern {
       ++numNodes;
       tileIDs.at(node) = tileID;
       auto leftChild = nodes.at(node).leftChild;
-      if (leftChild != decisionforest::DecisionTree<>::INVALID_NODE_INDEX && !nodes.at(leftChild).IsLeaf())
+      if (leftChild != decisionforest::DecisionTree::INVALID_NODE_INDEX && !nodes.at(leftChild).IsLeaf())
         nodeQ.push(leftChild);
       auto rightChild = nodes.at(node).rightChild;
-      if (rightChild != decisionforest::DecisionTree<>::INVALID_NODE_INDEX && !nodes.at(rightChild).IsLeaf())
+      if (rightChild != decisionforest::DecisionTree::INVALID_NODE_INDEX && !nodes.at(rightChild).IsLeaf())
         nodeQ.push(rightChild);
     }
   }
 
-  void ConstructTileIDVector(const std::vector<decisionforest::DecisionTree<>::Node>& nodes,
+  void ConstructTileIDVector(const std::vector<decisionforest::DecisionTree::Node>& nodes,
                              int32_t currentNode, int32_t& tileID, std::vector<int32_t>& tileIDs) const {
-    if (currentNode == decisionforest::DecisionTree<>::INVALID_NODE_INDEX)
+    if (currentNode == decisionforest::DecisionTree::INVALID_NODE_INDEX)
       return;
     if (tileIDs.at(currentNode) == -1) {
       DoTileTraversalForNode(nodes, currentNode, tileID, tileIDs);
@@ -108,7 +114,7 @@ struct TileEnsembleAttribute : public RewritePattern {
     ConstructTileIDVector(nodes, nodes.at(currentNode).rightChild, tileID, tileIDs);
   }
 
-  void TileSingleDecisionTree(decisionforest::DecisionTree<>& tree) const {
+  void TileSingleDecisionTree(decisionforest::DecisionTree& tree) const {
     const auto& nodes = tree.GetNodes();
     std::vector<int32_t> tileIDs(nodes.size(), -1);
     int32_t tileID = 0;

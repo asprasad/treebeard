@@ -81,10 +81,17 @@ class IndexVariable : public IndexDerivationTreeNode {
   friend class Schedule;
 public:
   enum class IndexVariableType { kBatch, kTree, kUnknown };
+  enum class GPUConstruct { Grid, ThreadBlock, None };
+  enum class Dimension { X, Y, Z };
+
   struct IndexRange {
     int32_t m_start = -1;
     int32_t m_stop = -1;
     int32_t m_step = 0;
+  };
+  struct GPUDimension {
+    GPUConstruct construct;
+    Dimension dimension;
   };
 protected:
   std::string m_name;
@@ -92,6 +99,8 @@ protected:
   IndexVariable* m_containingLoop;
   std::vector<IndexVariable*> m_containedLoops;
   IndexVariableType m_type = IndexVariableType::kUnknown; 
+  GPUConstruct m_gpuConstruct = GPUConstruct::None;
+  Dimension m_dimension = Dimension::X;
 
   // Fields for the index modifier tree
   IndexModifier *m_parentModifier; // The modifier that resulted in this index variable
@@ -101,13 +110,17 @@ protected:
   bool m_simdized = false;
   bool m_parallel = false;
   bool m_unrolled = false;
-  int32_t m_unrollFactor = -1;
+  
+  int32_t m_treeWalkUnrollFactor = -1;
+  
   int32_t m_iterationsToPeel = -1;
   bool m_peelWalk = false;
+  
+  bool m_cache = false;
 
   // Index variables can only be constructed through the Schedule object
   IndexVariable(const std::string& name)
-    :m_name(name), m_containingLoop(nullptr), m_parentModifier(nullptr), m_modifier(nullptr), m_unrollFactor(-1)
+    :m_name(name), m_containingLoop(nullptr), m_parentModifier(nullptr), m_modifier(nullptr), m_treeWalkUnrollFactor(-1)
   { }  
 
   // Index variables can't be copied
@@ -122,12 +135,14 @@ public:
   bool Simdized() const { return m_simdized; }
   bool Parallel() const { return m_parallel; }
   bool Unroll() const { return m_unrolled; }
-  bool UnrollTreeWalk() const { return m_unrollFactor > 0; }
-  int32_t GetUnrollFactor() const { return m_unrollFactor; }
-  void SetUnrollFactor (int32_t unrollFactor) { m_unrollFactor = unrollFactor; }
+  bool UnrollTreeWalk() const { return m_treeWalkUnrollFactor > 0; }
+  int32_t GetTreeWalkUnrollFactor() const { return m_treeWalkUnrollFactor; }
+  void SetTreeWalkUnrollFactor (int32_t unrollFactor) { m_treeWalkUnrollFactor = unrollFactor; }
 
   bool PeelWalk() const { return m_peelWalk; }
   int32_t IterationsToPeel() const { return m_iterationsToPeel; }
+
+  bool Cache() const { return m_cache; }
   
   void Visit(IndexDerivationTreeVisitor& visitor) override;
   void Validate() override;
@@ -135,6 +150,15 @@ public:
   IndexModifier* GetParentModifier() const { return m_parentModifier; }
   IndexModifier* GetIndexModifier() const { return m_modifier; }
   IndexVariableType GetType() const { return m_type; }
+
+  // GPU Support
+  void SetGPUDimension(GPUConstruct construct, Dimension dimension) {
+    m_gpuConstruct = construct;
+    m_dimension = dimension;
+  }
+  GPUDimension GetGPUDimension() const {
+    return GPUDimension{m_gpuConstruct, m_dimension};
+  }
 };
 
 class Schedule {
@@ -154,7 +178,7 @@ class Schedule {
 
 public:
   typedef std::map<IndexVariable*, std::pair<IndexVariable*, IndexVariable*>> IndexVariableMapType;
-  Schedule(int32_t batchSize, int32_t forestSize); 
+  Schedule(int32_t batchSize, int32_t forestSize);
   
   IndexVariable& NewIndexVariable(const std::string& name);
   IndexVariable& NewIndexVariable(const IndexVariable& indexVar);
@@ -171,6 +195,7 @@ public:
   Schedule& Parallel(IndexVariable& index);
   Schedule& Unroll(IndexVariable& index);
   Schedule& PeelWalk(IndexVariable& index, int32_t numberOfIterations);
+  Schedule& Cache(IndexVariable& index);
 
   const IndexVariable* GetRootIndex() const { return &m_rootIndex; }
   IndexVariable& GetBatchIndex() { return m_batchIndex; }

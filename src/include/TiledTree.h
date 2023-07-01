@@ -16,7 +16,7 @@ class TiledTree;
 class TiledTreeNode {
 private:
     friend class TiledTree;
-    DecisionTree<>& m_owningTree;
+    DecisionTree& m_owningTree;
     TiledTree& m_tiledTree;
     // indices into the contained tree nodes in the owning tree.
     // indices have to be in level order (wrt to the owning tree)
@@ -56,7 +56,7 @@ private:
 
     int32_t GetTileDepth(std::vector<TiledTreeNode>& tiles) const;
 public:
-    TiledTreeNode(DecisionTree<>& owningTree, TiledTree& tiledTree, int32_t tileID, int32_t tileIndex)
+    TiledTreeNode(DecisionTree& owningTree, TiledTree& tiledTree, int32_t tileID, int32_t tileIndex)
         :m_owningTree(owningTree), m_tiledTree(tiledTree), m_tileID(tileID), m_tileShapeID(-1), m_tileIndex(tileIndex), m_hasExtraNodes(false)
     { }
     std::vector<int32_t>& GetNodeIndices() { return m_nodeIndices; }
@@ -65,8 +65,8 @@ public:
     const std::vector<int32_t>& GetChildren() const { return m_children; }
 
     int32_t GetEntryNode() const { return m_nodeIndices[0]; }
-    DecisionTree<>& GetTree();
-    const DecisionTree<>::Node& GetNode(int32_t index) const;
+    DecisionTree& GetTree();
+    const DecisionTree::Node& GetNode(int32_t index) const;
     std::string GetTileShapeString();
     int32_t GetTileShapeID() const { return m_tileShapeID; }
     bool IsLeafTile() const { return m_nodeIndices.size()==1 && GetNode(m_nodeIndices.at(0)).IsLeaf(); }
@@ -130,10 +130,10 @@ class TiledTree {
     int32_t m_originalNumberOfTileShapes;
     int32_t m_numTilesThatAreNotSubsets;
     int32_t m_numberOfDummyTiles;
-    DecisionTree<>& m_owningTree;
+    DecisionTree& m_owningTree;
     // We may need to add nodes to the original tree to make the tiles full sized. This 
     // tree is the modified tree with nodes added if required.
-    DecisionTree<> m_modifiedTree;
+    DecisionTree m_modifiedTree;
     std::map<int32_t, int32_t> m_nodeToTileMap;
     TileShapeToTileIDMap& m_tileShapeToTileIDMap;
     bool m_probabilisticallyTiled;
@@ -177,7 +177,7 @@ class TiledTree {
 
     void AddExtraNodesIfNeeded(int32_t tileIndex);
 public:
-    TiledTree(DecisionTree<>& owningTree);
+    TiledTree(DecisionTree& owningTree);
     
     TiledTreeNode& GetTile(int32_t index) {
         return m_tiles[index];
@@ -192,7 +192,7 @@ public:
     int32_t TileSize() { return m_owningTree.TilingDescriptor().MaxTileSize(); }
     size_t NumTiles() { return m_tiles.size(); }
     int32_t GetNodeTileIndex(int32_t nodeIndex) {
-        if (nodeIndex == DecisionTree<>::INVALID_NODE_INDEX)
+        if (nodeIndex == DecisionTree::INVALID_NODE_INDEX)
           return nodeIndex;
         assert(m_nodeToTileMap.find(nodeIndex) != m_nodeToTileMap.end());
         return m_nodeToTileMap[nodeIndex];
@@ -209,7 +209,7 @@ public:
                                       std::vector<double>& leaves);
     int32_t GetTreeDepth() { 
         // The root of the tiled tree should be the first node
-        assert (m_tiles[0].GetParent() == DecisionTree<>::INVALID_NODE_INDEX);
+        assert (m_tiles[0].GetParent() == DecisionTree::INVALID_NODE_INDEX);
         return GetTreeDepthHelper(0);
     }
     int32_t NumberOfLeafTiles();
@@ -263,7 +263,7 @@ public:
       std::map<MapKey, int32_t> m_nodeIndexMap;
       std::map<int32_t, int32_t> m_levelOrderIndexToOriginalIndexMap;
       void DoLevelOrderTraversal(const std::vector<LevelOrderSorterNodeType>& nodes) {
-        int32_t invalidIndex = DecisionTree<>::INVALID_NODE_INDEX;
+        int32_t invalidIndex = DecisionTree::INVALID_NODE_INDEX;
         // MapKey invalidIndicesMapKey{invalidIndex, invalidIndex, 0 };
         // m_nodeIndexMap[invalidIndicesMapKey] = invalidIndex;
         // Assume the root is the first node.
@@ -283,7 +283,7 @@ public:
             continue;
           int32_t childNum=0;
           for (auto child : node.GetChildren()) {
-            if (child != DecisionTree<>::INVALID_NODE_INDEX)
+            if (child != DecisionTree::INVALID_NODE_INDEX)
                 m_queue.push(QueueEntry{index, child, childNum, nodes.at(child)});
             ++childNum;
           }
@@ -334,8 +334,7 @@ public:
 };
 
 // TODO This is a hack to get around the circular dependency between TiledTree.h and DecisionForest.h
-template <typename ThresholdType, typename ReturnType, typename FeatureIndexType, typename NodeIndexType>
-TiledTree* DecisionTree<ThresholdType, ReturnType, FeatureIndexType, NodeIndexType>::GetTiledTree() {
+inline TiledTree* DecisionTree::GetTiledTree() {
   if (m_tiledTree.get() == nullptr)
     m_tiledTree = std::make_shared<TiledTree>(*this);
   return m_tiledTree.get();
