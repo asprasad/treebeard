@@ -65,13 +65,13 @@ scripts with the "--explore" switch will explore a few other predefined configur
 and find the best one among these for the machine on which code is being executed. However, this will mean 
 that the python script will take significantly longer to complete.
 
-## Customizing the build
+# Customizing the build
 1. Setup a build of [MLIR](https://mlir.llvm.org/getting_started/).
 ```bash    
     git clone https://github.com/llvm/llvm-project.git
     mkdir llvm-project/build.release
     cd llvm-project/build.release
-    git checkout bc21af6a43db45bf0d0192afab0a079ecf400aa2
+    git checkout release/16.x
     cmake -G Ninja ../llvm \
         -DLLVM_ENABLE_PROJECTS="llvm;clang;lld;mlir;openmp" \
         -DLLVM_BUILD_EXAMPLES=ON -DLLVM_TARGETS_TO_BUILD="X86;NVPTX;AMDGPU" \
@@ -94,21 +94,7 @@ that the python script will take significantly longer to complete.
 4. All command line arguments to gen.sh are optional. If cmake path is not specified above, the "cmake" binary in the path is used. The default mlir build directory name is "build". The default configuration is "Release".
 
 ## MLIR Version
-The current version of Treebeard is tested with the following LLVM commit:
-```
-commit bc21af6a43db45bf0d0192afab0a079ecf400aa2 (HEAD -> main, origin/main, origin/HEAD)
-Author: Mark de Wever <koraq@xs4all.nl>
-Date:   Sat Dec 24 13:33:21 2022 +0100
-
-    [NFC][libc++][test] Improves code reuse.
-    
-    This applies D140115 to the new tuple tests.
-    
-    Reviewed By: #libc, ldionne
-    
-    Differential Revision: https://reviews.llvm.org/D140650
-```
-
+The current version of Treebeard is tested with LLVM 16 (branch release/16.x of the LLVM github repo).
 
 # Profiling Generated Code with VTune
 

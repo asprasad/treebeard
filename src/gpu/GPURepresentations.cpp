@@ -4,7 +4,6 @@
 #include "OpLoweringUtils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "GPURepresentations.h"
 #include "LIRLoweringHelpers.h"

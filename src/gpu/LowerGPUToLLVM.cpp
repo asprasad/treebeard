@@ -133,6 +133,12 @@ struct LowerGpuOpsToNVVMOpsPass
   void runOnOperation() override {
     gpu::GPUModuleOp m = getOperation();
 
+    // Request C wrapper emission.
+    for (auto func : m.getOps<func::FuncOp>()) {
+      func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
+                    UnitAttr::get(&getContext()));
+    }
+
     /// Customize the bitwidth used for the device side index computations.
     LowerToLLVMOptions options(
         m.getContext(),
@@ -141,31 +147,54 @@ struct LowerGpuOpsToNVVMOpsPass
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
 
-    /// MemRef conversion for GPU to NVVM lowering. The GPU dialect uses memory
-    /// space 5 for private memory attributions, but NVVM represents private
-    /// memory allocations as local `alloca`s in the default address space. This
-    /// converter drops the private memory space to support the use case above.
-    LLVMTypeConverter converter(m.getContext(), options);
-    converter.addConversion([&](MemRefType type) -> Optional<Type> {
-      if (type.getMemorySpaceAsInt() !=
-          gpu::GPUDialect::getPrivateAddressSpace())
-        return std::nullopt;
-      return converter.convertType(MemRefType::Builder(type).setMemorySpace(0));
-    });
+    // Apply in-dialect lowering. In-dialect lowering will replace
+    // ops which need to be lowered further, which is not supported by a
+    // single conversion pass.
+    {
+      RewritePatternSet patterns(m.getContext());
+      populateGpuRewritePatterns(patterns);
+      if (failed(applyPatternsAndFoldGreedily(m, std::move(patterns))))
+        return signalPassFailure();
+    }
 
+    // MemRef conversion for GPU to NVVM lowering.
+    {
+      RewritePatternSet patterns(m.getContext());
+      TypeConverter typeConverter;
+      typeConverter.addConversion([](Type t) { return t; });
+      // NVVM uses alloca in the default address space to represent private
+      // memory allocations, so drop private annotations. NVVM uses address
+      // space 3 for shared memory. NVVM uses the default address space to
+      // represent global memory.
+      gpu::populateMemorySpaceAttributeTypeConversions(
+          typeConverter, [](gpu::AddressSpace space) -> unsigned {
+            switch (space) {
+            case gpu::AddressSpace::Global:
+              return static_cast<unsigned>(
+                  NVVM::NVVMMemorySpace::kGlobalMemorySpace);
+            case gpu::AddressSpace::Workgroup:
+              return static_cast<unsigned>(
+                  NVVM::NVVMMemorySpace::kSharedMemorySpace);
+            case gpu::AddressSpace::Private:
+              return 0;
+            }
+            llvm_unreachable("unknown address space enum value");
+            return 0;
+          });
+      gpu::populateMemorySpaceLoweringPatterns(typeConverter, patterns);
+      ConversionTarget target(getContext());
+      gpu::populateLowerMemorySpaceOpLegality(target);
+      if (failed(applyFullConversion(m, target, std::move(patterns))))
+        return signalPassFailure();
+    }
+    
+    LLVMTypeConverter converter(m.getContext(), options);
     // Lowering for MMAMatrixType.
     converter.addConversion([&](gpu::MMAMatrixType type) -> Type {
       return convertMMAToLLVMType(type);
     });
 
-    RewritePatternSet patterns(m.getContext());
     RewritePatternSet llvmPatterns(m.getContext());
-
-    // Apply in-dialect lowering first. In-dialect lowering will replace ops
-    // which need to be lowered further, which is not supported by a single
-    // conversion pass.
-    populateGpuRewritePatterns(patterns);
-    (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
 
     arith::populateCeilFloorDivExpandOpsPatterns(llvmPatterns);
     arith::populateArithToLLVMConversionPatterns(converter, llvmPatterns);
@@ -318,16 +347,16 @@ void LowerGPUToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module, std::shar
   // pm.addPass(createConvertSCFToCFPass());
   pm.addPass(createGpuKernelOutliningPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
-  // pm.addPass(std::make_unique<PrintModulePass>());
   // pm.addPass(createMemRefToLLVMPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createConvertGlobalsToWorkgroupAllocationsPass());
+  pm.addPass(createDeleteSharedMemoryGlobalsPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
+  // pm.addPass(std::make_unique<PrintModulePass>()); 
   pm.addNestedPass<gpu::GPUModuleOp>(std::make_unique<LowerGpuOpsToNVVMOpsPass>(representation));
-  // pm.addPass(std::make_unique<PrintModulePass>());
+  // pm.addPass(std::make_unique<PrintModulePass>()); 
   pm.addPass(createReconcileUnrealizedCastsPass());
   // pm.addPass(std::make_unique<PrintModulePass>());
   pm.addNestedPass<gpu::GPUModuleOp>(createGpuSerializeToCubinPass("nvptx64-nvidia-cuda", "sm_35", "+ptx60"));
-  pm.addPass(createDeleteSharedMemoryGlobalsPass());
   pm.addPass(createConvertSCFToCFPass());
   pm.addPass(std::make_unique<GpuToLLVMConversionPass>(representation));
   pm.addPass(createReconcileUnrealizedCastsPass());
