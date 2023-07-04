@@ -2,7 +2,7 @@
 Treebeard is an optimizing compiler for decision tree ensemble inference. Please feel free to file a github issue if you have trouble setting up Treebeard.
 
 # Setting up Treebeard
-1. **[Dependencies]** Install git, clang (v10 or newer), lld (v10 or newer), cmake (v3.16.3 or newer), ninja (v1.10.0 or newer), gcc (v9.3.0 or newer), g++ (v9.3.0 or newer), Anaconda.
+1. **[Dependencies]** Install git, clang (v15 or newer), lld (v15 or newer), cmake (v3.20 or newer), ninja (v1.10.0 or newer), gcc (v9.3.0 or newer), g++ (v9.3.0 or newer), Anaconda.
     1. Run the following command on Ubuntu 20.04 (The packages default to the right versions on Ubuntu 20.04. Specific versions may need to be specified in other versions of Linux).
         ```bash
         sudo apt install git gcc g++ clang lld cmake ninja-build
