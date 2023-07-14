@@ -154,7 +154,8 @@ def WalkDecisionTreeOp : DecisionForest_Op<"walk_decision_tree"> {
   let description = "Operation to walk the decision tree and generate a prediction."
                     "Takes input data and tree as input and produces prediction as output.";
 
-  let arguments = (ins Arith_CmpFPredicateAttr:$predicate, 
+  let arguments = (ins Arith_CmpFPredicateAttr:$predicate,
+                       I64Attr:$unrollSteps, 
                        TreeType:$tree,
                        InputDataType:$data);
 
@@ -311,8 +312,8 @@ def CooperativeTraverseTreeTileOp : DecisionForest_Op<"cooperativeTraverseTileOp
   let summary = "Multiple threads cooperate to traverse a set of tiles";
   let description = "Traverse different (tile, row) pairs cooperatively across GPU threads";
   let arguments = (ins Arith_CmpFPredicateAttr:$predicate,
-                       TreeType:$trees,
-                       NodeType:$nodes,
+                       TreeType:$tree,
+                       NodeType:$node,
                        Variadic<InputDataType>:$data);
 
   let results = (outs NodeType);

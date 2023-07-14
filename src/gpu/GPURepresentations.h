@@ -74,8 +74,6 @@ public:
   mlir::LogicalResult GenerateModelGlobals(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter,
                                            std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override;
   
-  void GenerateTreeIndexBuffers(ConversionPatternRewriter &rewriter, mlir::Operation *op, mlir::Value treeValue) override;
-
   // mlir::Value GenerateGetTreeClassId(mlir::ConversionPatternRewriter &rewriter, mlir::Operation *op, Value ensemble, Value treeIndex) override;
   void LowerCacheTreeOp(ConversionPatternRewriter &rewriter, 
                         mlir::Operation *op,

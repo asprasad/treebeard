@@ -36,8 +36,12 @@ namespace
 {
 
 struct TraverseToCooperativeTraverseTreeTileOp : public ConversionPattern {
+  std::unique_ptr< std::map<Operation*, std::vector<Value>> > m_subviewMap;
   TraverseToCooperativeTraverseTreeTileOp(MLIRContext *ctx) 
-  : ConversionPattern(mlir::decisionforest::TraverseTreeTileOp::getOperationName(), 1 /*benefit*/, ctx) {}
+  : ConversionPattern(mlir::decisionforest::TraverseTreeTileOp::getOperationName(), 1 /*benefit*/, ctx) 
+  {
+    m_subviewMap = std::make_unique<std::map<Operation*, std::vector<Value>>>();
+  }
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
@@ -46,13 +50,68 @@ struct TraverseToCooperativeTraverseTreeTileOp : public ConversionPattern {
     assert(operands.size() == 3);
     if (!traverseTileOp)
         return mlir::failure();
-    
+
+    auto location = op->getLoc();
     auto treeType = traverseTileAdaptor.getTree().getType().cast<decisionforest::TreeType>();
-    if (treeType.getTileSize() == 1)
+    auto tileSize = treeType.getTileSize();
+    if (tileSize == 1)
       return mlir::failure();
     
-    // rewriter.replaceOp(op, static_cast<Value>(codeGenStateMachine.GetResult()[0]));
-    return mlir::failure();
+    // TODO_Ashwin Assume that successive threads are going to process successive rows 
+    // Find the subview op that is the source of the row for this traverseTile
+    auto rowVal = traverseTileAdaptor.getData();
+    auto definingOp = rowVal.getDefiningOp();
+    
+    auto rowSubviewOp = AssertOpIsOfType<memref::SubViewOp>(definingOp);
+    auto rowIndex = rowSubviewOp.getOffsets()[0];
+    auto zeroIndexAttr = rewriter.getIndexAttr(0);
+    
+    auto sizes = rowSubviewOp.getStaticSizesAttr();
+    auto size1Attr = rewriter.getIndexAttr(sizes[0]);
+    auto size2Attr = rewriter.getIndexAttr(sizes[1]);
+
+    auto strides = rowSubviewOp.getStaticStridesAttr();
+    auto strides1Attr = rewriter.getIndexAttr(strides[0]);
+    auto strides2Attr = rewriter.getIndexAttr(strides[1]);
+
+    std::vector<Value> rows;
+    auto mapIter = m_subviewMap->find(definingOp);
+    if (mapIter == m_subviewMap->end()) {
+      decisionforest::helpers::SaveAndRestoreInsertionPoint restoreInsertionPoint(rewriter);
+      rewriter.setInsertionPointAfter(rowSubviewOp);
+      
+      auto tileSizeConst = rewriter.create<arith::ConstantIndexOp>(location, tileSize);
+      auto rowIndByTileSize = rewriter.create<arith::FloorDivSIOp>(location, rowIndex, tileSizeConst.getResult());
+      auto rowStartIndex = rewriter.create<arith::MulIOp>(location, rowIndByTileSize.getResult(), tileSizeConst.getResult());
+      rowIndex = rowStartIndex.getResult();
+
+      auto oneConst = rewriter.create<arith::ConstantIndexOp>(location, 1);
+      for (auto i=0 ; i<tileSize ; ++i) {
+        auto nextRow = rewriter.create<memref::SubViewOp>(location,
+                                                          rowSubviewOp.getSource(), 
+                                                          ArrayRef<OpFoldResult>({rowIndex, zeroIndexAttr}),
+                                                          ArrayRef<OpFoldResult>({size1Attr, size2Attr}), 
+                                                          ArrayRef<OpFoldResult>({strides1Attr, strides2Attr}));
+        
+        auto nextRowIndex = rewriter.create<arith::AddIOp>(location, rowIndex, oneConst.getResult());
+        rowIndex = nextRowIndex;
+        rows.push_back(nextRow.getResult());
+      }
+      m_subviewMap->insert(std::make_pair(definingOp, rows));
+      rewriter.eraseOp(definingOp);
+    }
+    else {
+      rows = mapIter->second;
+    }
+    
+    auto simtTraverseTile = rewriter.create<decisionforest::CooperativeTraverseTreeTileOp>(location,
+                                                                                           traverseTileOp.getResult().getType(),
+                                                                                           traverseTileOp.getPredicate(),
+                                                                                           traverseTileOp.getTree(),
+                                                                                           traverseTileOp.getNode(),
+                                                                                           ValueRange(rows));
+    rewriter.replaceOp(op, simtTraverseTile.getResult());
+    return mlir::success();
   }
 };
 
@@ -91,13 +150,12 @@ namespace mlir
 namespace decisionforest
 {
 
-void LowerGPUEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module) {
+void ConvertTraverseToSimtTraverse(mlir::MLIRContext& context, mlir::ModuleOp module) {
   // llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
   mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
   optPM.addPass(std::make_unique<ConvertTraverseToCooperativeTraverse>());
-
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "GPU SIMT pass failed.\n";
   }

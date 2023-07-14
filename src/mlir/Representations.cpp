@@ -41,6 +41,7 @@ Type generateGetElementPtr(Operation *op, ArrayRef<Value> operands,
                            TypeConverter *typeConverter, Value &elementPtr) {
   const int32_t kTreeMemrefOperandNum = 0;
   const int32_t kIndexOperandNum = 1;
+  const int32_t kElementIndexOperandNum = 3;
   auto location = op->getLoc();
   
   auto memrefType = operands[kTreeMemrefOperandNum].getType();
@@ -62,19 +63,27 @@ Type generateGetElementPtr(Operation *op, ArrayRef<Value> operands,
                                                                    rewriter.getDenseI64ArrayAttr(kOffsetIndexInMemrefStruct));
 
   auto actualIndex = rewriter.create<LLVM::AddOp>(location, indexType, static_cast<Value>(extractMemrefOffset), static_cast<Value>(indexVal));
-
-  // Get a pointer to i'th tile's threshold
   auto elementPtrType = LLVM::LLVMPointerType::get(elementType, alignedPtrType.getAddressSpace());
-  assert(elementType == tileType.getBody()[elementNumber] && "The result type should be the same as the element type in the struct.");
   auto elemIndexConst = rewriter.create<LLVM::ConstantOp>(location, rewriter.getI32Type(), rewriter.getIntegerAttr(rewriter.getI32Type(), elementNumber));
-  elementPtr = rewriter.create<LLVM::GEPOp>(location, elementPtrType, static_cast<Value>(extractMemrefBufferPointer), 
-                                            ValueRange({static_cast<Value>(actualIndex), static_cast<Value>(elemIndexConst)}));
 
+  if (operands.size() != 4 || !operands[kElementIndexOperandNum]) {
+    // Get a pointer to i'th tile's threshold
+    assert(elementType == tileType.getBody()[elementNumber] && "The result type should be the same as the element type in the struct.");
+    elementPtr = rewriter.create<LLVM::GEPOp>(location, elementPtrType, static_cast<Value>(extractMemrefBufferPointer), 
+                                              ValueRange({static_cast<Value>(actualIndex), static_cast<Value>(elemIndexConst)}));
+  }
   // Insert call to print pointers if debug helpers is on
   // if (decisionforest::InsertDebugHelpers)
   //   decisionforest::InsertPrintElementAddressIfNeeded(rewriter, location, op->getParentOfType<ModuleOp>(), 
   //                                                     extractMemrefBufferPointer, indexVal, actualIndex, elemIndexConst, elementPtr);
-  
+  else if (operands.size() == 4 && operands[kElementIndexOperandNum]) {
+    auto elemIndex = operands[kElementIndexOperandNum];
+    elementPtr = rewriter.create<LLVM::GEPOp>(location, elementPtrType, static_cast<Value>(extractMemrefBufferPointer), 
+                                              ValueRange({static_cast<Value>(actualIndex), static_cast<Value>(elemIndexConst), elemIndex}));
+  }
+  else {
+    llvm_unreachable("Unexpected number of operands.");
+  }
   return elementType;
 }
 
@@ -113,7 +122,7 @@ struct LoadTileThresholdOpLowering: public ConversionPattern {
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
-    assert (operands.size() == 3);
+    assert (operands.size() == 3 || operands.size() == 4);
     generateLoadStructElement(op, operands, rewriter,
                               kThresholdElementNumberInTile,
                               getTypeConverter());
@@ -127,7 +136,7 @@ struct LoadTileFeatureIndicesOpLowering: public ConversionPattern {
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
-    assert(operands.size() == 3);
+    assert(operands.size() == 3 || operands.size() == 4);
     generateLoadStructElement(op, operands, rewriter,
                               kFeatureIndexElementNumberInTile,
                               getTypeConverter());

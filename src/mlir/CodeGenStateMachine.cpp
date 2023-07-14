@@ -1,4 +1,3 @@
-#include "CodeGenStateMachine.h"
 #include "MemrefTypes.h"
 #include "Dialect.h"
 #include "TreeTilingUtils.h"
@@ -9,6 +8,7 @@
 #include "LIRLoweringHelpers.h"
 
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "CodeGenStateMachine.h"
 
 using namespace mlir::decisionforest::helpers;
 
@@ -21,6 +21,7 @@ namespace decisionforest
 // ===---------------------------------------------------=== //
 
     mlir::gpu::KernelDim3 GetThreadID(mlir::Operation* op);
+    mlir::gpu::KernelDim3 GetBlockID(mlir::Operation* op);
     
     Value ReduceComparisonResultVectorToInt(Value comparisonResult, int32_t tileSize, ConversionPatternRewriter &rewriter, Location location) {
         auto i32VectorType = VectorType::get(tileSize, rewriter.getI32Type());
@@ -67,6 +68,45 @@ namespace decisionforest
           assert(false && "Unknown comparison predicate");
           return arith::CmpFPredicate::ULT;
       }
+    }
+
+    Operation* FindGetRootOp(decisionforest::CooperativeTraverseTreeTileOp traverseTile) {
+      // TODO_Ashwin This needs to become more general. Just hacking it 
+      // to work for now. Only handling cases where the traverse is in a while 
+      // loop and when its just a chain of calls
+      const size_t npos = std::string::npos;
+      auto owningWhileLoop = traverseTile->getParentOfType<scf::WhileOp>();
+      Operation* definingOp = nullptr;
+      if (owningWhileLoop) {
+        // TODO_Ashwin a more elaborate matching of node arguments is 
+        // needed here. For now, just assuming that the argument number 
+        // of node value is the same in before and after (which is the case
+        // for while loops that we generate)    
+        auto afterArguments = owningWhileLoop.getAfterArguments();
+        size_t argNum = npos;
+        for (size_t i=0 ; i<afterArguments.size() ; ++i) {
+          if (afterArguments[i] == traverseTile.getNode()) {
+            argNum = i;
+            break;
+          }
+        }
+        assert (argNum != npos);
+        // auto beforeArguments = owningWhileLoop.getBeforeArguments();
+        auto sourceNodeValue = owningWhileLoop.getOperand(argNum);
+        definingOp = sourceNodeValue.getDefiningOp();
+      } 
+      else {
+        definingOp = traverseTile.getNode().getDefiningOp();
+      }
+      auto getRootOp = llvm::dyn_cast<decisionforest::GetRootOp>(definingOp);
+      auto definingTraverseTile = llvm::dyn_cast<decisionforest::CooperativeTraverseTreeTileOp>(definingOp);
+      if (getRootOp)
+        return getRootOp;
+      else if (definingTraverseTile)
+        return FindGetRootOp(definingTraverseTile);
+      
+      assert (false && "Node values can only come from getRoot or traverseTile ops");
+      return nullptr;
     }
 
 // ===---------------------------------------------------=== //
@@ -402,66 +442,108 @@ namespace decisionforest
     }
 
 #ifdef TREEBEARD_GPU_SUPPORT
+
+Value GenerateLocalThreadId(ConversionPatternRewriter &rewriter, 
+                            Location location,
+                            gpu::LaunchOp launchOp);
+
+int64_t GetNumberOfThreadsInThreadBlock(gpu::LaunchOp gpuLaunchOp);
+
+Value GPUTraverseLoweringState::GetSharedMemoryResultsMatrix(gpu::LaunchOp launchOp, 
+                                                             ConversionPatternRewriter &rewriter,
+                                                             Location location,
+                                                             int32_t tileSize) {
+  if (m_resultsSharedMemBuffer)
+    return m_resultsSharedMemBuffer;
+  auto numThreads = GetNumberOfThreadsInThreadBlock(launchOp);
+  auto sharedMemoryType = MemRefType::get({numThreads, tileSize}, rewriter.getI8Type(), {}, 3);
+  {
+    decisionforest::helpers::SaveAndRestoreInsertionPoint saveIp(rewriter);
+    // set insertion point of rewriter to start of module
+    auto module = launchOp->getParentOfType<ModuleOp>();
+    rewriter.setInsertionPoint(&module.front());
+    // create a global memref of sharedMemoryType
+    /*auto global =*/ rewriter.create<memref::GlobalOp>(location, "tileTraversalSharedMemoryBuffer",
+                                    /*sym_visibility=*/rewriter.getStringAttr("private"),
+                                    /*type=*/sharedMemoryType,
+                                    /*initial_value=*/rewriter.getUnitAttr(),
+                                    /*constant=*/false, IntegerAttr());
+  }
+  {
+    // Save and reset insertion point of rewriter to start of function
+    decisionforest::helpers::SaveAndRestoreInsertionPoint saveIp(rewriter);
+    rewriter.setInsertionPointToStart(&launchOp.getBody().front());
+
+    // get the global memref
+    auto getGlobalMemref = rewriter.create<memref::GetGlobalOp>(location, sharedMemoryType, "tileTraversalSharedMemoryBuffer");
+    m_resultsSharedMemBuffer = getGlobalMemref;
+  }
+  return m_resultsSharedMemBuffer;
+}
+
 // ===---------------------------------------------------=== //
 // GPUVectorTraverseTileCodeGenerator Methods
 // ===---------------------------------------------------=== //
-    GPUVectorTraverseTileCodeGenerator::GPUVectorTraverseTileCodeGenerator(Value tree,
-                                                                          Value rowMemref,
-                                                                          Value node, 
+    GPUVectorTraverseTileCodeGenerator::GPUVectorTraverseTileCodeGenerator(decisionforest::CooperativeTraverseTreeTileOp traverseOp, 
                                                                           Type resultType,
                                                                           std::shared_ptr<IRepresentation> representation, 
                                                                           std::function<Value(Value)> getLutFunc,
-                                                                          mlir::arith::CmpFPredicateAttr cmpPredicateAttr) {
-      m_tree = tree;
-      m_rowMemref = rowMemref;
-      m_nodeToTraverse = node;
+                                                                          mlir::arith::CmpFPredicateAttr cmpPredicateAttr,
+                                                                          std::shared_ptr<GPUTraverseLoweringState> traverseLoweringState) {
+      m_traverseTileOp = traverseOp;
+      m_tree = traverseOp.getTree();
+      // m_rowMemref = rowMemref;
+      m_nodeToTraverse = traverseOp.getNode();
       m_resultType = resultType;
-      m_state = kLoadThreshold;
+      m_state = kInit;
       m_representation = representation;
       m_getLutFunc = getLutFunc;
       m_cmpPredicateAttr = cmpPredicateAttr;
+      m_traverseLoweringState = traverseLoweringState;
 
-      auto featureIndexType = m_representation->GetIndexFieldType();
-      m_featureIndexVectorType = featureIndexType.cast<VectorType>();
-      assert(m_featureIndexVectorType);
-      
-      auto thresholdType = m_representation->GetThresholdFieldType();
-      m_thresholdVectorType = thresholdType.cast<VectorType>();
-      assert(m_thresholdVectorType);
+      m_featureIndexType = m_representation->GetIndexElementType();
+      m_thresholdType = m_representation->GetThresholdElementType();
 
       m_tileShapeType = m_representation->GetTileShapeType();
       m_tileSize = m_representation->GetTileSize();
-
+      m_currentTileElem = 0;
+      
+      m_getRootOp = FindGetRootOp(m_traverseTileOp);
+      m_nodeIndexShMemBuffer = m_traverseLoweringState->getRootOpToShMemNodeArrayMap.find(m_getRootOp)->second;
       assert (m_tileSize > 1);
     }
 
     bool GPUVectorTraverseTileCodeGenerator::EmitNext(ConversionPatternRewriter& rewriter, Location& location) {
       switch (m_state) {
+        case kInit:
+          {
+            auto gpuLaunchOp = m_traverseTileOp->getParentOfType<gpu::LaunchOp>();
+            assert (gpuLaunchOp);
+            m_threadBlockThreadId = GenerateLocalThreadId(rewriter, location, gpuLaunchOp);
+            m_tileSizeConst = rewriter.create<arith::ConstantIndexOp>(location, m_tileSize);
+            m_threadId = rewriter.create<arith::RemSIOp>(location, m_threadBlockThreadId, m_tileSizeConst);
+            m_threadBaseId = rewriter.create<arith::SubIOp>(location, m_threadBlockThreadId, m_threadId);
+            m_cmpOutcomesShMemBuffer = m_traverseLoweringState->GetSharedMemoryResultsMatrix(gpuLaunchOp, rewriter, location, m_tileSize);
+
+            m_state = kLoadThreshold;
+          }
+          break;
         case kLoadThreshold:
           {
-            // TODO_Ashwin remove reference to memref
-            m_nodeIndex = rewriter.create<decisionforest::NodeToIndexOp>(location, 
-                                                                         rewriter.getIndexType(), 
-                                                                         m_representation->GetThresholdsMemref(m_tree),
-                                                                         m_nodeToTraverse);
-            if (decisionforest::InsertDebugHelpers) {
-              rewriter.create<decisionforest::PrintTreeNodeOp>(location, m_nodeIndex);
-            }
+            auto tileElementConst = rewriter.create<arith::ConstantIndexOp>(location, m_currentTileElem);
+            // compute the sum of tileElementConst and threadBaseId
+            auto tileElementPlusThreadBaseId = rewriter.create<arith::AddIOp>(location, tileElementConst, m_threadBaseId);
+            m_nodeIndex = rewriter.create<memref::LoadOp>(location, 
+                                                          m_nodeIndexShMemBuffer,
+                                                          tileElementPlusThreadBaseId.getResult()).getResult();
             // Load threshold
             Value treeIndex = m_representation->GetTreeIndex(m_tree);
             m_loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, 
-                                                                                      m_thresholdVectorType,
+                                                                                      m_thresholdType,
                                                                                       m_representation->GetThresholdsMemref(m_tree),
                                                                                       static_cast<Value>(m_nodeIndex),
-                                                                                      treeIndex);
-            if (decisionforest::InsertDebugHelpers) {
-              Value vectorVal = m_loadThresholdOp;
-              if (!m_thresholdVectorType.getElementType().isF64()) {
-                auto doubleVectorType = mlir::VectorType::get({ m_tileSize }, rewriter.getF64Type());
-                vectorVal = rewriter.create<arith::ExtFOp>(location, doubleVectorType, m_loadThresholdOp);
-              }
-              InsertPrintVectorOp(rewriter, location, 0 /*fp kind*/, 64, m_tileSize, vectorVal);
-            }
+                                                                                      treeIndex,
+                                                                                      m_threadId);
             m_state = kLoadFeatureIndex;
           }
           break;
@@ -469,19 +551,68 @@ namespace decisionforest
           {
             Value treeIndex = m_representation->GetTreeIndex(m_tree);
             m_loadFeatureIndexOp = rewriter.create<decisionforest::LoadTileFeatureIndicesOp>(location, 
-                                                                                             m_featureIndexVectorType,
+                                                                                             m_featureIndexType,
                                                                                              m_representation->GetFeatureIndexMemref(m_tree),
                                                                                              static_cast<Value>(m_nodeIndex),
-                                                                                             treeIndex);
-            if (decisionforest::InsertDebugHelpers) {
-              InsertPrintVectorOp(
-                  rewriter,
-                  location,
-                  1 /*int kind*/,
-                  m_featureIndexVectorType.getElementType().getIntOrFloatBitWidth(),
-                  m_tileSize, static_cast<Value>(m_loadFeatureIndexOp));
-            }
+                                                                                             treeIndex,
+                                                                                             m_threadId);
+            m_state = kLoadFeature;
+          }
+          break;
+        case kLoadFeature:
+          {
+            m_rowMemref = m_traverseTileOp.getData()[m_currentTileElem];
+            // Create an index const with value 0
+            auto zeroIndex = rewriter.create<arith::ConstantIndexOp>(location, 0);
+            // Cast m_loadFeatureIndexOp to index
+            auto featureIndex = rewriter.create<arith::IndexCastOp>(location,  rewriter.getIndexType(), m_loadFeatureIndexOp);
+            m_features = rewriter.create<memref::LoadOp>(location, m_rowMemref, ValueRange{zeroIndex, featureIndex.getResult()});
+            m_state = kCompare;
+          }
+          break; 
+        case kCompare:
+          {
+            auto tileElementConst = rewriter.create<arith::ConstantIndexOp>(location, m_currentTileElem);
+            auto comparison = rewriter.create<arith::CmpFOp>(location,
+                                                             m_cmpPredicateAttr.getValue(),
+                                                             static_cast<Value>(m_features),
+                                                             static_cast<Value>(m_loadThresholdOp));
+            auto comparisonUnsigned = rewriter.create<arith::ExtUIOp>(location, rewriter.getI8Type(), static_cast<Value>(comparison));
+            // add threadBaseId to tileElementConst
+            auto tileElementPlusThreadBaseId = rewriter.create<arith::AddIOp>(location, tileElementConst, m_threadBaseId);
 
+            rewriter.create<memref::StoreOp>(location, 
+                                             comparisonUnsigned,
+                                             m_cmpOutcomesShMemBuffer,
+                                             ValueRange{tileElementPlusThreadBaseId.getResult(), m_threadId});
+            
+            // Generate a gpu::PrintfOp to print ThreadID, comparison result, feature index, feature value, threshold value
+            // auto blockIdx = GetBlockID(m_traverseTileOp);
+            // auto threadIdx = GetThreadID(m_traverseTileOp);
+
+            // // Cast comparisonUnsigned to an i32
+            // auto comparisonUnsignedIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), comparisonUnsigned.getResult());
+
+            // // get the defining op of m_rowMemref and cast it subview
+            // auto subviewOp = dyn_cast<memref::SubViewOp>(m_rowMemref.getDefiningOp());
+            // auto rowIdx = subviewOp.getOffsets()[0];
+
+            // rewriter.create<gpu::PrintfOp>(location,
+            //      "Block %ld, %d Thread %ld, %ld: Comparison %lf < %lf = %ld RowIdx = %ld\n",
+            //      ValueRange{blockIdx.x, blockIdx.y, threadIdx.x, threadIdx.y, m_features, m_loadThresholdOp, comparisonUnsignedIndex.getResult(), rowIdx});
+            
+            ++m_currentTileElem;
+            if (m_currentTileElem == m_tileSize)
+              m_state = kLoadChildIndex;
+            else
+              m_state = kLoadThreshold;
+          }
+          break;
+        case kLoadChildIndex:
+          {
+            // Load the element at m_threadBlockThreadId in m_nodeIndexShMemBuffer into m_nodeIndex
+            m_nodeIndex = rewriter.create<memref::LoadOp>(location, m_nodeIndexShMemBuffer, m_threadBlockThreadId).getResult();
+            m_extraLoads = m_representation->GenerateExtraLoads(location, rewriter, m_tree, m_nodeIndex);
             m_state = kLoadTileShape;
           }
           break;
@@ -491,96 +622,93 @@ namespace decisionforest
             auto loadTileShapeOp = rewriter.create<decisionforest::LoadTileShapeOp>(location, 
                                                                                     m_tileShapeType,
                                                                                     m_representation->GetTileShapeMemref(m_tree),
-                                                                                    static_cast<Value>(m_nodeIndex),
+                                                                                    m_nodeIndex,
                                                                                     treeIndex);
             m_loadTileShapeIndexOp = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadTileShapeOp));
-
-            m_state = kLoadChildIndex;
-          }
-          break;
-        case kLoadChildIndex:
-          {
-            m_extraLoads = m_representation->GenerateExtraLoads(location, rewriter, m_tree, m_nodeIndex);
-            m_state = kLoadFeature;
-          }
-          break;
-        case kLoadFeature:
-          {
-            auto rowMemrefType = m_rowMemref.getType().cast<MemRefType>();
-            auto vectorIndexType = VectorType::get({ m_tileSize }, rewriter.getIndexType());
-            auto rowIndex = rewriter.create<arith::IndexCastOp>(location, vectorIndexType, static_cast<Value>(m_loadFeatureIndexOp));
-            auto zeroIndex = rewriter.create<arith::ConstantIndexOp>(location, 0);
-            // auto zeroIndexVector = rewriter.create<vector::BroadcastOp>(location, vectorIndexType, zeroIndex);
-
-            auto featuresVectorType = VectorType::get({ m_tileSize }, rowMemrefType.getElementType());
-            auto oneI1Const = rewriter.create<arith::ConstantIntOp>(location, 1, rewriter.getI1Type());
-            auto i1VectorType = VectorType::get(m_tileSize, rewriter.getI1Type());
-            auto mask = rewriter.create<vector::BroadcastOp>(location, i1VectorType, oneI1Const);
-
-            Value zeroPassThruConst;
-            if (rowMemrefType.getElementType().isa<mlir::Float64Type>())
-              zeroPassThruConst = rewriter.create<arith::ConstantFloatOp>(location, llvm::APFloat(0.0), rowMemrefType.getElementType().cast<FloatType>());
-            else if(rowMemrefType.getElementType().isa<mlir::Float32Type>())
-              zeroPassThruConst = rewriter.create<arith::ConstantFloatOp>(location, llvm::APFloat((float)0.0), rowMemrefType.getElementType().cast<FloatType>());
-            else
-              assert(false && "Unsupported floating point type");
-            auto zeroPassThruVector = rewriter.create<vector::BroadcastOp>(location, featuresVectorType, zeroPassThruConst);
-            
-            m_features = rewriter.create<vector::GatherOp>(
-              location,
-              featuresVectorType,
-              m_rowMemref,
-              ValueRange({static_cast<Value>(zeroIndex), static_cast<Value>(zeroIndex)}),
-              rowIndex,
-              mask,
-              zeroPassThruVector);
-
-              if (decisionforest::InsertDebugHelpers) {
-                Value vectorVal = m_features;
-                if (!featuresVectorType.getElementType().isF64()) {
-                  auto doubleVectorType = mlir::VectorType::get({ m_tileSize }, rewriter.getF64Type());
-                  vectorVal = rewriter.create<arith::ExtFOp>(location, doubleVectorType, m_features);
-                }
-
-                InsertPrintVectorOp(
-                  rewriter,
-                  location,
-                  0 /*fp kind*/,
-                  64, // double
-                  m_tileSize,
-                  vectorVal);
-              }
-            m_state = kCompare;
-          }
-          break;  
-        case kCompare:
-          {
-            auto comparison = rewriter.create<
-                                        arith::CmpFOp>(location,
-                                                       m_cmpPredicateAttr.getValue(),
-                                                       static_cast<Value>(m_features),
-                                                       static_cast<Value>(m_loadThresholdOp));
-            if (decisionforest::UseBitcastForComparisonOutcome)
-              m_comparisonIndex = ReduceComparisonResultVectorToInt_Bitcast(comparison, m_tileSize, rewriter, location);
-            else
-              m_comparisonIndex = ReduceComparisonResultVectorToInt(comparison, m_tileSize, rewriter, location);
-            
-            // TODO This needs a different print routine!
-            // if(decisionforest::InsertDebugHelpers) {
-            //   rewriter.create<decisionforest::PrintComparisonOp>(location, feature, loadThresholdOp, loadFeatureIndexOp);
-            // }
 
             m_state = kNextNode;
           }
           break;
         case kNextNode:
           {
+            // Generate for loop to go over the m_threadBlockThreadId-th row of m_cmpOutcomesShMemBuffer
+            // and or all the elements together
+            // first create a zero index const
+            rewriter.create<gpu::BarrierOp>(location);
+            auto zeroIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
+            // create a one index const
+            auto oneIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 1);
+            auto loop = rewriter.create<scf::ForOp>(location, 
+                                                    zeroIndexConst.getResult(),
+                                                    m_tileSizeConst,
+                                                    oneIndexConst.getResult(),
+                                                    ValueRange{zeroIndexConst.getResult()});
+            // set insertion point of rewriter to start of loop
+            auto& entryBlock = *loop.getBody();
+            rewriter.setInsertionPointToStart(&entryBlock);
+
+            // read the index-th element of the m_threadBlockThreadId row from m_cmpOutcomesShMemBuffer
+            auto cmpOutcome = rewriter.create<memref::LoadOp>(location, m_cmpOutcomesShMemBuffer, ValueRange{m_threadBlockThreadId, loop.getInductionVar()});
+            
+            // cast the cmpOutcome to an index
+            auto cmpOutcomeIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), cmpOutcome);
+
+            // Print the threadID, loop index and compOutcomeIndex
+            // auto threadIdx = GetThreadID(m_traverseTileOp);
+            // auto blockIdx = GetBlockID(m_traverseTileOp);
+            // rewriter.create<gpu::PrintfOp>(location,
+            //      "Block %ld, %ld Thread %ld, %ld: Loop index %ld, cmpOutcomeIndex %ld\n",
+            //      ValueRange{blockIdx.x, blockIdx.y, threadIdx.x, threadIdx.y, loop.getInductionVar(), cmpOutcomeIndex});
+            
+            // auto tileSizeMinusI = rewriter.create<arith::SubIOp>(location, m_tileSizeConst, loop.getInductionVar());
+            // subtract one from tileSizeMinusThreadId
+            // auto tileSizeMinusIMinusOne = rewriter.create<arith::SubIOp>(location, tileSizeMinusI.getResult(), oneIndexConst.getResult());
+            
+            // Left shift by m_threadId
+            // auto shiftedComparison = rewriter.create<arith::ShLIOp>(location, cmpOutcomeIndex.getResult(), tileSizeMinusIMinusOne.getResult());
+            auto shiftedComparison = rewriter.create<arith::ShLIOp>(location, cmpOutcomeIndex.getResult(), loop.getInductionVar());
+
+            // or it with the current value of the loop argument
+            auto orOp = rewriter.create<arith::OrIOp>(location, shiftedComparison.getResult(), entryBlock.getArgument(1));
+
+            // yield the result of the or
+            rewriter.create<scf::YieldOp>(location, orOp.getResult());
+
+            // set rewriter insertion point to after the loop
+            rewriter.setInsertionPointAfter(loop);
+
+            // comparison index is the result of the loop
+            auto comparisonIndex = loop.getResult(0);
+
             // Load the child index from the LUT
             auto lutValue = m_getLutFunc(m_tree);
-            auto childIndexInt = rewriter.create<memref::LoadOp>(location, lutValue, ValueRange{m_loadTileShapeIndexOp, m_comparisonIndex});
+            auto childIndexInt = rewriter.create<memref::LoadOp>(location, lutValue, ValueRange{m_loadTileShapeIndexOp, comparisonIndex});
             auto childIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(childIndexInt));
 
-            Value newIndex = m_representation->GenerateMoveToChild(location, rewriter, m_nodeIndex, childIndex, m_tileSize, m_extraLoads);
+            // Load lutValue[m_loadTileShapeIndexOp][0...3] and print the values
+            // for (int i = 0; i < 4; ++i)
+            // {
+            //   // create an index constant with value i
+            //   auto iIndexConst = rewriter.create<arith::ConstantIndexOp>(location, i);
+            //   auto lutValueInt = rewriter.create<memref::LoadOp>(location, lutValue, ValueRange{m_loadTileShapeIndexOp, iIndexConst.getResult()});
+            //   auto lutValueIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(lutValueInt));
+            //   rewriter.create<gpu::PrintfOp>(location,
+            //      "\tBlock %ld, %ld Thread %ld, %ld: lutValue[%ld][%ld] = %ld\n",
+            //      ValueRange{blockIdx.x, blockIdx.y, threadIdx.x, threadIdx.y, m_loadTileShapeIndexOp, iIndexConst.getResult(), lutValueIndex});
+            // }
+
+            // // Generate a gpu::PrintfOp to print m_loadTileShapeIndexOp, comparisonIndex and childIndex
+            // // auto threadIdx = GetThreadID(m_traverseTileOp);
+            // rewriter.create<gpu::PrintfOp>(location,
+            //      "Block %ld, %ld Thread %ld, %ld: m_loadTileShapeIndexOp %ld, comparisonIndex %ld, childIndex %ld\n",
+            //      ValueRange{blockIdx.x, blockIdx.y, threadIdx.x, threadIdx.y, m_loadTileShapeIndexOp, comparisonIndex, childIndex});
+            
+            // load the node index from m_nodeIndexShMemBuffer
+            auto nodeIndexShMem = rewriter.create<memref::LoadOp>(location, m_nodeIndexShMemBuffer, m_threadBlockThreadId);
+            Value newIndex = m_representation->GenerateMoveToChild(location, rewriter, nodeIndexShMem, childIndex, m_tileSize, m_extraLoads);
+            
+            // Store newIndex into m_nodeIndexShMemBuffer at m_threadBlockThreadId
+            rewriter.create<memref::StoreOp>(location, newIndex, m_nodeIndexShMemBuffer, m_threadBlockThreadId);
             
             // node = indexToNode(index)
             // TODO_Ashwin Remove memref reference

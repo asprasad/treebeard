@@ -79,12 +79,18 @@ namespace mlir
 {
 namespace decisionforest
 {
-// Definition in GPURepresentations.cpp
+// Definitions in GPURepresentations.cpp
+
 // Add a simple initialization function that initializes a GPU buffer by 
 // transferring values in a CPU buffer to the GPU buffer (single data transfer)
 void GenerateSimpleInitializer(const std::string& funcName, ConversionPatternRewriter &rewriter, Location location, 
                                ModuleOp module, MemRefType memrefType);
- 
+
+int64_t GetConstantIntValueFromMLIRValue(Value val);
+int64_t GetNumberOfThreadsInThreadBlock(gpu::LaunchOp gpuLaunchOp);
+Value GenerateLocalThreadId(ConversionPatternRewriter &rewriter, 
+                            Location location,
+                            gpu::LaunchOp launchOp);
 }
 }
 
@@ -308,15 +314,61 @@ struct GetRootOpLowering: public ConversionPattern {
 
 struct GPUGetRootOpLowering: public ConversionPattern {
   std::shared_ptr<mlir::decisionforest::IRepresentation> m_representation;
-  GPUGetRootOpLowering(MLIRContext *ctx, std::shared_ptr<mlir::decisionforest::IRepresentation> representation)
-   : ConversionPattern(mlir::decisionforest::GetRootOp::getOperationName(), 1 /*benefit*/, ctx), m_representation(representation) {}
+  std::shared_ptr<decisionforest::GPUTraverseLoweringState> m_traverseLoweringState;
+  GPUGetRootOpLowering(MLIRContext *ctx, 
+                       std::shared_ptr<mlir::decisionforest::IRepresentation> representation,
+                       std::shared_ptr<decisionforest::GPUTraverseLoweringState> traverseLoweringState)
+   : ConversionPattern(mlir::decisionforest::GetRootOp::getOperationName(), 1 /*benefit*/, ctx),
+     m_representation(representation),
+     m_traverseLoweringState(traverseLoweringState) {}
+
+  void GenerateTreeIndexBuffers(ConversionPatternRewriter &rewriter, 
+                                mlir::Operation *op,
+                                mlir::Value treeValue) const {
+    auto getRootOp = AssertOpIsOfType<decisionforest::GetRootOp>(op);
+    auto treeType = getRootOp.getTree().getType().cast<decisionforest::TreeType>();
+    auto tileSize = treeType.getTileSize();
+    if (tileSize == 1) {
+      return;
+    }
+    
+    // Add shared memory buffer that is the size of numThreads
+    // Initialize every element to zero
+    // __syncthreads()
+    auto owningModule = op->getParentOfType<mlir::ModuleOp>();
+    auto gpuLaunchOp = op->getParentOfType<gpu::LaunchOp>();
+    auto location = op->getLoc();
+
+    auto numThreads = decisionforest::GetNumberOfThreadsInThreadBlock(gpuLaunchOp);
+
+    std::string globalBufferName = "__nodeIndexBuffer_" + std::to_string(reinterpret_cast<int64_t>(op));
+    auto globalBufferType = MemRefType::get({numThreads}, rewriter.getIndexType(), {}, 3);
+    // create a global for shared memory
+    {
+      SaveAndRestoreInsertionPoint saveAndRestoreInsertPoint(rewriter);
+      rewriter.setInsertionPoint(&owningModule.front());
+      rewriter.create<memref::GlobalOp>(location, globalBufferName,
+                                    /*sym_visibility=*/rewriter.getStringAttr("private"),
+                                    /*type=*/globalBufferType,
+                                    /*initial_value=*/rewriter.getUnitAttr(),
+                                    /*constant=*/false, 
+                                    /*alignment*/IntegerAttr());
+    }
+    auto globalRef = rewriter.create<memref::GetGlobalOp>(location, globalBufferType, globalBufferName);
+    auto threadIndex = decisionforest::GenerateLocalThreadId(rewriter, location, gpuLaunchOp);
+    auto zeroConst = rewriter.create<arith::ConstantIndexOp>(location, 0);  
+    rewriter.create<memref::StoreOp>(location, zeroConst.getResult(), globalRef.getResult(), ValueRange{threadIndex});
+    rewriter.create<gpu::BarrierOp>(location);
+
+    m_traverseLoweringState->getRootOpToShMemNodeArrayMap[op] = globalRef;
+  }
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     auto getRootOp = AssertOpIsOfType<mlir::decisionforest::GetRootOp>(op);
     Value treeValue = operands[0];
     
-    m_representation->GenerateTreeIndexBuffers(rewriter, op, treeValue);
+    GenerateTreeIndexBuffers(rewriter, op, treeValue);
 
     auto nodeIndexConst = rewriter.create<arith::ConstantIndexOp>(op->getLoc(), 0);
 
@@ -403,6 +455,41 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
           m_representation,
           GetLUTFromTreeOperand,
           traverseTileOp.getPredicateAttr()));
+    
+    // Emit code.
+    auto location = op->getLoc();
+    while (codeGenStateMachine.EmitNext(rewriter, location));
+    
+    rewriter.replaceOp(op, static_cast<Value>(codeGenStateMachine.GetResult()[0]));
+    return mlir::success();
+  }
+};
+
+struct CooperativeTraverseTreeTileOpLowering : public ConversionPattern {
+  std::shared_ptr<mlir::decisionforest::IRepresentation> m_representation;
+  std::shared_ptr<decisionforest::GPUTraverseLoweringState> m_traverseTileLoweringState;
+  CooperativeTraverseTreeTileOpLowering(MLIRContext *ctx,
+                                        std::shared_ptr<mlir::decisionforest::IRepresentation> representation,
+                                        std::shared_ptr<decisionforest::GPUTraverseLoweringState> traverseTileLoweringState) 
+  : ConversionPattern(mlir::decisionforest::CooperativeTraverseTreeTileOp::getOperationName(), 1 /*benefit*/, ctx),
+    m_representation(representation),
+    m_traverseTileLoweringState(traverseTileLoweringState) { }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
+    auto traverseTileOp = AssertOpIsOfType<mlir::decisionforest::CooperativeTraverseTreeTileOp>(op);
+    if (!traverseTileOp)
+        return mlir::failure();
+    
+    decisionforest::InterleavedCodeGenStateMachine codeGenStateMachine;
+    codeGenStateMachine.AddStateMachine(
+      std::make_unique<decisionforest::GPUVectorTraverseTileCodeGenerator>(
+        traverseTileOp,
+        traverseTileOp.getResult().getType(),
+        m_representation,
+        GetLUTFromTreeOperand,
+        traverseTileOp.getPredicateAttr(),
+        m_traverseTileLoweringState));
     
     // Emit code.
     auto location = op->getLoc();
@@ -645,13 +732,17 @@ struct MidLevelIRToGPUMemrefLoweringPass: public PassWrapper<MidLevelIRToGPUMemr
                         decisionforest::GetLeafTileValueOp,
                         decisionforest::GetTreeClassIdOp,
                         decisionforest::CacheTreesFromEnsembleOp,
-                        decisionforest::CacheInputRowsOp>();
+                        decisionforest::CacheInputRowsOp,
+                        decisionforest::CooperativeTraverseTreeTileOp>();
+
+    auto traverseLoweringState = std::make_shared<decisionforest::GPUTraverseLoweringState>();
 
     RewritePatternSet patterns(&getContext());
     patterns.add<EnsembleConstantOpGPULowering>(patterns.getContext(), m_serializer, m_representation);
+    patterns.add<CooperativeTraverseTreeTileOpLowering>(patterns.getContext(), m_representation, traverseLoweringState);
     patterns.add<TraverseTreeTileOpLowering>(patterns.getContext(), m_representation);
     patterns.add<InterleavedTraverseTreeTileOpLowering>(patterns.getContext(), m_representation);
-    patterns.add<GPUGetRootOpLowering>(patterns.getContext(), m_representation);
+    patterns.add<GPUGetRootOpLowering>(patterns.getContext(), m_representation, traverseLoweringState);
     patterns.add<GetTreeOpLowering>(patterns.getContext(), m_representation);
     patterns.add<GetTreeClassIdOpLowering>(patterns.getContext(), m_representation);
     patterns.add<GetLeafValueOpLowering>(patterns.getContext(), m_representation);

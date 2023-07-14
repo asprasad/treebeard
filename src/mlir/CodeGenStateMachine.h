@@ -143,40 +143,63 @@ class VectorTraverseTileCodeGenerator : public ICodeGeneratorStateMachine {
 };
 
 #ifdef TREEBEARD_GPU_SUPPORT
+struct GPUTraverseLoweringState {
+  std::map<Operation*, Value> getRootOpToShMemNodeArrayMap;
+  Value m_resultsSharedMemBuffer;
+
+  Value GetSharedMemoryResultsMatrix(gpu::LaunchOp launchOp, 
+                                   ConversionPatternRewriter &rewriter,
+                                   Location location,
+                                   int32_t tileSize);
+};
+
 class GPUVectorTraverseTileCodeGenerator : public ICodeGeneratorStateMachine {
   private:
-    enum TraverseState { kLoadThreshold, kLoadFeatureIndex, kLoadTileShape, kLoadChildIndex, kLoadFeature, kCompare, kNextNode, kDone };
-    std::shared_ptr<IRepresentation> m_representation;
+    enum TraverseState { kInit, kLoadThreshold, kLoadFeatureIndex, kLoadTileShape, kLoadChildIndex, kLoadFeature, kCompare, kNextNode, kDone };
     TraverseState m_state;
-    Value m_tree;
-    Value m_rowMemref;
-    Type m_resultType;
-    VectorType m_featureIndexVectorType;
-    VectorType m_thresholdVectorType;
-    Type m_tileShapeType;
+    std::shared_ptr<IRepresentation> m_representation;
+    decisionforest::CooperativeTraverseTreeTileOp m_traverseTileOp;
+
+    int32_t m_currentTileElem;
     int32_t m_tileSize;
 
+    Type m_resultType;
+    Type m_featureIndexType;
+    Type m_thresholdType;
+    Type m_tileShapeType;
+
+    Value m_tree;
+    Value m_rowMemref;
+
     Value m_nodeToTraverse;
-    decisionforest::NodeToIndexOp m_nodeIndex;
-    decisionforest::LoadTileThresholdsOp m_loadThresholdOp;
-    decisionforest::LoadTileFeatureIndicesOp m_loadFeatureIndexOp;
+    Value m_nodeIndex;
+    Value m_loadThresholdOp;
+    Value m_loadFeatureIndexOp;
     arith::IndexCastOp m_loadTileShapeIndexOp;
     arith::IndexCastOp m_leafBitMask;
-    vector::GatherOp m_features;
+    Value m_features;
     Value m_comparisonIndex;
     Value m_result;
     std::vector<mlir::Value> m_extraLoads;
+    Value m_threadBlockThreadId;
+    Value m_threadId;
 
     std::function<Value(Value)> m_getLutFunc;
     mlir::arith::CmpFPredicateAttr m_cmpPredicateAttr;
+    std::shared_ptr<GPUTraverseLoweringState> m_traverseLoweringState;
+    Operation* m_getRootOp;
+    Value m_nodeIndexShMemBuffer;
+    Value m_cmpOutcomesShMemBuffer;
+    Value m_threadBaseId;
+    Value m_tileSizeConst;
+
   public:
-    GPUVectorTraverseTileCodeGenerator(Value tree, 
-                                    Value rowMemref,
-                                    Value node,
+    GPUVectorTraverseTileCodeGenerator(decisionforest::CooperativeTraverseTreeTileOp traverseTileOp,
                                     Type resultType, 
                                     std::shared_ptr<IRepresentation> representation,
                                     std::function<Value(Value)> getLutFunc,
-                                    mlir::arith::CmpFPredicateAttr cmpPredicateAttr);
+                                    mlir::arith::CmpFPredicateAttr cmpPredicateAttr,
+                                    std::shared_ptr<GPUTraverseLoweringState> traverseLoweringState);
     bool EmitNext(ConversionPatternRewriter& rewriter, Location& location) override;
     std::vector<Value> GetResult() override;
 };

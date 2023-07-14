@@ -662,9 +662,11 @@ struct PredictForestOpLowering: public ConversionPattern {
     else {
       // auto indexConst = rewriter.create<arith::ConstantIndexOp>(location, (int64_t)1);
       // walkOp = rewriter.create<memref::LoadOp>()
+      auto walkUnrollAttr = rewriter.getI64IntegerAttr(indexVar.GetTreeWalkUnrollFactor());
       walkOp = rewriter.create<decisionforest::WalkDecisionTreeOp>(location, 
                                                                    treeType.getThresholdType(),
                                                                    state.cmpPredicate,
+                                                                   walkUnrollAttr,
                                                                    tree,
                                                                    row);
       // auto printResult = rewriter.create<gpu::PrintfOp>(location, "Result [%d]: %lf\t", ValueRange{rowIndex, static_cast<Value>(walkOp)});
@@ -977,9 +979,11 @@ struct PredictForestOpLowering: public ConversionPattern {
                                                                          peelItersAttrib);
     }
     else {
+      auto walkUnrollAttr = rewriter.getI64IntegerAttr(indexVar.GetTreeWalkUnrollFactor());
       walkOp = rewriter.create<decisionforest::WalkDecisionTreeOp>(location, 
                                                                    treeType.getThresholdType(),
                                                                    state.cmpPredicate,
+                                                                   walkUnrollAttr,
                                                                    tree,
                                                                    row);
       // walkOp = rewriter.create<arith::ConstantFloatOp>(location, APFloat((double)0), treeType.getThresholdType().cast<FloatType>());
