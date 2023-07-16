@@ -483,8 +483,18 @@ bool Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32(Tes
 
 bool Test_SimpleSharedMem_LeftHeavy(TestArgs_t& args);
 bool Test_SimpleSharedMem_LeftRightAndBalanced(TestArgs_t& args);
+bool Test_SimpleSharedMem_LeftHeavy_F32I16(TestArgs_t& args);
+bool Test_SimpleSharedMem_LeftRightAndBalanced_F32I16(TestArgs_t& args);
+
 bool Test_SimpleSharedMem_LeftHeavy_ReorgRep(TestArgs_t& args);
 bool Test_SimpleSharedMem_LeftRightAndBalanced_Reorg(TestArgs_t& args);
+bool Test_SimpleSharedMem_LeftHeavy_ReorgRep_F32I16(TestArgs_t& args);
+bool Test_SimpleSharedMem_LeftRightAndBalanced_Reorg_F32I16(TestArgs_t& args);
+
+bool Test_SimpleSharedMem_LeftHeavy_SparseRep(TestArgs_t& args);
+bool Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep(TestArgs_t& args);
+bool Test_SimpleSharedMem_LeftHeavy_SparseRep_F32I16(TestArgs_t& args);
+bool Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep_F32I16(TestArgs_t& args);
 
 bool Test_GPUCodeGeneration_Covtype_ArrayRep_DoubleInt32_BatchSize32(TestArgs_t& args);
 bool Test_GPUCodeGeneration_Covtype_SparseRep_DoubleInt32_BatchSize32(TestArgs_t& args);
@@ -1586,8 +1596,19 @@ TestDescriptor testList[] = {
   // Basic GPU caching tests
   TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
   TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy),
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_F32I16),
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_F32I16),
+
   TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep),
   TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg),
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep_F32I16),
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg_F32I16),
+
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_SparseRep),
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep),
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_SparseRep_F32I16),
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep_F32I16),
+
   TEST_LIST_ENTRY(Test_InputSharedMem_LeftHeavy),
   TEST_LIST_ENTRY(Test_InputSharedMem_RightHeavy),
   TEST_LIST_ENTRY(Test_InputSharedMem_LeftRightAndBalanced),
@@ -1612,8 +1633,32 @@ TestDescriptor testList[] = {
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize1),
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy),
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_F32I16),
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_F32I16),
+
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep),
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg),
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep_F32I16),
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg_F32I16),
+
+  TEST_LIST_ENTRY(Test_InputSharedMem_LeftHeavy),
+  TEST_LIST_ENTRY(Test_InputSharedMem_RightHeavy),
+  TEST_LIST_ENTRY(Test_InputSharedMem_LeftRightAndBalanced),
+
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_SparseRep),
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep),
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_SparseRep_F32I16),
+  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep_F32I16),
   // TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_DblI32_B32_TSz2),
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_DblI32_B32_TSz2),
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_DblI32_B32_TSz2),
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_FltI16_B32_TSz2),
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_FltI16_B32_TSz2),
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_FltI16_B32_TSz2),
+  // TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
 
   // TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_DoubleInt),
   // TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_DoubleInt),

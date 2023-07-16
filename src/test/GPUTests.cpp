@@ -206,6 +206,9 @@ void GPUBasicSchedule(decisionforest::Schedule* schedule, int32_t gridXSize) {
   schedule->Tile(batchIndex, blockIndex, threadIndex, gridXSize);
   blockIndex.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::Grid, decisionforest::IndexVariable::Dimension::X);
   threadIndex.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::ThreadBlock, decisionforest::IndexVariable::Dimension::X);
+  
+  // auto& treeIndex = schedule->GetTreeIndex();
+  // treeIndex.SetTreeWalkUnrollFactor(2);
 }
 
 template <typename ThresholdType, typename IndexType>
@@ -965,6 +968,10 @@ bool Test_GPUCodeGen_InputShdMem_Scalar(TestArgs_t& args,
                                                                                           scheduleManipulator);
 }
 
+// ===---------------------------------------------------=== //
+// GPU Array Rep Shared Memory Tests
+// ===---------------------------------------------------=== //
+
 bool Test_SimpleSharedMem_LeftHeavy(TestArgs_t& args) {
   return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<double, int32_t>(args, 32, AddLeftHeavyTree<DoubleInt32Tile>);
 }
@@ -972,6 +979,18 @@ bool Test_SimpleSharedMem_LeftHeavy(TestArgs_t& args) {
 bool Test_SimpleSharedMem_LeftRightAndBalanced(TestArgs_t& args) {
   return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<double, int32_t>(args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>);
 }
+
+bool Test_SimpleSharedMem_LeftHeavy_F32I16(TestArgs_t& args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<float, int16_t>(args, 32, AddLeftHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_SimpleSharedMem_LeftRightAndBalanced_F32I16(TestArgs_t& args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<float, int16_t>(args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>);
+}
+
+// ===---------------------------------------------------=== //
+// GPU Input Shared Memory Tests
+// ===---------------------------------------------------=== //
 
 bool Test_InputSharedMem_LeftHeavy(TestArgs_t& args) {
   return Test_GPUCodeGen_InputShdMem_Scalar<double, int32_t>(args, 32, AddLeftHeavyTree<DoubleInt32Tile>);
@@ -984,6 +1003,10 @@ bool Test_InputSharedMem_RightHeavy(TestArgs_t& args) {
 bool Test_InputSharedMem_LeftRightAndBalanced(TestArgs_t& args) {
   return Test_GPUCodeGen_InputShdMem_Scalar<double, int32_t>(args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>);
 }
+
+// ===---------------------------------------------------=== //
+// GPU Multi-class Tests
+// ===---------------------------------------------------=== //
 
 bool Test_GPUCodeGeneration_Covtype_ArrayRep_DoubleInt32_BatchSize32(TestArgs_t& args) {
   return Test_GPUCodeGeneration_XGBoostModel_VariableBatchSize<float, int8_t, int32_t>(args, 32, "covtype_xgb_model_save.json", "gpu_array");
@@ -998,6 +1021,10 @@ bool Test_GPUCodeGeneration_Covtype_ReorgRep_DoubleInt32_BatchSize32(TestArgs_t&
   return Test_GPUCodeGeneration_XGBoostModel_VariableBatchSize<float, int8_t, int32_t>(args, 32, "covtype_xgb_model_save.json", "gpu_reorg");
 }
 
+// ===---------------------------------------------------=== //
+// GPU Reorg Rep Shared Memory Tests
+// ===---------------------------------------------------=== //
+
 bool Test_SimpleSharedMem_LeftHeavy_ReorgRep(TestArgs_t& args) {
   return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<double, int32_t>(args, 32, AddLeftHeavyTree<DoubleInt32Tile>, "gpu_reorg");
 }
@@ -1006,6 +1033,32 @@ bool Test_SimpleSharedMem_LeftRightAndBalanced_Reorg(TestArgs_t& args) {
   return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<double, int32_t>(args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>, "gpu_reorg");
 }
 
+bool Test_SimpleSharedMem_LeftHeavy_ReorgRep_F32I16(TestArgs_t& args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<float, int16_t>(args, 32, AddLeftHeavyTree<DoubleInt32Tile>, "gpu_reorg");
+}
+
+bool Test_SimpleSharedMem_LeftRightAndBalanced_Reorg_F32I16(TestArgs_t& args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<float, int16_t>(args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>, "gpu_reorg");
+}
+// ===---------------------------------------------------=== //
+// GPU Sparse Rep Shared Memory Tests
+// ===---------------------------------------------------=== //
+
+bool Test_SimpleSharedMem_LeftHeavy_SparseRep(TestArgs_t& args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<double, int32_t>(args, 32, AddLeftHeavyTree<DoubleInt32Tile>, "gpu_sparse", 32);
+}
+
+bool Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep(TestArgs_t& args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<double, int32_t>(args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>, "gpu_sparse", 32);
+}
+
+bool Test_SimpleSharedMem_LeftHeavy_SparseRep_F32I16(TestArgs_t& args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<float, int16_t>(args, 32, AddLeftHeavyTree<DoubleInt32Tile>, "gpu_sparse", 16);
+}
+
+bool Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep_F32I16(TestArgs_t& args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<float, int16_t>(args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>, "gpu_sparse", 16);
+}
 
 // ===---------------------------------------------------=== //
 // GPU Basic Tiled Code Generation Tests
@@ -1047,11 +1100,17 @@ bool VerifyGPUCodeGenerationOutput_Tiled_VariableBatchSize_AnyRep(TestArgs_t& ar
   // module->dump();
   decisionforest::RunCanonicalizerPass(context, module);
   // module->dump();
+  
+  decisionforest::ConvertTraverseToSimtTraverse(context, module);
+  // module->dump();
+  // return true;
 
   mlir::decisionforest::LowerGPUEnsembleToMemrefs(context,
                                                   module,
                                                   serializer,
                                                   representation);
+  // module->dump();
+  // return true;
   
   mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();

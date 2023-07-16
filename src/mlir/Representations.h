@@ -224,6 +224,7 @@ protected:
   mlir::Type m_thresholdType;
   mlir::Type m_featureIndexType;
   mlir::Type m_tileShapeType;
+  mlir::Type m_childIndexType;
 
   void GenModelMemrefInitFunctionBody(MemRefType memrefType, Value getGlobalMemref,
                                       mlir::OpBuilder &builder, Location location, Value tileIndex,

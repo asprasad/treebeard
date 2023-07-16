@@ -68,17 +68,39 @@ protected:
                            ModuleOp module,
                            Operation* op,
                            std::vector<Type>& cleanupArgs);
+  Value GenerateLeavesBufferCaching(ConversionPatternRewriter &rewriter, 
+                                    mlir::Operation *op,
+                                    ArrayRef<Value> operands,
+                                    std::shared_ptr<decisionforest::IModelSerializer> m_serializer,
+                                    decisionforest::SparseRepresentation::SparseEnsembleConstantLoweringInfo &ensembleInfo,
+                                    ModuleOp &owningModule,
+                                    int32_t bufferLen,
+                                    Value endIndexInRange,
+                                    Value numThreads,
+                                    Value threadIndex);
+  struct CacheTreesInfo {
+    Value cachedModelBuffer;
+    Value cachedLeavesBuffer;
+  };
+
+  std::map<mlir::Operation*, CacheTreesInfo> m_cacheTreesOpsMap;
+
 public:
   virtual ~GPUSparseRepresentation() { }
   void InitRepresentation() override { }
   mlir::LogicalResult GenerateModelGlobals(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter,
                                            std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override;
   
+  void GenerateTreeMemref(mlir::ConversionPatternRewriter &rewriter, 
+                        mlir::Operation *op, 
+                        Value ensemble,
+                        Value treeIndex) override;
+
   // mlir::Value GenerateGetTreeClassId(mlir::ConversionPatternRewriter &rewriter, mlir::Operation *op, Value ensemble, Value treeIndex) override;
   void LowerCacheTreeOp(ConversionPatternRewriter &rewriter, 
                         mlir::Operation *op,
                         ArrayRef<Value> operands,
-                        std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override { assert(false); }
+                        std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override;
 
   void LowerCacheRowsOp(ConversionPatternRewriter &rewriter,
                         mlir::Operation *op,

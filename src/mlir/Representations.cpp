@@ -754,9 +754,9 @@ std::tuple<Type, Type, Type, Type> SparseRepresentation::AddGlobalMemrefs(mlir::
   m_featureIndexType = treeType.getFeatureIndexType(); 
   m_tileSize = treeType.getTileSize();
   m_tileShapeType = treeType.getTileShapeType();
-  auto childIndexType = treeType.getChildIndexType();
+  m_childIndexType = treeType.getChildIndexType();
   Type memrefElementType = decisionforest::TiledNumericalNodeType::get(m_thresholdType, m_featureIndexType, m_tileShapeType, 
-                                                                       m_tileSize, childIndexType);
+                                                                       m_tileSize, m_childIndexType);
 
   std::vector<double> thresholds, leaves;
   std::vector<int32_t> indices, tileShapeIDs, childIndices;
@@ -823,7 +823,7 @@ std::tuple<Type, Type, Type, Type> SparseRepresentation::AddGlobalMemrefs(mlir::
   auto thresholdArgType = MemRefType::get({ modelMemrefSize * m_tileSize }, m_thresholdType);
   auto indexArgType = MemRefType::get({ modelMemrefSize * m_tileSize }, m_featureIndexType);
   auto tileShapeIDArgType = MemRefType::get({modelMemrefSize}, m_tileShapeType);
-  auto childrenIndexArgType = MemRefType::get({modelMemrefSize}, childIndexType);
+  auto childrenIndexArgType = MemRefType::get({modelMemrefSize}, m_childIndexType);
 
   createConstantGlobalOp(rewriter, location, kThresholdsMemrefName, thresholdArgType, thresholds);
   createConstantGlobalOp(rewriter, location, kFeatureIndexMemrefName, indexArgType, indices);
