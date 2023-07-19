@@ -514,6 +514,15 @@ bool Test_TiledSparseGPU_RightHeavy_FltI16_B32_TSz2(TestArgs_t& args);
 bool Test_TiledSparseGPU_Balanced_FltI16_B32_TSz2(TestArgs_t& args);
 bool Test_TiledSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2(TestArgs_t& args);
 
+bool Test_TiledArrayGPU_LeftHeavy_DblI32_B32_TSz2(TestArgs_t& args);
+bool Test_TiledArrayGPU_RightHeavy_DblI32_B32_TSz2(TestArgs_t& args);
+bool Test_TiledArrayGPU_Balanced_DblI32_B32_TSz2(TestArgs_t& args);
+bool Test_TiledArrayGPU_LeftAndRightHeavy_DblI32_B32_TSz2(TestArgs_t& args);
+bool Test_TiledArrayGPU_LeftHeavy_FltI16_B32_TSz2(TestArgs_t& args);
+bool Test_TiledArrayGPU_RightHeavy_FltI16_B32_TSz2(TestArgs_t& args);
+bool Test_TiledArrayGPU_Balanced_FltI16_B32_TSz2(TestArgs_t& args);
+bool Test_TiledArrayGPU_LeftAndRightHeavy_FltI16_B32_TSz2(TestArgs_t& args);
+
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
     vec[i] = (double)rand()/RAND_MAX;
@@ -1627,30 +1636,38 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_FltI16_B32_TSz2),
   TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_FltI16_B32_TSz2),
   TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
+
+  TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftHeavy_DblI32_B32_TSz2),
+  TEST_LIST_ENTRY(Test_TiledArrayGPU_RightHeavy_DblI32_B32_TSz2),
+  TEST_LIST_ENTRY(Test_TiledArrayGPU_Balanced_DblI32_B32_TSz2),
+  TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
+  TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftHeavy_FltI16_B32_TSz2),
+  TEST_LIST_ENTRY(Test_TiledArrayGPU_RightHeavy_FltI16_B32_TSz2),
+  TEST_LIST_ENTRY(Test_TiledArrayGPU_Balanced_FltI16_B32_TSz2),
+  TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
 #endif // TREEBEARD_GPU_SUPPORT
 };
 
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
-  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy),
-  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_F32I16),
-  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_F32I16),
+  TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_DblI32_B32_TSz2),
+  TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_DblI32_B32_TSz2),
+  TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_DblI32_B32_TSz2),
+  TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
+  TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_FltI16_B32_TSz2),
+  TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_FltI16_B32_TSz2),
+  TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_FltI16_B32_TSz2),
+  TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
 
-  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep),
-  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg),
-  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep_F32I16),
-  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg_F32I16),
-
-  TEST_LIST_ENTRY(Test_InputSharedMem_LeftHeavy),
-  TEST_LIST_ENTRY(Test_InputSharedMem_RightHeavy),
-  TEST_LIST_ENTRY(Test_InputSharedMem_LeftRightAndBalanced),
-
-  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_SparseRep),
-  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep),
-  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_SparseRep_F32I16),
-  TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep_F32I16),
+  TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftHeavy_DblI32_B32_TSz2),
+  TEST_LIST_ENTRY(Test_TiledArrayGPU_RightHeavy_DblI32_B32_TSz2),
+  TEST_LIST_ENTRY(Test_TiledArrayGPU_Balanced_DblI32_B32_TSz2),
+  TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
+  TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftHeavy_FltI16_B32_TSz2),
+  TEST_LIST_ENTRY(Test_TiledArrayGPU_RightHeavy_FltI16_B32_TSz2),
+  TEST_LIST_ENTRY(Test_TiledArrayGPU_Balanced_FltI16_B32_TSz2),
+  TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
   // TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_DblI32_B32_TSz2),
   // TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_DblI32_B32_TSz2),
   // TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_DblI32_B32_TSz2),

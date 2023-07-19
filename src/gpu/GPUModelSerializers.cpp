@@ -477,6 +477,39 @@ std::shared_ptr<IModelSerializer> ConstructGPUArrayRepresentation(const std::str
   return std::make_shared<GPUArrayRepresentationSerializer>(jsonFilename);
 }
 
+void GPUArrayRepresentationSerializer::CallPredictionMethod(void* predictFuncPtr,
+                                                            Memref<double, 2> inputs,
+                                                            Memref<double, 1> results) {
+    using InputElementType = double;
+    using ReturnType = double;
+
+    auto tileSize = m_inferenceRunner->GetTileSize();
+    if (tileSize == 1) {
+      GPUArraySparseSerializerBase::CallPredictionMethod(predictFuncPtr, inputs, results);
+      return;
+    }
+    
+    using InferenceFunc_t = Memref<ReturnType, 1> (*)(
+        InputElementType *, InputElementType *, int64_t, int64_t, int64_t, int64_t, int64_t, // Input data
+        ReturnType *, ReturnType *, int64_t, int64_t, int64_t, // Return values
+        Tile *, Tile *, int64_t, int64_t, int64_t, // Model memref
+        int64_t *, int64_t *, int64_t, int64_t, int64_t, // Tree offsets
+        int64_t *, int64_t *, int64_t, int64_t, int64_t, // Tree lengths
+        int8_t *, int8_t *, int64_t, int64_t, int64_t,    // class IDs
+        int8_t *, int8_t *, int64_t, int64_t, int64_t, int64_t, int64_t // LUT
+        );
+    auto lutMemref = m_inferenceRunner->GetLUTMemref();
+    auto inferenceFuncPtr = reinterpret_cast<InferenceFunc_t>(predictFuncPtr);
+    inferenceFuncPtr(inputs.bufferPtr, inputs.alignedPtr, inputs.offset, inputs.lengths[0], inputs.lengths[1], inputs.strides[0], inputs.strides[1],
+                    results.bufferPtr, results.alignedPtr, results.offset, results.lengths[0], results.strides[0],
+                    m_modelMemref.bufferPtr, m_modelMemref.alignedPtr, m_modelMemref.offset, m_modelMemref.lengths[0], m_modelMemref.strides[0],
+                    m_offsetsMemref.bufferPtr, m_offsetsMemref.alignedPtr, m_offsetsMemref.offset, m_offsetsMemref.lengths[0], m_offsetsMemref.strides[0],
+                    m_lengthsMemref.bufferPtr, m_lengthsMemref.alignedPtr, m_lengthsMemref.offset, m_lengthsMemref.lengths[0], m_lengthsMemref.strides[0],
+                    m_classIDMemref.bufferPtr, m_classIDMemref.alignedPtr, m_classIDMemref.offset, m_classIDMemref.lengths[0], m_classIDMemref.strides[0],
+                    lutMemref.bufferPtr, lutMemref.alignedPtr, lutMemref.offset, lutMemref.lengths[0], lutMemref.lengths[1], lutMemref.strides[0], lutMemref.strides[1]);
+}
+
+
 REGISTER_SERIALIZER(gpu_array, ConstructGPUArrayRepresentation)
 
 }

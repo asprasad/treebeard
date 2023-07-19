@@ -61,6 +61,10 @@ public:
   { }
   ~GPUArrayRepresentationSerializer() {}
   void Persist(mlir::decisionforest::DecisionForest& forest, mlir::decisionforest::TreeEnsembleType forestType) override;
+  void CallPredictionMethod(void* predictFuncPtr,
+                            Memref<double, 2> inputs,
+                            Memref<double, 1> results) override;
+
 };
 
 using LeafValueMemref = Memref<double, 1>;

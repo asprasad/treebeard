@@ -279,6 +279,7 @@ namespace decisionforest
             if (decisionforest::InsertDebugHelpers) {
               rewriter.create<decisionforest::PrintTreeNodeOp>(location, m_nodeIndex);
             }
+
             // Load threshold
             Value treeIndex = m_representation->GetTreeIndex(m_tree);
             m_loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(location, 
@@ -286,6 +287,8 @@ namespace decisionforest
                                                                                       m_representation->GetThresholdsMemref(m_tree),
                                                                                       static_cast<Value>(m_nodeIndex),
                                                                                       treeIndex);
+
+
             if (decisionforest::InsertDebugHelpers) {
               Value vectorVal = m_loadThresholdOp;
               if (!m_thresholdVectorType.getElementType().isF64()) {
@@ -305,6 +308,7 @@ namespace decisionforest
                                                                                              m_representation->GetFeatureIndexMemref(m_tree),
                                                                                              static_cast<Value>(m_nodeIndex),
                                                                                              treeIndex);
+
             if (decisionforest::InsertDebugHelpers) {
               InsertPrintVectorOp(
                   rewriter,
@@ -326,6 +330,23 @@ namespace decisionforest
                                                                                     static_cast<Value>(m_nodeIndex),
                                                                                     treeIndex);
             m_loadTileShapeIndexOp = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(loadTileShapeOp));
+            
+            // gpu::Printf Op to print the node index, the thread block ID and the thread ID
+            // auto blockIdx = GetBlockID(m_tree.getDefiningOp());
+            // auto threadIdx = GetThreadID(m_tree.getDefiningOp());
+            // rewriter.create<gpu::PrintfOp>(location, 
+            //     "Block %ld, %ld Thread %ld, %ld: Node index %ld, Tile Shape %ld\n",
+            //      ValueRange{blockIdx.x, blockIdx.y, threadIdx.x, threadIdx.y, m_nodeIndex, m_loadTileShapeIndexOp.getResult()});
+            
+            // Print the two elements of the feature index vector
+            // auto featureIndexType = m_featureIndexVectorType.getElementType();
+            // auto zeroIndexConstant = rewriter.create<arith::ConstantIndexOp>(location, 0);
+            // auto oneIndexConstant = rewriter.create<arith::ConstantIndexOp>(location, 1);
+            // auto featureIndex0 = rewriter.create<vector::ExtractElementOp>(location, featureIndexType, static_cast<Value>(m_loadFeatureIndexOp), zeroIndexConstant.getResult());
+            // auto featureIndex1 = rewriter.create<vector::ExtractElementOp>(location, featureIndexType, static_cast<Value>(m_loadFeatureIndexOp), oneIndexConstant.getResult());
+            // rewriter.create<gpu::PrintfOp>(location, 
+            //     "Block %ld, %ld Thread %ld, %ld: Feature index %d, %d\n",
+            //      ValueRange{blockIdx.x, blockIdx.y, threadIdx.x, threadIdx.y, featureIndex0, featureIndex1});
 
             m_state = kLoadChildIndex;
           }
@@ -366,6 +387,17 @@ namespace decisionforest
               rowIndex,
               mask,
               zeroPassThruVector);
+
+            // auto threadIdx = GetThreadID(m_tree.getDefiningOp());
+            // auto blockIdx = GetBlockID(m_tree.getDefiningOp());
+            // auto featureElementType = featuresVectorType.getElementType();
+            // auto zeroIndexConstant = rewriter.create<arith::ConstantIndexOp>(location, 0);
+            // auto oneIndexConstant = rewriter.create<arith::ConstantIndexOp>(location, 1);
+            // auto feature0 = rewriter.create<vector::ExtractElementOp>(location, featureElementType, static_cast<Value>(m_features), zeroIndexConstant.getResult());
+            // auto feature1 = rewriter.create<vector::ExtractElementOp>(location, featureElementType, static_cast<Value>(m_features), oneIndexConstant.getResult());
+            // rewriter.create<gpu::PrintfOp>(location, 
+            //     "Block %ld, %ld Thread %ld, %ld: Features %lf, %lf\n",
+            //      ValueRange{blockIdx.x, blockIdx.y, threadIdx.x, threadIdx.y, feature0, feature1});
 
               if (decisionforest::InsertDebugHelpers) {
                 Value vectorVal = m_features;
@@ -409,6 +441,14 @@ namespace decisionforest
           {
             // Load the child index from the LUT
             auto lutValue = m_getLutFunc(m_tree);
+
+            // Print the blockID, thread ID, m_loadTileShapeIndexOp, m_comparisonIndex
+            // auto threadIdx = GetThreadID(m_tree.getDefiningOp());
+            // auto blockIdx = GetBlockID(m_tree.getDefiningOp());
+            // rewriter.create<gpu::PrintfOp>(location, 
+            //     "Block %ld, %ld Thread %ld, %ld: TileShapeIndex %ld, ComparisonIndex %ld\n",
+            //      ValueRange{blockIdx.x, blockIdx.y, threadIdx.x, threadIdx.y, m_loadTileShapeIndexOp, m_comparisonIndex});
+
             auto childIndexInt = rewriter.create<memref::LoadOp>(location, lutValue, ValueRange{m_loadTileShapeIndexOp, m_comparisonIndex});
             auto childIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(childIndexInt));
 
@@ -420,7 +460,14 @@ namespace decisionforest
                                                                       m_resultType,
                                                                       m_representation->GetThresholdsMemref(m_tree),
                                                                       static_cast<Value>(newIndex));
-
+            // Print the blockID, thread ID and the next node index
+            
+            // auto threadIdx = GetThreadID(m_tree.getDefiningOp());
+            // auto blockIdx = GetBlockID(m_tree.getDefiningOp());
+            // rewriter.create<gpu::PrintfOp>(location, 
+            //   "Block %ld, %ld Thread %ld, %ld: Next node %ld\n",
+            //     ValueRange{blockIdx.x, blockIdx.y, threadIdx.x, threadIdx.y, newIndex});
+            
             m_state = kDone;
             return false;
           }
