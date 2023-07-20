@@ -354,6 +354,20 @@ Value GenerateLocalThreadId(ConversionPatternRewriter &rewriter,
   return index;
 }
 
+int64_t GetNumberOfTreesToCache(decisionforest::CacheTreesFromEnsembleOp cacheTreesOp) {
+  auto owningForLoop = cacheTreesOp->getParentOfType<scf::ForOp>();
+  if (owningForLoop) {
+    auto loopStep = owningForLoop.getStep();
+    auto stepValue = GetConstantIntValueFromMLIRValue(loopStep);
+    return stepValue;
+  }
+  else {
+    auto startIndex = GetConstantIntValueFromMLIRValue(cacheTreesOp.getStartTreeIndex());
+    auto endIndex = GetConstantIntValueFromMLIRValue(cacheTreesOp.getEndTreeIndex());
+    return (endIndex - startIndex);
+  }
+}
+
 // ===---------------------------------------------------=== //
 // GPU array based representation
 // ===---------------------------------------------------=== //
@@ -502,15 +516,7 @@ void GPUArrayBasedRepresentation::LowerCacheTreeOp(ConversionPatternRewriter &re
                                                                          treeType.getThresholdType().getIntOrFloatBitWidth(),
                                                                          treeType.getFeatureIndexType().getIntOrFloatBitWidth());
   auto maxLen = *std::max_element(lengths.begin(), lengths.end());
-
-  auto owningForLoop = cacheTreesOp->getParentOfType<scf::ForOp>();
-  assert (owningForLoop);
-
-  auto loopStep = owningForLoop.getStep();
-  auto stepConst = AssertOpIsOfType<arith::ConstantIndexOp>(loopStep.getDefiningOp());
-  auto stepValue = stepConst.value();
-
-  int64_t bufferLen = maxLen * stepValue;
+  int64_t bufferLen = maxLen * GetNumberOfTreesToCache(cacheTreesOp);
 
   // Add the required globals to the owning module
   auto owningModule = cacheTreesOp->getParentOfType<mlir::ModuleOp>();
@@ -966,15 +972,7 @@ void GPUSparseRepresentation::LowerCacheTreeOp(ConversionPatternRewriter &rewrit
                                                                          treeType.getThresholdType().getIntOrFloatBitWidth(),
                                                                          treeType.getFeatureIndexType().getIntOrFloatBitWidth());
   auto maxLen = *std::max_element(lengths.begin(), lengths.end());
-
-  auto owningForLoop = cacheTreesOp->getParentOfType<scf::ForOp>();
-  assert (owningForLoop);
-
-  auto loopStep = owningForLoop.getStep();
-  auto stepConst = AssertOpIsOfType<arith::ConstantIndexOp>(loopStep.getDefiningOp());
-  auto stepValue = stepConst.value();
-
-  int64_t bufferLen = maxLen * stepValue;
+  int64_t bufferLen = GetNumberOfTreesToCache(cacheTreesOp) * maxLen;
 
   // Add the required globals to the owning module
   auto owningModule = cacheTreesOp->getParentOfType<mlir::ModuleOp>();

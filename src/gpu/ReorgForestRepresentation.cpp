@@ -131,6 +131,7 @@ namespace decisionforest
 
 void GenerateSimpleInitializer(const std::string& funcName, ConversionPatternRewriter &rewriter, Location location, 
                                ModuleOp module, MemRefType memrefType);
+int64_t GetNumberOfTreesToCache(decisionforest::CacheTreesFromEnsembleOp cacheTreesOp);                               
 
 // ===---------------------------------------------------=== //
 // Reorg forest serializer methods
@@ -556,12 +557,7 @@ void ReorgForestRepresentation::LowerCacheTreeOp(ConversionPatternRewriter &rewr
 
   // TODO_Ashwin This is a BUG!! We may not always have a for loop surrounding a cache operation
   // The surrounding loops for grid and thread block have already been lowered to gpu.launch!!
-  auto owningForLoop = cacheTreesOp->getParentOfType<scf::ForOp>();
-  assert (owningForLoop);
-
-  auto loopStep = owningForLoop.getStep();
-  auto stepConst = AssertOpIsOfType<arith::ConstantIndexOp>(loopStep.getDefiningOp());
-  auto numTreesToCache = stepConst.value();
+  int64_t numTreesToCache = GetNumberOfTreesToCache(cacheTreesOp);
 
   // Create globals for threshold and feature indices
   //    - Size to be determined from the forest?
