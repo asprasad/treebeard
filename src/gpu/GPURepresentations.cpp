@@ -613,22 +613,30 @@ void GPUArrayBasedRepresentation::LowerCacheTreeOp(ConversionPatternRewriter &re
       auto globalIndex = thenBuilder.create<arith::AddIOp>(location, index.getResult(), startIndex.getResult());
       auto zeroIndexConst = thenBuilder.create<arith::ConstantIndexOp>(location, 0);
       auto threshold = thenBuilder.create<decisionforest::LoadTileThresholdsOp>(location,
-                                                                                GetThresholdElementType(),
+                                                                                GetThresholdFieldType(),
                                                                                 modelMemref,
                                                                                 globalIndex.getResult(),
                                                                                 zeroIndexConst);
       auto featureIndex = thenBuilder.create<decisionforest::LoadTileFeatureIndicesOp>(location,
-                                                                                      GetIndexElementType(),
+                                                                                      GetIndexFieldType(),
                                                                                       modelMemref,
                                                                                       globalIndex.getResult(),
                                                                                       zeroIndexConst);
-      auto tileShapeID = thenBuilder.create<arith::ConstantIntOp>(location, 0, thenBuilder.getI32Type());
+      Value tileShapeID;
+      if (GetTileSize() == 1)
+        tileShapeID = thenBuilder.create<arith::ConstantIntOp>(location, 0, GetTileShapeType());
+      else
+        tileShapeID = thenBuilder.create<decisionforest::LoadTileShapeOp>(location,
+                                                                          GetTileShapeType(),
+                                                                          modelMemref,
+                                                                          globalIndex.getResult(),
+                                                                          zeroIndexConst);
       thenBuilder.create<decisionforest::InitTileOp>(location, 
                                                     sharedMemoryBuffer.getResult(),
                                                     index.getResult(),
                                                     threshold.getResult(),
                                                     featureIndex.getResult(),
-                                                    tileShapeID.getResult());
+                                                    tileShapeID);
     }
   }
   rewriter.setInsertionPointAfter(forLoop);
@@ -865,12 +873,20 @@ Value GPUSparseRepresentation::GenerateLeavesBufferCaching(ConversionPatternRewr
                                                std::shared_ptr<decisionforest::IModelSerializer> m_serializer,
                                                decisionforest::SparseRepresentation::SparseEnsembleConstantLoweringInfo &ensembleInfo,
                                                ModuleOp &owningModule,
-                                               int32_t bufferLen,
                                                Value endIndexInRange,
                                                Value numThreads,
                                                Value threadIndex) {
   auto location = op->getLoc();
   auto cacheTreesOp = cast<decisionforest::CacheTreesFromEnsembleOp>(op);
+  
+  auto numTreesToCache = GetNumberOfTreesToCache(cacheTreesOp);
+  std::vector<int64_t> leavesLengths(decisionforest::ForestJSONReader::GetInstance().GetNumberOfTrees(), -1);
+  decisionforest::ForestJSONReader::GetInstance().InitializeLeavesLengthBuffer(leavesLengths.data(), 
+                                                                               m_tileSize,
+                                                                               m_thresholdType.getIntOrFloatBitWidth(),
+                                                                               m_featureIndexType.getIntOrFloatBitWidth());
+  auto maxLen = *std::max_element(leavesLengths.begin(), leavesLengths.end());
+  int64_t bufferLen = maxLen * numTreesToCache;
 
   std::string globalLeavesCacheBufferName = std::string("leavesCache_")+std::to_string(reinterpret_cast<long long>(op));
   MemRefType leavesMemrefType, leavesCacheBufferType;
@@ -1073,16 +1089,24 @@ void GPUSparseRepresentation::LowerCacheTreeOp(ConversionPatternRewriter &rewrit
         auto globalIndex = thenBuilder.create<arith::AddIOp>(location, index.getResult(), startIndex.getResult());
         auto zeroIndexConst = thenBuilder.create<arith::ConstantIndexOp>(location, 0);
         auto threshold = thenBuilder.create<decisionforest::LoadTileThresholdsOp>(location,
-                                                                                  GetThresholdElementType(),
+                                                                                  GetThresholdFieldType(),
                                                                                   modelMemref,
                                                                                   globalIndex.getResult(),
                                                                                   zeroIndexConst);
         auto featureIndex = thenBuilder.create<decisionforest::LoadTileFeatureIndicesOp>(location,
-                                                                                        GetIndexElementType(),
+                                                                                        GetIndexFieldType(),
                                                                                         modelMemref,
                                                                                         globalIndex.getResult(),
                                                                                         zeroIndexConst);
-        auto tileShapeID = thenBuilder.create<arith::ConstantIntOp>(location, 0, thenBuilder.getI32Type());
+        Value tileShapeID;
+        if (GetTileSize() == 1)
+          tileShapeID = thenBuilder.create<arith::ConstantIntOp>(location, 0, thenBuilder.getI32Type());
+        else
+          tileShapeID = thenBuilder.create<decisionforest::LoadTileShapeOp>(location,
+                                                                            GetTileShapeType(),
+                                                                            modelMemref,
+                                                                            globalIndex.getResult(),
+                                                                            zeroIndexConst);
         auto childIndex = thenBuilder.create<decisionforest::LoadChildIndexOp>(location,
                                                                                 m_childIndexType,
                                                                                 modelMemref,
@@ -1092,7 +1116,7 @@ void GPUSparseRepresentation::LowerCacheTreeOp(ConversionPatternRewriter &rewrit
                                                       index.getResult(),
                                                       threshold.getResult(),
                                                       featureIndex.getResult(),
-                                                      tileShapeID.getResult(),
+                                                      tileShapeID,
                                                       childIndex.getResult());
       }
     }
@@ -1102,15 +1126,14 @@ void GPUSparseRepresentation::LowerCacheTreeOp(ConversionPatternRewriter &rewrit
   Value leavesSharedMemoryBuffer;
   if (tileSize > 1) {
     leavesSharedMemoryBuffer = GenerateLeavesBufferCaching(rewriter, 
-                                op, 
-                                operands,
-                                m_serializer,
-                                ensembleInfo,
-                                owningModule,
-                                bufferLen,
-                                endIndexInRange,
-                                numThreads,
-                                threadIndex);
+                                                           op, 
+                                                           operands,
+                                                           m_serializer,
+                                                           ensembleInfo,
+                                                           owningModule,
+                                                           endIndexInRange,
+                                                           numThreads,
+                                                           threadIndex);
   }
   rewriter.create<gpu::BarrierOp>(location);
   m_cacheTreesOpsMap[op] = {sharedMemoryBuffer, leavesSharedMemoryBuffer};
@@ -1137,6 +1160,7 @@ void GPUSparseRepresentation::GenerateTreeMemref(mlir::ConversionPatternRewriter
   auto cacheTreesMapIter = m_cacheTreesOpsMap.find(cacheTreesOp.getOperation());
   assert (cacheTreesMapIter != m_cacheTreesOpsMap.end());
   auto cachedModelBuffer = cacheTreesMapIter->second.cachedModelBuffer;
+  auto cachedLeavesBuffer = cacheTreesMapIter->second.cachedLeavesBuffer;
 
   auto modelMemrefOffset = rewriter.create<memref::LoadOp>(location, ensembleInfo.offsetGlobal, cacheTreesOp.getStartTreeIndex()); 
   auto modelMemrefIndex = rewriter.create<memref::LoadOp>(location, ensembleInfo.offsetGlobal, treeIndex);
@@ -1156,7 +1180,7 @@ void GPUSparseRepresentation::GenerateTreeMemref(mlir::ConversionPatternRewriter
     auto leavesCacheIndex = rewriter.create<arith::SubIOp>(location, leavesMemrefIndex.getResult(), leavesMemrefOffset.getResult());
     auto leavesTreeLength = rewriter.create<memref::LoadOp>(location, ensembleInfo.leavesLengthGlobal, treeIndex);
     leavesTreeMemref = rewriter.create<memref::SubViewOp>(location,
-                                                          cachedModelBuffer,
+                                                          cachedLeavesBuffer,
                                                           ArrayRef<OpFoldResult>({static_cast<Value>(leavesCacheIndex)}),
                                                           ArrayRef<OpFoldResult>({static_cast<Value>(leavesTreeLength)}),
                                                           ArrayRef<OpFoldResult>({rewriter.getIndexAttr(1)}));

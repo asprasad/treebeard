@@ -74,7 +74,6 @@ protected:
                                     std::shared_ptr<decisionforest::IModelSerializer> m_serializer,
                                     decisionforest::SparseRepresentation::SparseEnsembleConstantLoweringInfo &ensembleInfo,
                                     ModuleOp &owningModule,
-                                    int32_t bufferLen,
                                     Value endIndexInRange,
                                     Value numThreads,
                                     Value threadIndex);
