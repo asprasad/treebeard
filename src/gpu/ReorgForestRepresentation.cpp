@@ -211,7 +211,7 @@ void ReorgForestSerializer::Persist(mlir::decisionforest::DecisionForest& forest
   m_featureIndexBitWidth = treeType.getFeatureIndexType().getIntOrFloatBitWidth();
   
   auto bufferSize = ComputeBufferSize(forest);
-  m_thresholds.resize(bufferSize, NAN);
+  m_thresholds.resize(bufferSize, -1e6);
   m_featureIndices.resize(bufferSize, -1);
 
   for (int32_t i=0 ; i<(int32_t)forest.NumTrees() ; ++i)

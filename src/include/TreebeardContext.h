@@ -104,7 +104,10 @@ struct CompilerOptions {
 void InitializeMLIRContext(mlir::MLIRContext& context);
 
 struct TreebeardContext {
-  mlir::MLIRContext context;
+private:
+  bool m_ownContext = false;
+public:
+  mlir::MLIRContext& context;
   std::string modelPath;
   std::string modelGlobalsJSONPath;
   CompilerOptions options;
@@ -118,7 +121,8 @@ struct TreebeardContext {
                    std::shared_ptr<mlir::decisionforest::IRepresentation>  rep = nullptr,
                    std::shared_ptr<mlir::decisionforest::IModelSerializer> ser = nullptr,
                    std::shared_ptr<ForestCreator> constructor = nullptr) 
-    : modelPath(modelFilePath), 
+    : m_ownContext(true), context(*new mlir::MLIRContext()), 
+      modelPath(modelFilePath), 
       modelGlobalsJSONPath(globalsJSONPath), 
       options(compilerOptions),
       representation(rep),
@@ -128,8 +132,32 @@ struct TreebeardContext {
     InitializeMLIRContext(context);
   }
 
-  TreebeardContext() {
+  TreebeardContext(mlir::MLIRContext& ctxt,
+                   const std::string& modelFilePath, 
+                   const std::string& globalsJSONPath,
+                   CompilerOptions& compilerOptions,
+                   std::shared_ptr<mlir::decisionforest::IRepresentation>  rep = nullptr,
+                   std::shared_ptr<mlir::decisionforest::IModelSerializer> ser = nullptr,
+                   std::shared_ptr<ForestCreator> constructor = nullptr) 
+    : m_ownContext(false), context(ctxt),
+      modelPath(modelFilePath), 
+      modelGlobalsJSONPath(globalsJSONPath), 
+      options(compilerOptions),
+      representation(rep),
+      serializer(ser),
+      forestConstructor(constructor)
+  {
     InitializeMLIRContext(context);
+  }
+
+  TreebeardContext()
+    : m_ownContext(true), context(*new mlir::MLIRContext()) {
+    InitializeMLIRContext(context);
+  }
+
+  ~TreebeardContext() {
+    if (m_ownContext)
+      delete &context;
   }
 
   void SetForestCreatorType(const std::string& creatorName);

@@ -227,11 +227,19 @@ public:
 typedef void (*ScheduleManipulator_t)(mlir::decisionforest::Schedule* schedule);
 
 class ScheduleManipulationFunctionWrapper : public mlir::decisionforest::ScheduleManipulator {
-  ScheduleManipulator_t m_func;
+  std::function<void(decisionforest::Schedule&)> m_func;
 public:
-  ScheduleManipulationFunctionWrapper(ScheduleManipulator_t func) :m_func(func) { }
+  ScheduleManipulationFunctionWrapper(ScheduleManipulator_t func) {
+    m_func = [func](decisionforest::Schedule& schedule) {
+      func(&schedule);
+    };
+  }
+  
+  ScheduleManipulationFunctionWrapper(std::function<void(decisionforest::Schedule&)> func) :m_func(func) {
+  }
+  
   void Run(mlir::decisionforest::Schedule* schedule) override {
-    m_func(schedule);
+    m_func(*schedule);
   }
 };
 

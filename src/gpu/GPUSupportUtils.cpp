@@ -140,9 +140,17 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
         }
       }
 
+      // Wait for all the transfers and allocs before the gpu.launch to finish
+      /*auto waitForTransfersAndAllocs =*/ builder.create<gpu::WaitOp>(location, Type(), ValueRange{waitToken});
+
+      // Add the transfers as an async dependency to the gpu.launch op.
+      // gpuLaunchOp.addAsyncDependency(waitToken);
+
       builder.setInsertionPointAfter(gpuLaunchOp.getOperation());
+      
       auto waitForGpuKernel = builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{});
       waitToken = waitForGpuKernel.getAsyncToken();
+      // waitToken = gpuLaunchOp.getAsyncToken();
 
       // Copy out any values that are needed by the CPU.
       for (auto&cpuGpuPair : gpuToCpuMemrefMap) {
@@ -153,8 +161,8 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
         waitToken = outputTransfer.getAsyncToken();
       }
 
-      auto waitForTransfers = builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), waitToken);
-      waitToken = waitForTransfers.getAsyncToken();
+      // auto waitForTransfers = builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), waitToken);
+      // waitToken = waitForTransfers.getAsyncToken();
 
       // Deallocate the GPU memory. 
       // #TODOSampath - Assumes that we haven't allocated anything that we haven't used to transfer memory from CPU.
@@ -164,7 +172,7 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
       } 
 
       // wait for final dealloc.
-      builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), waitToken);
+      builder.create<gpu::WaitOp>(location, Type(), waitToken);
 
       ReplaceCPUReferencesWithGPUMemref(cpuToGpuMemrefMap);
     }

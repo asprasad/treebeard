@@ -8,7 +8,8 @@ XGBoostBenchmarks.cpp
 StatsTests.cpp
 XGBoostProbTiling.cpp
 ONNXTests.cpp
-GPUTests.cpp)
+GPUTests.cpp
+GPUSyntheticXGBTests.cpp)
 
 target_sources(treebeard-runtime 
 PRIVATE

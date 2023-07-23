@@ -30,6 +30,7 @@
 #include "GPUModelSerializers.h"
 #include "ReorgForestRepresentation.h"
 #include "CompileUtils.h"
+#include "GPUCompileUtils.h"
 
 using namespace mlir;
 
@@ -129,7 +130,7 @@ void AddGPUModelMemrefGetter_Scalar(mlir::ModuleOp module) {
                                                        allocIndices.getMemref());
 
   // Wait and return 
-  /*auto waitBeforeReturn =*/ builder.create<gpu::WaitOp>(location, transferIndices.getAsyncToken().getType(), transferIndices.getAsyncToken());
+  /*auto waitBeforeReturn =*/ builder.create<gpu::WaitOp>(location, Type(), transferIndices.getAsyncToken());
   auto returnVal = builder.create<arith::ConstantIntOp>(location, 42 /*value*/, 32 /*width*/);
   builder.create<func::ReturnOp>(location, static_cast<Value>(returnVal));
 
@@ -187,7 +188,7 @@ void AddGPUModelMemrefGetter_Reorg(mlir::ModuleOp module) {
                                                        getModelFunc.getArgument(1));
 
   // Wait and return 
-  /*auto waitBeforeReturn =*/ builder.create<gpu::WaitOp>(location, transferIndices.getAsyncToken().getType(), transferIndices.getAsyncToken());
+  /*auto waitBeforeReturn =*/ builder.create<gpu::WaitOp>(location, Type(), transferIndices.getAsyncToken());
   auto returnVal = builder.create<arith::ConstantIntOp>(location, 42 /*value*/, 32 /*width*/);
   builder.create<func::ReturnOp>(location, static_cast<Value>(returnVal));
 
@@ -353,6 +354,12 @@ bool Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt16(TestArgs_t& args) {
 // GPU Code Generation Tests -- Helpers
 // ===---------------------------------------------------=== //
 
+struct NoOpDeleter {
+    void operator()(ForestCreator* ptr) const {
+        // Do nothing
+    }
+};
+
 template <typename ThresholdType, typename IndexType>
 bool VerifyGPUCodeGeneration(TestArgs_t& args, 
                              const int32_t batchSize,
@@ -365,52 +372,23 @@ bool VerifyGPUCodeGeneration(TestArgs_t& args,
                              std::function<void(decisionforest::Schedule&)> scheduleManipulator,
                              const std::string& csvPath="")
 {
-  auto& context = forestCreator.GetContext();
-  forestCreator.ConstructForest();
-                                                            
-  // If sparse representation is turned on, then child index bit width should be passed
-  assert (!mlir::decisionforest::UseSparseTreeRepresentation || childIndexBitWidth!=1 );
-  forestCreator.SetChildIndexBitWidth(childIndexBitWidth);
+  decisionforest::ScheduleManipulationFunctionWrapper scheduleManipulatorWrapper(scheduleManipulator);
+  TreeBeard::CompilerOptions options(sizeof(FloatType)*8, sizeof(FloatType)*8, true, sizeof(IndexType)*8, sizeof(IndexType)*8,
+                                     sizeof(FloatType)*8, batchSize, tileSize, tileShapeBitwidth, childIndexBitWidth,
+                                     TreeBeard::TilingType::kUniform, true, false, &scheduleManipulatorWrapper);
   
-  auto module = forestCreator.GetEvaluationFunction();
+  // [HACK!] Create a shared pointer that points to forestCreator
+  std::shared_ptr<ForestCreator> forestCreatorPtr(&forestCreator, NoOpDeleter());
   
-  if (tileSize > 1)
-    decisionforest::DoUniformTiling(context, module, tileSize, tileShapeBitwidth, true);
-
-  auto schedule = forestCreator.GetSchedule();
-  scheduleManipulator(*schedule);
-
-  mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
-  // module->dump();
-
-  mlir::decisionforest::GreedilyMapParallelLoopsToGPU(module);
-  // module->dump();
-
-  mlir::decisionforest::ConvertParallelLoopsToGPU(context, module);
+  TreeBeard::TreebeardContext tbContext(forestCreator.GetContext(),
+                                        "",
+                                        "",
+                                        options,
+                                        representation,
+                                        serializer,
+                                        forestCreatorPtr);
   
-  // module->dump();
-  decisionforest::RunCanonicalizerPass(context, module);
-  // module->dump();
-  
-  if (tileSize > 1)
-    decisionforest::ConvertTraverseToSimtTraverse(context, module);
-  // module->dump();
-  // return true;
-
-  mlir::decisionforest::LowerGPUEnsembleToMemrefs(context,
-                                                  module,
-                                                  serializer,
-                                                  representation);
-  // module->dump();
-  // return true;
-  
-  mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
-  // module->dump();
-  // return true;
-
-  mlir::decisionforest::LowerGPUToLLVM(context, module, representation);
-  // module->dump();
-  // return true;
+  auto module = ConstructGPUModuleFromTreebeardContext(tbContext);                                        
 
   GPUInferenceRunnerForTest inferenceRunner(serializer,
                                             module,
@@ -753,8 +731,8 @@ bool CheckGPUModelInitialization_ReorgForest(TestArgs_t& args, ForestConstructor
                               &retVal };
 
   // TODO_Ashwin : This is a HACK!!
-  std::chrono::milliseconds timespan(1);
-  std::this_thread::sleep_for(timespan);
+  // std::chrono::milliseconds timespan(1);
+  // std::this_thread::sleep_for(timespan);
   inferenceRunner.ExecuteFunction("GetModelValues", funcArgs);
 
   auto thresholdZip = llvm::zip(thresholds, actualThresholds);

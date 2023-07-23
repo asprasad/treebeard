@@ -546,6 +546,26 @@ bool Test_TiledCachedSparseGPU_Balanced_FltI16_B32_TSz2(TestArgs_t& args);
 bool Test_TiledCachedSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2(TestArgs_t& args);
 bool Test_TiledCachedSparseGPU_LeftRightAndBalanced_FltI16_B32_TSz2(TestArgs_t& args);
 
+// Random XGBoost GPU tests
+bool Test_GPU_1TreeXGB_Array_Scalar(TestArgs_t& args);
+bool Test_GPU_2TreeXGB_Array_Scalar(TestArgs_t& args);
+bool Test_GPU_4TreeXGB_Array_Scalar(TestArgs_t& args);
+bool Test_GPU_1TreeXGB_Array_Scalar_f32i16(TestArgs_t& args);
+bool Test_GPU_2TreeXGB_Array_Scalar_f32i16(TestArgs_t& args);
+bool Test_GPU_4TreeXGB_Array_Scalar_f32i16(TestArgs_t& args);
+bool Test_GPU_1TreeXGB_Sparse_Scalar(TestArgs_t& args);
+bool Test_GPU_2TreeXGB_Sparse_Scalar(TestArgs_t& args);
+bool Test_GPU_4TreeXGB_Sparse_Scalar(TestArgs_t& args);
+bool Test_GPU_1TreeXGB_Sparse_Scalar_f32i16(TestArgs_t& args);
+bool Test_GPU_2TreeXGB_Sparse_Scalar_f32i16(TestArgs_t& args);
+bool Test_GPU_4TreeXGB_Sparse_Scalar_f32i16(TestArgs_t& args);
+bool Test_GPU_1TreeXGB_Reorg_Scalar(TestArgs_t& args);
+bool Test_GPU_2TreeXGB_Reorg_Scalar(TestArgs_t& args);
+bool Test_GPU_4TreeXGB_Reorg_Scalar(TestArgs_t& args);
+bool Test_GPU_1TreeXGB_Reorg_Scalar_f32i16(TestArgs_t& args);
+bool Test_GPU_2TreeXGB_Reorg_Scalar_f32i16(TestArgs_t& args);
+bool Test_GPU_4TreeXGB_Reorg_Scalar_f32i16(TestArgs_t& args);
+
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
     vec[i] = (double)rand()/RAND_MAX;
@@ -1691,6 +1711,26 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
   TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_LeftRightAndBalanced_DblI32_B32_TSz2),
   TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_LeftRightAndBalanced_FltI16_B32_TSz2),
+
+  // GPU Synthetic XGB tests -- scalar
+  TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Array_Scalar),
+  TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Array_Scalar),
+  TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Array_Scalar),
+  TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Array_Scalar_f32i16),
+  TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Array_Scalar_f32i16),
+  TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Array_Scalar_f32i16),
+  TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Sparse_Scalar),
+  TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Sparse_Scalar),
+  TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Sparse_Scalar),
+  TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Sparse_Scalar_f32i16),
+  TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Sparse_Scalar_f32i16),
+  TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Sparse_Scalar_f32i16),
+  TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Reorg_Scalar),
+  TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Reorg_Scalar),
+  TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Reorg_Scalar),
+  TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Reorg_Scalar_f32i16),
+  TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Reorg_Scalar_f32i16),
+  TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Reorg_Scalar_f32i16),
 #endif // TREEBEARD_GPU_SUPPORT
 };
 

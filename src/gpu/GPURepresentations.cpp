@@ -34,7 +34,7 @@ void GenerateSimpleInitializer(const std::string& funcName, ConversionPatternRew
   auto alloc = builder.create<gpu::AllocOp>(location, memrefType, waitOp.getAsyncToken().getType(), ValueRange{waitOp.getAsyncToken()}, ValueRange{}, ValueRange{});
   auto transfer = builder.create<gpu::MemcpyOp>(location, alloc.getAsyncToken().getType(), ValueRange{alloc.getAsyncToken()}, 
                                                       alloc.getMemref(), static_cast<Value>(initFunc.getArgument(0)));
-  /*auto waitBeforeReturn =*/ builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{transfer.getAsyncToken()});
+  /*auto waitBeforeReturn =*/ builder.create<gpu::WaitOp>(location, Type(), ValueRange{transfer.getAsyncToken()});
   builder.create<mlir::func::ReturnOp>(location, static_cast<Value>(alloc.getMemref()));
   module.push_back(initFunc);
   // rewriter.setInsertionPoint(insertPoint.getBlock(), insertPoint.getPoint());
@@ -59,7 +59,7 @@ void GenerateCleanupProc(const std::string& funcName,
     asyncToken = dealloc.getAsyncToken();
   }
 
-  /*auto waitBeforeReturn =*/ builder.create<gpu::WaitOp>(location, asyncToken.getType(), ValueRange{asyncToken});
+  /*auto waitBeforeReturn =*/ builder.create<gpu::WaitOp>(location, Type(), ValueRange{asyncToken});
   auto constRetVal = builder.create<arith::ConstantIntOp>(location, 0 /*value*/, 32 /*width*/);
   builder.create<mlir::func::ReturnOp>(location, static_cast<Value>(constRetVal));
   module.push_back(initFunc);
@@ -164,7 +164,7 @@ void GenerateModelMemrefInitializerImpl(const std::string& funcName, ConversionP
   builder.create<gpu::TerminatorOp>(location);
   // Wait and return 
   builder.setInsertionPointAfter(gpuLaunch); 
-  /*auto waitBeforeReturn =*/ builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{gpuLaunch.getAsyncToken()});
+  /*auto waitBeforeReturn =*/ builder.create<gpu::WaitOp>(location, Type(), ValueRange{gpuLaunch.getAsyncToken()});
   builder.create<mlir::func::ReturnOp>(location, static_cast<Value>(modelMemrefGPUAlloc.getMemref()));
   module.push_back(initModelMemrefFunc);
 }
