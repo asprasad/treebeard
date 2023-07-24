@@ -566,6 +566,21 @@ bool Test_GPU_1TreeXGB_Reorg_Scalar_f32i16(TestArgs_t& args);
 bool Test_GPU_2TreeXGB_Reorg_Scalar_f32i16(TestArgs_t& args);
 bool Test_GPU_4TreeXGB_Reorg_Scalar_f32i16(TestArgs_t& args);
 
+// Random XGB tests - tile size 4
+bool Test_GPU_1TreeXGB_Array_Tile4(TestArgs_t& args);
+bool Test_GPU_2TreeXGB_Array_Tile4(TestArgs_t& args);
+bool Test_GPU_4TreeXGB_Array_Tile4(TestArgs_t& args);
+bool Test_GPU_1TreeXGB_Array_Tile4_f32i16(TestArgs_t& args);
+bool Test_GPU_2TreeXGB_Array_Tile4_f32i16(TestArgs_t& args);
+bool Test_GPU_4TreeXGB_Array_Tile4_f32i16(TestArgs_t& args);
+
+bool Test_GPU_1TreeXGB_Sparse_Tile4(TestArgs_t& args);
+bool Test_GPU_2TreeXGB_Sparse_Tile4(TestArgs_t& args);
+bool Test_GPU_4TreeXGB_Sparse_Tile4(TestArgs_t& args);
+bool Test_GPU_1TreeXGB_Sparse_Tile4_f32i16(TestArgs_t& args);
+bool Test_GPU_2TreeXGB_Sparse_Tile4_f32i16(TestArgs_t& args);
+bool Test_GPU_4TreeXGB_Sparse_Tile4_f32i16(TestArgs_t& args);
+
 void InitializeVectorWithRandValues(std::vector<double>& vec) {
   for(size_t i=0 ; i<vec.size() ; ++i)
     vec[i] = (double)rand()/RAND_MAX;
@@ -1731,6 +1746,19 @@ TestDescriptor testList[] = {
   TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Reorg_Scalar_f32i16),
   TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Reorg_Scalar_f32i16),
   TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Reorg_Scalar_f32i16),
+
+  TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Sparse_Tile4),
+  TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Sparse_Tile4),
+  TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Sparse_Tile4),
+  TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Sparse_Tile4_f32i16),
+  TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Sparse_Tile4_f32i16),
+  TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Sparse_Tile4_f32i16),
+  TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Array_Tile4),
+  TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Array_Tile4),
+  TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Array_Tile4),
+  TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Array_Tile4_f32i16),
+  TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Array_Tile4_f32i16),
+  TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Array_Tile4_f32i16),
 #endif // TREEBEARD_GPU_SUPPORT
 };
 
