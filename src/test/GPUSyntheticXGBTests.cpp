@@ -31,6 +31,7 @@
 #include "ReorgForestRepresentation.h"
 #include "CompileUtils.h"
 #include "GPUCompileUtils.h"
+#include "GPUSchedules.h"
 
 using namespace mlir;
 using namespace mlir::decisionforest;
@@ -140,9 +141,6 @@ bool Test_RandomXGBoostJSONs_4Trees(TestArgs_t& args, int32_t batchSize, int32_t
                                                          tileSize, tileShapeBitWidth, childIndexBitWidth, 
                                                          scheduleManipulatorFunc, serializer, representation);
 }
-
-// Definition in GPUTests.cpp
-void GPUBasicSchedule(decisionforest::Schedule& schedule, int32_t gridXSize);
 
 //------------------------------------------------------------//
 // Array representation - scalar - Random XGBoost JSONs
