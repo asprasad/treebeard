@@ -120,7 +120,10 @@ protected:
   std::map<Operation*, int32_t> m_numTreesMap; 
 public:
   ~ReorgForestRepresentation() { }
-  void InitRepresentation() override { }
+  void InitRepresentation() override { 
+    m_getTreeFromEnsembleMap.clear();
+    m_numTreesMap.clear();
+  }
   mlir::LogicalResult GenerateModelGlobals(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter,
                                            std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override;
   mlir::Value GetThresholdsMemref(mlir::Value treeValue) override { return m_thresholdMemref; }

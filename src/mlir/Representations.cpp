@@ -300,7 +300,8 @@ namespace decisionforest
 
 void ArrayBasedRepresentation::InitRepresentation() {
   ensembleConstantToMemrefsMap.clear();
-  getTreeOperationMap.clear();
+  if (getTreeOperationMap.size() > 0)
+    getTreeOperationMap.clear();
 }
 
 mlir::LogicalResult ArrayBasedRepresentation::GenerateModelGlobals(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter,

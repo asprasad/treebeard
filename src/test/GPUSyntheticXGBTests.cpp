@@ -491,6 +491,216 @@ bool Test_GPU_4TreeXGB_Sparse_Tile4_f32i16(TestArgs_t& args) {
                                                RepresentationFactory::Get().GetRepresentation("gpu_sparse"));
 }
 
+//------------------------------------------------------------//
+// Cache full model - Array representation - scalar - Random XGBoost JSONs
+//------------------------------------------------------------//
+
+bool Test_GPU_SharedForest_1TreeXGB_Array_Scalar(TestArgs_t& args) {
+  int32_t batchSize = 64;
+  auto tileSize = 1;
+  std::function<void(decisionforest::Schedule&)> scheduleManipulator = std::bind(decisionforest::TahoeSharedForestStrategy, std::placeholders::_1, 8);
+  auto modelGlobalsJSONPath = test::GetGlobalJSONNameForTests();
+  return Test_RandomXGBoostJSONs_1Tree<double>(args, batchSize, tileSize, 16, 1, 
+                                               scheduleManipulator, 
+                                               ModelSerializerFactory::Get().GetModelSerializer("gpu_array", modelGlobalsJSONPath),
+                                               RepresentationFactory::Get().GetRepresentation("gpu_array"));
+}
+
+bool Test_GPU_SharedForest_2TreeXGB_Array_Scalar(TestArgs_t& args) {
+  int32_t batchSize = 64;
+  auto tileSize = 1;
+  std::function<void(decisionforest::Schedule&)> scheduleManipulator = std::bind(decisionforest::TahoeSharedForestStrategy, std::placeholders::_1, 8);
+  auto modelGlobalsJSONPath = test::GetGlobalJSONNameForTests();
+  return Test_RandomXGBoostJSONs_2Trees<double>(args, batchSize, tileSize, 16, 1, 
+                                               scheduleManipulator, 
+                                               ModelSerializerFactory::Get().GetModelSerializer("gpu_array", modelGlobalsJSONPath),
+                                               RepresentationFactory::Get().GetRepresentation("gpu_array"));
+}
+
+bool Test_GPU_SharedForest_4TreeXGB_Array_Scalar(TestArgs_t& args) {
+  int32_t batchSize = 64;
+  auto tileSize = 1;
+  std::function<void(decisionforest::Schedule&)> scheduleManipulator = std::bind(decisionforest::TahoeSharedForestStrategy, std::placeholders::_1, 8);
+  auto modelGlobalsJSONPath = test::GetGlobalJSONNameForTests();
+  return Test_RandomXGBoostJSONs_4Trees<double>(args, batchSize, tileSize, 16, 1, 
+                                               scheduleManipulator, 
+                                               ModelSerializerFactory::Get().GetModelSerializer("gpu_array", modelGlobalsJSONPath),
+                                               RepresentationFactory::Get().GetRepresentation("gpu_array"));
+}
+
+bool Test_GPU_SharedForest_1TreeXGB_Array_Scalar_f32i16(TestArgs_t& args) {
+  int32_t batchSize = 64;
+  auto tileSize = 1;
+  std::function<void(decisionforest::Schedule&)> scheduleManipulator = std::bind(decisionforest::TahoeSharedForestStrategy, std::placeholders::_1, 8);
+  auto modelGlobalsJSONPath = test::GetGlobalJSONNameForTests();
+  return Test_RandomXGBoostJSONs_1Tree<float, int16_t>(args, batchSize, tileSize, 16, 1, 
+                                               scheduleManipulator, 
+                                               ModelSerializerFactory::Get().GetModelSerializer("gpu_array", modelGlobalsJSONPath),
+                                               RepresentationFactory::Get().GetRepresentation("gpu_array"));
+}
+
+bool Test_GPU_SharedForest_2TreeXGB_Array_Scalar_f32i16(TestArgs_t& args) {
+  int32_t batchSize = 64;
+  auto tileSize = 1;
+  std::function<void(decisionforest::Schedule&)> scheduleManipulator = std::bind(decisionforest::TahoeSharedForestStrategy, std::placeholders::_1, 8);
+  auto modelGlobalsJSONPath = test::GetGlobalJSONNameForTests();
+  return Test_RandomXGBoostJSONs_2Trees<float, int16_t>(args, batchSize, tileSize, 16, 1, 
+                                               scheduleManipulator, 
+                                               ModelSerializerFactory::Get().GetModelSerializer("gpu_array", modelGlobalsJSONPath),
+                                               RepresentationFactory::Get().GetRepresentation("gpu_array"));
+}
+
+bool Test_GPU_SharedForest_4TreeXGB_Array_Scalar_f32i16(TestArgs_t& args) {
+  int32_t batchSize = 64;
+  auto tileSize = 1;
+  std::function<void(decisionforest::Schedule&)> scheduleManipulator = std::bind(decisionforest::TahoeSharedForestStrategy, std::placeholders::_1, 8);
+  auto modelGlobalsJSONPath = test::GetGlobalJSONNameForTests();
+  return Test_RandomXGBoostJSONs_4Trees<float, int16_t>(args, batchSize, tileSize, 16, 1, 
+                                               scheduleManipulator, 
+                                               ModelSerializerFactory::Get().GetModelSerializer("gpu_array", modelGlobalsJSONPath),
+                                               RepresentationFactory::Get().GetRepresentation("gpu_array"));
+}
+
+//------------------------------------------------------------//
+// Cache full model - Sparse representation - scalar - Random XGBoost JSONs
+//------------------------------------------------------------//
+
+bool Test_GPU_SharedForest_1TreeXGB_Sparse_Scalar(TestArgs_t& args) {
+  int32_t batchSize = 64;
+  auto tileSize = 1;
+  std::function<void(decisionforest::Schedule&)> scheduleManipulator = std::bind(decisionforest::TahoeSharedForestStrategy, std::placeholders::_1, 8);
+  auto modelGlobalsJSONPath = test::GetGlobalJSONNameForTests();
+  return Test_RandomXGBoostJSONs_1Tree<double>(args, batchSize, tileSize, 16, 16, 
+                                               scheduleManipulator, 
+                                               ModelSerializerFactory::Get().GetModelSerializer("gpu_sparse", modelGlobalsJSONPath),
+                                               RepresentationFactory::Get().GetRepresentation("gpu_sparse"));
+}
+
+bool Test_GPU_SharedForest_2TreeXGB_Sparse_Scalar(TestArgs_t& args) {
+  int32_t batchSize = 64;
+  auto tileSize = 1;
+  std::function<void(decisionforest::Schedule&)> scheduleManipulator = std::bind(decisionforest::TahoeSharedForestStrategy, std::placeholders::_1, 8);
+  auto modelGlobalsJSONPath = test::GetGlobalJSONNameForTests();
+  return Test_RandomXGBoostJSONs_2Trees<double>(args, batchSize, tileSize, 16, 16, 
+                                               scheduleManipulator, 
+                                               ModelSerializerFactory::Get().GetModelSerializer("gpu_sparse", modelGlobalsJSONPath),
+                                               RepresentationFactory::Get().GetRepresentation("gpu_sparse"));
+}
+
+bool Test_GPU_SharedForest_4TreeXGB_Sparse_Scalar(TestArgs_t& args) {
+  int32_t batchSize = 64;
+  auto tileSize = 1;
+  std::function<void(decisionforest::Schedule&)> scheduleManipulator = std::bind(decisionforest::TahoeSharedForestStrategy, std::placeholders::_1, 8);
+  auto modelGlobalsJSONPath = test::GetGlobalJSONNameForTests();
+  return Test_RandomXGBoostJSONs_4Trees<double>(args, batchSize, tileSize, 16, 16, 
+                                               scheduleManipulator, 
+                                               ModelSerializerFactory::Get().GetModelSerializer("gpu_sparse", modelGlobalsJSONPath),
+                                               RepresentationFactory::Get().GetRepresentation("gpu_sparse"));
+}
+
+bool Test_GPU_SharedForest_1TreeXGB_Sparse_Scalar_f32i16(TestArgs_t& args) {
+  int32_t batchSize = 64;
+  auto tileSize = 1;
+  std::function<void(decisionforest::Schedule&)> scheduleManipulator = std::bind(decisionforest::TahoeSharedForestStrategy, std::placeholders::_1, 8);
+  auto modelGlobalsJSONPath = test::GetGlobalJSONNameForTests();
+  return Test_RandomXGBoostJSONs_1Tree<float, int16_t>(args, batchSize, tileSize, 16, 16, 
+                                               scheduleManipulator, 
+                                               ModelSerializerFactory::Get().GetModelSerializer("gpu_sparse", modelGlobalsJSONPath),
+                                               RepresentationFactory::Get().GetRepresentation("gpu_sparse"));
+}
+
+bool Test_GPU_SharedForest_2TreeXGB_Sparse_Scalar_f32i16(TestArgs_t& args) {
+  int32_t batchSize = 64;
+  auto tileSize = 1;
+  std::function<void(decisionforest::Schedule&)> scheduleManipulator = std::bind(decisionforest::TahoeSharedForestStrategy, std::placeholders::_1, 8);
+  auto modelGlobalsJSONPath = test::GetGlobalJSONNameForTests();
+  return Test_RandomXGBoostJSONs_2Trees<float, int16_t>(args, batchSize, tileSize, 16, 16, 
+                                               scheduleManipulator, 
+                                               ModelSerializerFactory::Get().GetModelSerializer("gpu_sparse", modelGlobalsJSONPath),
+                                               RepresentationFactory::Get().GetRepresentation("gpu_sparse"));
+}
+
+bool Test_GPU_SharedForest_4TreeXGB_Sparse_Scalar_f32i16(TestArgs_t& args) {
+  int32_t batchSize = 64;
+  auto tileSize = 1;
+  std::function<void(decisionforest::Schedule&)> scheduleManipulator = std::bind(decisionforest::TahoeSharedForestStrategy, std::placeholders::_1, 8);
+  auto modelGlobalsJSONPath = test::GetGlobalJSONNameForTests();
+  return Test_RandomXGBoostJSONs_4Trees<float, int16_t>(args, batchSize, tileSize, 16, 16, 
+                                               scheduleManipulator, 
+                                               ModelSerializerFactory::Get().GetModelSerializer("gpu_sparse", modelGlobalsJSONPath),
+                                               RepresentationFactory::Get().GetRepresentation("gpu_sparse"));
+}
+
+//------------------------------------------------------------//
+// Cache full model - Reorg representation - scalar - Random XGBoost JSONs
+//------------------------------------------------------------//
+
+bool Test_GPU_SharedForest_1TreeXGB_Reorg_Scalar(TestArgs_t& args) {
+  int32_t batchSize = 64;
+  auto tileSize = 1;
+  std::function<void(decisionforest::Schedule&)> scheduleManipulator = std::bind(TahoeSharedForestStrategy, std::placeholders::_1, 8);
+  auto modelGlobalsJSONPath = test::GetGlobalJSONNameForTests();
+  return Test_RandomXGBoostJSONs_1Tree<double>(args, batchSize, tileSize, 16, 16, 
+                                               scheduleManipulator, 
+                                               ModelSerializerFactory::Get().GetModelSerializer("gpu_reorg", modelGlobalsJSONPath),
+                                               RepresentationFactory::Get().GetRepresentation("gpu_reorg"));
+}
+
+bool Test_GPU_SharedForest_2TreeXGB_Reorg_Scalar(TestArgs_t& args) {
+  int32_t batchSize = 64;
+  auto tileSize = 1;
+  std::function<void(decisionforest::Schedule&)> scheduleManipulator = std::bind(TahoeSharedForestStrategy, std::placeholders::_1, 8);
+  auto modelGlobalsJSONPath = test::GetGlobalJSONNameForTests();
+  return Test_RandomXGBoostJSONs_2Trees<double>(args, batchSize, tileSize, 16, 16, 
+                                               scheduleManipulator, 
+                                               ModelSerializerFactory::Get().GetModelSerializer("gpu_reorg", modelGlobalsJSONPath),
+                                               RepresentationFactory::Get().GetRepresentation("gpu_reorg"));
+}
+
+bool Test_GPU_SharedForest_4TreeXGB_Reorg_Scalar(TestArgs_t& args) {
+  int32_t batchSize = 64;
+  auto tileSize = 1;
+  std::function<void(decisionforest::Schedule&)> scheduleManipulator = std::bind(TahoeSharedForestStrategy, std::placeholders::_1, 8);
+  auto modelGlobalsJSONPath = test::GetGlobalJSONNameForTests();
+  return Test_RandomXGBoostJSONs_4Trees<double>(args, batchSize, tileSize, 16, 16, 
+                                               scheduleManipulator, 
+                                               ModelSerializerFactory::Get().GetModelSerializer("gpu_reorg", modelGlobalsJSONPath),
+                                               RepresentationFactory::Get().GetRepresentation("gpu_reorg"));
+}
+
+bool Test_GPU_SharedForest_1TreeXGB_Reorg_Scalar_f32i16(TestArgs_t& args) {
+  int32_t batchSize = 64;
+  auto tileSize = 1;
+  std::function<void(decisionforest::Schedule&)> scheduleManipulator = std::bind(TahoeSharedForestStrategy, std::placeholders::_1, 8);
+  auto modelGlobalsJSONPath = test::GetGlobalJSONNameForTests();
+  return Test_RandomXGBoostJSONs_1Tree<float, int16_t>(args, batchSize, tileSize, 16, 16, 
+                                               scheduleManipulator, 
+                                               ModelSerializerFactory::Get().GetModelSerializer("gpu_reorg", modelGlobalsJSONPath),
+                                               RepresentationFactory::Get().GetRepresentation("gpu_reorg"));
+}
+
+bool Test_GPU_SharedForest_2TreeXGB_Reorg_Scalar_f32i16(TestArgs_t& args) {
+  int32_t batchSize = 64;
+  auto tileSize = 1;
+  std::function<void(decisionforest::Schedule&)> scheduleManipulator = std::bind(TahoeSharedForestStrategy, std::placeholders::_1, 8);
+  auto modelGlobalsJSONPath = test::GetGlobalJSONNameForTests();
+  return Test_RandomXGBoostJSONs_2Trees<float, int16_t>(args, batchSize, tileSize, 16, 16, 
+                                               scheduleManipulator, 
+                                               ModelSerializerFactory::Get().GetModelSerializer("gpu_reorg", modelGlobalsJSONPath),
+                                               RepresentationFactory::Get().GetRepresentation("gpu_reorg"));
+}
+
+bool Test_GPU_SharedForest_4TreeXGB_Reorg_Scalar_f32i16(TestArgs_t& args) {
+  int32_t batchSize = 64;
+  auto tileSize = 1;
+  std::function<void(decisionforest::Schedule&)> scheduleManipulator = std::bind(TahoeSharedForestStrategy, std::placeholders::_1, 8);
+  auto modelGlobalsJSONPath = test::GetGlobalJSONNameForTests();
+  return Test_RandomXGBoostJSONs_4Trees<float, int16_t>(args, batchSize, tileSize, 16, 16, 
+                                               scheduleManipulator, 
+                                               ModelSerializerFactory::Get().GetModelSerializer("gpu_reorg", modelGlobalsJSONPath),
+                                               RepresentationFactory::Get().GetRepresentation("gpu_reorg"));
+}
+
 } // test
 } // TreeBeard
 

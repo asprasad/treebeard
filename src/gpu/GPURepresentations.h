@@ -29,7 +29,10 @@ protected:
 
 public:
   virtual ~GPUArrayBasedRepresentation() { }
-  void InitRepresentation() override { }
+  void InitRepresentation() override {
+    m_cacheTreesOpsMap.clear();
+    ArrayBasedRepresentation::InitRepresentation();
+  }
   mlir::LogicalResult GenerateModelGlobals(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter,
                                            std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override;
 
@@ -86,7 +89,10 @@ protected:
 
 public:
   virtual ~GPUSparseRepresentation() { }
-  void InitRepresentation() override { }
+  void InitRepresentation() override {
+    m_cacheTreesOpsMap.clear();
+    SparseRepresentation::InitRepresentation();
+   }
   mlir::LogicalResult GenerateModelGlobals(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter,
                                            std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override;
   

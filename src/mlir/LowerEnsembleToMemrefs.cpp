@@ -713,8 +713,6 @@ struct MidLevelIRToGPUMemrefLoweringPass: public PassWrapper<MidLevelIRToGPUMemr
   void runOnOperation() final {
     // [BUG!!] TODO Since MLIR runs this pass multi-threaded, if multiple passes access 
     // the representation object need to be protected!
-    m_representation->InitRepresentation();
-
     ConversionTarget target(getContext());
 
     target.addLegalDialect<AffineDialect, memref::MemRefDialect, 
@@ -768,7 +766,9 @@ void LowerEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module,
                             std::shared_ptr<IModelSerializer> serializer,
                             std::shared_ptr<IRepresentation> representation) {
   // llvm::DebugFlag = true;
-  // Lower from high-level IR to mid-level IR
+  // Lower from mid-level IR to low-level IR
+  representation->InitRepresentation();
+
   mlir::PassManager pm(&context);
   mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
   optPM.addPass(std::make_unique<MidLevelIRToMemrefLoweringPass>(serializer, representation));
@@ -784,6 +784,7 @@ void LowerGPUEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module
                                std::shared_ptr<IModelSerializer> serializer,
                                std::shared_ptr<IRepresentation> representation) {
   // llvm::DebugFlag = true;
+  representation->InitRepresentation();
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
   mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
