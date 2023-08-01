@@ -95,7 +95,10 @@ struct LoadTileThresholdOpLowering: public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     assert (operands.size() == 3);
-    auto numTrees = m_representation->GetNumberOfTrees(operands[2]);
+    auto loadTileThresholdOp = AssertOpIsOfType<mlir::decisionforest::LoadTileThresholdsOp>(op);
+    auto treeMemrefType = loadTileThresholdOp.getTreeMemref().getType().cast<MemRefType>();
+    auto treeMemrefElementType = treeMemrefType.getElementType().cast<decisionforest::ReorgMemrefElementType>();
+    auto numTrees = treeMemrefElementType.getNumTrees();
     auto threshold = GenerateMemrefLoadForLoadFromTile(rewriter, op->getLoc(), operands[0], operands[1], operands[2], numTrees);
     rewriter.replaceOp(op, static_cast<Value>(threshold));
     return mlir::success();
@@ -111,7 +114,10 @@ struct LoadTileFeatureIndicesOpLowering: public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     assert (operands.size() == 3);
-    auto numTrees = m_representation->GetNumberOfTrees(operands[2]);
+    auto loadTileFeatureIndexOp = AssertOpIsOfType<mlir::decisionforest::LoadTileFeatureIndicesOp>(op);
+    auto treeMemrefType = loadTileFeatureIndexOp.getTreeMemref().getType().cast<MemRefType>();
+    auto treeMemrefElementType = treeMemrefType.getElementType().cast<decisionforest::ReorgMemrefElementType>();
+    auto numTrees = treeMemrefElementType.getNumTrees();
     auto featureIndex = GenerateMemrefLoadForLoadFromTile(rewriter, op->getLoc(), operands[0], operands[1], operands[2], numTrees);
     rewriter.replaceOp(op, static_cast<Value>(featureIndex));
     return mlir::success();
@@ -357,11 +363,13 @@ mlir::LogicalResult ReorgForestRepresentation::GenerateModelGlobals(Operation *o
 
   auto memrefSize = static_cast<int64_t>(reinterpret_cast<ReorgForestSerializer*>(m_serializer.get())->GetNumberOfNodes());
   
-  auto thresholdMemrefType = MemRefType::get({memrefSize}, m_thresholdType);
+  auto thresholdMemrefElemType = decisionforest::ReorgMemrefElementType::get(m_thresholdType, m_numTrees);
+  auto thresholdMemrefType = MemRefType::get({memrefSize}, thresholdMemrefElemType);
   func.insertArgument(func.getNumArguments(), thresholdMemrefType, mlir::DictionaryAttr(), location);
   m_thresholdMemrefArgIndex = func.getNumArguments() - 1;
 
-  auto featureIndexMemrefType = MemRefType::get({memrefSize}, m_featureIndexType);
+  auto featureIndexMemrefElemType = decisionforest::ReorgMemrefElementType::get(m_featureIndexType, m_numTrees);
+  auto featureIndexMemrefType = MemRefType::get({memrefSize}, featureIndexMemrefElemType);
   func.insertArgument(func.getNumArguments(), featureIndexMemrefType, mlir::DictionaryAttr(), location);
   m_featureIndexMemrefArgIndex = func.getNumArguments() - 1;
 
@@ -370,10 +378,12 @@ mlir::LogicalResult ReorgForestRepresentation::GenerateModelGlobals(Operation *o
   func.insertArgument(func.getNumArguments(), classInfoMemrefType, mlir::DictionaryAttr(), location);
   m_classInfoMemrefArgIndex = func.getNumArguments() - 1;
 
-  GenerateSimpleInitializer("Init_Thresholds", rewriter, location, module, thresholdMemrefType);
-  GenerateSimpleInitializer("Init_FeatureIndices", rewriter, location, module, featureIndexMemrefType);
+  auto actualThresholdMemrefType = MemRefType::get({memrefSize}, m_thresholdType);
+  GenerateSimpleInitializer("Init_Thresholds", rewriter, location, module, actualThresholdMemrefType);
+  auto actualFeatureIndexMemrefType = MemRefType::get({memrefSize}, m_featureIndexType);
+  GenerateSimpleInitializer("Init_FeatureIndices", rewriter, location, module, actualFeatureIndexMemrefType);
   
-  auto cleanupArgs = std::vector<Type>{thresholdMemrefType, featureIndexMemrefType};
+  auto cleanupArgs = std::vector<Type>{actualThresholdMemrefType, actualFeatureIndexMemrefType};
   if (forest.IsMultiClassClassifier()) {
     GenerateSimpleInitializer("Init_ClassIds", rewriter, location, module, classInfoMemrefType);
     cleanupArgs.push_back(classInfoMemrefType);
@@ -457,10 +467,38 @@ mlir::Value ReorgForestRepresentation::GenerateIsLeafTileOp(ConversionPatternRew
   return this->GenerateIsLeafOp(rewriter, op, treeValue, nodeIndex);
 }
 
+void ReorgForestRepresentation::AddTypeConversions(mlir::MLIRContext& context, LLVMTypeConverter& typeConverter) {
+  typeConverter.addConversion([&](decisionforest::ReorgMemrefElementType type) {
+              auto elemType = type.getElementType();
+              return elemType;
+            });
+}
+
 void ReorgForestRepresentation::AddLLVMConversionPatterns(LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<LoadTileFeatureIndicesOpLowering,
                LoadTileThresholdOpLowering>(converter, this);
 }
+
+mlir::Value ReorgForestRepresentation::GetThresholdsMemref(mlir::Value treeValue) { 
+  auto definingOp = treeValue.getDefiningOp();
+  // if defining op is in m_getTreeFromEnsembleMap, then return threshold memref from map
+  auto getTreeMapIter = m_getTreeFromEnsembleMap.find(definingOp);
+  if (getTreeMapIter != m_getTreeFromEnsembleMap.end()) {
+    return getTreeMapIter->second.thresholdBuffer;
+  }
+  return m_thresholdMemref; 
+}
+
+mlir::Value ReorgForestRepresentation::GetFeatureIndexMemref(mlir::Value treeValue) { 
+  auto definingOp = treeValue.getDefiningOp();
+  // if defining op is in m_getTreeFromEnsembleMap, then return threshold memref from map
+  auto getTreeMapIter = m_getTreeFromEnsembleMap.find(definingOp);
+  if (getTreeMapIter != m_getTreeFromEnsembleMap.end()) {
+    return getTreeMapIter->second.featureIndexBuffer;
+  }
+  return m_featureIndexMemref;
+}
+
 
 void ReorgForestRepresentation::GenerateTreeMemref(mlir::ConversionPatternRewriter &rewriter, 
                                                    mlir::Operation *op,
@@ -476,22 +514,12 @@ void ReorgForestRepresentation::GenerateTreeMemref(mlir::ConversionPatternRewrit
   auto cacheTreesOp = AssertOpIsOfType<decisionforest::CacheTreesFromEnsembleOp>(ensembleDefiningOp);
   auto correctedTreeIndex = rewriter.create<arith::SubIOp>(op->getLoc(), treeIndex, cacheTreesOp.getStartTreeIndex());
 
-  auto getTreeMapIter = m_getTreeFromEnsembleMap.find(op);
-  assert (getTreeMapIter == m_getTreeFromEnsembleMap.end());
-  m_getTreeFromEnsembleMap[op] = { correctedTreeIndex.getResult() };
-  
   auto cacheInfoIter = m_treeCacheMap.find(cacheTreesOp.getOperation());
   assert (cacheInfoIter != m_treeCacheMap.end());
-  m_numTreesMap[correctedTreeIndex.getOperation()] = cacheInfoIter->second.numCachedTrees;
-}
 
-int32_t ReorgForestRepresentation::GetNumberOfTrees(Value treeIndex) {
-  auto definingOp = treeIndex.getDefiningOp();
-  auto iter = m_numTreesMap.find(definingOp);
-  if (iter == m_numTreesMap.end())
-    return m_numTrees;
-  else
-    return iter->second;
+  auto getTreeMapIter = m_getTreeFromEnsembleMap.find(op);
+  assert (getTreeMapIter == m_getTreeFromEnsembleMap.end());
+  m_getTreeFromEnsembleMap[op] = { correctedTreeIndex.getResult(), cacheInfoIter->second.thresholdMemref, cacheInfoIter->second.featureIndexMemref };
 }
 
 mlir::Value ReorgForestRepresentation::GetTreeIndex(Value tree) {
@@ -503,21 +531,24 @@ mlir::Value ReorgForestRepresentation::GetTreeIndex(Value tree) {
     return getTreeMapIter->second.correctedIndex;
 }
 
-ReorgForestRepresentation::CacheGlobalValues ReorgForestRepresentation::AddTreeCacheGlobals(ConversionPatternRewriter &rewriter, Operation* op, int32_t bufferLen) {
+ReorgForestRepresentation::CacheGlobalValues ReorgForestRepresentation::AddTreeCacheGlobals(ConversionPatternRewriter &rewriter, 
+                                                                                            Operation* op,
+                                                                                            int32_t bufferLen,
+                                                                                            int64_t numTreesToCache) {
   auto location = op->getLoc();
   auto owningModule = op->getParentOfType<mlir::ModuleOp>();
   assert (owningModule);
   std::string thresholdCacheBufferName = std::string("treeCache_thresholds_")+std::to_string(reinterpret_cast<long long>(op));
   std::string featureIndexCacheBufferName = std::string("treeCache_featureIndices_")+std::to_string(reinterpret_cast<long long>(op));
-  auto thresholdsMemrefType = this->m_thresholdMemref.getType().cast<MemRefType>();
-  auto featureIndexMemrefType = this->m_featureIndexMemref.getType().cast<MemRefType>();
 
+  auto thresholdCacheElemType = decisionforest::ReorgMemrefElementType::get(m_thresholdType, numTreesToCache);
+  auto featureIndexCacheElemType = decisionforest::ReorgMemrefElementType::get(m_featureIndexType, numTreesToCache);
   auto thresholdCacheBufferType = MemRefType::get({bufferLen}, 
-                                         thresholdsMemrefType.getElementType(),
+                                         thresholdCacheElemType,
                                          {}, // Affine map
                                          3); // Address space ID -- shared memory
   auto featureIndexCacheBufferType = MemRefType::get({bufferLen}, 
-                                         featureIndexMemrefType.getElementType(),
+                                         featureIndexCacheElemType,
                                          {}, // Affine map
                                          3); // Address space ID -- shared memory
 
@@ -564,7 +595,7 @@ void ReorgForestRepresentation::LowerCacheTreeOp(ConversionPatternRewriter &rewr
   auto bufferLen = ComputeBufferSize(ensembleConst.getForest().GetDecisionForest(), numTreesToCache);
   auto numNodesPerTree = bufferLen/numTreesToCache;
   assert (bufferLen%numTreesToCache == 0);
-  auto cacheGlobals = AddTreeCacheGlobals(rewriter, op, bufferLen);
+  auto cacheGlobals = AddTreeCacheGlobals(rewriter, op, bufferLen, numTreesToCache);
   
   // Get the number of threads in the thread block
   auto owningGPULaunchOp = cacheTreesOp->getParentOfType<gpu::LaunchOp>();
@@ -614,8 +645,13 @@ void ReorgForestRepresentation::LowerCacheTreeOp(ConversionPatternRewriter &rewr
     auto thresholdVal = thenBodyBuilder.create<memref::LoadOp>(location, m_thresholdMemref, ValueRange{globalBufferIndex});
     auto featureIndexVal = thenBodyBuilder.create<memref::LoadOp>(location, m_featureIndexMemref, ValueRange{globalBufferIndex});
 
-    thenBodyBuilder.create<memref::StoreOp>(location, thresholdVal.getResult(), cacheGlobals.thresholdCache, ValueRange{cacheIndex});
-    thenBodyBuilder.create<memref::StoreOp>(location, featureIndexVal.getResult(), cacheGlobals.featureIndexCache, ValueRange{cacheIndex});
+    auto targetThresholdType = cacheGlobals.thresholdCache.getType().cast<MemRefType>().getElementType();
+    auto castedThreshold = thenBodyBuilder.create<UnrealizedConversionCastOp>(location, targetThresholdType, thresholdVal.getResult());
+    thenBodyBuilder.create<memref::StoreOp>(location, castedThreshold.getResult(0), cacheGlobals.thresholdCache, ValueRange{cacheIndex});
+
+    auto targetFeatureIndexType = cacheGlobals.featureIndexCache.getType().cast<MemRefType>().getElementType();
+    auto castedFeatureIndex = thenBodyBuilder.create<UnrealizedConversionCastOp>(location, targetFeatureIndexType, featureIndexVal.getResult());
+    thenBodyBuilder.create<memref::StoreOp>(location, castedFeatureIndex.getResult(0), cacheGlobals.featureIndexCache, ValueRange{cacheIndex});
   }
   rewriter.create<gpu::BarrierOp>(location);
 

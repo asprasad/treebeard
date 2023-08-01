@@ -16,6 +16,9 @@ void TahoeSharedDataStrategy(decisionforest::Schedule& schedule);
 void TahoeSharedPartialForestStrategy(decisionforest::Schedule& schedule,
                                       int32_t treesPerThreadBlock,
                                       int32_t rowsPerThreadBlock);
+void CachePartialForestStrategy(decisionforest::Schedule& schedule,
+                                int32_t treesToCache,
+                                int32_t rowsPerThreadBlock);                                      
 
 } // end namespace decisionforest
 } // end namespace mlir

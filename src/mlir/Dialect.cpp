@@ -47,7 +47,7 @@ void DecisionForestDialect::initialize() {
 #define GET_OP_LIST
 #include "Ops.cpp.inc"
       >();
-  addTypes<TreeEnsembleType, TreeType, NodeType, LeafNodeType, NumericalNodeType, TiledNumericalNodeType, ScheduleType>();
+  addTypes<TreeEnsembleType, TreeType, NodeType, LeafNodeType, NumericalNodeType, TiledNumericalNodeType, ReorgMemrefElementType, ScheduleType>();
   addAttributes<DecisionTreeAttribute, DecisionForestAttribute, ScheduleAttribute, UnrollLoopAttribute>();
 }
 
@@ -93,6 +93,10 @@ void DecisionForestDialect::printType(::mlir::Type type,
     else if(type.isa<mlir::decisionforest::ScheduleType>()) {
         auto scheduleType = type.cast<mlir::decisionforest::ScheduleType>();
         scheduleType.print(os);
+    }
+    else if(type.isa<mlir::decisionforest::ReorgMemrefElementType>()) {
+        auto reorgMemrefElementType = type.cast<mlir::decisionforest::ReorgMemrefElementType>();
+        reorgMemrefElementType.print(os);
     }
     else {
         llvm_unreachable("Invalid decisionforest dialect type");

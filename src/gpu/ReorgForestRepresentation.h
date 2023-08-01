@@ -102,7 +102,7 @@ protected:
     Value thresholdCache;
     Value featureIndexCache;
   };
-  CacheGlobalValues AddTreeCacheGlobals(ConversionPatternRewriter &rewriter, Operation* op, int32_t bufferLen);
+  CacheGlobalValues AddTreeCacheGlobals(ConversionPatternRewriter &rewriter, Operation* op, int32_t bufferLen, int64_t numTreesToCache);
 
   struct TreeCacheInfo {
     Value thresholdMemref;
@@ -113,21 +113,19 @@ protected:
 
   struct GetTreeInfo {
     Value correctedIndex;
+    Value thresholdBuffer;
+    Value featureIndexBuffer;
   };
   std::map<Operation*, GetTreeInfo> m_getTreeFromEnsembleMap;
-  // Map the defining operation of the tree index to the number of trees in the buffer 
-  // with that tree
-  std::map<Operation*, int32_t> m_numTreesMap; 
 public:
   ~ReorgForestRepresentation() { }
   void InitRepresentation() override { 
     m_getTreeFromEnsembleMap.clear();
-    m_numTreesMap.clear();
   }
   mlir::LogicalResult GenerateModelGlobals(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter,
                                            std::shared_ptr<decisionforest::IModelSerializer> m_serializer) override;
-  mlir::Value GetThresholdsMemref(mlir::Value treeValue) override { return m_thresholdMemref; }
-  mlir::Value GetFeatureIndexMemref(mlir::Value treeValue) override { return m_featureIndexMemref; }
+  mlir::Value GetThresholdsMemref(mlir::Value treeValue) override;
+  mlir::Value GetFeatureIndexMemref(mlir::Value treeValue) override;
   mlir::Value GetTileShapeMemref(mlir::Value treeValue) override { return Value(); }
 
   std::vector<mlir::Value> GenerateExtraLoads(mlir::Location location, 
@@ -161,7 +159,7 @@ public:
   }
   mlir::Value GetTreeIndex(Value tree) override;
 
-  void AddTypeConversions(mlir::MLIRContext& context, LLVMTypeConverter& typeConverter) override { }
+  void AddTypeConversions(mlir::MLIRContext& context, LLVMTypeConverter& typeConverter) override;
   void AddLLVMConversionPatterns(LLVMTypeConverter &converter, RewritePatternSet &patterns) override;
 
   void LowerCacheTreeOp(ConversionPatternRewriter &rewriter, 
@@ -172,7 +170,6 @@ public:
   void LowerCacheRowsOp(ConversionPatternRewriter &rewriter,
                         mlir::Operation *op,
                         ArrayRef<Value> operands) override;
-  int32_t GetNumberOfTrees(Value treeIndex);
 };
 
 }

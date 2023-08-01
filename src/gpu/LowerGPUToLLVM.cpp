@@ -366,6 +366,7 @@ void LowerGPUToLLVM(mlir::MLIRContext& context, mlir::ModuleOp module, std::shar
     llvm::errs() << "Lowering to LLVM failed.\n";
   }
   // module->dump();
+  // llvm::DebugFlag = false;
 }
 }
 }

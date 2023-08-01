@@ -57,6 +57,10 @@ def TiledNumericalNodeType :
     DialectType<DecisionForestDialect, CPred<"$_self.isa<TiledNumericalNodeType>()">,
     "TiledNumericalNodeType">;
 
+def ReorgMemrefElementType : 
+    DialectType<DecisionForestDialect, CPred<"$_self.isa<ReorgMemrefElementType>()">,
+    "ReorgMemrefElementType">;
+
 //-------   Attributes   ----------------------
 
 def DecisionTreeAttr : Attr<
@@ -331,8 +335,8 @@ def TiledNumericalNodeMemRef  : MemRefOf<[TiledNumericalNodeType]>;
 def TileOfThresholdTypes : AnyTypeOf<[ThresholdValueType, VectorOf<[ThresholdValueType]>]>;
 def TileOfFeatureIndices : AnyTypeOf<[FeatureIndexType, VectorOf<[FeatureIndexType]>]>;
 
-def ThresholdMemrefType : AnyTypeOf<[MemRefOf<[TiledNumericalNodeType]>, MemRefOf<[ThresholdValueType]>]>;
-def FeatureIndexMemrefType : AnyTypeOf<[MemRefOf<[TiledNumericalNodeType]>, MemRefOf<[FeatureIndexType]>]>;
+def ThresholdMemrefType : AnyTypeOf<[MemRefOf<[TiledNumericalNodeType]>, MemRefOf<[ThresholdValueType]>, MemRefOf<[ReorgMemrefElementType]>]>;
+def FeatureIndexMemrefType : AnyTypeOf<[MemRefOf<[TiledNumericalNodeType]>, MemRefOf<[FeatureIndexType]>, MemRefOf<[ReorgMemrefElementType]>]>;
 def TileShapeMemrefType : AnyTypeOf<[MemRefOf<[TiledNumericalNodeType]>, MemRefOf<[FeatureIndexType]>]>;
 
 // ----- Low-level IR Ops ------
