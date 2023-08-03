@@ -7,7 +7,8 @@ treebeard_runtime_so_name = "libtreebeard-runtime.so"
 treebeard_runtime_path = os.path.join(treebeard_runtime_dir, treebeard_runtime_so_name)
 
 # We expect the runtime so and this python file to be in the same directory
-assert os.path.exists(treebeard_runtime_path)
+if not os.path.exists(treebeard_runtime_path):
+  raise FileNotFoundError(f"Unable to find {treebeard_runtime_path!r}.")
 
 class TreebeardAPI:
   def __init__(self) -> None:
