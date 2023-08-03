@@ -1,7 +1,7 @@
 target_sources(treebeard 
 PRIVATE 
-schedule.cpp)
+${CMAKE_CURRENT_SOURCE_DIR}/schedule.cpp)
 
 target_sources(treebeard-runtime 
 PRIVATE
-schedule.cpp)
+${CMAKE_CURRENT_SOURCE_DIR}/schedule.cpp)

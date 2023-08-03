@@ -1,6 +1,3 @@
-message("Module path ${CMAKE_MODULE_PATH}")
-find_package(Protobuf REQUIRED)
-include_directories(${Protobuf_INCLUDE_DIRS})
 
 # protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS onnx.proto)
 # message("Protobuf headers in ${PROTO_HDRS} and sources in ${PROTO_SRCS}")
@@ -15,18 +12,19 @@ include_directories(${Protobuf_INCLUDE_DIRS})
 # target_include_directories(treebeard PRIVATE ${PROTO_DIR})
 # target_include_directories(treebeard-runtime PRIVATE ${PROTO_DIR})
 
-target_link_libraries(treebeard PRIVATE ${Protobuf_LIBRARIES})
-target_link_libraries(treebeard-runtime PRIVATE ${Protobuf_LIBRARIES})
 
 # target_sources(treebeard PRIVATE ${PROTO_SRCS})
 # target_sources(treebeard-runtime PRIVATE ${PROTO_SRCS})
 
-target_sources(treebeard
-PRIVATE 
-onnx.pb.cc
-ForestCreatorFactory.cpp)
 
-target_sources(treebeard-runtime
-PRIVATE
-onnx.pb.cc
-ForestCreatorFactory.cpp)
+target_sources(
+    treebeard PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/onnx.pb.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/ForestCreatorFactory.cpp
+)
+
+target_sources(
+    treebeard-runtime PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/onnx.pb.cc
+    ${CMAKE_CURRENT_SOURCE_DIR}/ForestCreatorFactory.cpp
+)

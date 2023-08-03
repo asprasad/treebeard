@@ -4,67 +4,90 @@
 #include "onnx.pb.h"
 
 #include <algorithm>
-
-#include <google/protobuf/io/coded_stream.h>
-#include <google/protobuf/extension_set.h>
-#include <google/protobuf/wire_format_lite.h>
-#include <google/protobuf/io/zero_copy_stream_impl_lite.h>
+#include "google/protobuf/io/coded_stream.h"
+#include "google/protobuf/extension_set.h"
+#include "google/protobuf/wire_format_lite.h"
+#include "google/protobuf/io/zero_copy_stream_impl_lite.h"
 // @@protoc_insertion_point(includes)
-#include <google/protobuf/port_def.inc>
 
+// Must be included last.
+#include "google/protobuf/port_def.inc"
 PROTOBUF_PRAGMA_INIT_SEG
-
 namespace _pb = ::PROTOBUF_NAMESPACE_ID;
-namespace _pbi = _pb::internal;
-
+namespace _pbi = ::PROTOBUF_NAMESPACE_ID::internal;
 namespace onnx {
 PROTOBUF_CONSTEXPR AttributeProto::AttributeProto(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_._has_bits_)*/{}
   , /*decltype(_impl_._cached_size_)*/{}
-  , /*decltype(_impl_.floats_)*/{}
-  , /*decltype(_impl_.ints_)*/{}
+  , /*decltype(_impl_.floats_)*/ {}
+
+  , /*decltype(_impl_.ints_)*/ {}
+
   , /*decltype(_impl_.strings_)*/{}
   , /*decltype(_impl_.tensors_)*/{}
   , /*decltype(_impl_.graphs_)*/{}
   , /*decltype(_impl_.type_protos_)*/{}
   , /*decltype(_impl_.sparse_tensors_)*/{}
-  , /*decltype(_impl_.name_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
-  , /*decltype(_impl_.s_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
-  , /*decltype(_impl_.doc_string_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
-  , /*decltype(_impl_.ref_attr_name_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.name_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
+  , /*decltype(_impl_.s_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
+  , /*decltype(_impl_.doc_string_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
+  , /*decltype(_impl_.ref_attr_name_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
   , /*decltype(_impl_.t_)*/nullptr
   , /*decltype(_impl_.g_)*/nullptr
   , /*decltype(_impl_.tp_)*/nullptr
   , /*decltype(_impl_.sparse_tensor_)*/nullptr
-  , /*decltype(_impl_.i_)*/int64_t{0}
-  , /*decltype(_impl_.f_)*/0
-  , /*decltype(_impl_.type_)*/0} {}
+  , /*decltype(_impl_.i_)*/ ::int64_t{0}
+
+  , /*decltype(_impl_.f_)*/ 0
+
+  , /*decltype(_impl_.type_)*/ 0
+} {}
 struct AttributeProtoDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR AttributeProtoDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR AttributeProtoDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
   ~AttributeProtoDefaultTypeInternal() {}
   union {
     AttributeProto _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 AttributeProtoDefaultTypeInternal _AttributeProto_default_instance_;
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 AttributeProtoDefaultTypeInternal _AttributeProto_default_instance_;
 PROTOBUF_CONSTEXPR ValueInfoProto::ValueInfoProto(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_._has_bits_)*/{}
   , /*decltype(_impl_._cached_size_)*/{}
-  , /*decltype(_impl_.name_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
-  , /*decltype(_impl_.doc_string_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.name_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
+  , /*decltype(_impl_.doc_string_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
   , /*decltype(_impl_.type_)*/nullptr} {}
 struct ValueInfoProtoDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR ValueInfoProtoDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR ValueInfoProtoDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
   ~ValueInfoProtoDefaultTypeInternal() {}
   union {
     ValueInfoProto _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 ValueInfoProtoDefaultTypeInternal _ValueInfoProto_default_instance_;
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 ValueInfoProtoDefaultTypeInternal _ValueInfoProto_default_instance_;
 PROTOBUF_CONSTEXPR NodeProto::NodeProto(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_._has_bits_)*/{}
@@ -72,19 +95,32 @@ PROTOBUF_CONSTEXPR NodeProto::NodeProto(
   , /*decltype(_impl_.input_)*/{}
   , /*decltype(_impl_.output_)*/{}
   , /*decltype(_impl_.attribute_)*/{}
-  , /*decltype(_impl_.name_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
-  , /*decltype(_impl_.op_type_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
-  , /*decltype(_impl_.doc_string_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
-  , /*decltype(_impl_.domain_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}} {}
+  , /*decltype(_impl_.name_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
+  , /*decltype(_impl_.op_type_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
+  , /*decltype(_impl_.doc_string_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
+  , /*decltype(_impl_.domain_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+} {}
 struct NodeProtoDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR NodeProtoDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR NodeProtoDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
   ~NodeProtoDefaultTypeInternal() {}
   union {
     NodeProto _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 NodeProtoDefaultTypeInternal _NodeProto_default_instance_;
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 NodeProtoDefaultTypeInternal _NodeProto_default_instance_;
 PROTOBUF_CONSTEXPR TrainingInfoProto::TrainingInfoProto(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_._has_bits_)*/{}
@@ -94,14 +130,15 @@ PROTOBUF_CONSTEXPR TrainingInfoProto::TrainingInfoProto(
   , /*decltype(_impl_.initialization_)*/nullptr
   , /*decltype(_impl_.algorithm_)*/nullptr} {}
 struct TrainingInfoProtoDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR TrainingInfoProtoDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR TrainingInfoProtoDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
   ~TrainingInfoProtoDefaultTypeInternal() {}
   union {
     TrainingInfoProto _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TrainingInfoProtoDefaultTypeInternal _TrainingInfoProto_default_instance_;
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TrainingInfoProtoDefaultTypeInternal _TrainingInfoProto_default_instance_;
 PROTOBUF_CONSTEXPR ModelProto::ModelProto(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_._has_bits_)*/{}
@@ -110,52 +147,78 @@ PROTOBUF_CONSTEXPR ModelProto::ModelProto(
   , /*decltype(_impl_.metadata_props_)*/{}
   , /*decltype(_impl_.training_info_)*/{}
   , /*decltype(_impl_.functions_)*/{}
-  , /*decltype(_impl_.producer_name_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
-  , /*decltype(_impl_.producer_version_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
-  , /*decltype(_impl_.domain_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
-  , /*decltype(_impl_.doc_string_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.producer_name_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
+  , /*decltype(_impl_.producer_version_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
+  , /*decltype(_impl_.domain_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
+  , /*decltype(_impl_.doc_string_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
   , /*decltype(_impl_.graph_)*/nullptr
-  , /*decltype(_impl_.ir_version_)*/int64_t{0}
-  , /*decltype(_impl_.model_version_)*/int64_t{0}} {}
+  , /*decltype(_impl_.ir_version_)*/ ::int64_t{0}
+
+  , /*decltype(_impl_.model_version_)*/ ::int64_t{0}
+} {}
 struct ModelProtoDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR ModelProtoDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR ModelProtoDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
   ~ModelProtoDefaultTypeInternal() {}
   union {
     ModelProto _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 ModelProtoDefaultTypeInternal _ModelProto_default_instance_;
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 ModelProtoDefaultTypeInternal _ModelProto_default_instance_;
 PROTOBUF_CONSTEXPR StringStringEntryProto::StringStringEntryProto(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_._has_bits_)*/{}
   , /*decltype(_impl_._cached_size_)*/{}
-  , /*decltype(_impl_.key_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
-  , /*decltype(_impl_.value_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}} {}
+  , /*decltype(_impl_.key_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
+  , /*decltype(_impl_.value_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+} {}
 struct StringStringEntryProtoDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR StringStringEntryProtoDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR StringStringEntryProtoDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
   ~StringStringEntryProtoDefaultTypeInternal() {}
   union {
     StringStringEntryProto _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 StringStringEntryProtoDefaultTypeInternal _StringStringEntryProto_default_instance_;
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 StringStringEntryProtoDefaultTypeInternal _StringStringEntryProto_default_instance_;
 PROTOBUF_CONSTEXPR TensorAnnotation::TensorAnnotation(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_._has_bits_)*/{}
   , /*decltype(_impl_._cached_size_)*/{}
   , /*decltype(_impl_.quant_parameter_tensor_names_)*/{}
-  , /*decltype(_impl_.tensor_name_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}} {}
+  , /*decltype(_impl_.tensor_name_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+} {}
 struct TensorAnnotationDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR TensorAnnotationDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR TensorAnnotationDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
   ~TensorAnnotationDefaultTypeInternal() {}
   union {
     TensorAnnotation _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TensorAnnotationDefaultTypeInternal _TensorAnnotation_default_instance_;
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TensorAnnotationDefaultTypeInternal _TensorAnnotation_default_instance_;
 PROTOBUF_CONSTEXPR GraphProto::GraphProto(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_._has_bits_)*/{}
@@ -167,211 +230,263 @@ PROTOBUF_CONSTEXPR GraphProto::GraphProto(
   , /*decltype(_impl_.value_info_)*/{}
   , /*decltype(_impl_.quantization_annotation_)*/{}
   , /*decltype(_impl_.sparse_initializer_)*/{}
-  , /*decltype(_impl_.name_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
-  , /*decltype(_impl_.doc_string_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}} {}
+  , /*decltype(_impl_.name_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
+  , /*decltype(_impl_.doc_string_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+} {}
 struct GraphProtoDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR GraphProtoDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR GraphProtoDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
   ~GraphProtoDefaultTypeInternal() {}
   union {
     GraphProto _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 GraphProtoDefaultTypeInternal _GraphProto_default_instance_;
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 GraphProtoDefaultTypeInternal _GraphProto_default_instance_;
 PROTOBUF_CONSTEXPR TensorProto_Segment::TensorProto_Segment(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_._has_bits_)*/{}
   , /*decltype(_impl_._cached_size_)*/{}
-  , /*decltype(_impl_.begin_)*/int64_t{0}
-  , /*decltype(_impl_.end_)*/int64_t{0}} {}
+  , /*decltype(_impl_.begin_)*/ ::int64_t{0}
+
+  , /*decltype(_impl_.end_)*/ ::int64_t{0}
+} {}
 struct TensorProto_SegmentDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR TensorProto_SegmentDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR TensorProto_SegmentDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
   ~TensorProto_SegmentDefaultTypeInternal() {}
   union {
     TensorProto_Segment _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TensorProto_SegmentDefaultTypeInternal _TensorProto_Segment_default_instance_;
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TensorProto_SegmentDefaultTypeInternal _TensorProto_Segment_default_instance_;
 PROTOBUF_CONSTEXPR TensorProto::TensorProto(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_._has_bits_)*/{}
   , /*decltype(_impl_._cached_size_)*/{}
-  , /*decltype(_impl_.dims_)*/{}
-  , /*decltype(_impl_.float_data_)*/{}
-  , /*decltype(_impl_.int32_data_)*/{}
-  , /*decltype(_impl_._int32_data_cached_byte_size_)*/{0}
+  , /*decltype(_impl_.dims_)*/ {}
+
+  , /*decltype(_impl_.float_data_)*/ {}
+
+  , /*decltype(_impl_.int32_data_)*/ {}
+  ,/* _impl_._int32_data_cached_byte_size_ = */ { 0 }
+
   , /*decltype(_impl_.string_data_)*/{}
-  , /*decltype(_impl_.int64_data_)*/{}
-  , /*decltype(_impl_._int64_data_cached_byte_size_)*/{0}
-  , /*decltype(_impl_.double_data_)*/{}
-  , /*decltype(_impl_.uint64_data_)*/{}
-  , /*decltype(_impl_._uint64_data_cached_byte_size_)*/{0}
+  , /*decltype(_impl_.int64_data_)*/ {}
+  ,/* _impl_._int64_data_cached_byte_size_ = */ { 0 }
+
+  , /*decltype(_impl_.double_data_)*/ {}
+
+  , /*decltype(_impl_.uint64_data_)*/ {}
+  ,/* _impl_._uint64_data_cached_byte_size_ = */ { 0 }
+
   , /*decltype(_impl_.external_data_)*/{}
-  , /*decltype(_impl_.name_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
-  , /*decltype(_impl_.raw_data_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
-  , /*decltype(_impl_.doc_string_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.name_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
+  , /*decltype(_impl_.raw_data_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
+  , /*decltype(_impl_.doc_string_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
   , /*decltype(_impl_.segment_)*/nullptr
-  , /*decltype(_impl_.data_type_)*/0
-  , /*decltype(_impl_.data_location_)*/0} {}
+  , /*decltype(_impl_.data_type_)*/ 0
+
+  , /*decltype(_impl_.data_location_)*/ 0
+} {}
 struct TensorProtoDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR TensorProtoDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR TensorProtoDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
   ~TensorProtoDefaultTypeInternal() {}
   union {
     TensorProto _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TensorProtoDefaultTypeInternal _TensorProto_default_instance_;
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TensorProtoDefaultTypeInternal _TensorProto_default_instance_;
 PROTOBUF_CONSTEXPR SparseTensorProto::SparseTensorProto(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_._has_bits_)*/{}
   , /*decltype(_impl_._cached_size_)*/{}
-  , /*decltype(_impl_.dims_)*/{}
+  , /*decltype(_impl_.dims_)*/ {}
+
   , /*decltype(_impl_.values_)*/nullptr
   , /*decltype(_impl_.indices_)*/nullptr} {}
 struct SparseTensorProtoDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR SparseTensorProtoDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR SparseTensorProtoDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
   ~SparseTensorProtoDefaultTypeInternal() {}
   union {
     SparseTensorProto _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 SparseTensorProtoDefaultTypeInternal _SparseTensorProto_default_instance_;
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 SparseTensorProtoDefaultTypeInternal _SparseTensorProto_default_instance_;
 PROTOBUF_CONSTEXPR TensorShapeProto_Dimension::TensorShapeProto_Dimension(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_._has_bits_)*/{}
   , /*decltype(_impl_._cached_size_)*/{}
-  , /*decltype(_impl_.denotation_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.denotation_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
   , /*decltype(_impl_.value_)*/{}
   , /*decltype(_impl_._oneof_case_)*/{}} {}
 struct TensorShapeProto_DimensionDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR TensorShapeProto_DimensionDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR TensorShapeProto_DimensionDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
   ~TensorShapeProto_DimensionDefaultTypeInternal() {}
   union {
     TensorShapeProto_Dimension _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TensorShapeProto_DimensionDefaultTypeInternal _TensorShapeProto_Dimension_default_instance_;
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TensorShapeProto_DimensionDefaultTypeInternal _TensorShapeProto_Dimension_default_instance_;
 PROTOBUF_CONSTEXPR TensorShapeProto::TensorShapeProto(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.dim_)*/{}
   , /*decltype(_impl_._cached_size_)*/{}} {}
 struct TensorShapeProtoDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR TensorShapeProtoDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR TensorShapeProtoDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
   ~TensorShapeProtoDefaultTypeInternal() {}
   union {
     TensorShapeProto _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TensorShapeProtoDefaultTypeInternal _TensorShapeProto_default_instance_;
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TensorShapeProtoDefaultTypeInternal _TensorShapeProto_default_instance_;
 PROTOBUF_CONSTEXPR TypeProto_Tensor::TypeProto_Tensor(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_._has_bits_)*/{}
   , /*decltype(_impl_._cached_size_)*/{}
   , /*decltype(_impl_.shape_)*/nullptr
-  , /*decltype(_impl_.elem_type_)*/0} {}
+  , /*decltype(_impl_.elem_type_)*/ 0
+} {}
 struct TypeProto_TensorDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR TypeProto_TensorDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR TypeProto_TensorDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
   ~TypeProto_TensorDefaultTypeInternal() {}
   union {
     TypeProto_Tensor _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TypeProto_TensorDefaultTypeInternal _TypeProto_Tensor_default_instance_;
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TypeProto_TensorDefaultTypeInternal _TypeProto_Tensor_default_instance_;
 PROTOBUF_CONSTEXPR TypeProto_Sequence::TypeProto_Sequence(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_._has_bits_)*/{}
   , /*decltype(_impl_._cached_size_)*/{}
   , /*decltype(_impl_.elem_type_)*/nullptr} {}
 struct TypeProto_SequenceDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR TypeProto_SequenceDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR TypeProto_SequenceDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
   ~TypeProto_SequenceDefaultTypeInternal() {}
   union {
     TypeProto_Sequence _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TypeProto_SequenceDefaultTypeInternal _TypeProto_Sequence_default_instance_;
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TypeProto_SequenceDefaultTypeInternal _TypeProto_Sequence_default_instance_;
 PROTOBUF_CONSTEXPR TypeProto_Map::TypeProto_Map(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_._has_bits_)*/{}
   , /*decltype(_impl_._cached_size_)*/{}
   , /*decltype(_impl_.value_type_)*/nullptr
-  , /*decltype(_impl_.key_type_)*/0} {}
+  , /*decltype(_impl_.key_type_)*/ 0
+} {}
 struct TypeProto_MapDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR TypeProto_MapDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR TypeProto_MapDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
   ~TypeProto_MapDefaultTypeInternal() {}
   union {
     TypeProto_Map _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TypeProto_MapDefaultTypeInternal _TypeProto_Map_default_instance_;
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TypeProto_MapDefaultTypeInternal _TypeProto_Map_default_instance_;
 PROTOBUF_CONSTEXPR TypeProto_Optional::TypeProto_Optional(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_._has_bits_)*/{}
   , /*decltype(_impl_._cached_size_)*/{}
   , /*decltype(_impl_.elem_type_)*/nullptr} {}
 struct TypeProto_OptionalDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR TypeProto_OptionalDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR TypeProto_OptionalDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
   ~TypeProto_OptionalDefaultTypeInternal() {}
   union {
     TypeProto_Optional _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TypeProto_OptionalDefaultTypeInternal _TypeProto_Optional_default_instance_;
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TypeProto_OptionalDefaultTypeInternal _TypeProto_Optional_default_instance_;
 PROTOBUF_CONSTEXPR TypeProto_SparseTensor::TypeProto_SparseTensor(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_._has_bits_)*/{}
   , /*decltype(_impl_._cached_size_)*/{}
   , /*decltype(_impl_.shape_)*/nullptr
-  , /*decltype(_impl_.elem_type_)*/0} {}
+  , /*decltype(_impl_.elem_type_)*/ 0
+} {}
 struct TypeProto_SparseTensorDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR TypeProto_SparseTensorDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR TypeProto_SparseTensorDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
   ~TypeProto_SparseTensorDefaultTypeInternal() {}
   union {
     TypeProto_SparseTensor _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TypeProto_SparseTensorDefaultTypeInternal _TypeProto_SparseTensor_default_instance_;
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TypeProto_SparseTensorDefaultTypeInternal _TypeProto_SparseTensor_default_instance_;
 PROTOBUF_CONSTEXPR TypeProto::TypeProto(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_._has_bits_)*/{}
   , /*decltype(_impl_._cached_size_)*/{}
-  , /*decltype(_impl_.denotation_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
+  , /*decltype(_impl_.denotation_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
   , /*decltype(_impl_.value_)*/{}
   , /*decltype(_impl_._oneof_case_)*/{}} {}
 struct TypeProtoDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR TypeProtoDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR TypeProtoDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
   ~TypeProtoDefaultTypeInternal() {}
   union {
     TypeProto _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TypeProtoDefaultTypeInternal _TypeProto_default_instance_;
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TypeProtoDefaultTypeInternal _TypeProto_default_instance_;
 PROTOBUF_CONSTEXPR OperatorSetIdProto::OperatorSetIdProto(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_._has_bits_)*/{}
   , /*decltype(_impl_._cached_size_)*/{}
-  , /*decltype(_impl_.domain_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
-  , /*decltype(_impl_.version_)*/int64_t{0}} {}
+  , /*decltype(_impl_.domain_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
+  , /*decltype(_impl_.version_)*/ ::int64_t{0}
+} {}
 struct OperatorSetIdProtoDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR OperatorSetIdProtoDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR OperatorSetIdProtoDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
   ~OperatorSetIdProtoDefaultTypeInternal() {}
   union {
     OperatorSetIdProto _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 OperatorSetIdProtoDefaultTypeInternal _OperatorSetIdProto_default_instance_;
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 OperatorSetIdProtoDefaultTypeInternal _OperatorSetIdProto_default_instance_;
 PROTOBUF_CONSTEXPR FunctionProto::FunctionProto(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_._has_bits_)*/{}
@@ -381,18 +496,29 @@ PROTOBUF_CONSTEXPR FunctionProto::FunctionProto(
   , /*decltype(_impl_.attribute_)*/{}
   , /*decltype(_impl_.node_)*/{}
   , /*decltype(_impl_.opset_import_)*/{}
-  , /*decltype(_impl_.name_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
-  , /*decltype(_impl_.doc_string_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
-  , /*decltype(_impl_.domain_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}} {}
+  , /*decltype(_impl_.attribute_proto_)*/{}
+  , /*decltype(_impl_.name_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
+  , /*decltype(_impl_.doc_string_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+
+  , /*decltype(_impl_.domain_)*/ {
+    &::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized {}
+  }
+} {}
 struct FunctionProtoDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR FunctionProtoDefaultTypeInternal()
-      : _instance(::_pbi::ConstantInitialized{}) {}
+  PROTOBUF_CONSTEXPR FunctionProtoDefaultTypeInternal() : _instance(::_pbi::ConstantInitialized{}) {}
   ~FunctionProtoDefaultTypeInternal() {}
   union {
     FunctionProto _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 FunctionProtoDefaultTypeInternal _FunctionProto_default_instance_;
+
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT
+    PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 FunctionProtoDefaultTypeInternal _FunctionProto_default_instance_;
 }  // namespace onnx
 namespace onnx {
 bool AttributeProto_AttributeType_IsValid(int value) {
@@ -417,79 +543,79 @@ bool AttributeProto_AttributeType_IsValid(int value) {
       return false;
   }
 }
+static ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<std::string>
+    AttributeProto_AttributeType_strings[15] = {};
 
-static ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<std::string> AttributeProto_AttributeType_strings[15] = {};
+static const char AttributeProto_AttributeType_names[] = {
+    "FLOAT"
+    "FLOATS"
+    "GRAPH"
+    "GRAPHS"
+    "INT"
+    "INTS"
+    "SPARSE_TENSOR"
+    "SPARSE_TENSORS"
+    "STRING"
+    "STRINGS"
+    "TENSOR"
+    "TENSORS"
+    "TYPE_PROTO"
+    "TYPE_PROTOS"
+    "UNDEFINED"
+};
 
-static const char AttributeProto_AttributeType_names[] =
-  "FLOAT"
-  "FLOATS"
-  "GRAPH"
-  "GRAPHS"
-  "INT"
-  "INTS"
-  "SPARSE_TENSOR"
-  "SPARSE_TENSORS"
-  "STRING"
-  "STRINGS"
-  "TENSOR"
-  "TENSORS"
-  "TYPE_PROTO"
-  "TYPE_PROTOS"
-  "UNDEFINED";
-
-static const ::PROTOBUF_NAMESPACE_ID::internal::EnumEntry AttributeProto_AttributeType_entries[] = {
-  { {AttributeProto_AttributeType_names + 0, 5}, 1 },
-  { {AttributeProto_AttributeType_names + 5, 6}, 6 },
-  { {AttributeProto_AttributeType_names + 11, 5}, 5 },
-  { {AttributeProto_AttributeType_names + 16, 6}, 10 },
-  { {AttributeProto_AttributeType_names + 22, 3}, 2 },
-  { {AttributeProto_AttributeType_names + 25, 4}, 7 },
-  { {AttributeProto_AttributeType_names + 29, 13}, 11 },
-  { {AttributeProto_AttributeType_names + 42, 14}, 12 },
-  { {AttributeProto_AttributeType_names + 56, 6}, 3 },
-  { {AttributeProto_AttributeType_names + 62, 7}, 8 },
-  { {AttributeProto_AttributeType_names + 69, 6}, 4 },
-  { {AttributeProto_AttributeType_names + 75, 7}, 9 },
-  { {AttributeProto_AttributeType_names + 82, 10}, 13 },
-  { {AttributeProto_AttributeType_names + 92, 11}, 14 },
-  { {AttributeProto_AttributeType_names + 103, 9}, 0 },
+static const ::PROTOBUF_NAMESPACE_ID::internal::EnumEntry AttributeProto_AttributeType_entries[] =
+    {
+        {{&AttributeProto_AttributeType_names[0], 5}, 1},
+        {{&AttributeProto_AttributeType_names[5], 6}, 6},
+        {{&AttributeProto_AttributeType_names[11], 5}, 5},
+        {{&AttributeProto_AttributeType_names[16], 6}, 10},
+        {{&AttributeProto_AttributeType_names[22], 3}, 2},
+        {{&AttributeProto_AttributeType_names[25], 4}, 7},
+        {{&AttributeProto_AttributeType_names[29], 13}, 11},
+        {{&AttributeProto_AttributeType_names[42], 14}, 12},
+        {{&AttributeProto_AttributeType_names[56], 6}, 3},
+        {{&AttributeProto_AttributeType_names[62], 7}, 8},
+        {{&AttributeProto_AttributeType_names[69], 6}, 4},
+        {{&AttributeProto_AttributeType_names[75], 7}, 9},
+        {{&AttributeProto_AttributeType_names[82], 10}, 13},
+        {{&AttributeProto_AttributeType_names[92], 11}, 14},
+        {{&AttributeProto_AttributeType_names[103], 9}, 0},
 };
 
 static const int AttributeProto_AttributeType_entries_by_number[] = {
-  14, // 0 -> UNDEFINED
-  0, // 1 -> FLOAT
-  4, // 2 -> INT
-  8, // 3 -> STRING
-  10, // 4 -> TENSOR
-  2, // 5 -> GRAPH
-  1, // 6 -> FLOATS
-  5, // 7 -> INTS
-  9, // 8 -> STRINGS
-  11, // 9 -> TENSORS
-  3, // 10 -> GRAPHS
-  6, // 11 -> SPARSE_TENSOR
-  7, // 12 -> SPARSE_TENSORS
-  12, // 13 -> TYPE_PROTO
-  13, // 14 -> TYPE_PROTOS
+    14,  // 0 -> UNDEFINED
+    0,  // 1 -> FLOAT
+    4,  // 2 -> INT
+    8,  // 3 -> STRING
+    10,  // 4 -> TENSOR
+    2,  // 5 -> GRAPH
+    1,  // 6 -> FLOATS
+    5,  // 7 -> INTS
+    9,  // 8 -> STRINGS
+    11,  // 9 -> TENSORS
+    3,  // 10 -> GRAPHS
+    6,  // 11 -> SPARSE_TENSOR
+    7,  // 12 -> SPARSE_TENSORS
+    12,  // 13 -> TYPE_PROTO
+    13,  // 14 -> TYPE_PROTOS
 };
 
-const std::string& AttributeProto_AttributeType_Name(
-    AttributeProto_AttributeType value) {
-  static const bool dummy =
+const std::string& AttributeProto_AttributeType_Name(AttributeProto_AttributeType value) {
+  static const bool kDummy =
       ::PROTOBUF_NAMESPACE_ID::internal::InitializeEnumStrings(
-          AttributeProto_AttributeType_entries,
-          AttributeProto_AttributeType_entries_by_number,
+          AttributeProto_AttributeType_entries, AttributeProto_AttributeType_entries_by_number,
           15, AttributeProto_AttributeType_strings);
-  (void) dummy;
+  (void)kDummy;
+
   int idx = ::PROTOBUF_NAMESPACE_ID::internal::LookUpEnumName(
-      AttributeProto_AttributeType_entries,
-      AttributeProto_AttributeType_entries_by_number,
-      15, value);
-  return idx == -1 ? ::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString() :
-                     AttributeProto_AttributeType_strings[idx].get();
+      AttributeProto_AttributeType_entries, AttributeProto_AttributeType_entries_by_number, 15,
+      value);
+  return idx == -1 ? ::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString()
+                   : AttributeProto_AttributeType_strings[idx].get();
 }
-bool AttributeProto_AttributeType_Parse(
-    ::PROTOBUF_NAMESPACE_ID::ConstStringParam name, AttributeProto_AttributeType* value) {
+
+bool AttributeProto_AttributeType_Parse(absl::string_view name, AttributeProto_AttributeType* value) {
   int int_value;
   bool success = ::PROTOBUF_NAMESPACE_ID::internal::LookUpEnumValue(
       AttributeProto_AttributeType_entries, 15, name, &int_value);
@@ -498,7 +624,9 @@ bool AttributeProto_AttributeType_Parse(
   }
   return success;
 }
-#if (__cplusplus < 201703) && (!defined(_MSC_VER) || (_MSC_VER >= 1900 && _MSC_VER < 1912))
+#if (__cplusplus < 201703) && \
+  (!defined(_MSC_VER) || (_MSC_VER >= 1900 && _MSC_VER < 1912))
+
 constexpr AttributeProto_AttributeType AttributeProto::UNDEFINED;
 constexpr AttributeProto_AttributeType AttributeProto::FLOAT;
 constexpr AttributeProto_AttributeType AttributeProto::INT;
@@ -517,7 +645,9 @@ constexpr AttributeProto_AttributeType AttributeProto::TYPE_PROTOS;
 constexpr AttributeProto_AttributeType AttributeProto::AttributeType_MIN;
 constexpr AttributeProto_AttributeType AttributeProto::AttributeType_MAX;
 constexpr int AttributeProto::AttributeType_ARRAYSIZE;
-#endif  // (__cplusplus < 201703) && (!defined(_MSC_VER) || (_MSC_VER >= 1900 && _MSC_VER < 1912))
+
+#endif  // (__cplusplus < 201703) &&
+        // (!defined(_MSC_VER) || (_MSC_VER >= 1900 && _MSC_VER < 1912))
 bool TensorProto_DataType_IsValid(int value) {
   switch (value) {
     case 0:
@@ -537,99 +667,117 @@ bool TensorProto_DataType_IsValid(int value) {
     case 14:
     case 15:
     case 16:
+    case 17:
+    case 18:
+    case 19:
+    case 20:
       return true;
     default:
       return false;
   }
 }
+static ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<std::string>
+    TensorProto_DataType_strings[21] = {};
 
-static ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<std::string> TensorProto_DataType_strings[17] = {};
+static const char TensorProto_DataType_names[] = {
+    "BFLOAT16"
+    "BOOL"
+    "COMPLEX128"
+    "COMPLEX64"
+    "DOUBLE"
+    "FLOAT"
+    "FLOAT16"
+    "FLOAT8E4M3FN"
+    "FLOAT8E4M3FNUZ"
+    "FLOAT8E5M2"
+    "FLOAT8E5M2FNUZ"
+    "INT16"
+    "INT32"
+    "INT64"
+    "INT8"
+    "STRING"
+    "UINT16"
+    "UINT32"
+    "UINT64"
+    "UINT8"
+    "UNDEFINED"
+};
 
-static const char TensorProto_DataType_names[] =
-  "BFLOAT16"
-  "BOOL"
-  "COMPLEX128"
-  "COMPLEX64"
-  "DOUBLE"
-  "FLOAT"
-  "FLOAT16"
-  "INT16"
-  "INT32"
-  "INT64"
-  "INT8"
-  "STRING"
-  "UINT16"
-  "UINT32"
-  "UINT64"
-  "UINT8"
-  "UNDEFINED";
-
-static const ::PROTOBUF_NAMESPACE_ID::internal::EnumEntry TensorProto_DataType_entries[] = {
-  { {TensorProto_DataType_names + 0, 8}, 16 },
-  { {TensorProto_DataType_names + 8, 4}, 9 },
-  { {TensorProto_DataType_names + 12, 10}, 15 },
-  { {TensorProto_DataType_names + 22, 9}, 14 },
-  { {TensorProto_DataType_names + 31, 6}, 11 },
-  { {TensorProto_DataType_names + 37, 5}, 1 },
-  { {TensorProto_DataType_names + 42, 7}, 10 },
-  { {TensorProto_DataType_names + 49, 5}, 5 },
-  { {TensorProto_DataType_names + 54, 5}, 6 },
-  { {TensorProto_DataType_names + 59, 5}, 7 },
-  { {TensorProto_DataType_names + 64, 4}, 3 },
-  { {TensorProto_DataType_names + 68, 6}, 8 },
-  { {TensorProto_DataType_names + 74, 6}, 4 },
-  { {TensorProto_DataType_names + 80, 6}, 12 },
-  { {TensorProto_DataType_names + 86, 6}, 13 },
-  { {TensorProto_DataType_names + 92, 5}, 2 },
-  { {TensorProto_DataType_names + 97, 9}, 0 },
+static const ::PROTOBUF_NAMESPACE_ID::internal::EnumEntry TensorProto_DataType_entries[] =
+    {
+        {{&TensorProto_DataType_names[0], 8}, 16},
+        {{&TensorProto_DataType_names[8], 4}, 9},
+        {{&TensorProto_DataType_names[12], 10}, 15},
+        {{&TensorProto_DataType_names[22], 9}, 14},
+        {{&TensorProto_DataType_names[31], 6}, 11},
+        {{&TensorProto_DataType_names[37], 5}, 1},
+        {{&TensorProto_DataType_names[42], 7}, 10},
+        {{&TensorProto_DataType_names[49], 12}, 17},
+        {{&TensorProto_DataType_names[61], 14}, 18},
+        {{&TensorProto_DataType_names[75], 10}, 19},
+        {{&TensorProto_DataType_names[85], 14}, 20},
+        {{&TensorProto_DataType_names[99], 5}, 5},
+        {{&TensorProto_DataType_names[104], 5}, 6},
+        {{&TensorProto_DataType_names[109], 5}, 7},
+        {{&TensorProto_DataType_names[114], 4}, 3},
+        {{&TensorProto_DataType_names[118], 6}, 8},
+        {{&TensorProto_DataType_names[124], 6}, 4},
+        {{&TensorProto_DataType_names[130], 6}, 12},
+        {{&TensorProto_DataType_names[136], 6}, 13},
+        {{&TensorProto_DataType_names[142], 5}, 2},
+        {{&TensorProto_DataType_names[147], 9}, 0},
 };
 
 static const int TensorProto_DataType_entries_by_number[] = {
-  16, // 0 -> UNDEFINED
-  5, // 1 -> FLOAT
-  15, // 2 -> UINT8
-  10, // 3 -> INT8
-  12, // 4 -> UINT16
-  7, // 5 -> INT16
-  8, // 6 -> INT32
-  9, // 7 -> INT64
-  11, // 8 -> STRING
-  1, // 9 -> BOOL
-  6, // 10 -> FLOAT16
-  4, // 11 -> DOUBLE
-  13, // 12 -> UINT32
-  14, // 13 -> UINT64
-  3, // 14 -> COMPLEX64
-  2, // 15 -> COMPLEX128
-  0, // 16 -> BFLOAT16
+    20,  // 0 -> UNDEFINED
+    5,  // 1 -> FLOAT
+    19,  // 2 -> UINT8
+    14,  // 3 -> INT8
+    16,  // 4 -> UINT16
+    11,  // 5 -> INT16
+    12,  // 6 -> INT32
+    13,  // 7 -> INT64
+    15,  // 8 -> STRING
+    1,  // 9 -> BOOL
+    6,  // 10 -> FLOAT16
+    4,  // 11 -> DOUBLE
+    17,  // 12 -> UINT32
+    18,  // 13 -> UINT64
+    3,  // 14 -> COMPLEX64
+    2,  // 15 -> COMPLEX128
+    0,  // 16 -> BFLOAT16
+    7,  // 17 -> FLOAT8E4M3FN
+    8,  // 18 -> FLOAT8E4M3FNUZ
+    9,  // 19 -> FLOAT8E5M2
+    10,  // 20 -> FLOAT8E5M2FNUZ
 };
 
-const std::string& TensorProto_DataType_Name(
-    TensorProto_DataType value) {
-  static const bool dummy =
+const std::string& TensorProto_DataType_Name(TensorProto_DataType value) {
+  static const bool kDummy =
       ::PROTOBUF_NAMESPACE_ID::internal::InitializeEnumStrings(
-          TensorProto_DataType_entries,
-          TensorProto_DataType_entries_by_number,
-          17, TensorProto_DataType_strings);
-  (void) dummy;
+          TensorProto_DataType_entries, TensorProto_DataType_entries_by_number,
+          21, TensorProto_DataType_strings);
+  (void)kDummy;
+
   int idx = ::PROTOBUF_NAMESPACE_ID::internal::LookUpEnumName(
-      TensorProto_DataType_entries,
-      TensorProto_DataType_entries_by_number,
-      17, value);
-  return idx == -1 ? ::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString() :
-                     TensorProto_DataType_strings[idx].get();
+      TensorProto_DataType_entries, TensorProto_DataType_entries_by_number, 21,
+      value);
+  return idx == -1 ? ::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString()
+                   : TensorProto_DataType_strings[idx].get();
 }
-bool TensorProto_DataType_Parse(
-    ::PROTOBUF_NAMESPACE_ID::ConstStringParam name, TensorProto_DataType* value) {
+
+bool TensorProto_DataType_Parse(absl::string_view name, TensorProto_DataType* value) {
   int int_value;
   bool success = ::PROTOBUF_NAMESPACE_ID::internal::LookUpEnumValue(
-      TensorProto_DataType_entries, 17, name, &int_value);
+      TensorProto_DataType_entries, 21, name, &int_value);
   if (success) {
     *value = static_cast<TensorProto_DataType>(int_value);
   }
   return success;
 }
-#if (__cplusplus < 201703) && (!defined(_MSC_VER) || (_MSC_VER >= 1900 && _MSC_VER < 1912))
+#if (__cplusplus < 201703) && \
+  (!defined(_MSC_VER) || (_MSC_VER >= 1900 && _MSC_VER < 1912))
+
 constexpr TensorProto_DataType TensorProto::UNDEFINED;
 constexpr TensorProto_DataType TensorProto::FLOAT;
 constexpr TensorProto_DataType TensorProto::UINT8;
@@ -647,10 +795,16 @@ constexpr TensorProto_DataType TensorProto::UINT64;
 constexpr TensorProto_DataType TensorProto::COMPLEX64;
 constexpr TensorProto_DataType TensorProto::COMPLEX128;
 constexpr TensorProto_DataType TensorProto::BFLOAT16;
+constexpr TensorProto_DataType TensorProto::FLOAT8E4M3FN;
+constexpr TensorProto_DataType TensorProto::FLOAT8E4M3FNUZ;
+constexpr TensorProto_DataType TensorProto::FLOAT8E5M2;
+constexpr TensorProto_DataType TensorProto::FLOAT8E5M2FNUZ;
 constexpr TensorProto_DataType TensorProto::DataType_MIN;
 constexpr TensorProto_DataType TensorProto::DataType_MAX;
 constexpr int TensorProto::DataType_ARRAYSIZE;
-#endif  // (__cplusplus < 201703) && (!defined(_MSC_VER) || (_MSC_VER >= 1900 && _MSC_VER < 1912))
+
+#endif  // (__cplusplus < 201703) &&
+        // (!defined(_MSC_VER) || (_MSC_VER >= 1900 && _MSC_VER < 1912))
 bool TensorProto_DataLocation_IsValid(int value) {
   switch (value) {
     case 0:
@@ -660,40 +814,40 @@ bool TensorProto_DataLocation_IsValid(int value) {
       return false;
   }
 }
+static ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<std::string>
+    TensorProto_DataLocation_strings[2] = {};
 
-static ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<std::string> TensorProto_DataLocation_strings[2] = {};
+static const char TensorProto_DataLocation_names[] = {
+    "DEFAULT"
+    "EXTERNAL"
+};
 
-static const char TensorProto_DataLocation_names[] =
-  "DEFAULT"
-  "EXTERNAL";
-
-static const ::PROTOBUF_NAMESPACE_ID::internal::EnumEntry TensorProto_DataLocation_entries[] = {
-  { {TensorProto_DataLocation_names + 0, 7}, 0 },
-  { {TensorProto_DataLocation_names + 7, 8}, 1 },
+static const ::PROTOBUF_NAMESPACE_ID::internal::EnumEntry TensorProto_DataLocation_entries[] =
+    {
+        {{&TensorProto_DataLocation_names[0], 7}, 0},
+        {{&TensorProto_DataLocation_names[7], 8}, 1},
 };
 
 static const int TensorProto_DataLocation_entries_by_number[] = {
-  0, // 0 -> DEFAULT
-  1, // 1 -> EXTERNAL
+    0,  // 0 -> DEFAULT
+    1,  // 1 -> EXTERNAL
 };
 
-const std::string& TensorProto_DataLocation_Name(
-    TensorProto_DataLocation value) {
-  static const bool dummy =
+const std::string& TensorProto_DataLocation_Name(TensorProto_DataLocation value) {
+  static const bool kDummy =
       ::PROTOBUF_NAMESPACE_ID::internal::InitializeEnumStrings(
-          TensorProto_DataLocation_entries,
-          TensorProto_DataLocation_entries_by_number,
+          TensorProto_DataLocation_entries, TensorProto_DataLocation_entries_by_number,
           2, TensorProto_DataLocation_strings);
-  (void) dummy;
+  (void)kDummy;
+
   int idx = ::PROTOBUF_NAMESPACE_ID::internal::LookUpEnumName(
-      TensorProto_DataLocation_entries,
-      TensorProto_DataLocation_entries_by_number,
-      2, value);
-  return idx == -1 ? ::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString() :
-                     TensorProto_DataLocation_strings[idx].get();
+      TensorProto_DataLocation_entries, TensorProto_DataLocation_entries_by_number, 2,
+      value);
+  return idx == -1 ? ::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString()
+                   : TensorProto_DataLocation_strings[idx].get();
 }
-bool TensorProto_DataLocation_Parse(
-    ::PROTOBUF_NAMESPACE_ID::ConstStringParam name, TensorProto_DataLocation* value) {
+
+bool TensorProto_DataLocation_Parse(absl::string_view name, TensorProto_DataLocation* value) {
   int int_value;
   bool success = ::PROTOBUF_NAMESPACE_ID::internal::LookUpEnumValue(
       TensorProto_DataLocation_entries, 2, name, &int_value);
@@ -702,13 +856,17 @@ bool TensorProto_DataLocation_Parse(
   }
   return success;
 }
-#if (__cplusplus < 201703) && (!defined(_MSC_VER) || (_MSC_VER >= 1900 && _MSC_VER < 1912))
+#if (__cplusplus < 201703) && \
+  (!defined(_MSC_VER) || (_MSC_VER >= 1900 && _MSC_VER < 1912))
+
 constexpr TensorProto_DataLocation TensorProto::DEFAULT;
 constexpr TensorProto_DataLocation TensorProto::EXTERNAL;
 constexpr TensorProto_DataLocation TensorProto::DataLocation_MIN;
 constexpr TensorProto_DataLocation TensorProto::DataLocation_MAX;
 constexpr int TensorProto::DataLocation_ARRAYSIZE;
-#endif  // (__cplusplus < 201703) && (!defined(_MSC_VER) || (_MSC_VER >= 1900 && _MSC_VER < 1912))
+
+#endif  // (__cplusplus < 201703) &&
+        // (!defined(_MSC_VER) || (_MSC_VER >= 1900 && _MSC_VER < 1912))
 bool Version_IsValid(int value) {
   switch (value) {
     case 0:
@@ -720,69 +878,73 @@ bool Version_IsValid(int value) {
     case 6:
     case 7:
     case 8:
+    case 9:
       return true;
     default:
       return false;
   }
 }
+static ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<std::string>
+    Version_strings[10] = {};
 
-static ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<std::string> Version_strings[9] = {};
+static const char Version_names[] = {
+    "IR_VERSION"
+    "IR_VERSION_2017_10_10"
+    "IR_VERSION_2017_10_30"
+    "IR_VERSION_2017_11_3"
+    "IR_VERSION_2019_1_22"
+    "IR_VERSION_2019_3_18"
+    "IR_VERSION_2019_9_19"
+    "IR_VERSION_2020_5_8"
+    "IR_VERSION_2021_7_30"
+    "_START_VERSION"
+};
 
-static const char Version_names[] =
-  "IR_VERSION"
-  "IR_VERSION_2017_10_10"
-  "IR_VERSION_2017_10_30"
-  "IR_VERSION_2017_11_3"
-  "IR_VERSION_2019_1_22"
-  "IR_VERSION_2019_3_18"
-  "IR_VERSION_2019_9_19"
-  "IR_VERSION_2020_5_8"
-  "_START_VERSION";
-
-static const ::PROTOBUF_NAMESPACE_ID::internal::EnumEntry Version_entries[] = {
-  { {Version_names + 0, 10}, 8 },
-  { {Version_names + 10, 21}, 1 },
-  { {Version_names + 31, 21}, 2 },
-  { {Version_names + 52, 20}, 3 },
-  { {Version_names + 72, 20}, 4 },
-  { {Version_names + 92, 20}, 5 },
-  { {Version_names + 112, 20}, 6 },
-  { {Version_names + 132, 19}, 7 },
-  { {Version_names + 151, 14}, 0 },
+static const ::PROTOBUF_NAMESPACE_ID::internal::EnumEntry Version_entries[] =
+    {
+        {{&Version_names[0], 10}, 9},
+        {{&Version_names[10], 21}, 1},
+        {{&Version_names[31], 21}, 2},
+        {{&Version_names[52], 20}, 3},
+        {{&Version_names[72], 20}, 4},
+        {{&Version_names[92], 20}, 5},
+        {{&Version_names[112], 20}, 6},
+        {{&Version_names[132], 19}, 7},
+        {{&Version_names[151], 20}, 8},
+        {{&Version_names[171], 14}, 0},
 };
 
 static const int Version_entries_by_number[] = {
-  8, // 0 -> _START_VERSION
-  1, // 1 -> IR_VERSION_2017_10_10
-  2, // 2 -> IR_VERSION_2017_10_30
-  3, // 3 -> IR_VERSION_2017_11_3
-  4, // 4 -> IR_VERSION_2019_1_22
-  5, // 5 -> IR_VERSION_2019_3_18
-  6, // 6 -> IR_VERSION_2019_9_19
-  7, // 7 -> IR_VERSION_2020_5_8
-  0, // 8 -> IR_VERSION
+    9,  // 0 -> _START_VERSION
+    1,  // 1 -> IR_VERSION_2017_10_10
+    2,  // 2 -> IR_VERSION_2017_10_30
+    3,  // 3 -> IR_VERSION_2017_11_3
+    4,  // 4 -> IR_VERSION_2019_1_22
+    5,  // 5 -> IR_VERSION_2019_3_18
+    6,  // 6 -> IR_VERSION_2019_9_19
+    7,  // 7 -> IR_VERSION_2020_5_8
+    8,  // 8 -> IR_VERSION_2021_7_30
+    0,  // 9 -> IR_VERSION
 };
 
-const std::string& Version_Name(
-    Version value) {
-  static const bool dummy =
+const std::string& Version_Name(Version value) {
+  static const bool kDummy =
       ::PROTOBUF_NAMESPACE_ID::internal::InitializeEnumStrings(
-          Version_entries,
-          Version_entries_by_number,
-          9, Version_strings);
-  (void) dummy;
+          Version_entries, Version_entries_by_number,
+          10, Version_strings);
+  (void)kDummy;
+
   int idx = ::PROTOBUF_NAMESPACE_ID::internal::LookUpEnumName(
-      Version_entries,
-      Version_entries_by_number,
-      9, value);
-  return idx == -1 ? ::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString() :
-                     Version_strings[idx].get();
+      Version_entries, Version_entries_by_number, 10,
+      value);
+  return idx == -1 ? ::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString()
+                   : Version_strings[idx].get();
 }
-bool Version_Parse(
-    ::PROTOBUF_NAMESPACE_ID::ConstStringParam name, Version* value) {
+
+bool Version_Parse(absl::string_view name, Version* value) {
   int int_value;
   bool success = ::PROTOBUF_NAMESPACE_ID::internal::LookUpEnumValue(
-      Version_entries, 9, name, &int_value);
+      Version_entries, 10, name, &int_value);
   if (success) {
     *value = static_cast<Version>(int_value);
   }
@@ -797,40 +959,40 @@ bool OperatorStatus_IsValid(int value) {
       return false;
   }
 }
+static ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<std::string>
+    OperatorStatus_strings[2] = {};
 
-static ::PROTOBUF_NAMESPACE_ID::internal::ExplicitlyConstructed<std::string> OperatorStatus_strings[2] = {};
+static const char OperatorStatus_names[] = {
+    "EXPERIMENTAL"
+    "STABLE"
+};
 
-static const char OperatorStatus_names[] =
-  "EXPERIMENTAL"
-  "STABLE";
-
-static const ::PROTOBUF_NAMESPACE_ID::internal::EnumEntry OperatorStatus_entries[] = {
-  { {OperatorStatus_names + 0, 12}, 0 },
-  { {OperatorStatus_names + 12, 6}, 1 },
+static const ::PROTOBUF_NAMESPACE_ID::internal::EnumEntry OperatorStatus_entries[] =
+    {
+        {{&OperatorStatus_names[0], 12}, 0},
+        {{&OperatorStatus_names[12], 6}, 1},
 };
 
 static const int OperatorStatus_entries_by_number[] = {
-  0, // 0 -> EXPERIMENTAL
-  1, // 1 -> STABLE
+    0,  // 0 -> EXPERIMENTAL
+    1,  // 1 -> STABLE
 };
 
-const std::string& OperatorStatus_Name(
-    OperatorStatus value) {
-  static const bool dummy =
+const std::string& OperatorStatus_Name(OperatorStatus value) {
+  static const bool kDummy =
       ::PROTOBUF_NAMESPACE_ID::internal::InitializeEnumStrings(
-          OperatorStatus_entries,
-          OperatorStatus_entries_by_number,
+          OperatorStatus_entries, OperatorStatus_entries_by_number,
           2, OperatorStatus_strings);
-  (void) dummy;
+  (void)kDummy;
+
   int idx = ::PROTOBUF_NAMESPACE_ID::internal::LookUpEnumName(
-      OperatorStatus_entries,
-      OperatorStatus_entries_by_number,
-      2, value);
-  return idx == -1 ? ::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString() :
-                     OperatorStatus_strings[idx].get();
+      OperatorStatus_entries, OperatorStatus_entries_by_number, 2,
+      value);
+  return idx == -1 ? ::PROTOBUF_NAMESPACE_ID::internal::GetEmptyString()
+                   : OperatorStatus_strings[idx].get();
 }
-bool OperatorStatus_Parse(
-    ::PROTOBUF_NAMESPACE_ID::ConstStringParam name, OperatorStatus* value) {
+
+bool OperatorStatus_Parse(absl::string_view name, OperatorStatus* value) {
   int int_value;
   bool success = ::PROTOBUF_NAMESPACE_ID::internal::LookUpEnumValue(
       OperatorStatus_entries, 2, name, &int_value);
@@ -839,12 +1001,13 @@ bool OperatorStatus_Parse(
   }
   return success;
 }
-
 // ===================================================================
 
 class AttributeProto::_Internal {
  public:
   using HasBits = decltype(std::declval<AttributeProto>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(AttributeProto, _impl_._has_bits_);
   static void set_has_name(HasBits* has_bits) {
     (*has_bits)[0] |= 1u;
   }
@@ -900,10 +1063,9 @@ const ::onnx::TypeProto&
 AttributeProto::_Internal::tp(const AttributeProto* msg) {
   return *msg->_impl_.tp_;
 }
-AttributeProto::AttributeProto(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
+AttributeProto::AttributeProto(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena) {
+  SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:onnx.AttributeProto)
 }
 AttributeProto::AttributeProto(const AttributeProto& from)
@@ -912,118 +1074,130 @@ AttributeProto::AttributeProto(const AttributeProto& from)
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){from._impl_._has_bits_}
     , /*decltype(_impl_._cached_size_)*/{}
-    , decltype(_impl_.floats_){from._impl_.floats_}
-    , decltype(_impl_.ints_){from._impl_.ints_}
+    , decltype(_impl_.floats_) { from._impl_.floats_ }
+
+    , decltype(_impl_.ints_) { from._impl_.ints_ }
+
     , decltype(_impl_.strings_){from._impl_.strings_}
     , decltype(_impl_.tensors_){from._impl_.tensors_}
     , decltype(_impl_.graphs_){from._impl_.graphs_}
     , decltype(_impl_.type_protos_){from._impl_.type_protos_}
     , decltype(_impl_.sparse_tensors_){from._impl_.sparse_tensors_}
-    , decltype(_impl_.name_){}
-    , decltype(_impl_.s_){}
-    , decltype(_impl_.doc_string_){}
-    , decltype(_impl_.ref_attr_name_){}
+    , decltype(_impl_.name_) {}
+
+    , decltype(_impl_.s_) {}
+
+    , decltype(_impl_.doc_string_) {}
+
+    , decltype(_impl_.ref_attr_name_) {}
+
     , decltype(_impl_.t_){nullptr}
     , decltype(_impl_.g_){nullptr}
     , decltype(_impl_.tp_){nullptr}
     , decltype(_impl_.sparse_tensor_){nullptr}
-    , decltype(_impl_.i_){}
-    , decltype(_impl_.f_){}
-    , decltype(_impl_.type_){}};
+    , decltype(_impl_.i_) {}
+
+    , decltype(_impl_.f_) {}
+
+    , decltype(_impl_.type_) {}
+  };
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
   _impl_.name_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.name_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_name()) {
-    _this->_impl_.name_.Set(from._internal_name(), 
-      _this->GetArenaForAllocation());
+        _impl_.name_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
+    _this->_impl_.name_.Set(from._internal_name(), _this->GetArenaForAllocation());
   }
   _impl_.s_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.s_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_s()) {
-    _this->_impl_.s_.Set(from._internal_s(), 
-      _this->GetArenaForAllocation());
+        _impl_.s_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000002u) != 0) {
+    _this->_impl_.s_.Set(from._internal_s(), _this->GetArenaForAllocation());
   }
   _impl_.doc_string_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.doc_string_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_doc_string()) {
-    _this->_impl_.doc_string_.Set(from._internal_doc_string(), 
-      _this->GetArenaForAllocation());
+        _impl_.doc_string_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000004u) != 0) {
+    _this->_impl_.doc_string_.Set(from._internal_doc_string(), _this->GetArenaForAllocation());
   }
   _impl_.ref_attr_name_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.ref_attr_name_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_ref_attr_name()) {
-    _this->_impl_.ref_attr_name_.Set(from._internal_ref_attr_name(), 
-      _this->GetArenaForAllocation());
+        _impl_.ref_attr_name_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000008u) != 0) {
+    _this->_impl_.ref_attr_name_.Set(from._internal_ref_attr_name(), _this->GetArenaForAllocation());
   }
-  if (from._internal_has_t()) {
+  if ((from._impl_._has_bits_[0] & 0x00000010u) != 0) {
     _this->_impl_.t_ = new ::onnx::TensorProto(*from._impl_.t_);
   }
-  if (from._internal_has_g()) {
+  if ((from._impl_._has_bits_[0] & 0x00000020u) != 0) {
     _this->_impl_.g_ = new ::onnx::GraphProto(*from._impl_.g_);
   }
-  if (from._internal_has_tp()) {
+  if ((from._impl_._has_bits_[0] & 0x00000040u) != 0) {
     _this->_impl_.tp_ = new ::onnx::TypeProto(*from._impl_.tp_);
   }
-  if (from._internal_has_sparse_tensor()) {
+  if ((from._impl_._has_bits_[0] & 0x00000080u) != 0) {
     _this->_impl_.sparse_tensor_ = new ::onnx::SparseTensorProto(*from._impl_.sparse_tensor_);
   }
   ::memcpy(&_impl_.i_, &from._impl_.i_,
-    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.type_) -
+    static_cast<::size_t>(reinterpret_cast<char*>(&_impl_.type_) -
     reinterpret_cast<char*>(&_impl_.i_)) + sizeof(_impl_.type_));
   // @@protoc_insertion_point(copy_constructor:onnx.AttributeProto)
 }
 
-inline void AttributeProto::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
+inline void AttributeProto::SharedCtor(::_pb::Arena* arena) {
   (void)arena;
-  (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){}
     , /*decltype(_impl_._cached_size_)*/{}
-    , decltype(_impl_.floats_){arena}
-    , decltype(_impl_.ints_){arena}
+    , decltype(_impl_.floats_) { arena }
+
+    , decltype(_impl_.ints_) { arena }
+
     , decltype(_impl_.strings_){arena}
     , decltype(_impl_.tensors_){arena}
     , decltype(_impl_.graphs_){arena}
     , decltype(_impl_.type_protos_){arena}
     , decltype(_impl_.sparse_tensors_){arena}
-    , decltype(_impl_.name_){}
-    , decltype(_impl_.s_){}
-    , decltype(_impl_.doc_string_){}
-    , decltype(_impl_.ref_attr_name_){}
+    , decltype(_impl_.name_) {}
+
+    , decltype(_impl_.s_) {}
+
+    , decltype(_impl_.doc_string_) {}
+
+    , decltype(_impl_.ref_attr_name_) {}
+
     , decltype(_impl_.t_){nullptr}
     , decltype(_impl_.g_){nullptr}
     , decltype(_impl_.tp_){nullptr}
     , decltype(_impl_.sparse_tensor_){nullptr}
-    , decltype(_impl_.i_){int64_t{0}}
-    , decltype(_impl_.f_){0}
-    , decltype(_impl_.type_){0}
+    , decltype(_impl_.i_) { ::int64_t{0} }
+
+    , decltype(_impl_.f_) { 0 }
+
+    , decltype(_impl_.type_) { 0 }
+
   };
   _impl_.name_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.name_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.name_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   _impl_.s_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.s_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.s_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   _impl_.doc_string_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.doc_string_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.doc_string_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   _impl_.ref_attr_name_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.ref_attr_name_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.ref_attr_name_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 }
 
 AttributeProto::~AttributeProto() {
@@ -1036,7 +1210,7 @@ AttributeProto::~AttributeProto() {
 }
 
 inline void AttributeProto::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  ABSL_DCHECK(GetArenaForAllocation() == nullptr);
   _impl_.floats_.~RepeatedField();
   _impl_.ints_.~RepeatedField();
   _impl_.strings_.~RepeatedPtrField();
@@ -1060,7 +1234,7 @@ void AttributeProto::SetCachedSize(int size) const {
 
 void AttributeProto::Clear() {
 // @@protoc_insertion_point(message_clear_start:onnx.AttributeProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -1086,24 +1260,24 @@ void AttributeProto::Clear() {
       _impl_.ref_attr_name_.ClearNonDefaultToEmpty();
     }
     if (cached_has_bits & 0x00000010u) {
-      GOOGLE_DCHECK(_impl_.t_ != nullptr);
+      ABSL_DCHECK(_impl_.t_ != nullptr);
       _impl_.t_->Clear();
     }
     if (cached_has_bits & 0x00000020u) {
-      GOOGLE_DCHECK(_impl_.g_ != nullptr);
+      ABSL_DCHECK(_impl_.g_ != nullptr);
       _impl_.g_->Clear();
     }
     if (cached_has_bits & 0x00000040u) {
-      GOOGLE_DCHECK(_impl_.tp_ != nullptr);
+      ABSL_DCHECK(_impl_.tp_ != nullptr);
       _impl_.tp_->Clear();
     }
     if (cached_has_bits & 0x00000080u) {
-      GOOGLE_DCHECK(_impl_.sparse_tensor_ != nullptr);
+      ABSL_DCHECK(_impl_.sparse_tensor_ != nullptr);
       _impl_.sparse_tensor_->Clear();
     }
   }
   if (cached_has_bits & 0x00000700u) {
-    ::memset(&_impl_.i_, 0, static_cast<size_t>(
+    ::memset(&_impl_.i_, 0, static_cast<::size_t>(
         reinterpret_cast<char*>(&_impl_.type_) -
         reinterpret_cast<char*>(&_impl_.i_)) + sizeof(_impl_.type_));
   }
@@ -1115,64 +1289,70 @@ const char* AttributeProto::_InternalParse(const char* ptr, ::_pbi::ParseContext
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   _Internal::HasBits has_bits{};
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
+    ::uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // optional string name = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 10)) {
           auto str = _internal_mutable_name();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional float f = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 21)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 21)) {
           _Internal::set_has_f(&has_bits);
           _impl_.f_ = ::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<float>(ptr);
           ptr += sizeof(float);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional int64 i = 3;
       case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 24)) {
           _Internal::set_has_i(&has_bits);
           _impl_.i_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional bytes s = 4;
       case 4:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 34)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 34)) {
           auto str = _internal_mutable_s();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional .onnx.TensorProto t = 5;
       case 5:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 42)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 42)) {
           ptr = ctx->ParseMessage(_internal_mutable_t(), ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional .onnx.GraphProto g = 6;
       case 6:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 50)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 50)) {
           ptr = ctx->ParseMessage(_internal_mutable_g(), ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated float floats = 7;
       case 7:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 61)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 61)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -1180,15 +1360,16 @@ const char* AttributeProto::_InternalParse(const char* ptr, ::_pbi::ParseContext
             ptr += sizeof(float);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<61>(ptr));
-        } else if (static_cast<uint8_t>(tag) == 58) {
+        } else if (static_cast<::uint8_t>(tag) == 58) {
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedFloatParser(_internal_mutable_floats(), ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated int64 ints = 8;
       case 8:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 64)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 64)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -1196,15 +1377,16 @@ const char* AttributeProto::_InternalParse(const char* ptr, ::_pbi::ParseContext
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<64>(ptr));
-        } else if (static_cast<uint8_t>(tag) == 66) {
+        } else if (static_cast<::uint8_t>(tag) == 66) {
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedInt64Parser(_internal_mutable_ints(), ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated bytes strings = 9;
       case 9:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 74)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 74)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -1213,12 +1395,13 @@ const char* AttributeProto::_InternalParse(const char* ptr, ::_pbi::ParseContext
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<74>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated .onnx.TensorProto tensors = 10;
       case 10:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 82)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 82)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -1226,12 +1409,13 @@ const char* AttributeProto::_InternalParse(const char* ptr, ::_pbi::ParseContext
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<82>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated .onnx.GraphProto graphs = 11;
       case 11:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 90)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 90)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -1239,29 +1423,32 @@ const char* AttributeProto::_InternalParse(const char* ptr, ::_pbi::ParseContext
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<90>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional string doc_string = 13;
       case 13:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 106)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 106)) {
           auto str = _internal_mutable_doc_string();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional .onnx.TypeProto tp = 14;
       case 14:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 114)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 114)) {
           ptr = ctx->ParseMessage(_internal_mutable_tp(), ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated .onnx.TypeProto type_protos = 15;
       case 15:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 122)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 122)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -1269,42 +1456,46 @@ const char* AttributeProto::_InternalParse(const char* ptr, ::_pbi::ParseContext
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<122>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional .onnx.AttributeProto.AttributeType type = 20;
       case 20:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 160)) {
-          uint64_t val = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 160)) {
+          ::uint32_t val = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
-          if (PROTOBUF_PREDICT_TRUE(::onnx::AttributeProto_AttributeType_IsValid(val))) {
+          if (PROTOBUF_PREDICT_TRUE(::onnx::AttributeProto_AttributeType_IsValid(static_cast<int>(val)))) {
             _internal_set_type(static_cast<::onnx::AttributeProto_AttributeType>(val));
           } else {
             ::PROTOBUF_NAMESPACE_ID::internal::WriteVarint(20, val, mutable_unknown_fields());
           }
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional string ref_attr_name = 21;
       case 21:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 170)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 170)) {
           auto str = _internal_mutable_ref_attr_name();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional .onnx.SparseTensorProto sparse_tensor = 22;
       case 22:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 178)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 178)) {
           ptr = ctx->ParseMessage(_internal_mutable_sparse_tensor(), ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated .onnx.SparseTensorProto sparse_tensors = 23;
       case 23:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 186)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 186)) {
           ptr -= 2;
           do {
             ptr += 2;
@@ -1312,8 +1503,9 @@ const char* AttributeProto::_InternalParse(const char* ptr, ::_pbi::ParseContext
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<186>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       default:
         goto handle_unusual;
@@ -1339,35 +1531,37 @@ failure:
 #undef CHK_
 }
 
-uint8_t* AttributeProto::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::uint8_t* AttributeProto::_InternalSerialize(
+    ::uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:onnx.AttributeProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
   // optional string name = 1;
   if (cached_has_bits & 0x00000001u) {
-    target = stream->WriteStringMaybeAliased(
-        1, this->_internal_name(), target);
+    const std::string& _s = this->_internal_name();
+    target = stream->WriteStringMaybeAliased(1, _s, target);
   }
 
   // optional float f = 2;
   if (cached_has_bits & 0x00000200u) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteFloatToArray(2, this->_internal_f(), target);
+    target = ::_pbi::WireFormatLite::WriteFloatToArray(
+        2, this->_internal_f(), target);
   }
 
   // optional int64 i = 3;
   if (cached_has_bits & 0x00000100u) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt64ToArray(3, this->_internal_i(), target);
+    target = ::_pbi::WireFormatLite::WriteInt64ToArray(
+        3, this->_internal_i(), target);
   }
 
   // optional bytes s = 4;
   if (cached_has_bits & 0x00000002u) {
-    target = stream->WriteBytesMaybeAliased(
-        4, this->_internal_s(), target);
+    const std::string& _s = this->_internal_s();
+    target = stream->WriteBytesMaybeAliased(4, _s, target);
   }
 
   // optional .onnx.TensorProto t = 5;
@@ -1385,19 +1579,21 @@ uint8_t* AttributeProto::_InternalSerialize(
   }
 
   // repeated float floats = 7;
-  for (int i = 0, n = this->_internal_floats_size(); i < n; i++) {
+  for (int i = 0, n = this->_internal_floats_size(); i < n; ++i) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteFloatToArray(7, this->_internal_floats(i), target);
+    target = ::_pbi::WireFormatLite::WriteFloatToArray(
+        7, this->_internal_floats(i), target);
   }
 
   // repeated int64 ints = 8;
-  for (int i = 0, n = this->_internal_ints_size(); i < n; i++) {
+  for (int i = 0, n = this->_internal_ints_size(); i < n; ++i) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt64ToArray(8, this->_internal_ints(i), target);
+    target = ::_pbi::WireFormatLite::WriteInt64ToArray(
+        8, this->_internal_ints(i), target);
   }
 
   // repeated bytes strings = 9;
-  for (int i = 0, n = this->_internal_strings_size(); i < n; i++) {
+  for (int i = 0, n = this->_internal_strings_size(); i < n; ++i) {
     const auto& s = this->_internal_strings(i);
     target = stream->WriteBytes(9, s, target);
   }
@@ -1420,8 +1616,8 @@ uint8_t* AttributeProto::_InternalSerialize(
 
   // optional string doc_string = 13;
   if (cached_has_bits & 0x00000004u) {
-    target = stream->WriteStringMaybeAliased(
-        13, this->_internal_doc_string(), target);
+    const std::string& _s = this->_internal_doc_string();
+    target = stream->WriteStringMaybeAliased(13, _s, target);
   }
 
   // optional .onnx.TypeProto tp = 14;
@@ -1443,13 +1639,13 @@ uint8_t* AttributeProto::_InternalSerialize(
   if (cached_has_bits & 0x00000400u) {
     target = stream->EnsureSpace(target);
     target = ::_pbi::WireFormatLite::WriteEnumToArray(
-      20, this->_internal_type(), target);
+        20, this->_internal_type(), target);
   }
 
   // optional string ref_attr_name = 21;
   if (cached_has_bits & 0x00000008u) {
-    target = stream->WriteStringMaybeAliased(
-        21, this->_internal_ref_attr_name(), target);
+    const std::string& _s = this->_internal_ref_attr_name();
+    target = stream->WriteStringMaybeAliased(21, _s, target);
   }
 
   // optional .onnx.SparseTensorProto sparse_tensor = 22;
@@ -1475,38 +1671,39 @@ uint8_t* AttributeProto::_InternalSerialize(
   return target;
 }
 
-size_t AttributeProto::ByteSizeLong() const {
+::size_t AttributeProto::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:onnx.AttributeProto)
-  size_t total_size = 0;
+  ::size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   // repeated float floats = 7;
   {
-    unsigned int count = static_cast<unsigned int>(this->_internal_floats_size());
-    size_t data_size = 4UL * count;
-    total_size += 1 *
-                  ::_pbi::FromIntSize(this->_internal_floats_size());
-    total_size += data_size;
+    std::size_t data_size = std::size_t{4} *
+        ::_pbi::FromIntSize(this->_internal_floats_size())
+    ;
+    std::size_t tag_size = std::size_t{1} *
+        ::_pbi::FromIntSize(this->_internal_floats_size());
+    ;
+    total_size += tag_size + data_size;
   }
 
   // repeated int64 ints = 8;
   {
-    size_t data_size = ::_pbi::WireFormatLite::
-      Int64Size(this->_impl_.ints_);
-    total_size += 1 *
-                  ::_pbi::FromIntSize(this->_internal_ints_size());
-    total_size += data_size;
+    std::size_t data_size = ::_pbi::WireFormatLite::Int64Size(this->_impl_.ints_)
+    ;
+    std::size_t tag_size = std::size_t{1} *
+        ::_pbi::FromIntSize(this->_internal_ints_size());
+    ;
+    total_size += tag_size + data_size;
   }
 
   // repeated bytes strings = 9;
-  total_size += 1 *
-      ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(_impl_.strings_.size());
-  for (int i = 0, n = _impl_.strings_.size(); i < n; i++) {
-    total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
-      _impl_.strings_.Get(i));
+  total_size += 1 * ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(_impl_.strings_.size());
+  for (int i = 0, n = _impl_.strings_.size(); i < n; ++i) {
+    total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(_impl_.strings_.Get(i));
   }
 
   // repeated .onnx.TensorProto tensors = 10;
@@ -1541,30 +1738,26 @@ size_t AttributeProto::ByteSizeLong() const {
   if (cached_has_bits & 0x000000ffu) {
     // optional string name = 1;
     if (cached_has_bits & 0x00000001u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_name());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_name());
     }
 
     // optional bytes s = 4;
     if (cached_has_bits & 0x00000002u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
-          this->_internal_s());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
+                                      this->_internal_s());
     }
 
     // optional string doc_string = 13;
     if (cached_has_bits & 0x00000004u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_doc_string());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_doc_string());
     }
 
     // optional string ref_attr_name = 21;
     if (cached_has_bits & 0x00000008u) {
-      total_size += 2 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_ref_attr_name());
+      total_size += 2 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_ref_attr_name());
     }
 
     // optional .onnx.TensorProto t = 5;
@@ -1599,18 +1792,19 @@ size_t AttributeProto::ByteSizeLong() const {
   if (cached_has_bits & 0x00000700u) {
     // optional int64 i = 3;
     if (cached_has_bits & 0x00000100u) {
-      total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(this->_internal_i());
+      total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(
+          this->_internal_i());
     }
 
     // optional float f = 2;
     if (cached_has_bits & 0x00000200u) {
-      total_size += 1 + 4;
+      total_size += 5;
     }
 
     // optional .onnx.AttributeProto.AttributeType type = 20;
     if (cached_has_bits & 0x00000400u) {
       total_size += 2 +
-        ::_pbi::WireFormatLite::EnumSize(this->_internal_type());
+                    ::_pbi::WireFormatLite::EnumSize(this->_internal_type());
     }
 
   }
@@ -1631,8 +1825,8 @@ void AttributeProto::CheckTypeAndMergeFrom(
 void AttributeProto::MergeFrom(const AttributeProto& from) {
   AttributeProto* const _this = this;
   // @@protoc_insertion_point(class_specific_merge_from_start:onnx.AttributeProto)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   _this->_impl_.floats_.MergeFrom(from._impl_.floats_);
@@ -1712,22 +1906,14 @@ void AttributeProto::InternalSwap(AttributeProto* other) {
   _impl_.graphs_.InternalSwap(&other->_impl_.graphs_);
   _impl_.type_protos_.InternalSwap(&other->_impl_.type_protos_);
   _impl_.sparse_tensors_.InternalSwap(&other->_impl_.sparse_tensors_);
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.name_, lhs_arena,
-      &other->_impl_.name_, rhs_arena
-  );
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.s_, lhs_arena,
-      &other->_impl_.s_, rhs_arena
-  );
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.doc_string_, lhs_arena,
-      &other->_impl_.doc_string_, rhs_arena
-  );
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.ref_attr_name_, lhs_arena,
-      &other->_impl_.ref_attr_name_, rhs_arena
-  );
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.name_, lhs_arena,
+                                       &other->_impl_.name_, rhs_arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.s_, lhs_arena,
+                                       &other->_impl_.s_, rhs_arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.doc_string_, lhs_arena,
+                                       &other->_impl_.doc_string_, rhs_arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.ref_attr_name_, lhs_arena,
+                                       &other->_impl_.ref_attr_name_, rhs_arena);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
       PROTOBUF_FIELD_OFFSET(AttributeProto, _impl_.type_)
       + sizeof(AttributeProto::_impl_.type_)
@@ -1740,12 +1926,13 @@ std::string AttributeProto::GetTypeName() const {
   return "onnx.AttributeProto";
 }
 
-
 // ===================================================================
 
 class ValueInfoProto::_Internal {
  public:
   using HasBits = decltype(std::declval<ValueInfoProto>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(ValueInfoProto, _impl_._has_bits_);
   static void set_has_name(HasBits* has_bits) {
     (*has_bits)[0] |= 1u;
   }
@@ -1762,10 +1949,9 @@ const ::onnx::TypeProto&
 ValueInfoProto::_Internal::type(const ValueInfoProto* msg) {
   return *msg->_impl_.type_;
 }
-ValueInfoProto::ValueInfoProto(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
+ValueInfoProto::ValueInfoProto(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena) {
+  SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:onnx.ValueInfoProto)
 }
 ValueInfoProto::ValueInfoProto(const ValueInfoProto& from)
@@ -1774,52 +1960,52 @@ ValueInfoProto::ValueInfoProto(const ValueInfoProto& from)
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){from._impl_._has_bits_}
     , /*decltype(_impl_._cached_size_)*/{}
-    , decltype(_impl_.name_){}
-    , decltype(_impl_.doc_string_){}
+    , decltype(_impl_.name_) {}
+
+    , decltype(_impl_.doc_string_) {}
+
     , decltype(_impl_.type_){nullptr}};
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
   _impl_.name_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.name_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_name()) {
-    _this->_impl_.name_.Set(from._internal_name(), 
-      _this->GetArenaForAllocation());
+        _impl_.name_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
+    _this->_impl_.name_.Set(from._internal_name(), _this->GetArenaForAllocation());
   }
   _impl_.doc_string_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.doc_string_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_doc_string()) {
-    _this->_impl_.doc_string_.Set(from._internal_doc_string(), 
-      _this->GetArenaForAllocation());
+        _impl_.doc_string_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000002u) != 0) {
+    _this->_impl_.doc_string_.Set(from._internal_doc_string(), _this->GetArenaForAllocation());
   }
-  if (from._internal_has_type()) {
+  if ((from._impl_._has_bits_[0] & 0x00000004u) != 0) {
     _this->_impl_.type_ = new ::onnx::TypeProto(*from._impl_.type_);
   }
   // @@protoc_insertion_point(copy_constructor:onnx.ValueInfoProto)
 }
 
-inline void ValueInfoProto::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
+inline void ValueInfoProto::SharedCtor(::_pb::Arena* arena) {
   (void)arena;
-  (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){}
     , /*decltype(_impl_._cached_size_)*/{}
-    , decltype(_impl_.name_){}
-    , decltype(_impl_.doc_string_){}
+    , decltype(_impl_.name_) {}
+
+    , decltype(_impl_.doc_string_) {}
+
     , decltype(_impl_.type_){nullptr}
   };
   _impl_.name_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.name_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.name_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   _impl_.doc_string_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.doc_string_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.doc_string_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 }
 
 ValueInfoProto::~ValueInfoProto() {
@@ -1832,7 +2018,7 @@ ValueInfoProto::~ValueInfoProto() {
 }
 
 inline void ValueInfoProto::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  ABSL_DCHECK(GetArenaForAllocation() == nullptr);
   _impl_.name_.Destroy();
   _impl_.doc_string_.Destroy();
   if (this != internal_default_instance()) delete _impl_.type_;
@@ -1844,7 +2030,7 @@ void ValueInfoProto::SetCachedSize(int size) const {
 
 void ValueInfoProto::Clear() {
 // @@protoc_insertion_point(message_clear_start:onnx.ValueInfoProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -1857,7 +2043,7 @@ void ValueInfoProto::Clear() {
       _impl_.doc_string_.ClearNonDefaultToEmpty();
     }
     if (cached_has_bits & 0x00000004u) {
-      GOOGLE_DCHECK(_impl_.type_ != nullptr);
+      ABSL_DCHECK(_impl_.type_ != nullptr);
       _impl_.type_->Clear();
     }
   }
@@ -1869,34 +2055,37 @@ const char* ValueInfoProto::_InternalParse(const char* ptr, ::_pbi::ParseContext
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   _Internal::HasBits has_bits{};
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
+    ::uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // optional string name = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 10)) {
           auto str = _internal_mutable_name();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional .onnx.TypeProto type = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 18)) {
           ptr = ctx->ParseMessage(_internal_mutable_type(), ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional string doc_string = 3;
       case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 26)) {
           auto str = _internal_mutable_doc_string();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       default:
         goto handle_unusual;
@@ -1922,17 +2111,17 @@ failure:
 #undef CHK_
 }
 
-uint8_t* ValueInfoProto::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::uint8_t* ValueInfoProto::_InternalSerialize(
+    ::uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:onnx.ValueInfoProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
   // optional string name = 1;
   if (cached_has_bits & 0x00000001u) {
-    target = stream->WriteStringMaybeAliased(
-        1, this->_internal_name(), target);
+    const std::string& _s = this->_internal_name();
+    target = stream->WriteStringMaybeAliased(1, _s, target);
   }
 
   // optional .onnx.TypeProto type = 2;
@@ -1944,8 +2133,8 @@ uint8_t* ValueInfoProto::_InternalSerialize(
 
   // optional string doc_string = 3;
   if (cached_has_bits & 0x00000002u) {
-    target = stream->WriteStringMaybeAliased(
-        3, this->_internal_doc_string(), target);
+    const std::string& _s = this->_internal_doc_string();
+    target = stream->WriteStringMaybeAliased(3, _s, target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -1956,11 +2145,11 @@ uint8_t* ValueInfoProto::_InternalSerialize(
   return target;
 }
 
-size_t ValueInfoProto::ByteSizeLong() const {
+::size_t ValueInfoProto::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:onnx.ValueInfoProto)
-  size_t total_size = 0;
+  ::size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -1968,16 +2157,14 @@ size_t ValueInfoProto::ByteSizeLong() const {
   if (cached_has_bits & 0x00000007u) {
     // optional string name = 1;
     if (cached_has_bits & 0x00000001u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_name());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_name());
     }
 
     // optional string doc_string = 3;
     if (cached_has_bits & 0x00000002u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_doc_string());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_doc_string());
     }
 
     // optional .onnx.TypeProto type = 2;
@@ -2005,8 +2192,8 @@ void ValueInfoProto::CheckTypeAndMergeFrom(
 void ValueInfoProto::MergeFrom(const ValueInfoProto& from) {
   ValueInfoProto* const _this = this;
   // @@protoc_insertion_point(class_specific_merge_from_start:onnx.ValueInfoProto)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   cached_has_bits = from._impl_._has_bits_[0];
@@ -2042,14 +2229,10 @@ void ValueInfoProto::InternalSwap(ValueInfoProto* other) {
   auto* rhs_arena = other->GetArenaForAllocation();
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.name_, lhs_arena,
-      &other->_impl_.name_, rhs_arena
-  );
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.doc_string_, lhs_arena,
-      &other->_impl_.doc_string_, rhs_arena
-  );
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.name_, lhs_arena,
+                                       &other->_impl_.name_, rhs_arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.doc_string_, lhs_arena,
+                                       &other->_impl_.doc_string_, rhs_arena);
   swap(_impl_.type_, other->_impl_.type_);
 }
 
@@ -2057,12 +2240,13 @@ std::string ValueInfoProto::GetTypeName() const {
   return "onnx.ValueInfoProto";
 }
 
-
 // ===================================================================
 
 class NodeProto::_Internal {
  public:
   using HasBits = decltype(std::declval<NodeProto>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(NodeProto, _impl_._has_bits_);
   static void set_has_name(HasBits* has_bits) {
     (*has_bits)[0] |= 1u;
   }
@@ -2077,10 +2261,9 @@ class NodeProto::_Internal {
   }
 };
 
-NodeProto::NodeProto(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
+NodeProto::NodeProto(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena) {
+  SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:onnx.NodeProto)
 }
 NodeProto::NodeProto(const NodeProto& from)
@@ -2092,78 +2275,80 @@ NodeProto::NodeProto(const NodeProto& from)
     , decltype(_impl_.input_){from._impl_.input_}
     , decltype(_impl_.output_){from._impl_.output_}
     , decltype(_impl_.attribute_){from._impl_.attribute_}
-    , decltype(_impl_.name_){}
-    , decltype(_impl_.op_type_){}
-    , decltype(_impl_.doc_string_){}
-    , decltype(_impl_.domain_){}};
+    , decltype(_impl_.name_) {}
+
+    , decltype(_impl_.op_type_) {}
+
+    , decltype(_impl_.doc_string_) {}
+
+    , decltype(_impl_.domain_) {}
+  };
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
   _impl_.name_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.name_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_name()) {
-    _this->_impl_.name_.Set(from._internal_name(), 
-      _this->GetArenaForAllocation());
+        _impl_.name_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
+    _this->_impl_.name_.Set(from._internal_name(), _this->GetArenaForAllocation());
   }
   _impl_.op_type_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.op_type_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_op_type()) {
-    _this->_impl_.op_type_.Set(from._internal_op_type(), 
-      _this->GetArenaForAllocation());
+        _impl_.op_type_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000002u) != 0) {
+    _this->_impl_.op_type_.Set(from._internal_op_type(), _this->GetArenaForAllocation());
   }
   _impl_.doc_string_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.doc_string_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_doc_string()) {
-    _this->_impl_.doc_string_.Set(from._internal_doc_string(), 
-      _this->GetArenaForAllocation());
+        _impl_.doc_string_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000004u) != 0) {
+    _this->_impl_.doc_string_.Set(from._internal_doc_string(), _this->GetArenaForAllocation());
   }
   _impl_.domain_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.domain_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_domain()) {
-    _this->_impl_.domain_.Set(from._internal_domain(), 
-      _this->GetArenaForAllocation());
+        _impl_.domain_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000008u) != 0) {
+    _this->_impl_.domain_.Set(from._internal_domain(), _this->GetArenaForAllocation());
   }
   // @@protoc_insertion_point(copy_constructor:onnx.NodeProto)
 }
 
-inline void NodeProto::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
+inline void NodeProto::SharedCtor(::_pb::Arena* arena) {
   (void)arena;
-  (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){}
     , /*decltype(_impl_._cached_size_)*/{}
     , decltype(_impl_.input_){arena}
     , decltype(_impl_.output_){arena}
     , decltype(_impl_.attribute_){arena}
-    , decltype(_impl_.name_){}
-    , decltype(_impl_.op_type_){}
-    , decltype(_impl_.doc_string_){}
-    , decltype(_impl_.domain_){}
+    , decltype(_impl_.name_) {}
+
+    , decltype(_impl_.op_type_) {}
+
+    , decltype(_impl_.doc_string_) {}
+
+    , decltype(_impl_.domain_) {}
+
   };
   _impl_.name_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.name_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.name_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   _impl_.op_type_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.op_type_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.op_type_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   _impl_.doc_string_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.doc_string_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.doc_string_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   _impl_.domain_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.domain_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.domain_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 }
 
 NodeProto::~NodeProto() {
@@ -2176,7 +2361,7 @@ NodeProto::~NodeProto() {
 }
 
 inline void NodeProto::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  ABSL_DCHECK(GetArenaForAllocation() == nullptr);
   _impl_.input_.~RepeatedPtrField();
   _impl_.output_.~RepeatedPtrField();
   _impl_.attribute_.~RepeatedPtrField();
@@ -2192,7 +2377,7 @@ void NodeProto::SetCachedSize(int size) const {
 
 void NodeProto::Clear() {
 // @@protoc_insertion_point(message_clear_start:onnx.NodeProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -2222,12 +2407,12 @@ const char* NodeProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   _Internal::HasBits has_bits{};
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
+    ::uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // repeated string input = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 10)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -2236,12 +2421,13 @@ const char* NodeProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<10>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated string output = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 18)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -2250,30 +2436,33 @@ const char* NodeProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<18>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional string name = 3;
       case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 26)) {
           auto str = _internal_mutable_name();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional string op_type = 4;
       case 4:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 34)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 34)) {
           auto str = _internal_mutable_op_type();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated .onnx.AttributeProto attribute = 5;
       case 5:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 42)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 42)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -2281,26 +2470,29 @@ const char* NodeProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<42>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional string doc_string = 6;
       case 6:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 50)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 50)) {
           auto str = _internal_mutable_doc_string();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional string domain = 7;
       case 7:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 58)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 58)) {
           auto str = _internal_mutable_domain();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       default:
         goto handle_unusual;
@@ -2326,20 +2518,20 @@ failure:
 #undef CHK_
 }
 
-uint8_t* NodeProto::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::uint8_t* NodeProto::_InternalSerialize(
+    ::uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:onnx.NodeProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   // repeated string input = 1;
-  for (int i = 0, n = this->_internal_input_size(); i < n; i++) {
+  for (int i = 0, n = this->_internal_input_size(); i < n; ++i) {
     const auto& s = this->_internal_input(i);
     target = stream->WriteString(1, s, target);
   }
 
   // repeated string output = 2;
-  for (int i = 0, n = this->_internal_output_size(); i < n; i++) {
+  for (int i = 0, n = this->_internal_output_size(); i < n; ++i) {
     const auto& s = this->_internal_output(i);
     target = stream->WriteString(2, s, target);
   }
@@ -2347,14 +2539,14 @@ uint8_t* NodeProto::_InternalSerialize(
   cached_has_bits = _impl_._has_bits_[0];
   // optional string name = 3;
   if (cached_has_bits & 0x00000001u) {
-    target = stream->WriteStringMaybeAliased(
-        3, this->_internal_name(), target);
+    const std::string& _s = this->_internal_name();
+    target = stream->WriteStringMaybeAliased(3, _s, target);
   }
 
   // optional string op_type = 4;
   if (cached_has_bits & 0x00000002u) {
-    target = stream->WriteStringMaybeAliased(
-        4, this->_internal_op_type(), target);
+    const std::string& _s = this->_internal_op_type();
+    target = stream->WriteStringMaybeAliased(4, _s, target);
   }
 
   // repeated .onnx.AttributeProto attribute = 5;
@@ -2367,14 +2559,14 @@ uint8_t* NodeProto::_InternalSerialize(
 
   // optional string doc_string = 6;
   if (cached_has_bits & 0x00000004u) {
-    target = stream->WriteStringMaybeAliased(
-        6, this->_internal_doc_string(), target);
+    const std::string& _s = this->_internal_doc_string();
+    target = stream->WriteStringMaybeAliased(6, _s, target);
   }
 
   // optional string domain = 7;
   if (cached_has_bits & 0x00000008u) {
-    target = stream->WriteStringMaybeAliased(
-        7, this->_internal_domain(), target);
+    const std::string& _s = this->_internal_domain();
+    target = stream->WriteStringMaybeAliased(7, _s, target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -2385,28 +2577,24 @@ uint8_t* NodeProto::_InternalSerialize(
   return target;
 }
 
-size_t NodeProto::ByteSizeLong() const {
+::size_t NodeProto::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:onnx.NodeProto)
-  size_t total_size = 0;
+  ::size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   // repeated string input = 1;
-  total_size += 1 *
-      ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(_impl_.input_.size());
-  for (int i = 0, n = _impl_.input_.size(); i < n; i++) {
-    total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-      _impl_.input_.Get(i));
+  total_size += 1 * ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(_impl_.input_.size());
+  for (int i = 0, n = _impl_.input_.size(); i < n; ++i) {
+    total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(_impl_.input_.Get(i));
   }
 
   // repeated string output = 2;
-  total_size += 1 *
-      ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(_impl_.output_.size());
-  for (int i = 0, n = _impl_.output_.size(); i < n; i++) {
-    total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-      _impl_.output_.Get(i));
+  total_size += 1 * ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(_impl_.output_.size());
+  for (int i = 0, n = _impl_.output_.size(); i < n; ++i) {
+    total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(_impl_.output_.Get(i));
   }
 
   // repeated .onnx.AttributeProto attribute = 5;
@@ -2420,30 +2608,26 @@ size_t NodeProto::ByteSizeLong() const {
   if (cached_has_bits & 0x0000000fu) {
     // optional string name = 3;
     if (cached_has_bits & 0x00000001u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_name());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_name());
     }
 
     // optional string op_type = 4;
     if (cached_has_bits & 0x00000002u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_op_type());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_op_type());
     }
 
     // optional string doc_string = 6;
     if (cached_has_bits & 0x00000004u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_doc_string());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_doc_string());
     }
 
     // optional string domain = 7;
     if (cached_has_bits & 0x00000008u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_domain());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_domain());
     }
 
   }
@@ -2464,8 +2648,8 @@ void NodeProto::CheckTypeAndMergeFrom(
 void NodeProto::MergeFrom(const NodeProto& from) {
   NodeProto* const _this = this;
   // @@protoc_insertion_point(class_specific_merge_from_start:onnx.NodeProto)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   _this->_impl_.input_.MergeFrom(from._impl_.input_);
@@ -2509,34 +2693,27 @@ void NodeProto::InternalSwap(NodeProto* other) {
   _impl_.input_.InternalSwap(&other->_impl_.input_);
   _impl_.output_.InternalSwap(&other->_impl_.output_);
   _impl_.attribute_.InternalSwap(&other->_impl_.attribute_);
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.name_, lhs_arena,
-      &other->_impl_.name_, rhs_arena
-  );
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.op_type_, lhs_arena,
-      &other->_impl_.op_type_, rhs_arena
-  );
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.doc_string_, lhs_arena,
-      &other->_impl_.doc_string_, rhs_arena
-  );
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.domain_, lhs_arena,
-      &other->_impl_.domain_, rhs_arena
-  );
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.name_, lhs_arena,
+                                       &other->_impl_.name_, rhs_arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.op_type_, lhs_arena,
+                                       &other->_impl_.op_type_, rhs_arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.doc_string_, lhs_arena,
+                                       &other->_impl_.doc_string_, rhs_arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.domain_, lhs_arena,
+                                       &other->_impl_.domain_, rhs_arena);
 }
 
 std::string NodeProto::GetTypeName() const {
   return "onnx.NodeProto";
 }
 
-
 // ===================================================================
 
 class TrainingInfoProto::_Internal {
  public:
   using HasBits = decltype(std::declval<TrainingInfoProto>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(TrainingInfoProto, _impl_._has_bits_);
   static const ::onnx::GraphProto& initialization(const TrainingInfoProto* msg);
   static void set_has_initialization(HasBits* has_bits) {
     (*has_bits)[0] |= 1u;
@@ -2555,10 +2732,9 @@ const ::onnx::GraphProto&
 TrainingInfoProto::_Internal::algorithm(const TrainingInfoProto* msg) {
   return *msg->_impl_.algorithm_;
 }
-TrainingInfoProto::TrainingInfoProto(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
+TrainingInfoProto::TrainingInfoProto(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena) {
+  SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:onnx.TrainingInfoProto)
 }
 TrainingInfoProto::TrainingInfoProto(const TrainingInfoProto& from)
@@ -2573,19 +2749,17 @@ TrainingInfoProto::TrainingInfoProto(const TrainingInfoProto& from)
     , decltype(_impl_.algorithm_){nullptr}};
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
-  if (from._internal_has_initialization()) {
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
     _this->_impl_.initialization_ = new ::onnx::GraphProto(*from._impl_.initialization_);
   }
-  if (from._internal_has_algorithm()) {
+  if ((from._impl_._has_bits_[0] & 0x00000002u) != 0) {
     _this->_impl_.algorithm_ = new ::onnx::GraphProto(*from._impl_.algorithm_);
   }
   // @@protoc_insertion_point(copy_constructor:onnx.TrainingInfoProto)
 }
 
-inline void TrainingInfoProto::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
+inline void TrainingInfoProto::SharedCtor(::_pb::Arena* arena) {
   (void)arena;
-  (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){}
     , /*decltype(_impl_._cached_size_)*/{}
@@ -2606,7 +2780,7 @@ TrainingInfoProto::~TrainingInfoProto() {
 }
 
 inline void TrainingInfoProto::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  ABSL_DCHECK(GetArenaForAllocation() == nullptr);
   _impl_.initialization_binding_.~RepeatedPtrField();
   _impl_.update_binding_.~RepeatedPtrField();
   if (this != internal_default_instance()) delete _impl_.initialization_;
@@ -2619,7 +2793,7 @@ void TrainingInfoProto::SetCachedSize(int size) const {
 
 void TrainingInfoProto::Clear() {
 // @@protoc_insertion_point(message_clear_start:onnx.TrainingInfoProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -2628,11 +2802,11 @@ void TrainingInfoProto::Clear() {
   cached_has_bits = _impl_._has_bits_[0];
   if (cached_has_bits & 0x00000003u) {
     if (cached_has_bits & 0x00000001u) {
-      GOOGLE_DCHECK(_impl_.initialization_ != nullptr);
+      ABSL_DCHECK(_impl_.initialization_ != nullptr);
       _impl_.initialization_->Clear();
     }
     if (cached_has_bits & 0x00000002u) {
-      GOOGLE_DCHECK(_impl_.algorithm_ != nullptr);
+      ABSL_DCHECK(_impl_.algorithm_ != nullptr);
       _impl_.algorithm_->Clear();
     }
   }
@@ -2644,28 +2818,30 @@ const char* TrainingInfoProto::_InternalParse(const char* ptr, ::_pbi::ParseCont
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   _Internal::HasBits has_bits{};
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
+    ::uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // optional .onnx.GraphProto initialization = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 10)) {
           ptr = ctx->ParseMessage(_internal_mutable_initialization(), ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional .onnx.GraphProto algorithm = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 18)) {
           ptr = ctx->ParseMessage(_internal_mutable_algorithm(), ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated .onnx.StringStringEntryProto initialization_binding = 3;
       case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 26)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -2673,12 +2849,13 @@ const char* TrainingInfoProto::_InternalParse(const char* ptr, ::_pbi::ParseCont
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<26>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated .onnx.StringStringEntryProto update_binding = 4;
       case 4:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 34)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 34)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -2686,8 +2863,9 @@ const char* TrainingInfoProto::_InternalParse(const char* ptr, ::_pbi::ParseCont
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<34>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       default:
         goto handle_unusual;
@@ -2713,10 +2891,10 @@ failure:
 #undef CHK_
 }
 
-uint8_t* TrainingInfoProto::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::uint8_t* TrainingInfoProto::_InternalSerialize(
+    ::uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:onnx.TrainingInfoProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
@@ -2758,11 +2936,11 @@ uint8_t* TrainingInfoProto::_InternalSerialize(
   return target;
 }
 
-size_t TrainingInfoProto::ByteSizeLong() const {
+::size_t TrainingInfoProto::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:onnx.TrainingInfoProto)
-  size_t total_size = 0;
+  ::size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -2814,8 +2992,8 @@ void TrainingInfoProto::CheckTypeAndMergeFrom(
 void TrainingInfoProto::MergeFrom(const TrainingInfoProto& from) {
   TrainingInfoProto* const _this = this;
   // @@protoc_insertion_point(class_specific_merge_from_start:onnx.TrainingInfoProto)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   _this->_impl_.initialization_binding_.MergeFrom(from._impl_.initialization_binding_);
@@ -2863,12 +3041,13 @@ std::string TrainingInfoProto::GetTypeName() const {
   return "onnx.TrainingInfoProto";
 }
 
-
 // ===================================================================
 
 class ModelProto::_Internal {
  public:
   using HasBits = decltype(std::declval<ModelProto>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(ModelProto, _impl_._has_bits_);
   static void set_has_ir_version(HasBits* has_bits) {
     (*has_bits)[0] |= 32u;
   }
@@ -2897,10 +3076,9 @@ const ::onnx::GraphProto&
 ModelProto::_Internal::graph(const ModelProto* msg) {
   return *msg->_impl_.graph_;
 }
-ModelProto::ModelProto(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
+ModelProto::ModelProto(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena) {
+  SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:onnx.ModelProto)
 }
 ModelProto::ModelProto(const ModelProto& from)
@@ -2913,60 +3091,60 @@ ModelProto::ModelProto(const ModelProto& from)
     , decltype(_impl_.metadata_props_){from._impl_.metadata_props_}
     , decltype(_impl_.training_info_){from._impl_.training_info_}
     , decltype(_impl_.functions_){from._impl_.functions_}
-    , decltype(_impl_.producer_name_){}
-    , decltype(_impl_.producer_version_){}
-    , decltype(_impl_.domain_){}
-    , decltype(_impl_.doc_string_){}
+    , decltype(_impl_.producer_name_) {}
+
+    , decltype(_impl_.producer_version_) {}
+
+    , decltype(_impl_.domain_) {}
+
+    , decltype(_impl_.doc_string_) {}
+
     , decltype(_impl_.graph_){nullptr}
-    , decltype(_impl_.ir_version_){}
-    , decltype(_impl_.model_version_){}};
+    , decltype(_impl_.ir_version_) {}
+
+    , decltype(_impl_.model_version_) {}
+  };
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
   _impl_.producer_name_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.producer_name_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_producer_name()) {
-    _this->_impl_.producer_name_.Set(from._internal_producer_name(), 
-      _this->GetArenaForAllocation());
+        _impl_.producer_name_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
+    _this->_impl_.producer_name_.Set(from._internal_producer_name(), _this->GetArenaForAllocation());
   }
   _impl_.producer_version_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.producer_version_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_producer_version()) {
-    _this->_impl_.producer_version_.Set(from._internal_producer_version(), 
-      _this->GetArenaForAllocation());
+        _impl_.producer_version_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000002u) != 0) {
+    _this->_impl_.producer_version_.Set(from._internal_producer_version(), _this->GetArenaForAllocation());
   }
   _impl_.domain_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.domain_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_domain()) {
-    _this->_impl_.domain_.Set(from._internal_domain(), 
-      _this->GetArenaForAllocation());
+        _impl_.domain_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000004u) != 0) {
+    _this->_impl_.domain_.Set(from._internal_domain(), _this->GetArenaForAllocation());
   }
   _impl_.doc_string_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.doc_string_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_doc_string()) {
-    _this->_impl_.doc_string_.Set(from._internal_doc_string(), 
-      _this->GetArenaForAllocation());
+        _impl_.doc_string_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000008u) != 0) {
+    _this->_impl_.doc_string_.Set(from._internal_doc_string(), _this->GetArenaForAllocation());
   }
-  if (from._internal_has_graph()) {
+  if ((from._impl_._has_bits_[0] & 0x00000010u) != 0) {
     _this->_impl_.graph_ = new ::onnx::GraphProto(*from._impl_.graph_);
   }
   ::memcpy(&_impl_.ir_version_, &from._impl_.ir_version_,
-    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.model_version_) -
+    static_cast<::size_t>(reinterpret_cast<char*>(&_impl_.model_version_) -
     reinterpret_cast<char*>(&_impl_.ir_version_)) + sizeof(_impl_.model_version_));
   // @@protoc_insertion_point(copy_constructor:onnx.ModelProto)
 }
 
-inline void ModelProto::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
+inline void ModelProto::SharedCtor(::_pb::Arena* arena) {
   (void)arena;
-  (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){}
     , /*decltype(_impl_._cached_size_)*/{}
@@ -2974,30 +3152,36 @@ inline void ModelProto::SharedCtor(
     , decltype(_impl_.metadata_props_){arena}
     , decltype(_impl_.training_info_){arena}
     , decltype(_impl_.functions_){arena}
-    , decltype(_impl_.producer_name_){}
-    , decltype(_impl_.producer_version_){}
-    , decltype(_impl_.domain_){}
-    , decltype(_impl_.doc_string_){}
+    , decltype(_impl_.producer_name_) {}
+
+    , decltype(_impl_.producer_version_) {}
+
+    , decltype(_impl_.domain_) {}
+
+    , decltype(_impl_.doc_string_) {}
+
     , decltype(_impl_.graph_){nullptr}
-    , decltype(_impl_.ir_version_){int64_t{0}}
-    , decltype(_impl_.model_version_){int64_t{0}}
+    , decltype(_impl_.ir_version_) { ::int64_t{0} }
+
+    , decltype(_impl_.model_version_) { ::int64_t{0} }
+
   };
   _impl_.producer_name_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.producer_name_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.producer_name_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   _impl_.producer_version_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.producer_version_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.producer_version_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   _impl_.domain_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.domain_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.domain_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   _impl_.doc_string_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.doc_string_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.doc_string_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 }
 
 ModelProto::~ModelProto() {
@@ -3010,7 +3194,7 @@ ModelProto::~ModelProto() {
 }
 
 inline void ModelProto::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  ABSL_DCHECK(GetArenaForAllocation() == nullptr);
   _impl_.opset_import_.~RepeatedPtrField();
   _impl_.metadata_props_.~RepeatedPtrField();
   _impl_.training_info_.~RepeatedPtrField();
@@ -3028,7 +3212,7 @@ void ModelProto::SetCachedSize(int size) const {
 
 void ModelProto::Clear() {
 // @@protoc_insertion_point(message_clear_start:onnx.ModelProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -3051,12 +3235,12 @@ void ModelProto::Clear() {
       _impl_.doc_string_.ClearNonDefaultToEmpty();
     }
     if (cached_has_bits & 0x00000010u) {
-      GOOGLE_DCHECK(_impl_.graph_ != nullptr);
+      ABSL_DCHECK(_impl_.graph_ != nullptr);
       _impl_.graph_->Clear();
     }
   }
   if (cached_has_bits & 0x00000060u) {
-    ::memset(&_impl_.ir_version_, 0, static_cast<size_t>(
+    ::memset(&_impl_.ir_version_, 0, static_cast<::size_t>(
         reinterpret_cast<char*>(&_impl_.model_version_) -
         reinterpret_cast<char*>(&_impl_.ir_version_)) + sizeof(_impl_.model_version_));
   }
@@ -3068,74 +3252,81 @@ const char* ModelProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ct
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   _Internal::HasBits has_bits{};
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
+    ::uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // optional int64 ir_version = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 8)) {
           _Internal::set_has_ir_version(&has_bits);
           _impl_.ir_version_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional string producer_name = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 18)) {
           auto str = _internal_mutable_producer_name();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional string producer_version = 3;
       case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 26)) {
           auto str = _internal_mutable_producer_version();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional string domain = 4;
       case 4:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 34)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 34)) {
           auto str = _internal_mutable_domain();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional int64 model_version = 5;
       case 5:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 40)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 40)) {
           _Internal::set_has_model_version(&has_bits);
           _impl_.model_version_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional string doc_string = 6;
       case 6:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 50)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 50)) {
           auto str = _internal_mutable_doc_string();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional .onnx.GraphProto graph = 7;
       case 7:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 58)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 58)) {
           ptr = ctx->ParseMessage(_internal_mutable_graph(), ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated .onnx.OperatorSetIdProto opset_import = 8;
       case 8:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 66)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 66)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -3143,12 +3334,13 @@ const char* ModelProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ct
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<66>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated .onnx.StringStringEntryProto metadata_props = 14;
       case 14:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 114)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 114)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -3156,12 +3348,13 @@ const char* ModelProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ct
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<114>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated .onnx.TrainingInfoProto training_info = 20;
       case 20:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 162)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 162)) {
           ptr -= 2;
           do {
             ptr += 2;
@@ -3169,12 +3362,13 @@ const char* ModelProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ct
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<162>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated .onnx.FunctionProto functions = 25;
       case 25:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 202)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 202)) {
           ptr -= 2;
           do {
             ptr += 2;
@@ -3182,8 +3376,9 @@ const char* ModelProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ct
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<202>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       default:
         goto handle_unusual;
@@ -3209,47 +3404,49 @@ failure:
 #undef CHK_
 }
 
-uint8_t* ModelProto::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::uint8_t* ModelProto::_InternalSerialize(
+    ::uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:onnx.ModelProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
   // optional int64 ir_version = 1;
   if (cached_has_bits & 0x00000020u) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt64ToArray(1, this->_internal_ir_version(), target);
+    target = ::_pbi::WireFormatLite::WriteInt64ToArray(
+        1, this->_internal_ir_version(), target);
   }
 
   // optional string producer_name = 2;
   if (cached_has_bits & 0x00000001u) {
-    target = stream->WriteStringMaybeAliased(
-        2, this->_internal_producer_name(), target);
+    const std::string& _s = this->_internal_producer_name();
+    target = stream->WriteStringMaybeAliased(2, _s, target);
   }
 
   // optional string producer_version = 3;
   if (cached_has_bits & 0x00000002u) {
-    target = stream->WriteStringMaybeAliased(
-        3, this->_internal_producer_version(), target);
+    const std::string& _s = this->_internal_producer_version();
+    target = stream->WriteStringMaybeAliased(3, _s, target);
   }
 
   // optional string domain = 4;
   if (cached_has_bits & 0x00000004u) {
-    target = stream->WriteStringMaybeAliased(
-        4, this->_internal_domain(), target);
+    const std::string& _s = this->_internal_domain();
+    target = stream->WriteStringMaybeAliased(4, _s, target);
   }
 
   // optional int64 model_version = 5;
   if (cached_has_bits & 0x00000040u) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt64ToArray(5, this->_internal_model_version(), target);
+    target = ::_pbi::WireFormatLite::WriteInt64ToArray(
+        5, this->_internal_model_version(), target);
   }
 
   // optional string doc_string = 6;
   if (cached_has_bits & 0x00000008u) {
-    target = stream->WriteStringMaybeAliased(
-        6, this->_internal_doc_string(), target);
+    const std::string& _s = this->_internal_doc_string();
+    target = stream->WriteStringMaybeAliased(6, _s, target);
   }
 
   // optional .onnx.GraphProto graph = 7;
@@ -3299,11 +3496,11 @@ uint8_t* ModelProto::_InternalSerialize(
   return target;
 }
 
-size_t ModelProto::ByteSizeLong() const {
+::size_t ModelProto::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:onnx.ModelProto)
-  size_t total_size = 0;
+  ::size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -3339,30 +3536,26 @@ size_t ModelProto::ByteSizeLong() const {
   if (cached_has_bits & 0x0000007fu) {
     // optional string producer_name = 2;
     if (cached_has_bits & 0x00000001u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_producer_name());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_producer_name());
     }
 
     // optional string producer_version = 3;
     if (cached_has_bits & 0x00000002u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_producer_version());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_producer_version());
     }
 
     // optional string domain = 4;
     if (cached_has_bits & 0x00000004u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_domain());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_domain());
     }
 
     // optional string doc_string = 6;
     if (cached_has_bits & 0x00000008u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_doc_string());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_doc_string());
     }
 
     // optional .onnx.GraphProto graph = 7;
@@ -3374,12 +3567,14 @@ size_t ModelProto::ByteSizeLong() const {
 
     // optional int64 ir_version = 1;
     if (cached_has_bits & 0x00000020u) {
-      total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(this->_internal_ir_version());
+      total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(
+          this->_internal_ir_version());
     }
 
     // optional int64 model_version = 5;
     if (cached_has_bits & 0x00000040u) {
-      total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(this->_internal_model_version());
+      total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(
+          this->_internal_model_version());
     }
 
   }
@@ -3400,8 +3595,8 @@ void ModelProto::CheckTypeAndMergeFrom(
 void ModelProto::MergeFrom(const ModelProto& from) {
   ModelProto* const _this = this;
   // @@protoc_insertion_point(class_specific_merge_from_start:onnx.ModelProto)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   _this->_impl_.opset_import_.MergeFrom(from._impl_.opset_import_);
@@ -3458,22 +3653,14 @@ void ModelProto::InternalSwap(ModelProto* other) {
   _impl_.metadata_props_.InternalSwap(&other->_impl_.metadata_props_);
   _impl_.training_info_.InternalSwap(&other->_impl_.training_info_);
   _impl_.functions_.InternalSwap(&other->_impl_.functions_);
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.producer_name_, lhs_arena,
-      &other->_impl_.producer_name_, rhs_arena
-  );
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.producer_version_, lhs_arena,
-      &other->_impl_.producer_version_, rhs_arena
-  );
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.domain_, lhs_arena,
-      &other->_impl_.domain_, rhs_arena
-  );
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.doc_string_, lhs_arena,
-      &other->_impl_.doc_string_, rhs_arena
-  );
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.producer_name_, lhs_arena,
+                                       &other->_impl_.producer_name_, rhs_arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.producer_version_, lhs_arena,
+                                       &other->_impl_.producer_version_, rhs_arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.domain_, lhs_arena,
+                                       &other->_impl_.domain_, rhs_arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.doc_string_, lhs_arena,
+                                       &other->_impl_.doc_string_, rhs_arena);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
       PROTOBUF_FIELD_OFFSET(ModelProto, _impl_.model_version_)
       + sizeof(ModelProto::_impl_.model_version_)
@@ -3486,12 +3673,13 @@ std::string ModelProto::GetTypeName() const {
   return "onnx.ModelProto";
 }
 
-
 // ===================================================================
 
 class StringStringEntryProto::_Internal {
  public:
   using HasBits = decltype(std::declval<StringStringEntryProto>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(StringStringEntryProto, _impl_._has_bits_);
   static void set_has_key(HasBits* has_bits) {
     (*has_bits)[0] |= 1u;
   }
@@ -3500,10 +3688,9 @@ class StringStringEntryProto::_Internal {
   }
 };
 
-StringStringEntryProto::StringStringEntryProto(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
+StringStringEntryProto::StringStringEntryProto(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena) {
+  SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:onnx.StringStringEntryProto)
 }
 StringStringEntryProto::StringStringEntryProto(const StringStringEntryProto& from)
@@ -3512,47 +3699,47 @@ StringStringEntryProto::StringStringEntryProto(const StringStringEntryProto& fro
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){from._impl_._has_bits_}
     , /*decltype(_impl_._cached_size_)*/{}
-    , decltype(_impl_.key_){}
-    , decltype(_impl_.value_){}};
+    , decltype(_impl_.key_) {}
+
+    , decltype(_impl_.value_) {}
+  };
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
   _impl_.key_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.key_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_key()) {
-    _this->_impl_.key_.Set(from._internal_key(), 
-      _this->GetArenaForAllocation());
+        _impl_.key_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
+    _this->_impl_.key_.Set(from._internal_key(), _this->GetArenaForAllocation());
   }
   _impl_.value_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.value_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_value()) {
-    _this->_impl_.value_.Set(from._internal_value(), 
-      _this->GetArenaForAllocation());
+        _impl_.value_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000002u) != 0) {
+    _this->_impl_.value_.Set(from._internal_value(), _this->GetArenaForAllocation());
   }
   // @@protoc_insertion_point(copy_constructor:onnx.StringStringEntryProto)
 }
 
-inline void StringStringEntryProto::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
+inline void StringStringEntryProto::SharedCtor(::_pb::Arena* arena) {
   (void)arena;
-  (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){}
     , /*decltype(_impl_._cached_size_)*/{}
-    , decltype(_impl_.key_){}
-    , decltype(_impl_.value_){}
+    , decltype(_impl_.key_) {}
+
+    , decltype(_impl_.value_) {}
+
   };
   _impl_.key_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.key_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.key_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   _impl_.value_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.value_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.value_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 }
 
 StringStringEntryProto::~StringStringEntryProto() {
@@ -3565,7 +3752,7 @@ StringStringEntryProto::~StringStringEntryProto() {
 }
 
 inline void StringStringEntryProto::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  ABSL_DCHECK(GetArenaForAllocation() == nullptr);
   _impl_.key_.Destroy();
   _impl_.value_.Destroy();
 }
@@ -3576,7 +3763,7 @@ void StringStringEntryProto::SetCachedSize(int size) const {
 
 void StringStringEntryProto::Clear() {
 // @@protoc_insertion_point(message_clear_start:onnx.StringStringEntryProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -3597,26 +3784,28 @@ const char* StringStringEntryProto::_InternalParse(const char* ptr, ::_pbi::Pars
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   _Internal::HasBits has_bits{};
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
+    ::uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // optional string key = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 10)) {
           auto str = _internal_mutable_key();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional string value = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 18)) {
           auto str = _internal_mutable_value();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       default:
         goto handle_unusual;
@@ -3642,23 +3831,23 @@ failure:
 #undef CHK_
 }
 
-uint8_t* StringStringEntryProto::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::uint8_t* StringStringEntryProto::_InternalSerialize(
+    ::uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:onnx.StringStringEntryProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
   // optional string key = 1;
   if (cached_has_bits & 0x00000001u) {
-    target = stream->WriteStringMaybeAliased(
-        1, this->_internal_key(), target);
+    const std::string& _s = this->_internal_key();
+    target = stream->WriteStringMaybeAliased(1, _s, target);
   }
 
   // optional string value = 2;
   if (cached_has_bits & 0x00000002u) {
-    target = stream->WriteStringMaybeAliased(
-        2, this->_internal_value(), target);
+    const std::string& _s = this->_internal_value();
+    target = stream->WriteStringMaybeAliased(2, _s, target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -3669,11 +3858,11 @@ uint8_t* StringStringEntryProto::_InternalSerialize(
   return target;
 }
 
-size_t StringStringEntryProto::ByteSizeLong() const {
+::size_t StringStringEntryProto::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:onnx.StringStringEntryProto)
-  size_t total_size = 0;
+  ::size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -3681,16 +3870,14 @@ size_t StringStringEntryProto::ByteSizeLong() const {
   if (cached_has_bits & 0x00000003u) {
     // optional string key = 1;
     if (cached_has_bits & 0x00000001u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_key());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_key());
     }
 
     // optional string value = 2;
     if (cached_has_bits & 0x00000002u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_value());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_value());
     }
 
   }
@@ -3711,8 +3898,8 @@ void StringStringEntryProto::CheckTypeAndMergeFrom(
 void StringStringEntryProto::MergeFrom(const StringStringEntryProto& from) {
   StringStringEntryProto* const _this = this;
   // @@protoc_insertion_point(class_specific_merge_from_start:onnx.StringStringEntryProto)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   cached_has_bits = from._impl_._has_bits_[0];
@@ -3744,35 +3931,31 @@ void StringStringEntryProto::InternalSwap(StringStringEntryProto* other) {
   auto* rhs_arena = other->GetArenaForAllocation();
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.key_, lhs_arena,
-      &other->_impl_.key_, rhs_arena
-  );
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.value_, lhs_arena,
-      &other->_impl_.value_, rhs_arena
-  );
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.key_, lhs_arena,
+                                       &other->_impl_.key_, rhs_arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.value_, lhs_arena,
+                                       &other->_impl_.value_, rhs_arena);
 }
 
 std::string StringStringEntryProto::GetTypeName() const {
   return "onnx.StringStringEntryProto";
 }
 
-
 // ===================================================================
 
 class TensorAnnotation::_Internal {
  public:
   using HasBits = decltype(std::declval<TensorAnnotation>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(TensorAnnotation, _impl_._has_bits_);
   static void set_has_tensor_name(HasBits* has_bits) {
     (*has_bits)[0] |= 1u;
   }
 };
 
-TensorAnnotation::TensorAnnotation(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
+TensorAnnotation::TensorAnnotation(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena) {
+  SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:onnx.TensorAnnotation)
 }
 TensorAnnotation::TensorAnnotation(const TensorAnnotation& from)
@@ -3782,34 +3965,33 @@ TensorAnnotation::TensorAnnotation(const TensorAnnotation& from)
       decltype(_impl_._has_bits_){from._impl_._has_bits_}
     , /*decltype(_impl_._cached_size_)*/{}
     , decltype(_impl_.quant_parameter_tensor_names_){from._impl_.quant_parameter_tensor_names_}
-    , decltype(_impl_.tensor_name_){}};
+    , decltype(_impl_.tensor_name_) {}
+  };
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
   _impl_.tensor_name_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.tensor_name_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_tensor_name()) {
-    _this->_impl_.tensor_name_.Set(from._internal_tensor_name(), 
-      _this->GetArenaForAllocation());
+        _impl_.tensor_name_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
+    _this->_impl_.tensor_name_.Set(from._internal_tensor_name(), _this->GetArenaForAllocation());
   }
   // @@protoc_insertion_point(copy_constructor:onnx.TensorAnnotation)
 }
 
-inline void TensorAnnotation::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
+inline void TensorAnnotation::SharedCtor(::_pb::Arena* arena) {
   (void)arena;
-  (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){}
     , /*decltype(_impl_._cached_size_)*/{}
     , decltype(_impl_.quant_parameter_tensor_names_){arena}
-    , decltype(_impl_.tensor_name_){}
+    , decltype(_impl_.tensor_name_) {}
+
   };
   _impl_.tensor_name_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.tensor_name_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.tensor_name_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 }
 
 TensorAnnotation::~TensorAnnotation() {
@@ -3822,7 +4004,7 @@ TensorAnnotation::~TensorAnnotation() {
 }
 
 inline void TensorAnnotation::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  ABSL_DCHECK(GetArenaForAllocation() == nullptr);
   _impl_.quant_parameter_tensor_names_.~RepeatedPtrField();
   _impl_.tensor_name_.Destroy();
 }
@@ -3833,7 +4015,7 @@ void TensorAnnotation::SetCachedSize(int size) const {
 
 void TensorAnnotation::Clear() {
 // @@protoc_insertion_point(message_clear_start:onnx.TensorAnnotation)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -3850,21 +4032,22 @@ const char* TensorAnnotation::_InternalParse(const char* ptr, ::_pbi::ParseConte
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   _Internal::HasBits has_bits{};
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
+    ::uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // optional string tensor_name = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 10)) {
           auto str = _internal_mutable_tensor_name();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated .onnx.StringStringEntryProto quant_parameter_tensor_names = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 18)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -3872,8 +4055,9 @@ const char* TensorAnnotation::_InternalParse(const char* ptr, ::_pbi::ParseConte
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<18>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       default:
         goto handle_unusual;
@@ -3899,17 +4083,17 @@ failure:
 #undef CHK_
 }
 
-uint8_t* TensorAnnotation::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::uint8_t* TensorAnnotation::_InternalSerialize(
+    ::uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:onnx.TensorAnnotation)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
   // optional string tensor_name = 1;
   if (cached_has_bits & 0x00000001u) {
-    target = stream->WriteStringMaybeAliased(
-        1, this->_internal_tensor_name(), target);
+    const std::string& _s = this->_internal_tensor_name();
+    target = stream->WriteStringMaybeAliased(1, _s, target);
   }
 
   // repeated .onnx.StringStringEntryProto quant_parameter_tensor_names = 2;
@@ -3928,11 +4112,11 @@ uint8_t* TensorAnnotation::_InternalSerialize(
   return target;
 }
 
-size_t TensorAnnotation::ByteSizeLong() const {
+::size_t TensorAnnotation::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:onnx.TensorAnnotation)
-  size_t total_size = 0;
+  ::size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -3946,9 +4130,8 @@ size_t TensorAnnotation::ByteSizeLong() const {
   // optional string tensor_name = 1;
   cached_has_bits = _impl_._has_bits_[0];
   if (cached_has_bits & 0x00000001u) {
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-        this->_internal_tensor_name());
+    total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                    this->_internal_tensor_name());
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -3968,12 +4151,12 @@ void TensorAnnotation::CheckTypeAndMergeFrom(
 void TensorAnnotation::MergeFrom(const TensorAnnotation& from) {
   TensorAnnotation* const _this = this;
   // @@protoc_insertion_point(class_specific_merge_from_start:onnx.TensorAnnotation)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   _this->_impl_.quant_parameter_tensor_names_.MergeFrom(from._impl_.quant_parameter_tensor_names_);
-  if (from._internal_has_tensor_name()) {
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
     _this->_internal_set_tensor_name(from._internal_tensor_name());
   }
   _this->_internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
@@ -3997,22 +4180,21 @@ void TensorAnnotation::InternalSwap(TensorAnnotation* other) {
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
   _impl_.quant_parameter_tensor_names_.InternalSwap(&other->_impl_.quant_parameter_tensor_names_);
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.tensor_name_, lhs_arena,
-      &other->_impl_.tensor_name_, rhs_arena
-  );
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.tensor_name_, lhs_arena,
+                                       &other->_impl_.tensor_name_, rhs_arena);
 }
 
 std::string TensorAnnotation::GetTypeName() const {
   return "onnx.TensorAnnotation";
 }
 
-
 // ===================================================================
 
 class GraphProto::_Internal {
  public:
   using HasBits = decltype(std::declval<GraphProto>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(GraphProto, _impl_._has_bits_);
   static void set_has_name(HasBits* has_bits) {
     (*has_bits)[0] |= 1u;
   }
@@ -4021,10 +4203,9 @@ class GraphProto::_Internal {
   }
 };
 
-GraphProto::GraphProto(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
+GraphProto::GraphProto(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena) {
+  SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:onnx.GraphProto)
 }
 GraphProto::GraphProto(const GraphProto& from)
@@ -4040,33 +4221,31 @@ GraphProto::GraphProto(const GraphProto& from)
     , decltype(_impl_.value_info_){from._impl_.value_info_}
     , decltype(_impl_.quantization_annotation_){from._impl_.quantization_annotation_}
     , decltype(_impl_.sparse_initializer_){from._impl_.sparse_initializer_}
-    , decltype(_impl_.name_){}
-    , decltype(_impl_.doc_string_){}};
+    , decltype(_impl_.name_) {}
+
+    , decltype(_impl_.doc_string_) {}
+  };
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
   _impl_.name_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.name_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_name()) {
-    _this->_impl_.name_.Set(from._internal_name(), 
-      _this->GetArenaForAllocation());
+        _impl_.name_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
+    _this->_impl_.name_.Set(from._internal_name(), _this->GetArenaForAllocation());
   }
   _impl_.doc_string_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.doc_string_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_doc_string()) {
-    _this->_impl_.doc_string_.Set(from._internal_doc_string(), 
-      _this->GetArenaForAllocation());
+        _impl_.doc_string_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000002u) != 0) {
+    _this->_impl_.doc_string_.Set(from._internal_doc_string(), _this->GetArenaForAllocation());
   }
   // @@protoc_insertion_point(copy_constructor:onnx.GraphProto)
 }
 
-inline void GraphProto::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
+inline void GraphProto::SharedCtor(::_pb::Arena* arena) {
   (void)arena;
-  (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){}
     , /*decltype(_impl_._cached_size_)*/{}
@@ -4077,17 +4256,19 @@ inline void GraphProto::SharedCtor(
     , decltype(_impl_.value_info_){arena}
     , decltype(_impl_.quantization_annotation_){arena}
     , decltype(_impl_.sparse_initializer_){arena}
-    , decltype(_impl_.name_){}
-    , decltype(_impl_.doc_string_){}
+    , decltype(_impl_.name_) {}
+
+    , decltype(_impl_.doc_string_) {}
+
   };
   _impl_.name_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.name_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.name_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   _impl_.doc_string_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.doc_string_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.doc_string_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 }
 
 GraphProto::~GraphProto() {
@@ -4100,7 +4281,7 @@ GraphProto::~GraphProto() {
 }
 
 inline void GraphProto::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  ABSL_DCHECK(GetArenaForAllocation() == nullptr);
   _impl_.node_.~RepeatedPtrField();
   _impl_.initializer_.~RepeatedPtrField();
   _impl_.input_.~RepeatedPtrField();
@@ -4118,7 +4299,7 @@ void GraphProto::SetCachedSize(int size) const {
 
 void GraphProto::Clear() {
 // @@protoc_insertion_point(message_clear_start:onnx.GraphProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -4146,12 +4327,12 @@ const char* GraphProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ct
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   _Internal::HasBits has_bits{};
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
+    ::uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // repeated .onnx.NodeProto node = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 10)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -4159,21 +4340,23 @@ const char* GraphProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ct
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<10>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional string name = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 18)) {
           auto str = _internal_mutable_name();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated .onnx.TensorProto initializer = 5;
       case 5:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 42)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 42)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -4181,21 +4364,23 @@ const char* GraphProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ct
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<42>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional string doc_string = 10;
       case 10:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 82)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 82)) {
           auto str = _internal_mutable_doc_string();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated .onnx.ValueInfoProto input = 11;
       case 11:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 90)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 90)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -4203,12 +4388,13 @@ const char* GraphProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ct
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<90>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated .onnx.ValueInfoProto output = 12;
       case 12:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 98)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 98)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -4216,12 +4402,13 @@ const char* GraphProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ct
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<98>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated .onnx.ValueInfoProto value_info = 13;
       case 13:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 106)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 106)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -4229,12 +4416,13 @@ const char* GraphProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ct
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<106>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated .onnx.TensorAnnotation quantization_annotation = 14;
       case 14:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 114)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 114)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -4242,12 +4430,13 @@ const char* GraphProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ct
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<114>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated .onnx.SparseTensorProto sparse_initializer = 15;
       case 15:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 122)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 122)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -4255,8 +4444,9 @@ const char* GraphProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ct
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<122>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       default:
         goto handle_unusual;
@@ -4282,10 +4472,10 @@ failure:
 #undef CHK_
 }
 
-uint8_t* GraphProto::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::uint8_t* GraphProto::_InternalSerialize(
+    ::uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:onnx.GraphProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   // repeated .onnx.NodeProto node = 1;
@@ -4299,8 +4489,8 @@ uint8_t* GraphProto::_InternalSerialize(
   cached_has_bits = _impl_._has_bits_[0];
   // optional string name = 2;
   if (cached_has_bits & 0x00000001u) {
-    target = stream->WriteStringMaybeAliased(
-        2, this->_internal_name(), target);
+    const std::string& _s = this->_internal_name();
+    target = stream->WriteStringMaybeAliased(2, _s, target);
   }
 
   // repeated .onnx.TensorProto initializer = 5;
@@ -4313,8 +4503,8 @@ uint8_t* GraphProto::_InternalSerialize(
 
   // optional string doc_string = 10;
   if (cached_has_bits & 0x00000002u) {
-    target = stream->WriteStringMaybeAliased(
-        10, this->_internal_doc_string(), target);
+    const std::string& _s = this->_internal_doc_string();
+    target = stream->WriteStringMaybeAliased(10, _s, target);
   }
 
   // repeated .onnx.ValueInfoProto input = 11;
@@ -4365,11 +4555,11 @@ uint8_t* GraphProto::_InternalSerialize(
   return target;
 }
 
-size_t GraphProto::ByteSizeLong() const {
+::size_t GraphProto::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:onnx.GraphProto)
-  size_t total_size = 0;
+  ::size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -4426,16 +4616,14 @@ size_t GraphProto::ByteSizeLong() const {
   if (cached_has_bits & 0x00000003u) {
     // optional string name = 2;
     if (cached_has_bits & 0x00000001u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_name());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_name());
     }
 
     // optional string doc_string = 10;
     if (cached_has_bits & 0x00000002u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_doc_string());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_doc_string());
     }
 
   }
@@ -4456,8 +4644,8 @@ void GraphProto::CheckTypeAndMergeFrom(
 void GraphProto::MergeFrom(const GraphProto& from) {
   GraphProto* const _this = this;
   // @@protoc_insertion_point(class_specific_merge_from_start:onnx.GraphProto)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   _this->_impl_.node_.MergeFrom(from._impl_.node_);
@@ -4503,26 +4691,23 @@ void GraphProto::InternalSwap(GraphProto* other) {
   _impl_.value_info_.InternalSwap(&other->_impl_.value_info_);
   _impl_.quantization_annotation_.InternalSwap(&other->_impl_.quantization_annotation_);
   _impl_.sparse_initializer_.InternalSwap(&other->_impl_.sparse_initializer_);
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.name_, lhs_arena,
-      &other->_impl_.name_, rhs_arena
-  );
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.doc_string_, lhs_arena,
-      &other->_impl_.doc_string_, rhs_arena
-  );
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.name_, lhs_arena,
+                                       &other->_impl_.name_, rhs_arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.doc_string_, lhs_arena,
+                                       &other->_impl_.doc_string_, rhs_arena);
 }
 
 std::string GraphProto::GetTypeName() const {
   return "onnx.GraphProto";
 }
 
-
 // ===================================================================
 
 class TensorProto_Segment::_Internal {
  public:
   using HasBits = decltype(std::declval<TensorProto_Segment>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(TensorProto_Segment, _impl_._has_bits_);
   static void set_has_begin(HasBits* has_bits) {
     (*has_bits)[0] |= 1u;
   }
@@ -4531,37 +4716,27 @@ class TensorProto_Segment::_Internal {
   }
 };
 
-TensorProto_Segment::TensorProto_Segment(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
+TensorProto_Segment::TensorProto_Segment(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena) {
+  SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:onnx.TensorProto.Segment)
 }
 TensorProto_Segment::TensorProto_Segment(const TensorProto_Segment& from)
-  : ::PROTOBUF_NAMESPACE_ID::MessageLite() {
-  TensorProto_Segment* const _this = this; (void)_this;
-  new (&_impl_) Impl_{
-      decltype(_impl_._has_bits_){from._impl_._has_bits_}
-    , /*decltype(_impl_._cached_size_)*/{}
-    , decltype(_impl_.begin_){}
-    , decltype(_impl_.end_){}};
-
-  _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
-  ::memcpy(&_impl_.begin_, &from._impl_.begin_,
-    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.end_) -
-    reinterpret_cast<char*>(&_impl_.begin_)) + sizeof(_impl_.end_));
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(), _impl_(from._impl_) {
+  _internal_metadata_.MergeFrom<std::string>(
+      from._internal_metadata_);
   // @@protoc_insertion_point(copy_constructor:onnx.TensorProto.Segment)
 }
 
-inline void TensorProto_Segment::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
+inline void TensorProto_Segment::SharedCtor(::_pb::Arena* arena) {
   (void)arena;
-  (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){}
     , /*decltype(_impl_._cached_size_)*/{}
-    , decltype(_impl_.begin_){int64_t{0}}
-    , decltype(_impl_.end_){int64_t{0}}
+    , decltype(_impl_.begin_) { ::int64_t{0} }
+
+    , decltype(_impl_.end_) { ::int64_t{0} }
+
   };
 }
 
@@ -4575,7 +4750,7 @@ TensorProto_Segment::~TensorProto_Segment() {
 }
 
 inline void TensorProto_Segment::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  ABSL_DCHECK(GetArenaForAllocation() == nullptr);
 }
 
 void TensorProto_Segment::SetCachedSize(int size) const {
@@ -4584,13 +4759,13 @@ void TensorProto_Segment::SetCachedSize(int size) const {
 
 void TensorProto_Segment::Clear() {
 // @@protoc_insertion_point(message_clear_start:onnx.TensorProto.Segment)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
   if (cached_has_bits & 0x00000003u) {
-    ::memset(&_impl_.begin_, 0, static_cast<size_t>(
+    ::memset(&_impl_.begin_, 0, static_cast<::size_t>(
         reinterpret_cast<char*>(&_impl_.end_) -
         reinterpret_cast<char*>(&_impl_.begin_)) + sizeof(_impl_.end_));
   }
@@ -4602,26 +4777,28 @@ const char* TensorProto_Segment::_InternalParse(const char* ptr, ::_pbi::ParseCo
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   _Internal::HasBits has_bits{};
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
+    ::uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // optional int64 begin = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 8)) {
           _Internal::set_has_begin(&has_bits);
           _impl_.begin_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional int64 end = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 16)) {
           _Internal::set_has_end(&has_bits);
           _impl_.end_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       default:
         goto handle_unusual;
@@ -4647,23 +4824,25 @@ failure:
 #undef CHK_
 }
 
-uint8_t* TensorProto_Segment::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::uint8_t* TensorProto_Segment::_InternalSerialize(
+    ::uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:onnx.TensorProto.Segment)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
   // optional int64 begin = 1;
   if (cached_has_bits & 0x00000001u) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt64ToArray(1, this->_internal_begin(), target);
+    target = ::_pbi::WireFormatLite::WriteInt64ToArray(
+        1, this->_internal_begin(), target);
   }
 
   // optional int64 end = 2;
   if (cached_has_bits & 0x00000002u) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt64ToArray(2, this->_internal_end(), target);
+    target = ::_pbi::WireFormatLite::WriteInt64ToArray(
+        2, this->_internal_end(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -4674,11 +4853,11 @@ uint8_t* TensorProto_Segment::_InternalSerialize(
   return target;
 }
 
-size_t TensorProto_Segment::ByteSizeLong() const {
+::size_t TensorProto_Segment::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:onnx.TensorProto.Segment)
-  size_t total_size = 0;
+  ::size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -4686,12 +4865,14 @@ size_t TensorProto_Segment::ByteSizeLong() const {
   if (cached_has_bits & 0x00000003u) {
     // optional int64 begin = 1;
     if (cached_has_bits & 0x00000001u) {
-      total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(this->_internal_begin());
+      total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(
+          this->_internal_begin());
     }
 
     // optional int64 end = 2;
     if (cached_has_bits & 0x00000002u) {
-      total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(this->_internal_end());
+      total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(
+          this->_internal_end());
     }
 
   }
@@ -4712,8 +4893,8 @@ void TensorProto_Segment::CheckTypeAndMergeFrom(
 void TensorProto_Segment::MergeFrom(const TensorProto_Segment& from) {
   TensorProto_Segment* const _this = this;
   // @@protoc_insertion_point(class_specific_merge_from_start:onnx.TensorProto.Segment)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   cached_has_bits = from._impl_._has_bits_[0];
@@ -4756,12 +4937,13 @@ std::string TensorProto_Segment::GetTypeName() const {
   return "onnx.TensorProto.Segment";
 }
 
-
 // ===================================================================
 
 class TensorProto::_Internal {
  public:
   using HasBits = decltype(std::declval<TensorProto>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(TensorProto, _impl_._has_bits_);
   static void set_has_data_type(HasBits* has_bits) {
     (*has_bits)[0] |= 16u;
   }
@@ -4787,10 +4969,9 @@ const ::onnx::TensorProto_Segment&
 TensorProto::_Internal::segment(const TensorProto* msg) {
   return *msg->_impl_.segment_;
 }
-TensorProto::TensorProto(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
+TensorProto::TensorProto(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena) {
+  SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:onnx.TensorProto)
 }
 TensorProto::TensorProto(const TensorProto& from)
@@ -4799,95 +4980,112 @@ TensorProto::TensorProto(const TensorProto& from)
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){from._impl_._has_bits_}
     , /*decltype(_impl_._cached_size_)*/{}
-    , decltype(_impl_.dims_){from._impl_.dims_}
-    , decltype(_impl_.float_data_){from._impl_.float_data_}
-    , decltype(_impl_.int32_data_){from._impl_.int32_data_}
-    , /*decltype(_impl_._int32_data_cached_byte_size_)*/{0}
+    , decltype(_impl_.dims_) { from._impl_.dims_ }
+
+    , decltype(_impl_.float_data_) { from._impl_.float_data_ }
+
+    , decltype(_impl_.int32_data_) { from._impl_.int32_data_ }
+    ,/* _impl_._int32_data_cached_byte_size_ = */ { 0 }
+
     , decltype(_impl_.string_data_){from._impl_.string_data_}
-    , decltype(_impl_.int64_data_){from._impl_.int64_data_}
-    , /*decltype(_impl_._int64_data_cached_byte_size_)*/{0}
-    , decltype(_impl_.double_data_){from._impl_.double_data_}
-    , decltype(_impl_.uint64_data_){from._impl_.uint64_data_}
-    , /*decltype(_impl_._uint64_data_cached_byte_size_)*/{0}
+    , decltype(_impl_.int64_data_) { from._impl_.int64_data_ }
+    ,/* _impl_._int64_data_cached_byte_size_ = */ { 0 }
+
+    , decltype(_impl_.double_data_) { from._impl_.double_data_ }
+
+    , decltype(_impl_.uint64_data_) { from._impl_.uint64_data_ }
+    ,/* _impl_._uint64_data_cached_byte_size_ = */ { 0 }
+
     , decltype(_impl_.external_data_){from._impl_.external_data_}
-    , decltype(_impl_.name_){}
-    , decltype(_impl_.raw_data_){}
-    , decltype(_impl_.doc_string_){}
+    , decltype(_impl_.name_) {}
+
+    , decltype(_impl_.raw_data_) {}
+
+    , decltype(_impl_.doc_string_) {}
+
     , decltype(_impl_.segment_){nullptr}
-    , decltype(_impl_.data_type_){}
-    , decltype(_impl_.data_location_){}};
+    , decltype(_impl_.data_type_) {}
+
+    , decltype(_impl_.data_location_) {}
+  };
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
   _impl_.name_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.name_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_name()) {
-    _this->_impl_.name_.Set(from._internal_name(), 
-      _this->GetArenaForAllocation());
+        _impl_.name_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
+    _this->_impl_.name_.Set(from._internal_name(), _this->GetArenaForAllocation());
   }
   _impl_.raw_data_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.raw_data_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_raw_data()) {
-    _this->_impl_.raw_data_.Set(from._internal_raw_data(), 
-      _this->GetArenaForAllocation());
+        _impl_.raw_data_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000002u) != 0) {
+    _this->_impl_.raw_data_.Set(from._internal_raw_data(), _this->GetArenaForAllocation());
   }
   _impl_.doc_string_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.doc_string_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_doc_string()) {
-    _this->_impl_.doc_string_.Set(from._internal_doc_string(), 
-      _this->GetArenaForAllocation());
+        _impl_.doc_string_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000004u) != 0) {
+    _this->_impl_.doc_string_.Set(from._internal_doc_string(), _this->GetArenaForAllocation());
   }
-  if (from._internal_has_segment()) {
+  if ((from._impl_._has_bits_[0] & 0x00000008u) != 0) {
     _this->_impl_.segment_ = new ::onnx::TensorProto_Segment(*from._impl_.segment_);
   }
   ::memcpy(&_impl_.data_type_, &from._impl_.data_type_,
-    static_cast<size_t>(reinterpret_cast<char*>(&_impl_.data_location_) -
+    static_cast<::size_t>(reinterpret_cast<char*>(&_impl_.data_location_) -
     reinterpret_cast<char*>(&_impl_.data_type_)) + sizeof(_impl_.data_location_));
   // @@protoc_insertion_point(copy_constructor:onnx.TensorProto)
 }
 
-inline void TensorProto::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
+inline void TensorProto::SharedCtor(::_pb::Arena* arena) {
   (void)arena;
-  (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){}
     , /*decltype(_impl_._cached_size_)*/{}
-    , decltype(_impl_.dims_){arena}
-    , decltype(_impl_.float_data_){arena}
-    , decltype(_impl_.int32_data_){arena}
-    , /*decltype(_impl_._int32_data_cached_byte_size_)*/{0}
+    , decltype(_impl_.dims_) { arena }
+
+    , decltype(_impl_.float_data_) { arena }
+
+    , decltype(_impl_.int32_data_) { arena }
+    ,/* _impl_._int32_data_cached_byte_size_ = */ { 0 }
+
     , decltype(_impl_.string_data_){arena}
-    , decltype(_impl_.int64_data_){arena}
-    , /*decltype(_impl_._int64_data_cached_byte_size_)*/{0}
-    , decltype(_impl_.double_data_){arena}
-    , decltype(_impl_.uint64_data_){arena}
-    , /*decltype(_impl_._uint64_data_cached_byte_size_)*/{0}
+    , decltype(_impl_.int64_data_) { arena }
+    ,/* _impl_._int64_data_cached_byte_size_ = */ { 0 }
+
+    , decltype(_impl_.double_data_) { arena }
+
+    , decltype(_impl_.uint64_data_) { arena }
+    ,/* _impl_._uint64_data_cached_byte_size_ = */ { 0 }
+
     , decltype(_impl_.external_data_){arena}
-    , decltype(_impl_.name_){}
-    , decltype(_impl_.raw_data_){}
-    , decltype(_impl_.doc_string_){}
+    , decltype(_impl_.name_) {}
+
+    , decltype(_impl_.raw_data_) {}
+
+    , decltype(_impl_.doc_string_) {}
+
     , decltype(_impl_.segment_){nullptr}
-    , decltype(_impl_.data_type_){0}
-    , decltype(_impl_.data_location_){0}
+    , decltype(_impl_.data_type_) { 0 }
+
+    , decltype(_impl_.data_location_) { 0 }
+
   };
   _impl_.name_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.name_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.name_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   _impl_.raw_data_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.raw_data_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.raw_data_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   _impl_.doc_string_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.doc_string_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.doc_string_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 }
 
 TensorProto::~TensorProto() {
@@ -4900,7 +5098,7 @@ TensorProto::~TensorProto() {
 }
 
 inline void TensorProto::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  ABSL_DCHECK(GetArenaForAllocation() == nullptr);
   _impl_.dims_.~RepeatedField();
   _impl_.float_data_.~RepeatedField();
   _impl_.int32_data_.~RepeatedField();
@@ -4921,7 +5119,7 @@ void TensorProto::SetCachedSize(int size) const {
 
 void TensorProto::Clear() {
 // @@protoc_insertion_point(message_clear_start:onnx.TensorProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -4945,12 +5143,12 @@ void TensorProto::Clear() {
       _impl_.doc_string_.ClearNonDefaultToEmpty();
     }
     if (cached_has_bits & 0x00000008u) {
-      GOOGLE_DCHECK(_impl_.segment_ != nullptr);
+      ABSL_DCHECK(_impl_.segment_ != nullptr);
       _impl_.segment_->Clear();
     }
   }
   if (cached_has_bits & 0x00000030u) {
-    ::memset(&_impl_.data_type_, 0, static_cast<size_t>(
+    ::memset(&_impl_.data_type_, 0, static_cast<::size_t>(
         reinterpret_cast<char*>(&_impl_.data_location_) -
         reinterpret_cast<char*>(&_impl_.data_type_)) + sizeof(_impl_.data_location_));
   }
@@ -4962,12 +5160,12 @@ const char* TensorProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* c
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   _Internal::HasBits has_bits{};
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
+    ::uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // repeated int64 dims = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 8)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -4975,54 +5173,59 @@ const char* TensorProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* c
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<8>(ptr));
-        } else if (static_cast<uint8_t>(tag) == 10) {
+        } else if (static_cast<::uint8_t>(tag) == 10) {
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedInt64Parser(_internal_mutable_dims(), ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional int32 data_type = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 16)) {
           _Internal::set_has_data_type(&has_bits);
           _impl_.data_type_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional .onnx.TensorProto.Segment segment = 3;
       case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 26)) {
           ptr = ctx->ParseMessage(_internal_mutable_segment(), ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated float float_data = 4 [packed = true];
       case 4:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 34)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 34)) {
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedFloatParser(_internal_mutable_float_data(), ptr, ctx);
           CHK_(ptr);
-        } else if (static_cast<uint8_t>(tag) == 37) {
+        } else if (static_cast<::uint8_t>(tag) == 37) {
           _internal_add_float_data(::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<float>(ptr));
           ptr += sizeof(float);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated int32 int32_data = 5 [packed = true];
       case 5:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 42)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 42)) {
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedInt32Parser(_internal_mutable_int32_data(), ptr, ctx);
           CHK_(ptr);
-        } else if (static_cast<uint8_t>(tag) == 40) {
+        } else if (static_cast<::uint8_t>(tag) == 40) {
           _internal_add_int32_data(::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr));
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated bytes string_data = 6;
       case 6:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 50)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 50)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -5031,72 +5234,79 @@ const char* TensorProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* c
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<50>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated int64 int64_data = 7 [packed = true];
       case 7:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 58)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 58)) {
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedInt64Parser(_internal_mutable_int64_data(), ptr, ctx);
           CHK_(ptr);
-        } else if (static_cast<uint8_t>(tag) == 56) {
+        } else if (static_cast<::uint8_t>(tag) == 56) {
           _internal_add_int64_data(::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr));
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional string name = 8;
       case 8:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 66)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 66)) {
           auto str = _internal_mutable_name();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional bytes raw_data = 9;
       case 9:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 74)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 74)) {
           auto str = _internal_mutable_raw_data();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated double double_data = 10 [packed = true];
       case 10:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 82)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 82)) {
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedDoubleParser(_internal_mutable_double_data(), ptr, ctx);
           CHK_(ptr);
-        } else if (static_cast<uint8_t>(tag) == 81) {
+        } else if (static_cast<::uint8_t>(tag) == 81) {
           _internal_add_double_data(::PROTOBUF_NAMESPACE_ID::internal::UnalignedLoad<double>(ptr));
           ptr += sizeof(double);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated uint64 uint64_data = 11 [packed = true];
       case 11:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 90)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 90)) {
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedUInt64Parser(_internal_mutable_uint64_data(), ptr, ctx);
           CHK_(ptr);
-        } else if (static_cast<uint8_t>(tag) == 88) {
+        } else if (static_cast<::uint8_t>(tag) == 88) {
           _internal_add_uint64_data(::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr));
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional string doc_string = 12;
       case 12:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 98)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 98)) {
           auto str = _internal_mutable_doc_string();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated .onnx.StringStringEntryProto external_data = 13;
       case 13:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 106)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 106)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -5104,21 +5314,23 @@ const char* TensorProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* c
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<106>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional .onnx.TensorProto.DataLocation data_location = 14;
       case 14:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 112)) {
-          uint64_t val = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 112)) {
+          ::uint32_t val = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
-          if (PROTOBUF_PREDICT_TRUE(::onnx::TensorProto_DataLocation_IsValid(val))) {
+          if (PROTOBUF_PREDICT_TRUE(::onnx::TensorProto_DataLocation_IsValid(static_cast<int>(val)))) {
             _internal_set_data_location(static_cast<::onnx::TensorProto_DataLocation>(val));
           } else {
             ::PROTOBUF_NAMESPACE_ID::internal::WriteVarint(14, val, mutable_unknown_fields());
           }
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       default:
         goto handle_unusual;
@@ -5144,23 +5356,25 @@ failure:
 #undef CHK_
 }
 
-uint8_t* TensorProto::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::uint8_t* TensorProto::_InternalSerialize(
+    ::uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:onnx.TensorProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   // repeated int64 dims = 1;
-  for (int i = 0, n = this->_internal_dims_size(); i < n; i++) {
+  for (int i = 0, n = this->_internal_dims_size(); i < n; ++i) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt64ToArray(1, this->_internal_dims(i), target);
+    target = ::_pbi::WireFormatLite::WriteInt64ToArray(
+        1, this->_internal_dims(i), target);
   }
 
   cached_has_bits = _impl_._has_bits_[0];
   // optional int32 data_type = 2;
   if (cached_has_bits & 0x00000010u) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt32ToArray(2, this->_internal_data_type(), target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(
+        2, this->_internal_data_type(), target);
   }
 
   // optional .onnx.TensorProto.Segment segment = 3;
@@ -5177,38 +5391,38 @@ uint8_t* TensorProto::_InternalSerialize(
 
   // repeated int32 int32_data = 5 [packed = true];
   {
-    int byte_size = _impl_._int32_data_cached_byte_size_.load(std::memory_order_relaxed);
+    int byte_size = _impl_._int32_data_cached_byte_size_.Get();
     if (byte_size > 0) {
-      target = stream->WriteInt32Packed(
-          5, _internal_int32_data(), byte_size, target);
+      target = stream->WriteInt32Packed(5, _internal_int32_data(),
+                                                 byte_size, target);
     }
   }
 
   // repeated bytes string_data = 6;
-  for (int i = 0, n = this->_internal_string_data_size(); i < n; i++) {
+  for (int i = 0, n = this->_internal_string_data_size(); i < n; ++i) {
     const auto& s = this->_internal_string_data(i);
     target = stream->WriteBytes(6, s, target);
   }
 
   // repeated int64 int64_data = 7 [packed = true];
   {
-    int byte_size = _impl_._int64_data_cached_byte_size_.load(std::memory_order_relaxed);
+    int byte_size = _impl_._int64_data_cached_byte_size_.Get();
     if (byte_size > 0) {
-      target = stream->WriteInt64Packed(
-          7, _internal_int64_data(), byte_size, target);
+      target = stream->WriteInt64Packed(7, _internal_int64_data(),
+                                                 byte_size, target);
     }
   }
 
   // optional string name = 8;
   if (cached_has_bits & 0x00000001u) {
-    target = stream->WriteStringMaybeAliased(
-        8, this->_internal_name(), target);
+    const std::string& _s = this->_internal_name();
+    target = stream->WriteStringMaybeAliased(8, _s, target);
   }
 
   // optional bytes raw_data = 9;
   if (cached_has_bits & 0x00000002u) {
-    target = stream->WriteBytesMaybeAliased(
-        9, this->_internal_raw_data(), target);
+    const std::string& _s = this->_internal_raw_data();
+    target = stream->WriteBytesMaybeAliased(9, _s, target);
   }
 
   // repeated double double_data = 10 [packed = true];
@@ -5218,17 +5432,17 @@ uint8_t* TensorProto::_InternalSerialize(
 
   // repeated uint64 uint64_data = 11 [packed = true];
   {
-    int byte_size = _impl_._uint64_data_cached_byte_size_.load(std::memory_order_relaxed);
+    int byte_size = _impl_._uint64_data_cached_byte_size_.Get();
     if (byte_size > 0) {
-      target = stream->WriteUInt64Packed(
-          11, _internal_uint64_data(), byte_size, target);
+      target = stream->WriteUInt64Packed(11, _internal_uint64_data(),
+                                                 byte_size, target);
     }
   }
 
   // optional string doc_string = 12;
   if (cached_has_bits & 0x00000004u) {
-    target = stream->WriteStringMaybeAliased(
-        12, this->_internal_doc_string(), target);
+    const std::string& _s = this->_internal_doc_string();
+    target = stream->WriteStringMaybeAliased(12, _s, target);
   }
 
   // repeated .onnx.StringStringEntryProto external_data = 13;
@@ -5243,7 +5457,7 @@ uint8_t* TensorProto::_InternalSerialize(
   if (cached_has_bits & 0x00000020u) {
     target = stream->EnsureSpace(target);
     target = ::_pbi::WireFormatLite::WriteEnumToArray(
-      14, this->_internal_data_location(), target);
+        14, this->_internal_data_location(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -5254,93 +5468,93 @@ uint8_t* TensorProto::_InternalSerialize(
   return target;
 }
 
-size_t TensorProto::ByteSizeLong() const {
+::size_t TensorProto::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:onnx.TensorProto)
-  size_t total_size = 0;
+  ::size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   // repeated int64 dims = 1;
   {
-    size_t data_size = ::_pbi::WireFormatLite::
-      Int64Size(this->_impl_.dims_);
-    total_size += 1 *
-                  ::_pbi::FromIntSize(this->_internal_dims_size());
-    total_size += data_size;
+    std::size_t data_size = ::_pbi::WireFormatLite::Int64Size(this->_impl_.dims_)
+    ;
+    std::size_t tag_size = std::size_t{1} *
+        ::_pbi::FromIntSize(this->_internal_dims_size());
+    ;
+    total_size += tag_size + data_size;
   }
 
   // repeated float float_data = 4 [packed = true];
   {
-    unsigned int count = static_cast<unsigned int>(this->_internal_float_data_size());
-    size_t data_size = 4UL * count;
-    if (data_size > 0) {
-      total_size += 1 +
-        ::_pbi::WireFormatLite::Int32Size(static_cast<int32_t>(data_size));
-    }
-    total_size += data_size;
+    std::size_t data_size = std::size_t{4} *
+        ::_pbi::FromIntSize(this->_internal_float_data_size())
+    ;
+    std::size_t tag_size = data_size == 0
+        ? 0
+        : 1 + ::_pbi::WireFormatLite::Int32Size(
+                            static_cast<int32_t>(data_size))
+    ;
+    total_size += tag_size + data_size;
   }
 
   // repeated int32 int32_data = 5 [packed = true];
   {
-    size_t data_size = ::_pbi::WireFormatLite::
-      Int32Size(this->_impl_.int32_data_);
-    if (data_size > 0) {
-      total_size += 1 +
-        ::_pbi::WireFormatLite::Int32Size(static_cast<int32_t>(data_size));
-    }
-    int cached_size = ::_pbi::ToCachedSize(data_size);
-    _impl_._int32_data_cached_byte_size_.store(cached_size,
-                                    std::memory_order_relaxed);
-    total_size += data_size;
+    std::size_t data_size = ::_pbi::WireFormatLite::Int32Size(this->_impl_.int32_data_)
+    ;
+    _impl_._int32_data_cached_byte_size_.Set(::_pbi::ToCachedSize(data_size));
+    std::size_t tag_size = data_size == 0
+        ? 0
+        : 1 + ::_pbi::WireFormatLite::Int32Size(
+                            static_cast<int32_t>(data_size))
+    ;
+    total_size += tag_size + data_size;
   }
 
   // repeated bytes string_data = 6;
-  total_size += 1 *
-      ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(_impl_.string_data_.size());
-  for (int i = 0, n = _impl_.string_data_.size(); i < n; i++) {
-    total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
-      _impl_.string_data_.Get(i));
+  total_size += 1 * ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(_impl_.string_data_.size());
+  for (int i = 0, n = _impl_.string_data_.size(); i < n; ++i) {
+    total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(_impl_.string_data_.Get(i));
   }
 
   // repeated int64 int64_data = 7 [packed = true];
   {
-    size_t data_size = ::_pbi::WireFormatLite::
-      Int64Size(this->_impl_.int64_data_);
-    if (data_size > 0) {
-      total_size += 1 +
-        ::_pbi::WireFormatLite::Int32Size(static_cast<int32_t>(data_size));
-    }
-    int cached_size = ::_pbi::ToCachedSize(data_size);
-    _impl_._int64_data_cached_byte_size_.store(cached_size,
-                                    std::memory_order_relaxed);
-    total_size += data_size;
+    std::size_t data_size = ::_pbi::WireFormatLite::Int64Size(this->_impl_.int64_data_)
+    ;
+    _impl_._int64_data_cached_byte_size_.Set(::_pbi::ToCachedSize(data_size));
+    std::size_t tag_size = data_size == 0
+        ? 0
+        : 1 + ::_pbi::WireFormatLite::Int32Size(
+                            static_cast<int32_t>(data_size))
+    ;
+    total_size += tag_size + data_size;
   }
 
   // repeated double double_data = 10 [packed = true];
   {
-    unsigned int count = static_cast<unsigned int>(this->_internal_double_data_size());
-    size_t data_size = 8UL * count;
-    if (data_size > 0) {
-      total_size += 1 +
-        ::_pbi::WireFormatLite::Int32Size(static_cast<int32_t>(data_size));
-    }
-    total_size += data_size;
+    std::size_t data_size = std::size_t{8} *
+        ::_pbi::FromIntSize(this->_internal_double_data_size())
+    ;
+    std::size_t tag_size = data_size == 0
+        ? 0
+        : 1 + ::_pbi::WireFormatLite::Int32Size(
+                            static_cast<int32_t>(data_size))
+    ;
+    total_size += tag_size + data_size;
   }
 
   // repeated uint64 uint64_data = 11 [packed = true];
   {
-    size_t data_size = ::_pbi::WireFormatLite::
-      UInt64Size(this->_impl_.uint64_data_);
-    if (data_size > 0) {
-      total_size += 1 +
-        ::_pbi::WireFormatLite::Int32Size(static_cast<int32_t>(data_size));
-    }
-    int cached_size = ::_pbi::ToCachedSize(data_size);
-    _impl_._uint64_data_cached_byte_size_.store(cached_size,
-                                    std::memory_order_relaxed);
-    total_size += data_size;
+    std::size_t data_size = ::_pbi::WireFormatLite::UInt64Size(this->_impl_.uint64_data_)
+    ;
+    _impl_._uint64_data_cached_byte_size_.Set(::_pbi::ToCachedSize(data_size));
+    std::size_t tag_size = data_size == 0
+        ? 0
+        : 1 + ::_pbi::WireFormatLite::Int32Size(
+                            static_cast<int32_t>(data_size))
+    ;
+    total_size += tag_size + data_size;
   }
 
   // repeated .onnx.StringStringEntryProto external_data = 13;
@@ -5354,23 +5568,20 @@ size_t TensorProto::ByteSizeLong() const {
   if (cached_has_bits & 0x0000003fu) {
     // optional string name = 8;
     if (cached_has_bits & 0x00000001u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_name());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_name());
     }
 
     // optional bytes raw_data = 9;
     if (cached_has_bits & 0x00000002u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
-          this->_internal_raw_data());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::BytesSize(
+                                      this->_internal_raw_data());
     }
 
     // optional string doc_string = 12;
     if (cached_has_bits & 0x00000004u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_doc_string());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_doc_string());
     }
 
     // optional .onnx.TensorProto.Segment segment = 3;
@@ -5382,13 +5593,14 @@ size_t TensorProto::ByteSizeLong() const {
 
     // optional int32 data_type = 2;
     if (cached_has_bits & 0x00000010u) {
-      total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_data_type());
+      total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(
+          this->_internal_data_type());
     }
 
     // optional .onnx.TensorProto.DataLocation data_location = 14;
     if (cached_has_bits & 0x00000020u) {
       total_size += 1 +
-        ::_pbi::WireFormatLite::EnumSize(this->_internal_data_location());
+                    ::_pbi::WireFormatLite::EnumSize(this->_internal_data_location());
     }
 
   }
@@ -5409,8 +5621,8 @@ void TensorProto::CheckTypeAndMergeFrom(
 void TensorProto::MergeFrom(const TensorProto& from) {
   TensorProto* const _this = this;
   // @@protoc_insertion_point(class_specific_merge_from_start:onnx.TensorProto)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   _this->_impl_.dims_.MergeFrom(from._impl_.dims_);
@@ -5472,18 +5684,12 @@ void TensorProto::InternalSwap(TensorProto* other) {
   _impl_.double_data_.InternalSwap(&other->_impl_.double_data_);
   _impl_.uint64_data_.InternalSwap(&other->_impl_.uint64_data_);
   _impl_.external_data_.InternalSwap(&other->_impl_.external_data_);
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.name_, lhs_arena,
-      &other->_impl_.name_, rhs_arena
-  );
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.raw_data_, lhs_arena,
-      &other->_impl_.raw_data_, rhs_arena
-  );
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.doc_string_, lhs_arena,
-      &other->_impl_.doc_string_, rhs_arena
-  );
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.name_, lhs_arena,
+                                       &other->_impl_.name_, rhs_arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.raw_data_, lhs_arena,
+                                       &other->_impl_.raw_data_, rhs_arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.doc_string_, lhs_arena,
+                                       &other->_impl_.doc_string_, rhs_arena);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
       PROTOBUF_FIELD_OFFSET(TensorProto, _impl_.data_location_)
       + sizeof(TensorProto::_impl_.data_location_)
@@ -5496,12 +5702,13 @@ std::string TensorProto::GetTypeName() const {
   return "onnx.TensorProto";
 }
 
-
 // ===================================================================
 
 class SparseTensorProto::_Internal {
  public:
   using HasBits = decltype(std::declval<SparseTensorProto>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(SparseTensorProto, _impl_._has_bits_);
   static const ::onnx::TensorProto& values(const SparseTensorProto* msg);
   static void set_has_values(HasBits* has_bits) {
     (*has_bits)[0] |= 1u;
@@ -5520,10 +5727,9 @@ const ::onnx::TensorProto&
 SparseTensorProto::_Internal::indices(const SparseTensorProto* msg) {
   return *msg->_impl_.indices_;
 }
-SparseTensorProto::SparseTensorProto(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
+SparseTensorProto::SparseTensorProto(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena) {
+  SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:onnx.SparseTensorProto)
 }
 SparseTensorProto::SparseTensorProto(const SparseTensorProto& from)
@@ -5532,28 +5738,28 @@ SparseTensorProto::SparseTensorProto(const SparseTensorProto& from)
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){from._impl_._has_bits_}
     , /*decltype(_impl_._cached_size_)*/{}
-    , decltype(_impl_.dims_){from._impl_.dims_}
+    , decltype(_impl_.dims_) { from._impl_.dims_ }
+
     , decltype(_impl_.values_){nullptr}
     , decltype(_impl_.indices_){nullptr}};
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
-  if (from._internal_has_values()) {
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
     _this->_impl_.values_ = new ::onnx::TensorProto(*from._impl_.values_);
   }
-  if (from._internal_has_indices()) {
+  if ((from._impl_._has_bits_[0] & 0x00000002u) != 0) {
     _this->_impl_.indices_ = new ::onnx::TensorProto(*from._impl_.indices_);
   }
   // @@protoc_insertion_point(copy_constructor:onnx.SparseTensorProto)
 }
 
-inline void SparseTensorProto::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
+inline void SparseTensorProto::SharedCtor(::_pb::Arena* arena) {
   (void)arena;
-  (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){}
     , /*decltype(_impl_._cached_size_)*/{}
-    , decltype(_impl_.dims_){arena}
+    , decltype(_impl_.dims_) { arena }
+
     , decltype(_impl_.values_){nullptr}
     , decltype(_impl_.indices_){nullptr}
   };
@@ -5569,7 +5775,7 @@ SparseTensorProto::~SparseTensorProto() {
 }
 
 inline void SparseTensorProto::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  ABSL_DCHECK(GetArenaForAllocation() == nullptr);
   _impl_.dims_.~RepeatedField();
   if (this != internal_default_instance()) delete _impl_.values_;
   if (this != internal_default_instance()) delete _impl_.indices_;
@@ -5581,7 +5787,7 @@ void SparseTensorProto::SetCachedSize(int size) const {
 
 void SparseTensorProto::Clear() {
 // @@protoc_insertion_point(message_clear_start:onnx.SparseTensorProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -5589,11 +5795,11 @@ void SparseTensorProto::Clear() {
   cached_has_bits = _impl_._has_bits_[0];
   if (cached_has_bits & 0x00000003u) {
     if (cached_has_bits & 0x00000001u) {
-      GOOGLE_DCHECK(_impl_.values_ != nullptr);
+      ABSL_DCHECK(_impl_.values_ != nullptr);
       _impl_.values_->Clear();
     }
     if (cached_has_bits & 0x00000002u) {
-      GOOGLE_DCHECK(_impl_.indices_ != nullptr);
+      ABSL_DCHECK(_impl_.indices_ != nullptr);
       _impl_.indices_->Clear();
     }
   }
@@ -5605,28 +5811,30 @@ const char* SparseTensorProto::_InternalParse(const char* ptr, ::_pbi::ParseCont
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   _Internal::HasBits has_bits{};
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
+    ::uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // optional .onnx.TensorProto values = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 10)) {
           ptr = ctx->ParseMessage(_internal_mutable_values(), ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional .onnx.TensorProto indices = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 18)) {
           ptr = ctx->ParseMessage(_internal_mutable_indices(), ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated int64 dims = 3;
       case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 24)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 24)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -5634,11 +5842,12 @@ const char* SparseTensorProto::_InternalParse(const char* ptr, ::_pbi::ParseCont
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<24>(ptr));
-        } else if (static_cast<uint8_t>(tag) == 26) {
+        } else if (static_cast<::uint8_t>(tag) == 26) {
           ptr = ::PROTOBUF_NAMESPACE_ID::internal::PackedInt64Parser(_internal_mutable_dims(), ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       default:
         goto handle_unusual;
@@ -5664,10 +5873,10 @@ failure:
 #undef CHK_
 }
 
-uint8_t* SparseTensorProto::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::uint8_t* SparseTensorProto::_InternalSerialize(
+    ::uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:onnx.SparseTensorProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
@@ -5686,9 +5895,10 @@ uint8_t* SparseTensorProto::_InternalSerialize(
   }
 
   // repeated int64 dims = 3;
-  for (int i = 0, n = this->_internal_dims_size(); i < n; i++) {
+  for (int i = 0, n = this->_internal_dims_size(); i < n; ++i) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt64ToArray(3, this->_internal_dims(i), target);
+    target = ::_pbi::WireFormatLite::WriteInt64ToArray(
+        3, this->_internal_dims(i), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -5699,21 +5909,22 @@ uint8_t* SparseTensorProto::_InternalSerialize(
   return target;
 }
 
-size_t SparseTensorProto::ByteSizeLong() const {
+::size_t SparseTensorProto::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:onnx.SparseTensorProto)
-  size_t total_size = 0;
+  ::size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   // repeated int64 dims = 3;
   {
-    size_t data_size = ::_pbi::WireFormatLite::
-      Int64Size(this->_impl_.dims_);
-    total_size += 1 *
-                  ::_pbi::FromIntSize(this->_internal_dims_size());
-    total_size += data_size;
+    std::size_t data_size = ::_pbi::WireFormatLite::Int64Size(this->_impl_.dims_)
+    ;
+    std::size_t tag_size = std::size_t{1} *
+        ::_pbi::FromIntSize(this->_internal_dims_size());
+    ;
+    total_size += tag_size + data_size;
   }
 
   cached_has_bits = _impl_._has_bits_[0];
@@ -5750,8 +5961,8 @@ void SparseTensorProto::CheckTypeAndMergeFrom(
 void SparseTensorProto::MergeFrom(const SparseTensorProto& from) {
   SparseTensorProto* const _this = this;
   // @@protoc_insertion_point(class_specific_merge_from_start:onnx.SparseTensorProto)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   _this->_impl_.dims_.MergeFrom(from._impl_.dims_);
@@ -5797,21 +6008,23 @@ std::string SparseTensorProto::GetTypeName() const {
   return "onnx.SparseTensorProto";
 }
 
-
 // ===================================================================
 
 class TensorShapeProto_Dimension::_Internal {
  public:
   using HasBits = decltype(std::declval<TensorShapeProto_Dimension>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(TensorShapeProto_Dimension, _impl_._has_bits_);
+  static constexpr ::int32_t kOneofCaseOffset =
+    PROTOBUF_FIELD_OFFSET(::onnx::TensorShapeProto_Dimension, _impl_._oneof_case_);
   static void set_has_denotation(HasBits* has_bits) {
     (*has_bits)[0] |= 1u;
   }
 };
 
-TensorShapeProto_Dimension::TensorShapeProto_Dimension(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
+TensorShapeProto_Dimension::TensorShapeProto_Dimension(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena) {
+  SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:onnx.TensorShapeProto.Dimension)
 }
 TensorShapeProto_Dimension::TensorShapeProto_Dimension(const TensorShapeProto_Dimension& from)
@@ -5820,18 +6033,18 @@ TensorShapeProto_Dimension::TensorShapeProto_Dimension(const TensorShapeProto_Di
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){from._impl_._has_bits_}
     , /*decltype(_impl_._cached_size_)*/{}
-    , decltype(_impl_.denotation_){}
+    , decltype(_impl_.denotation_) {}
+
     , decltype(_impl_.value_){}
     , /*decltype(_impl_._oneof_case_)*/{}};
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
   _impl_.denotation_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.denotation_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_denotation()) {
-    _this->_impl_.denotation_.Set(from._internal_denotation(), 
-      _this->GetArenaForAllocation());
+        _impl_.denotation_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
+    _this->_impl_.denotation_.Set(from._internal_denotation(), _this->GetArenaForAllocation());
   }
   clear_has_value();
   switch (from.value_case()) {
@@ -5850,21 +6063,20 @@ TensorShapeProto_Dimension::TensorShapeProto_Dimension(const TensorShapeProto_Di
   // @@protoc_insertion_point(copy_constructor:onnx.TensorShapeProto.Dimension)
 }
 
-inline void TensorShapeProto_Dimension::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
+inline void TensorShapeProto_Dimension::SharedCtor(::_pb::Arena* arena) {
   (void)arena;
-  (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){}
     , /*decltype(_impl_._cached_size_)*/{}
-    , decltype(_impl_.denotation_){}
+    , decltype(_impl_.denotation_) {}
+
     , decltype(_impl_.value_){}
     , /*decltype(_impl_._oneof_case_)*/{}
   };
   _impl_.denotation_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.denotation_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.denotation_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   clear_has_value();
 }
 
@@ -5878,7 +6090,7 @@ TensorShapeProto_Dimension::~TensorShapeProto_Dimension() {
 }
 
 inline void TensorShapeProto_Dimension::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  ABSL_DCHECK(GetArenaForAllocation() == nullptr);
   _impl_.denotation_.Destroy();
   if (has_value()) {
     clear_value();
@@ -5910,7 +6122,7 @@ void TensorShapeProto_Dimension::clear_value() {
 
 void TensorShapeProto_Dimension::Clear() {
 // @@protoc_insertion_point(message_clear_start:onnx.TensorShapeProto.Dimension)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -5927,34 +6139,37 @@ const char* TensorShapeProto_Dimension::_InternalParse(const char* ptr, ::_pbi::
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   _Internal::HasBits has_bits{};
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
+    ::uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // int64 dim_value = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 8)) {
           _internal_set_dim_value(::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr));
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // string dim_param = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 18)) {
           auto str = _internal_mutable_dim_param();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional string denotation = 3;
       case 3:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 26)) {
           auto str = _internal_mutable_denotation();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       default:
         goto handle_unusual;
@@ -5980,21 +6195,22 @@ failure:
 #undef CHK_
 }
 
-uint8_t* TensorShapeProto_Dimension::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::uint8_t* TensorShapeProto_Dimension::_InternalSerialize(
+    ::uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:onnx.TensorShapeProto.Dimension)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   switch (value_case()) {
     case kDimValue: {
       target = stream->EnsureSpace(target);
-      target = ::_pbi::WireFormatLite::WriteInt64ToArray(1, this->_internal_dim_value(), target);
+      target = ::_pbi::WireFormatLite::WriteInt64ToArray(
+          1, this->_internal_dim_value(), target);
       break;
     }
     case kDimParam: {
-      target = stream->WriteStringMaybeAliased(
-          2, this->_internal_dim_param(), target);
+      const std::string& _s = this->_internal_dim_param();
+      target = stream->WriteStringMaybeAliased(2, _s, target);
       break;
     }
     default: ;
@@ -6002,8 +6218,8 @@ uint8_t* TensorShapeProto_Dimension::_InternalSerialize(
   cached_has_bits = _impl_._has_bits_[0];
   // optional string denotation = 3;
   if (cached_has_bits & 0x00000001u) {
-    target = stream->WriteStringMaybeAliased(
-        3, this->_internal_denotation(), target);
+    const std::string& _s = this->_internal_denotation();
+    target = stream->WriteStringMaybeAliased(3, _s, target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -6014,33 +6230,32 @@ uint8_t* TensorShapeProto_Dimension::_InternalSerialize(
   return target;
 }
 
-size_t TensorShapeProto_Dimension::ByteSizeLong() const {
+::size_t TensorShapeProto_Dimension::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:onnx.TensorShapeProto.Dimension)
-  size_t total_size = 0;
+  ::size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   // optional string denotation = 3;
   cached_has_bits = _impl_._has_bits_[0];
   if (cached_has_bits & 0x00000001u) {
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-        this->_internal_denotation());
+    total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                    this->_internal_denotation());
   }
 
   switch (value_case()) {
     // int64 dim_value = 1;
     case kDimValue: {
-      total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(this->_internal_dim_value());
+      total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(
+          this->_internal_dim_value());
       break;
     }
     // string dim_param = 2;
     case kDimParam: {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_dim_param());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_dim_param());
       break;
     }
     case VALUE_NOT_SET: {
@@ -6064,11 +6279,11 @@ void TensorShapeProto_Dimension::CheckTypeAndMergeFrom(
 void TensorShapeProto_Dimension::MergeFrom(const TensorShapeProto_Dimension& from) {
   TensorShapeProto_Dimension* const _this = this;
   // @@protoc_insertion_point(class_specific_merge_from_start:onnx.TensorShapeProto.Dimension)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (from._internal_has_denotation()) {
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
     _this->_internal_set_denotation(from._internal_denotation());
   }
   switch (from.value_case()) {
@@ -6104,10 +6319,8 @@ void TensorShapeProto_Dimension::InternalSwap(TensorShapeProto_Dimension* other)
   auto* rhs_arena = other->GetArenaForAllocation();
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.denotation_, lhs_arena,
-      &other->_impl_.denotation_, rhs_arena
-  );
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.denotation_, lhs_arena,
+                                       &other->_impl_.denotation_, rhs_arena);
   swap(_impl_.value_, other->_impl_.value_);
   swap(_impl_._oneof_case_[0], other->_impl_._oneof_case_[0]);
 }
@@ -6116,17 +6329,15 @@ std::string TensorShapeProto_Dimension::GetTypeName() const {
   return "onnx.TensorShapeProto.Dimension";
 }
 
-
 // ===================================================================
 
 class TensorShapeProto::_Internal {
  public:
 };
 
-TensorShapeProto::TensorShapeProto(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
+TensorShapeProto::TensorShapeProto(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena) {
+  SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:onnx.TensorShapeProto)
 }
 TensorShapeProto::TensorShapeProto(const TensorShapeProto& from)
@@ -6140,10 +6351,8 @@ TensorShapeProto::TensorShapeProto(const TensorShapeProto& from)
   // @@protoc_insertion_point(copy_constructor:onnx.TensorShapeProto)
 }
 
-inline void TensorShapeProto::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
+inline void TensorShapeProto::SharedCtor(::_pb::Arena* arena) {
   (void)arena;
-  (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_.dim_){arena}
     , /*decltype(_impl_._cached_size_)*/{}
@@ -6160,7 +6369,7 @@ TensorShapeProto::~TensorShapeProto() {
 }
 
 inline void TensorShapeProto::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  ABSL_DCHECK(GetArenaForAllocation() == nullptr);
   _impl_.dim_.~RepeatedPtrField();
 }
 
@@ -6170,7 +6379,7 @@ void TensorShapeProto::SetCachedSize(int size) const {
 
 void TensorShapeProto::Clear() {
 // @@protoc_insertion_point(message_clear_start:onnx.TensorShapeProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -6181,12 +6390,12 @@ void TensorShapeProto::Clear() {
 const char* TensorShapeProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
+    ::uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // repeated .onnx.TensorShapeProto.Dimension dim = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 10)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -6194,8 +6403,9 @@ const char* TensorShapeProto::_InternalParse(const char* ptr, ::_pbi::ParseConte
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<10>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       default:
         goto handle_unusual;
@@ -6220,10 +6430,10 @@ failure:
 #undef CHK_
 }
 
-uint8_t* TensorShapeProto::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::uint8_t* TensorShapeProto::_InternalSerialize(
+    ::uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:onnx.TensorShapeProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   // repeated .onnx.TensorShapeProto.Dimension dim = 1;
@@ -6242,11 +6452,11 @@ uint8_t* TensorShapeProto::_InternalSerialize(
   return target;
 }
 
-size_t TensorShapeProto::ByteSizeLong() const {
+::size_t TensorShapeProto::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:onnx.TensorShapeProto)
-  size_t total_size = 0;
+  ::size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -6274,8 +6484,8 @@ void TensorShapeProto::CheckTypeAndMergeFrom(
 void TensorShapeProto::MergeFrom(const TensorShapeProto& from) {
   TensorShapeProto* const _this = this;
   // @@protoc_insertion_point(class_specific_merge_from_start:onnx.TensorShapeProto)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   _this->_impl_.dim_.MergeFrom(from._impl_.dim_);
@@ -6303,12 +6513,13 @@ std::string TensorShapeProto::GetTypeName() const {
   return "onnx.TensorShapeProto";
 }
 
-
 // ===================================================================
 
 class TypeProto_Tensor::_Internal {
  public:
   using HasBits = decltype(std::declval<TypeProto_Tensor>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(TypeProto_Tensor, _impl_._has_bits_);
   static void set_has_elem_type(HasBits* has_bits) {
     (*has_bits)[0] |= 2u;
   }
@@ -6322,10 +6533,9 @@ const ::onnx::TensorShapeProto&
 TypeProto_Tensor::_Internal::shape(const TypeProto_Tensor* msg) {
   return *msg->_impl_.shape_;
 }
-TypeProto_Tensor::TypeProto_Tensor(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
+TypeProto_Tensor::TypeProto_Tensor(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena) {
+  SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:onnx.TypeProto.Tensor)
 }
 TypeProto_Tensor::TypeProto_Tensor(const TypeProto_Tensor& from)
@@ -6335,25 +6545,25 @@ TypeProto_Tensor::TypeProto_Tensor(const TypeProto_Tensor& from)
       decltype(_impl_._has_bits_){from._impl_._has_bits_}
     , /*decltype(_impl_._cached_size_)*/{}
     , decltype(_impl_.shape_){nullptr}
-    , decltype(_impl_.elem_type_){}};
+    , decltype(_impl_.elem_type_) {}
+  };
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
-  if (from._internal_has_shape()) {
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
     _this->_impl_.shape_ = new ::onnx::TensorShapeProto(*from._impl_.shape_);
   }
   _this->_impl_.elem_type_ = from._impl_.elem_type_;
   // @@protoc_insertion_point(copy_constructor:onnx.TypeProto.Tensor)
 }
 
-inline void TypeProto_Tensor::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
+inline void TypeProto_Tensor::SharedCtor(::_pb::Arena* arena) {
   (void)arena;
-  (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){}
     , /*decltype(_impl_._cached_size_)*/{}
     , decltype(_impl_.shape_){nullptr}
-    , decltype(_impl_.elem_type_){0}
+    , decltype(_impl_.elem_type_) { 0 }
+
   };
 }
 
@@ -6367,7 +6577,7 @@ TypeProto_Tensor::~TypeProto_Tensor() {
 }
 
 inline void TypeProto_Tensor::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  ABSL_DCHECK(GetArenaForAllocation() == nullptr);
   if (this != internal_default_instance()) delete _impl_.shape_;
 }
 
@@ -6377,13 +6587,13 @@ void TypeProto_Tensor::SetCachedSize(int size) const {
 
 void TypeProto_Tensor::Clear() {
 // @@protoc_insertion_point(message_clear_start:onnx.TypeProto.Tensor)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
   if (cached_has_bits & 0x00000001u) {
-    GOOGLE_DCHECK(_impl_.shape_ != nullptr);
+    ABSL_DCHECK(_impl_.shape_ != nullptr);
     _impl_.shape_->Clear();
   }
   _impl_.elem_type_ = 0;
@@ -6395,25 +6605,27 @@ const char* TypeProto_Tensor::_InternalParse(const char* ptr, ::_pbi::ParseConte
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   _Internal::HasBits has_bits{};
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
+    ::uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // optional int32 elem_type = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 8)) {
           _Internal::set_has_elem_type(&has_bits);
           _impl_.elem_type_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional .onnx.TensorShapeProto shape = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 18)) {
           ptr = ctx->ParseMessage(_internal_mutable_shape(), ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       default:
         goto handle_unusual;
@@ -6439,17 +6651,18 @@ failure:
 #undef CHK_
 }
 
-uint8_t* TypeProto_Tensor::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::uint8_t* TypeProto_Tensor::_InternalSerialize(
+    ::uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:onnx.TypeProto.Tensor)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
   // optional int32 elem_type = 1;
   if (cached_has_bits & 0x00000002u) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt32ToArray(1, this->_internal_elem_type(), target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(
+        1, this->_internal_elem_type(), target);
   }
 
   // optional .onnx.TensorShapeProto shape = 2;
@@ -6467,11 +6680,11 @@ uint8_t* TypeProto_Tensor::_InternalSerialize(
   return target;
 }
 
-size_t TypeProto_Tensor::ByteSizeLong() const {
+::size_t TypeProto_Tensor::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:onnx.TypeProto.Tensor)
-  size_t total_size = 0;
+  ::size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -6486,7 +6699,8 @@ size_t TypeProto_Tensor::ByteSizeLong() const {
 
     // optional int32 elem_type = 1;
     if (cached_has_bits & 0x00000002u) {
-      total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_elem_type());
+      total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(
+          this->_internal_elem_type());
     }
 
   }
@@ -6507,8 +6721,8 @@ void TypeProto_Tensor::CheckTypeAndMergeFrom(
 void TypeProto_Tensor::MergeFrom(const TypeProto_Tensor& from) {
   TypeProto_Tensor* const _this = this;
   // @@protoc_insertion_point(class_specific_merge_from_start:onnx.TypeProto.Tensor)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   cached_has_bits = from._impl_._has_bits_[0];
@@ -6552,12 +6766,13 @@ std::string TypeProto_Tensor::GetTypeName() const {
   return "onnx.TypeProto.Tensor";
 }
 
-
 // ===================================================================
 
 class TypeProto_Sequence::_Internal {
  public:
   using HasBits = decltype(std::declval<TypeProto_Sequence>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(TypeProto_Sequence, _impl_._has_bits_);
   static const ::onnx::TypeProto& elem_type(const TypeProto_Sequence* msg);
   static void set_has_elem_type(HasBits* has_bits) {
     (*has_bits)[0] |= 1u;
@@ -6568,10 +6783,9 @@ const ::onnx::TypeProto&
 TypeProto_Sequence::_Internal::elem_type(const TypeProto_Sequence* msg) {
   return *msg->_impl_.elem_type_;
 }
-TypeProto_Sequence::TypeProto_Sequence(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
+TypeProto_Sequence::TypeProto_Sequence(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena) {
+  SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:onnx.TypeProto.Sequence)
 }
 TypeProto_Sequence::TypeProto_Sequence(const TypeProto_Sequence& from)
@@ -6583,16 +6797,14 @@ TypeProto_Sequence::TypeProto_Sequence(const TypeProto_Sequence& from)
     , decltype(_impl_.elem_type_){nullptr}};
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
-  if (from._internal_has_elem_type()) {
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
     _this->_impl_.elem_type_ = new ::onnx::TypeProto(*from._impl_.elem_type_);
   }
   // @@protoc_insertion_point(copy_constructor:onnx.TypeProto.Sequence)
 }
 
-inline void TypeProto_Sequence::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
+inline void TypeProto_Sequence::SharedCtor(::_pb::Arena* arena) {
   (void)arena;
-  (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){}
     , /*decltype(_impl_._cached_size_)*/{}
@@ -6610,7 +6822,7 @@ TypeProto_Sequence::~TypeProto_Sequence() {
 }
 
 inline void TypeProto_Sequence::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  ABSL_DCHECK(GetArenaForAllocation() == nullptr);
   if (this != internal_default_instance()) delete _impl_.elem_type_;
 }
 
@@ -6620,13 +6832,13 @@ void TypeProto_Sequence::SetCachedSize(int size) const {
 
 void TypeProto_Sequence::Clear() {
 // @@protoc_insertion_point(message_clear_start:onnx.TypeProto.Sequence)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
   if (cached_has_bits & 0x00000001u) {
-    GOOGLE_DCHECK(_impl_.elem_type_ != nullptr);
+    ABSL_DCHECK(_impl_.elem_type_ != nullptr);
     _impl_.elem_type_->Clear();
   }
   _impl_._has_bits_.Clear();
@@ -6637,16 +6849,17 @@ const char* TypeProto_Sequence::_InternalParse(const char* ptr, ::_pbi::ParseCon
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   _Internal::HasBits has_bits{};
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
+    ::uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // optional .onnx.TypeProto elem_type = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 10)) {
           ptr = ctx->ParseMessage(_internal_mutable_elem_type(), ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       default:
         goto handle_unusual;
@@ -6672,10 +6885,10 @@ failure:
 #undef CHK_
 }
 
-uint8_t* TypeProto_Sequence::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::uint8_t* TypeProto_Sequence::_InternalSerialize(
+    ::uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:onnx.TypeProto.Sequence)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
@@ -6694,11 +6907,11 @@ uint8_t* TypeProto_Sequence::_InternalSerialize(
   return target;
 }
 
-size_t TypeProto_Sequence::ByteSizeLong() const {
+::size_t TypeProto_Sequence::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:onnx.TypeProto.Sequence)
-  size_t total_size = 0;
+  ::size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -6727,11 +6940,11 @@ void TypeProto_Sequence::CheckTypeAndMergeFrom(
 void TypeProto_Sequence::MergeFrom(const TypeProto_Sequence& from) {
   TypeProto_Sequence* const _this = this;
   // @@protoc_insertion_point(class_specific_merge_from_start:onnx.TypeProto.Sequence)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (from._internal_has_elem_type()) {
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
     _this->_internal_mutable_elem_type()->::onnx::TypeProto::MergeFrom(
         from._internal_elem_type());
   }
@@ -6760,12 +6973,13 @@ std::string TypeProto_Sequence::GetTypeName() const {
   return "onnx.TypeProto.Sequence";
 }
 
-
 // ===================================================================
 
 class TypeProto_Map::_Internal {
  public:
   using HasBits = decltype(std::declval<TypeProto_Map>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(TypeProto_Map, _impl_._has_bits_);
   static void set_has_key_type(HasBits* has_bits) {
     (*has_bits)[0] |= 2u;
   }
@@ -6779,10 +6993,9 @@ const ::onnx::TypeProto&
 TypeProto_Map::_Internal::value_type(const TypeProto_Map* msg) {
   return *msg->_impl_.value_type_;
 }
-TypeProto_Map::TypeProto_Map(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
+TypeProto_Map::TypeProto_Map(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena) {
+  SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:onnx.TypeProto.Map)
 }
 TypeProto_Map::TypeProto_Map(const TypeProto_Map& from)
@@ -6792,25 +7005,25 @@ TypeProto_Map::TypeProto_Map(const TypeProto_Map& from)
       decltype(_impl_._has_bits_){from._impl_._has_bits_}
     , /*decltype(_impl_._cached_size_)*/{}
     , decltype(_impl_.value_type_){nullptr}
-    , decltype(_impl_.key_type_){}};
+    , decltype(_impl_.key_type_) {}
+  };
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
-  if (from._internal_has_value_type()) {
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
     _this->_impl_.value_type_ = new ::onnx::TypeProto(*from._impl_.value_type_);
   }
   _this->_impl_.key_type_ = from._impl_.key_type_;
   // @@protoc_insertion_point(copy_constructor:onnx.TypeProto.Map)
 }
 
-inline void TypeProto_Map::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
+inline void TypeProto_Map::SharedCtor(::_pb::Arena* arena) {
   (void)arena;
-  (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){}
     , /*decltype(_impl_._cached_size_)*/{}
     , decltype(_impl_.value_type_){nullptr}
-    , decltype(_impl_.key_type_){0}
+    , decltype(_impl_.key_type_) { 0 }
+
   };
 }
 
@@ -6824,7 +7037,7 @@ TypeProto_Map::~TypeProto_Map() {
 }
 
 inline void TypeProto_Map::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  ABSL_DCHECK(GetArenaForAllocation() == nullptr);
   if (this != internal_default_instance()) delete _impl_.value_type_;
 }
 
@@ -6834,13 +7047,13 @@ void TypeProto_Map::SetCachedSize(int size) const {
 
 void TypeProto_Map::Clear() {
 // @@protoc_insertion_point(message_clear_start:onnx.TypeProto.Map)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
   if (cached_has_bits & 0x00000001u) {
-    GOOGLE_DCHECK(_impl_.value_type_ != nullptr);
+    ABSL_DCHECK(_impl_.value_type_ != nullptr);
     _impl_.value_type_->Clear();
   }
   _impl_.key_type_ = 0;
@@ -6852,25 +7065,27 @@ const char* TypeProto_Map::_InternalParse(const char* ptr, ::_pbi::ParseContext*
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   _Internal::HasBits has_bits{};
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
+    ::uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // optional int32 key_type = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 8)) {
           _Internal::set_has_key_type(&has_bits);
           _impl_.key_type_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional .onnx.TypeProto value_type = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 18)) {
           ptr = ctx->ParseMessage(_internal_mutable_value_type(), ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       default:
         goto handle_unusual;
@@ -6896,17 +7111,18 @@ failure:
 #undef CHK_
 }
 
-uint8_t* TypeProto_Map::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::uint8_t* TypeProto_Map::_InternalSerialize(
+    ::uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:onnx.TypeProto.Map)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
   // optional int32 key_type = 1;
   if (cached_has_bits & 0x00000002u) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt32ToArray(1, this->_internal_key_type(), target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(
+        1, this->_internal_key_type(), target);
   }
 
   // optional .onnx.TypeProto value_type = 2;
@@ -6924,11 +7140,11 @@ uint8_t* TypeProto_Map::_InternalSerialize(
   return target;
 }
 
-size_t TypeProto_Map::ByteSizeLong() const {
+::size_t TypeProto_Map::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:onnx.TypeProto.Map)
-  size_t total_size = 0;
+  ::size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -6943,7 +7159,8 @@ size_t TypeProto_Map::ByteSizeLong() const {
 
     // optional int32 key_type = 1;
     if (cached_has_bits & 0x00000002u) {
-      total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_key_type());
+      total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(
+          this->_internal_key_type());
     }
 
   }
@@ -6964,8 +7181,8 @@ void TypeProto_Map::CheckTypeAndMergeFrom(
 void TypeProto_Map::MergeFrom(const TypeProto_Map& from) {
   TypeProto_Map* const _this = this;
   // @@protoc_insertion_point(class_specific_merge_from_start:onnx.TypeProto.Map)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   cached_has_bits = from._impl_._has_bits_[0];
@@ -7009,12 +7226,13 @@ std::string TypeProto_Map::GetTypeName() const {
   return "onnx.TypeProto.Map";
 }
 
-
 // ===================================================================
 
 class TypeProto_Optional::_Internal {
  public:
   using HasBits = decltype(std::declval<TypeProto_Optional>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(TypeProto_Optional, _impl_._has_bits_);
   static const ::onnx::TypeProto& elem_type(const TypeProto_Optional* msg);
   static void set_has_elem_type(HasBits* has_bits) {
     (*has_bits)[0] |= 1u;
@@ -7025,10 +7243,9 @@ const ::onnx::TypeProto&
 TypeProto_Optional::_Internal::elem_type(const TypeProto_Optional* msg) {
   return *msg->_impl_.elem_type_;
 }
-TypeProto_Optional::TypeProto_Optional(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
+TypeProto_Optional::TypeProto_Optional(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena) {
+  SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:onnx.TypeProto.Optional)
 }
 TypeProto_Optional::TypeProto_Optional(const TypeProto_Optional& from)
@@ -7040,16 +7257,14 @@ TypeProto_Optional::TypeProto_Optional(const TypeProto_Optional& from)
     , decltype(_impl_.elem_type_){nullptr}};
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
-  if (from._internal_has_elem_type()) {
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
     _this->_impl_.elem_type_ = new ::onnx::TypeProto(*from._impl_.elem_type_);
   }
   // @@protoc_insertion_point(copy_constructor:onnx.TypeProto.Optional)
 }
 
-inline void TypeProto_Optional::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
+inline void TypeProto_Optional::SharedCtor(::_pb::Arena* arena) {
   (void)arena;
-  (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){}
     , /*decltype(_impl_._cached_size_)*/{}
@@ -7067,7 +7282,7 @@ TypeProto_Optional::~TypeProto_Optional() {
 }
 
 inline void TypeProto_Optional::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  ABSL_DCHECK(GetArenaForAllocation() == nullptr);
   if (this != internal_default_instance()) delete _impl_.elem_type_;
 }
 
@@ -7077,13 +7292,13 @@ void TypeProto_Optional::SetCachedSize(int size) const {
 
 void TypeProto_Optional::Clear() {
 // @@protoc_insertion_point(message_clear_start:onnx.TypeProto.Optional)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
   if (cached_has_bits & 0x00000001u) {
-    GOOGLE_DCHECK(_impl_.elem_type_ != nullptr);
+    ABSL_DCHECK(_impl_.elem_type_ != nullptr);
     _impl_.elem_type_->Clear();
   }
   _impl_._has_bits_.Clear();
@@ -7094,16 +7309,17 @@ const char* TypeProto_Optional::_InternalParse(const char* ptr, ::_pbi::ParseCon
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   _Internal::HasBits has_bits{};
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
+    ::uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // optional .onnx.TypeProto elem_type = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 10)) {
           ptr = ctx->ParseMessage(_internal_mutable_elem_type(), ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       default:
         goto handle_unusual;
@@ -7129,10 +7345,10 @@ failure:
 #undef CHK_
 }
 
-uint8_t* TypeProto_Optional::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::uint8_t* TypeProto_Optional::_InternalSerialize(
+    ::uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:onnx.TypeProto.Optional)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
@@ -7151,11 +7367,11 @@ uint8_t* TypeProto_Optional::_InternalSerialize(
   return target;
 }
 
-size_t TypeProto_Optional::ByteSizeLong() const {
+::size_t TypeProto_Optional::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:onnx.TypeProto.Optional)
-  size_t total_size = 0;
+  ::size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -7184,11 +7400,11 @@ void TypeProto_Optional::CheckTypeAndMergeFrom(
 void TypeProto_Optional::MergeFrom(const TypeProto_Optional& from) {
   TypeProto_Optional* const _this = this;
   // @@protoc_insertion_point(class_specific_merge_from_start:onnx.TypeProto.Optional)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (from._internal_has_elem_type()) {
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
     _this->_internal_mutable_elem_type()->::onnx::TypeProto::MergeFrom(
         from._internal_elem_type());
   }
@@ -7217,12 +7433,13 @@ std::string TypeProto_Optional::GetTypeName() const {
   return "onnx.TypeProto.Optional";
 }
 
-
 // ===================================================================
 
 class TypeProto_SparseTensor::_Internal {
  public:
   using HasBits = decltype(std::declval<TypeProto_SparseTensor>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(TypeProto_SparseTensor, _impl_._has_bits_);
   static void set_has_elem_type(HasBits* has_bits) {
     (*has_bits)[0] |= 2u;
   }
@@ -7236,10 +7453,9 @@ const ::onnx::TensorShapeProto&
 TypeProto_SparseTensor::_Internal::shape(const TypeProto_SparseTensor* msg) {
   return *msg->_impl_.shape_;
 }
-TypeProto_SparseTensor::TypeProto_SparseTensor(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
+TypeProto_SparseTensor::TypeProto_SparseTensor(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena) {
+  SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:onnx.TypeProto.SparseTensor)
 }
 TypeProto_SparseTensor::TypeProto_SparseTensor(const TypeProto_SparseTensor& from)
@@ -7249,25 +7465,25 @@ TypeProto_SparseTensor::TypeProto_SparseTensor(const TypeProto_SparseTensor& fro
       decltype(_impl_._has_bits_){from._impl_._has_bits_}
     , /*decltype(_impl_._cached_size_)*/{}
     , decltype(_impl_.shape_){nullptr}
-    , decltype(_impl_.elem_type_){}};
+    , decltype(_impl_.elem_type_) {}
+  };
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
-  if (from._internal_has_shape()) {
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
     _this->_impl_.shape_ = new ::onnx::TensorShapeProto(*from._impl_.shape_);
   }
   _this->_impl_.elem_type_ = from._impl_.elem_type_;
   // @@protoc_insertion_point(copy_constructor:onnx.TypeProto.SparseTensor)
 }
 
-inline void TypeProto_SparseTensor::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
+inline void TypeProto_SparseTensor::SharedCtor(::_pb::Arena* arena) {
   (void)arena;
-  (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){}
     , /*decltype(_impl_._cached_size_)*/{}
     , decltype(_impl_.shape_){nullptr}
-    , decltype(_impl_.elem_type_){0}
+    , decltype(_impl_.elem_type_) { 0 }
+
   };
 }
 
@@ -7281,7 +7497,7 @@ TypeProto_SparseTensor::~TypeProto_SparseTensor() {
 }
 
 inline void TypeProto_SparseTensor::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  ABSL_DCHECK(GetArenaForAllocation() == nullptr);
   if (this != internal_default_instance()) delete _impl_.shape_;
 }
 
@@ -7291,13 +7507,13 @@ void TypeProto_SparseTensor::SetCachedSize(int size) const {
 
 void TypeProto_SparseTensor::Clear() {
 // @@protoc_insertion_point(message_clear_start:onnx.TypeProto.SparseTensor)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
   if (cached_has_bits & 0x00000001u) {
-    GOOGLE_DCHECK(_impl_.shape_ != nullptr);
+    ABSL_DCHECK(_impl_.shape_ != nullptr);
     _impl_.shape_->Clear();
   }
   _impl_.elem_type_ = 0;
@@ -7309,25 +7525,27 @@ const char* TypeProto_SparseTensor::_InternalParse(const char* ptr, ::_pbi::Pars
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   _Internal::HasBits has_bits{};
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
+    ::uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // optional int32 elem_type = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 8)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 8)) {
           _Internal::set_has_elem_type(&has_bits);
           _impl_.elem_type_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint32(&ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional .onnx.TensorShapeProto shape = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 18)) {
           ptr = ctx->ParseMessage(_internal_mutable_shape(), ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       default:
         goto handle_unusual;
@@ -7353,17 +7571,18 @@ failure:
 #undef CHK_
 }
 
-uint8_t* TypeProto_SparseTensor::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::uint8_t* TypeProto_SparseTensor::_InternalSerialize(
+    ::uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:onnx.TypeProto.SparseTensor)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
   // optional int32 elem_type = 1;
   if (cached_has_bits & 0x00000002u) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt32ToArray(1, this->_internal_elem_type(), target);
+    target = ::_pbi::WireFormatLite::WriteInt32ToArray(
+        1, this->_internal_elem_type(), target);
   }
 
   // optional .onnx.TensorShapeProto shape = 2;
@@ -7381,11 +7600,11 @@ uint8_t* TypeProto_SparseTensor::_InternalSerialize(
   return target;
 }
 
-size_t TypeProto_SparseTensor::ByteSizeLong() const {
+::size_t TypeProto_SparseTensor::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:onnx.TypeProto.SparseTensor)
-  size_t total_size = 0;
+  ::size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -7400,7 +7619,8 @@ size_t TypeProto_SparseTensor::ByteSizeLong() const {
 
     // optional int32 elem_type = 1;
     if (cached_has_bits & 0x00000002u) {
-      total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(this->_internal_elem_type());
+      total_size += ::_pbi::WireFormatLite::Int32SizePlusOne(
+          this->_internal_elem_type());
     }
 
   }
@@ -7421,8 +7641,8 @@ void TypeProto_SparseTensor::CheckTypeAndMergeFrom(
 void TypeProto_SparseTensor::MergeFrom(const TypeProto_SparseTensor& from) {
   TypeProto_SparseTensor* const _this = this;
   // @@protoc_insertion_point(class_specific_merge_from_start:onnx.TypeProto.SparseTensor)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   cached_has_bits = from._impl_._has_bits_[0];
@@ -7466,12 +7686,15 @@ std::string TypeProto_SparseTensor::GetTypeName() const {
   return "onnx.TypeProto.SparseTensor";
 }
 
-
 // ===================================================================
 
 class TypeProto::_Internal {
  public:
   using HasBits = decltype(std::declval<TypeProto>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(TypeProto, _impl_._has_bits_);
+  static constexpr ::int32_t kOneofCaseOffset =
+    PROTOBUF_FIELD_OFFSET(::onnx::TypeProto, _impl_._oneof_case_);
   static const ::onnx::TypeProto_Tensor& tensor_type(const TypeProto* msg);
   static const ::onnx::TypeProto_Sequence& sequence_type(const TypeProto* msg);
   static const ::onnx::TypeProto_Map& map_type(const TypeProto* msg);
@@ -7577,10 +7800,9 @@ void TypeProto::set_allocated_sparse_tensor_type(::onnx::TypeProto_SparseTensor*
   }
   // @@protoc_insertion_point(field_set_allocated:onnx.TypeProto.sparse_tensor_type)
 }
-TypeProto::TypeProto(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
+TypeProto::TypeProto(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena) {
+  SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:onnx.TypeProto)
 }
 TypeProto::TypeProto(const TypeProto& from)
@@ -7589,18 +7811,18 @@ TypeProto::TypeProto(const TypeProto& from)
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){from._impl_._has_bits_}
     , /*decltype(_impl_._cached_size_)*/{}
-    , decltype(_impl_.denotation_){}
+    , decltype(_impl_.denotation_) {}
+
     , decltype(_impl_.value_){}
     , /*decltype(_impl_._oneof_case_)*/{}};
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
   _impl_.denotation_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.denotation_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_denotation()) {
-    _this->_impl_.denotation_.Set(from._internal_denotation(), 
-      _this->GetArenaForAllocation());
+        _impl_.denotation_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
+    _this->_impl_.denotation_.Set(from._internal_denotation(), _this->GetArenaForAllocation());
   }
   clear_has_value();
   switch (from.value_case()) {
@@ -7636,21 +7858,20 @@ TypeProto::TypeProto(const TypeProto& from)
   // @@protoc_insertion_point(copy_constructor:onnx.TypeProto)
 }
 
-inline void TypeProto::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
+inline void TypeProto::SharedCtor(::_pb::Arena* arena) {
   (void)arena;
-  (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){}
     , /*decltype(_impl_._cached_size_)*/{}
-    , decltype(_impl_.denotation_){}
+    , decltype(_impl_.denotation_) {}
+
     , decltype(_impl_.value_){}
     , /*decltype(_impl_._oneof_case_)*/{}
   };
   _impl_.denotation_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.denotation_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.denotation_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   clear_has_value();
 }
 
@@ -7664,7 +7885,7 @@ TypeProto::~TypeProto() {
 }
 
 inline void TypeProto::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  ABSL_DCHECK(GetArenaForAllocation() == nullptr);
   _impl_.denotation_.Destroy();
   if (has_value()) {
     clear_value();
@@ -7718,7 +7939,7 @@ void TypeProto::clear_value() {
 
 void TypeProto::Clear() {
 // @@protoc_insertion_point(message_clear_start:onnx.TypeProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -7735,57 +7956,63 @@ const char* TypeProto::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   _Internal::HasBits has_bits{};
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
+    ::uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // .onnx.TypeProto.Tensor tensor_type = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 10)) {
           ptr = ctx->ParseMessage(_internal_mutable_tensor_type(), ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // .onnx.TypeProto.Sequence sequence_type = 4;
       case 4:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 34)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 34)) {
           ptr = ctx->ParseMessage(_internal_mutable_sequence_type(), ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // .onnx.TypeProto.Map map_type = 5;
       case 5:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 42)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 42)) {
           ptr = ctx->ParseMessage(_internal_mutable_map_type(), ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional string denotation = 6;
       case 6:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 50)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 50)) {
           auto str = _internal_mutable_denotation();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // .onnx.TypeProto.SparseTensor sparse_tensor_type = 8;
       case 8:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 66)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 66)) {
           ptr = ctx->ParseMessage(_internal_mutable_sparse_tensor_type(), ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // .onnx.TypeProto.Optional optional_type = 9;
       case 9:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 74)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 74)) {
           ptr = ctx->ParseMessage(_internal_mutable_optional_type(), ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       default:
         goto handle_unusual;
@@ -7811,10 +8038,10 @@ failure:
 #undef CHK_
 }
 
-uint8_t* TypeProto::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::uint8_t* TypeProto::_InternalSerialize(
+    ::uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:onnx.TypeProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   switch (value_case()) {
@@ -7841,8 +8068,8 @@ uint8_t* TypeProto::_InternalSerialize(
   cached_has_bits = _impl_._has_bits_[0];
   // optional string denotation = 6;
   if (cached_has_bits & 0x00000001u) {
-    target = stream->WriteStringMaybeAliased(
-        6, this->_internal_denotation(), target);
+    const std::string& _s = this->_internal_denotation();
+    target = stream->WriteStringMaybeAliased(6, _s, target);
   }
 
   switch (value_case()) {
@@ -7868,20 +8095,19 @@ uint8_t* TypeProto::_InternalSerialize(
   return target;
 }
 
-size_t TypeProto::ByteSizeLong() const {
+::size_t TypeProto::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:onnx.TypeProto)
-  size_t total_size = 0;
+  ::size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   // optional string denotation = 6;
   cached_has_bits = _impl_._has_bits_[0];
   if (cached_has_bits & 0x00000001u) {
-    total_size += 1 +
-      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-        this->_internal_denotation());
+    total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                    this->_internal_denotation());
   }
 
   switch (value_case()) {
@@ -7941,11 +8167,11 @@ void TypeProto::CheckTypeAndMergeFrom(
 void TypeProto::MergeFrom(const TypeProto& from) {
   TypeProto* const _this = this;
   // @@protoc_insertion_point(class_specific_merge_from_start:onnx.TypeProto)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (from._internal_has_denotation()) {
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
     _this->_internal_set_denotation(from._internal_denotation());
   }
   switch (from.value_case()) {
@@ -7998,10 +8224,8 @@ void TypeProto::InternalSwap(TypeProto* other) {
   auto* rhs_arena = other->GetArenaForAllocation();
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.denotation_, lhs_arena,
-      &other->_impl_.denotation_, rhs_arena
-  );
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.denotation_, lhs_arena,
+                                       &other->_impl_.denotation_, rhs_arena);
   swap(_impl_.value_, other->_impl_.value_);
   swap(_impl_._oneof_case_[0], other->_impl_._oneof_case_[0]);
 }
@@ -8010,12 +8234,13 @@ std::string TypeProto::GetTypeName() const {
   return "onnx.TypeProto";
 }
 
-
 // ===================================================================
 
 class OperatorSetIdProto::_Internal {
  public:
   using HasBits = decltype(std::declval<OperatorSetIdProto>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(OperatorSetIdProto, _impl_._has_bits_);
   static void set_has_domain(HasBits* has_bits) {
     (*has_bits)[0] |= 1u;
   }
@@ -8024,10 +8249,9 @@ class OperatorSetIdProto::_Internal {
   }
 };
 
-OperatorSetIdProto::OperatorSetIdProto(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
+OperatorSetIdProto::OperatorSetIdProto(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena) {
+  SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:onnx.OperatorSetIdProto)
 }
 OperatorSetIdProto::OperatorSetIdProto(const OperatorSetIdProto& from)
@@ -8036,36 +8260,37 @@ OperatorSetIdProto::OperatorSetIdProto(const OperatorSetIdProto& from)
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){from._impl_._has_bits_}
     , /*decltype(_impl_._cached_size_)*/{}
-    , decltype(_impl_.domain_){}
-    , decltype(_impl_.version_){}};
+    , decltype(_impl_.domain_) {}
+
+    , decltype(_impl_.version_) {}
+  };
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
   _impl_.domain_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.domain_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_domain()) {
-    _this->_impl_.domain_.Set(from._internal_domain(), 
-      _this->GetArenaForAllocation());
+        _impl_.domain_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
+    _this->_impl_.domain_.Set(from._internal_domain(), _this->GetArenaForAllocation());
   }
   _this->_impl_.version_ = from._impl_.version_;
   // @@protoc_insertion_point(copy_constructor:onnx.OperatorSetIdProto)
 }
 
-inline void OperatorSetIdProto::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
+inline void OperatorSetIdProto::SharedCtor(::_pb::Arena* arena) {
   (void)arena;
-  (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){}
     , /*decltype(_impl_._cached_size_)*/{}
-    , decltype(_impl_.domain_){}
-    , decltype(_impl_.version_){int64_t{0}}
+    , decltype(_impl_.domain_) {}
+
+    , decltype(_impl_.version_) { ::int64_t{0} }
+
   };
   _impl_.domain_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.domain_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.domain_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 }
 
 OperatorSetIdProto::~OperatorSetIdProto() {
@@ -8078,7 +8303,7 @@ OperatorSetIdProto::~OperatorSetIdProto() {
 }
 
 inline void OperatorSetIdProto::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  ABSL_DCHECK(GetArenaForAllocation() == nullptr);
   _impl_.domain_.Destroy();
 }
 
@@ -8088,7 +8313,7 @@ void OperatorSetIdProto::SetCachedSize(int size) const {
 
 void OperatorSetIdProto::Clear() {
 // @@protoc_insertion_point(message_clear_start:onnx.OperatorSetIdProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -8096,7 +8321,7 @@ void OperatorSetIdProto::Clear() {
   if (cached_has_bits & 0x00000001u) {
     _impl_.domain_.ClearNonDefaultToEmpty();
   }
-  _impl_.version_ = int64_t{0};
+  _impl_.version_ = ::int64_t{0};
   _impl_._has_bits_.Clear();
   _internal_metadata_.Clear<std::string>();
 }
@@ -8105,26 +8330,28 @@ const char* OperatorSetIdProto::_InternalParse(const char* ptr, ::_pbi::ParseCon
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   _Internal::HasBits has_bits{};
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
+    ::uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // optional string domain = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 10)) {
           auto str = _internal_mutable_domain();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional int64 version = 2;
       case 2:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 16)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 16)) {
           _Internal::set_has_version(&has_bits);
           _impl_.version_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       default:
         goto handle_unusual;
@@ -8150,23 +8377,24 @@ failure:
 #undef CHK_
 }
 
-uint8_t* OperatorSetIdProto::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::uint8_t* OperatorSetIdProto::_InternalSerialize(
+    ::uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:onnx.OperatorSetIdProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
   // optional string domain = 1;
   if (cached_has_bits & 0x00000001u) {
-    target = stream->WriteStringMaybeAliased(
-        1, this->_internal_domain(), target);
+    const std::string& _s = this->_internal_domain();
+    target = stream->WriteStringMaybeAliased(1, _s, target);
   }
 
   // optional int64 version = 2;
   if (cached_has_bits & 0x00000002u) {
     target = stream->EnsureSpace(target);
-    target = ::_pbi::WireFormatLite::WriteInt64ToArray(2, this->_internal_version(), target);
+    target = ::_pbi::WireFormatLite::WriteInt64ToArray(
+        2, this->_internal_version(), target);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -8177,11 +8405,11 @@ uint8_t* OperatorSetIdProto::_InternalSerialize(
   return target;
 }
 
-size_t OperatorSetIdProto::ByteSizeLong() const {
+::size_t OperatorSetIdProto::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:onnx.OperatorSetIdProto)
-  size_t total_size = 0;
+  ::size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -8189,14 +8417,14 @@ size_t OperatorSetIdProto::ByteSizeLong() const {
   if (cached_has_bits & 0x00000003u) {
     // optional string domain = 1;
     if (cached_has_bits & 0x00000001u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_domain());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_domain());
     }
 
     // optional int64 version = 2;
     if (cached_has_bits & 0x00000002u) {
-      total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(this->_internal_version());
+      total_size += ::_pbi::WireFormatLite::Int64SizePlusOne(
+          this->_internal_version());
     }
 
   }
@@ -8217,8 +8445,8 @@ void OperatorSetIdProto::CheckTypeAndMergeFrom(
 void OperatorSetIdProto::MergeFrom(const OperatorSetIdProto& from) {
   OperatorSetIdProto* const _this = this;
   // @@protoc_insertion_point(class_specific_merge_from_start:onnx.OperatorSetIdProto)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   cached_has_bits = from._impl_._has_bits_[0];
@@ -8251,10 +8479,9 @@ void OperatorSetIdProto::InternalSwap(OperatorSetIdProto* other) {
   auto* rhs_arena = other->GetArenaForAllocation();
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   swap(_impl_._has_bits_[0], other->_impl_._has_bits_[0]);
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.domain_, lhs_arena,
-      &other->_impl_.domain_, rhs_arena
-  );
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.domain_, lhs_arena,
+                                       &other->_impl_.domain_, rhs_arena);
+
   swap(_impl_.version_, other->_impl_.version_);
 }
 
@@ -8262,12 +8489,13 @@ std::string OperatorSetIdProto::GetTypeName() const {
   return "onnx.OperatorSetIdProto";
 }
 
-
 // ===================================================================
 
 class FunctionProto::_Internal {
  public:
   using HasBits = decltype(std::declval<FunctionProto>()._impl_._has_bits_);
+  static constexpr ::int32_t kHasBitsOffset =
+    8 * PROTOBUF_FIELD_OFFSET(FunctionProto, _impl_._has_bits_);
   static void set_has_name(HasBits* has_bits) {
     (*has_bits)[0] |= 1u;
   }
@@ -8279,10 +8507,9 @@ class FunctionProto::_Internal {
   }
 };
 
-FunctionProto::FunctionProto(::PROTOBUF_NAMESPACE_ID::Arena* arena,
-                         bool is_message_owned)
-  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena, is_message_owned) {
-  SharedCtor(arena, is_message_owned);
+FunctionProto::FunctionProto(::PROTOBUF_NAMESPACE_ID::Arena* arena)
+  : ::PROTOBUF_NAMESPACE_ID::MessageLite(arena) {
+  SharedCtor(arena);
   // @@protoc_insertion_point(arena_constructor:onnx.FunctionProto)
 }
 FunctionProto::FunctionProto(const FunctionProto& from)
@@ -8296,42 +8523,41 @@ FunctionProto::FunctionProto(const FunctionProto& from)
     , decltype(_impl_.attribute_){from._impl_.attribute_}
     , decltype(_impl_.node_){from._impl_.node_}
     , decltype(_impl_.opset_import_){from._impl_.opset_import_}
-    , decltype(_impl_.name_){}
-    , decltype(_impl_.doc_string_){}
-    , decltype(_impl_.domain_){}};
+    , decltype(_impl_.attribute_proto_){from._impl_.attribute_proto_}
+    , decltype(_impl_.name_) {}
+
+    , decltype(_impl_.doc_string_) {}
+
+    , decltype(_impl_.domain_) {}
+  };
 
   _internal_metadata_.MergeFrom<std::string>(from._internal_metadata_);
   _impl_.name_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.name_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_name()) {
-    _this->_impl_.name_.Set(from._internal_name(), 
-      _this->GetArenaForAllocation());
+        _impl_.name_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000001u) != 0) {
+    _this->_impl_.name_.Set(from._internal_name(), _this->GetArenaForAllocation());
   }
   _impl_.doc_string_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.doc_string_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_doc_string()) {
-    _this->_impl_.doc_string_.Set(from._internal_doc_string(), 
-      _this->GetArenaForAllocation());
+        _impl_.doc_string_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000002u) != 0) {
+    _this->_impl_.doc_string_.Set(from._internal_doc_string(), _this->GetArenaForAllocation());
   }
   _impl_.domain_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.domain_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
-  if (from._internal_has_domain()) {
-    _this->_impl_.domain_.Set(from._internal_domain(), 
-      _this->GetArenaForAllocation());
+        _impl_.domain_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+  if ((from._impl_._has_bits_[0] & 0x00000004u) != 0) {
+    _this->_impl_.domain_.Set(from._internal_domain(), _this->GetArenaForAllocation());
   }
   // @@protoc_insertion_point(copy_constructor:onnx.FunctionProto)
 }
 
-inline void FunctionProto::SharedCtor(
-    ::_pb::Arena* arena, bool is_message_owned) {
+inline void FunctionProto::SharedCtor(::_pb::Arena* arena) {
   (void)arena;
-  (void)is_message_owned;
   new (&_impl_) Impl_{
       decltype(_impl_._has_bits_){}
     , /*decltype(_impl_._cached_size_)*/{}
@@ -8340,22 +8566,26 @@ inline void FunctionProto::SharedCtor(
     , decltype(_impl_.attribute_){arena}
     , decltype(_impl_.node_){arena}
     , decltype(_impl_.opset_import_){arena}
-    , decltype(_impl_.name_){}
-    , decltype(_impl_.doc_string_){}
-    , decltype(_impl_.domain_){}
+    , decltype(_impl_.attribute_proto_){arena}
+    , decltype(_impl_.name_) {}
+
+    , decltype(_impl_.doc_string_) {}
+
+    , decltype(_impl_.domain_) {}
+
   };
   _impl_.name_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.name_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.name_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   _impl_.doc_string_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.doc_string_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.doc_string_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
   _impl_.domain_.InitDefault();
   #ifdef PROTOBUF_FORCE_COPY_DEFAULT_STRING
-    _impl_.domain_.Set("", GetArenaForAllocation());
-  #endif // PROTOBUF_FORCE_COPY_DEFAULT_STRING
+        _impl_.domain_.Set("", GetArenaForAllocation());
+  #endif  // PROTOBUF_FORCE_COPY_DEFAULT_STRING
 }
 
 FunctionProto::~FunctionProto() {
@@ -8368,12 +8598,13 @@ FunctionProto::~FunctionProto() {
 }
 
 inline void FunctionProto::SharedDtor() {
-  GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
+  ABSL_DCHECK(GetArenaForAllocation() == nullptr);
   _impl_.input_.~RepeatedPtrField();
   _impl_.output_.~RepeatedPtrField();
   _impl_.attribute_.~RepeatedPtrField();
   _impl_.node_.~RepeatedPtrField();
   _impl_.opset_import_.~RepeatedPtrField();
+  _impl_.attribute_proto_.~RepeatedPtrField();
   _impl_.name_.Destroy();
   _impl_.doc_string_.Destroy();
   _impl_.domain_.Destroy();
@@ -8385,7 +8616,7 @@ void FunctionProto::SetCachedSize(int size) const {
 
 void FunctionProto::Clear() {
 // @@protoc_insertion_point(message_clear_start:onnx.FunctionProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
@@ -8394,6 +8625,7 @@ void FunctionProto::Clear() {
   _impl_.attribute_.Clear();
   _impl_.node_.Clear();
   _impl_.opset_import_.Clear();
+  _impl_.attribute_proto_.Clear();
   cached_has_bits = _impl_._has_bits_[0];
   if (cached_has_bits & 0x00000007u) {
     if (cached_has_bits & 0x00000001u) {
@@ -8414,21 +8646,22 @@ const char* FunctionProto::_InternalParse(const char* ptr, ::_pbi::ParseContext*
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   _Internal::HasBits has_bits{};
   while (!ctx->Done(&ptr)) {
-    uint32_t tag;
+    ::uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
       // optional string name = 1;
       case 1:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 10)) {
           auto str = _internal_mutable_name();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated string input = 4;
       case 4:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 34)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 34)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -8437,12 +8670,13 @@ const char* FunctionProto::_InternalParse(const char* ptr, ::_pbi::ParseContext*
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<34>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated string output = 5;
       case 5:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 42)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 42)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -8451,12 +8685,13 @@ const char* FunctionProto::_InternalParse(const char* ptr, ::_pbi::ParseContext*
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<42>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated string attribute = 6;
       case 6:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 50)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 50)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -8465,12 +8700,13 @@ const char* FunctionProto::_InternalParse(const char* ptr, ::_pbi::ParseContext*
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<50>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated .onnx.NodeProto node = 7;
       case 7:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 58)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 58)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -8478,21 +8714,23 @@ const char* FunctionProto::_InternalParse(const char* ptr, ::_pbi::ParseContext*
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<58>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional string doc_string = 8;
       case 8:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 66)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 66)) {
           auto str = _internal_mutable_doc_string();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // repeated .onnx.OperatorSetIdProto opset_import = 9;
       case 9:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 74)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 74)) {
           ptr -= 1;
           do {
             ptr += 1;
@@ -8500,17 +8738,33 @@ const char* FunctionProto::_InternalParse(const char* ptr, ::_pbi::ParseContext*
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<74>(ptr));
-        } else
+        } else {
           goto handle_unusual;
+        }
         continue;
       // optional string domain = 10;
       case 10:
-        if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 82)) {
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 82)) {
           auto str = _internal_mutable_domain();
           ptr = ::_pbi::InlineGreedyStringParser(str, ptr, ctx);
           CHK_(ptr);
-        } else
+        } else {
           goto handle_unusual;
+        }
+        continue;
+      // repeated .onnx.AttributeProto attribute_proto = 11;
+      case 11:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::uint8_t>(tag) == 90)) {
+          ptr -= 1;
+          do {
+            ptr += 1;
+            ptr = ctx->ParseMessage(_internal_add_attribute_proto(), ptr);
+            CHK_(ptr);
+            if (!ctx->DataAvailable(ptr)) break;
+          } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<90>(ptr));
+        } else {
+          goto handle_unusual;
+        }
         continue;
       default:
         goto handle_unusual;
@@ -8536,33 +8790,33 @@ failure:
 #undef CHK_
 }
 
-uint8_t* FunctionProto::_InternalSerialize(
-    uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
+::uint8_t* FunctionProto::_InternalSerialize(
+    ::uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
   // @@protoc_insertion_point(serialize_to_array_start:onnx.FunctionProto)
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   cached_has_bits = _impl_._has_bits_[0];
   // optional string name = 1;
   if (cached_has_bits & 0x00000001u) {
-    target = stream->WriteStringMaybeAliased(
-        1, this->_internal_name(), target);
+    const std::string& _s = this->_internal_name();
+    target = stream->WriteStringMaybeAliased(1, _s, target);
   }
 
   // repeated string input = 4;
-  for (int i = 0, n = this->_internal_input_size(); i < n; i++) {
+  for (int i = 0, n = this->_internal_input_size(); i < n; ++i) {
     const auto& s = this->_internal_input(i);
     target = stream->WriteString(4, s, target);
   }
 
   // repeated string output = 5;
-  for (int i = 0, n = this->_internal_output_size(); i < n; i++) {
+  for (int i = 0, n = this->_internal_output_size(); i < n; ++i) {
     const auto& s = this->_internal_output(i);
     target = stream->WriteString(5, s, target);
   }
 
   // repeated string attribute = 6;
-  for (int i = 0, n = this->_internal_attribute_size(); i < n; i++) {
+  for (int i = 0, n = this->_internal_attribute_size(); i < n; ++i) {
     const auto& s = this->_internal_attribute(i);
     target = stream->WriteString(6, s, target);
   }
@@ -8577,8 +8831,8 @@ uint8_t* FunctionProto::_InternalSerialize(
 
   // optional string doc_string = 8;
   if (cached_has_bits & 0x00000002u) {
-    target = stream->WriteStringMaybeAliased(
-        8, this->_internal_doc_string(), target);
+    const std::string& _s = this->_internal_doc_string();
+    target = stream->WriteStringMaybeAliased(8, _s, target);
   }
 
   // repeated .onnx.OperatorSetIdProto opset_import = 9;
@@ -8591,8 +8845,16 @@ uint8_t* FunctionProto::_InternalSerialize(
 
   // optional string domain = 10;
   if (cached_has_bits & 0x00000004u) {
-    target = stream->WriteStringMaybeAliased(
-        10, this->_internal_domain(), target);
+    const std::string& _s = this->_internal_domain();
+    target = stream->WriteStringMaybeAliased(10, _s, target);
+  }
+
+  // repeated .onnx.AttributeProto attribute_proto = 11;
+  for (unsigned i = 0,
+      n = static_cast<unsigned>(this->_internal_attribute_proto_size()); i < n; i++) {
+    const auto& repfield = this->_internal_attribute_proto(i);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
+        InternalWriteMessage(11, repfield, repfield.GetCachedSize(), target, stream);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
@@ -8603,36 +8865,30 @@ uint8_t* FunctionProto::_InternalSerialize(
   return target;
 }
 
-size_t FunctionProto::ByteSizeLong() const {
+::size_t FunctionProto::ByteSizeLong() const {
 // @@protoc_insertion_point(message_byte_size_start:onnx.FunctionProto)
-  size_t total_size = 0;
+  ::size_t total_size = 0;
 
-  uint32_t cached_has_bits = 0;
+  ::uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
   // repeated string input = 4;
-  total_size += 1 *
-      ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(_impl_.input_.size());
-  for (int i = 0, n = _impl_.input_.size(); i < n; i++) {
-    total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-      _impl_.input_.Get(i));
+  total_size += 1 * ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(_impl_.input_.size());
+  for (int i = 0, n = _impl_.input_.size(); i < n; ++i) {
+    total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(_impl_.input_.Get(i));
   }
 
   // repeated string output = 5;
-  total_size += 1 *
-      ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(_impl_.output_.size());
-  for (int i = 0, n = _impl_.output_.size(); i < n; i++) {
-    total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-      _impl_.output_.Get(i));
+  total_size += 1 * ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(_impl_.output_.size());
+  for (int i = 0, n = _impl_.output_.size(); i < n; ++i) {
+    total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(_impl_.output_.Get(i));
   }
 
   // repeated string attribute = 6;
-  total_size += 1 *
-      ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(_impl_.attribute_.size());
-  for (int i = 0, n = _impl_.attribute_.size(); i < n; i++) {
-    total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-      _impl_.attribute_.Get(i));
+  total_size += 1 * ::PROTOBUF_NAMESPACE_ID::internal::FromIntSize(_impl_.attribute_.size());
+  for (int i = 0, n = _impl_.attribute_.size(); i < n; ++i) {
+    total_size += ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(_impl_.attribute_.Get(i));
   }
 
   // repeated .onnx.NodeProto node = 7;
@@ -8649,27 +8905,31 @@ size_t FunctionProto::ByteSizeLong() const {
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(msg);
   }
 
+  // repeated .onnx.AttributeProto attribute_proto = 11;
+  total_size += 1UL * this->_internal_attribute_proto_size();
+  for (const auto& msg : this->_impl_.attribute_proto_) {
+    total_size +=
+      ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(msg);
+  }
+
   cached_has_bits = _impl_._has_bits_[0];
   if (cached_has_bits & 0x00000007u) {
     // optional string name = 1;
     if (cached_has_bits & 0x00000001u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_name());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_name());
     }
 
     // optional string doc_string = 8;
     if (cached_has_bits & 0x00000002u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_doc_string());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_doc_string());
     }
 
     // optional string domain = 10;
     if (cached_has_bits & 0x00000004u) {
-      total_size += 1 +
-        ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
-          this->_internal_domain());
+      total_size += 1 + ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::StringSize(
+                                      this->_internal_domain());
     }
 
   }
@@ -8690,8 +8950,8 @@ void FunctionProto::CheckTypeAndMergeFrom(
 void FunctionProto::MergeFrom(const FunctionProto& from) {
   FunctionProto* const _this = this;
   // @@protoc_insertion_point(class_specific_merge_from_start:onnx.FunctionProto)
-  GOOGLE_DCHECK_NE(&from, _this);
-  uint32_t cached_has_bits = 0;
+  ABSL_DCHECK_NE(&from, _this);
+  ::uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
   _this->_impl_.input_.MergeFrom(from._impl_.input_);
@@ -8699,6 +8959,7 @@ void FunctionProto::MergeFrom(const FunctionProto& from) {
   _this->_impl_.attribute_.MergeFrom(from._impl_.attribute_);
   _this->_impl_.node_.MergeFrom(from._impl_.node_);
   _this->_impl_.opset_import_.MergeFrom(from._impl_.opset_import_);
+  _this->_impl_.attribute_proto_.MergeFrom(from._impl_.attribute_proto_);
   cached_has_bits = from._impl_._has_bits_[0];
   if (cached_has_bits & 0x00000007u) {
     if (cached_has_bits & 0x00000001u) {
@@ -8736,24 +8997,18 @@ void FunctionProto::InternalSwap(FunctionProto* other) {
   _impl_.attribute_.InternalSwap(&other->_impl_.attribute_);
   _impl_.node_.InternalSwap(&other->_impl_.node_);
   _impl_.opset_import_.InternalSwap(&other->_impl_.opset_import_);
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.name_, lhs_arena,
-      &other->_impl_.name_, rhs_arena
-  );
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.doc_string_, lhs_arena,
-      &other->_impl_.doc_string_, rhs_arena
-  );
-  ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
-      &_impl_.domain_, lhs_arena,
-      &other->_impl_.domain_, rhs_arena
-  );
+  _impl_.attribute_proto_.InternalSwap(&other->_impl_.attribute_proto_);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.name_, lhs_arena,
+                                       &other->_impl_.name_, rhs_arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.doc_string_, lhs_arena,
+                                       &other->_impl_.doc_string_, rhs_arena);
+  ::_pbi::ArenaStringPtr::InternalSwap(&_impl_.domain_, lhs_arena,
+                                       &other->_impl_.domain_, rhs_arena);
 }
 
 std::string FunctionProto::GetTypeName() const {
   return "onnx.FunctionProto";
 }
-
 
 // @@protoc_insertion_point(namespace_scope)
 }  // namespace onnx
@@ -8843,6 +9098,5 @@ Arena::CreateMaybeMessage< ::onnx::FunctionProto >(Arena* arena) {
   return Arena::CreateMessageInternal< ::onnx::FunctionProto >(arena);
 }
 PROTOBUF_NAMESPACE_CLOSE
-
 // @@protoc_insertion_point(global_scope)
-#include <google/protobuf/port_undef.inc>
+#include "google/protobuf/port_undef.inc"
