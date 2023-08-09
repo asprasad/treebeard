@@ -1720,7 +1720,7 @@ TestDescriptor testList[] = {
   // XGBoost tests on GPU
   TEST_LIST_ENTRY(Test_GPUCodeGeneration_Covtype_ArrayRep_DoubleInt32_BatchSize32),
   TEST_LIST_ENTRY(Test_GPUCodeGeneration_Covtype_SparseRep_DoubleInt32_BatchSize32),
-  // TEST_LIST_ENTRY(Test_GPUCodeGeneration_Covtype_ReorgRep_DoubleInt32_BatchSize32), - Currently not supported
+  TEST_LIST_ENTRY(Test_GPUCodeGeneration_Covtype_ReorgRep_DoubleInt32_BatchSize32),
 
   // Simple GPU Tiling tests
   TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_DblI32_B32_TSz2),
