@@ -348,6 +348,18 @@ struct LoopConstructor {
   LoopType GetInnerLoop() { return m_innerLoop; }
 };
 
+void GenerateResultReduction(ConversionPatternRewriter &rewriter,
+                             Location location,
+                             PredictOpLoweringState& state,
+                             Value accumulatedValue,
+                             Value rowIndex) {
+  // Generate the store back in to the result memref
+  auto currentMemrefElem = rewriter.create<memref::LoadOp>(location, state.resultMemref, ValueRange{rowIndex});
+  auto newMemrefElem = rewriter.create<arith::AddFOp>(location, state.resultMemrefType.getElementType(), accumulatedValue, currentMemrefElem);
+  rewriter.create<memref::StoreOp>(location, newMemrefElem, state.resultMemref, ValueRange{rowIndex});
+}
+
+
 struct PredictForestOpLowering: public ConversionPattern {
   PredictForestOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::PredictForestOp::getOperationName(), 1 /*benefit*/, ctx) {}
 
@@ -777,9 +789,7 @@ struct PredictForestOpLowering: public ConversionPattern {
       if (state.isMultiClass) return;
 
       // Generate the store back in to the result memref
-      auto currentMemrefElem = rewriter.create<memref::LoadOp>(location, state.resultMemref, ValueRange{rowIndex});
-      auto newMemrefElem = rewriter.create<arith::AddFOp>(location, state.resultMemrefType.getElementType(), accumulatedValue, currentMemrefElem);
-      rewriter.create<memref::StoreOp>(location, newMemrefElem, state.resultMemref, ValueRange{rowIndex});
+      GenerateResultReduction(rewriter, location, state, accumulatedValue, rowIndex);
     }
     else if (indexVar.Pipelined()) {
       auto range = indexVar.GetRange();
@@ -820,9 +830,8 @@ struct PredictForestOpLowering: public ConversionPattern {
       // Don't accumulate into memref in case of multiclass.
       if (!state.isMultiClass) {
         // Generate the store back in to the result memref
-        auto currentMemrefElem = rewriter.create<memref::LoadOp>(location, state.resultMemref, ValueRange{rowIndex});
-        auto newMemrefElem = rewriter.create<arith::AddFOp>(location, state.resultMemrefType.getElementType(), loop.getResults()[0], currentMemrefElem);
-        rewriter.create<memref::StoreOp>(location, newMemrefElem, state.resultMemref, ValueRange{rowIndex});
+        auto accumulatedValue = loop.getResults()[0];
+        GenerateResultReduction(rewriter, location, state, accumulatedValue, rowIndex);
       }
 
       if (peeledLoopStart < range.m_stop) {
@@ -859,9 +868,8 @@ struct PredictForestOpLowering: public ConversionPattern {
         }
 
         if (!state.isMultiClass) {
-          auto currentMemrefElem = rewriter.create<memref::LoadOp>(location, state.resultMemref, ValueRange{rowIndex});
-          auto newMemrefElem = rewriter.create<arith::AddFOp>(location, state.resultMemrefType.getElementType(), peeledLoop.getResults()[0], currentMemrefElem);
-          rewriter.create<memref::StoreOp>(location, newMemrefElem, state.resultMemref, ValueRange{rowIndex});
+          Value accumulatedValue = peeledLoop.getResults()[0];
+          GenerateResultReduction(rewriter, location, state, accumulatedValue, rowIndex);
         }
       }
     }
@@ -890,9 +898,7 @@ struct PredictForestOpLowering: public ConversionPattern {
       if (state.isMultiClass) return;
       
       // Generate the store back in to the result memref
-      auto currentMemrefElem = rewriter.create<memref::LoadOp>(location, state.resultMemref, ValueRange{rowIndex});
-      auto newMemrefElem = rewriter.create<arith::AddFOp>(location, state.resultMemrefType.getElementType(), loopResult, currentMemrefElem);
-      rewriter.create<memref::StoreOp>(location, newMemrefElem, state.resultMemref, ValueRange{rowIndex});
+      GenerateResultReduction(rewriter, location, state, loopResult, rowIndex);
 
       // rewriter.create<gpu::PrintfOp>(location, "Writing result[%d] = %lf + %lf: %lf\n", ValueRange{rowIndex, currentMemrefElem, loop.getResults()[0], newMemrefElem});
     }
@@ -944,11 +950,7 @@ struct PredictForestOpLowering: public ConversionPattern {
       }
       else {
         // Accumulate the tree prediction and generate the store back in to the result memref
-        // TODO - Check of load and store value range can just store all row indices at once
-        auto currentMemrefElem = rewriter.create<memref::LoadOp>(location, state.resultMemref, ValueRange{rowIndices[i]});
-        auto accumulatedValue = rewriter.create<arith::AddFOp>(location, state.resultMemrefType.getElementType(), walkOp.getResult(i), currentMemrefElem);
-        rewriter.create<memref::StoreOp>(location, accumulatedValue, state.resultMemref, ValueRange{rowIndices[i]});
-
+        GenerateResultReduction(rewriter, location, state, walkOp.getResult(i), rowIndices[i]);
         if (mlir::decisionforest::InsertDebugHelpers) {
           rewriter.create<decisionforest::PrintTreePredictionOp>(location, walkOp.getResult(i), treeIndex);
         }
@@ -995,10 +997,7 @@ struct PredictForestOpLowering: public ConversionPattern {
     if (state.isMultiClass) return;
 
     // Accumulate the tree prediction and generate the store back in to the result memref
-    auto currentMemrefElem = rewriter.create<memref::LoadOp>(location, state.resultMemref, ValueRange{rowIndex});
-    auto accumulatedValue = rewriter.create<arith::AddFOp>(location, state.resultMemrefType.getElementType(), walkOp, currentMemrefElem);
-    rewriter.create<memref::StoreOp>(location, accumulatedValue, state.resultMemref, ValueRange{rowIndex});
-
+    GenerateResultReduction(rewriter, location, state, walkOp, rowIndex);
     if (mlir::decisionforest::InsertDebugHelpers) {
       Value treePred = walkOp;
       if (!treePred.getType().isF64())

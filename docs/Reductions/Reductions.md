@@ -65,7 +65,7 @@ builtin.module @MyModule  {
 ```
 The op `reduce_dimension` reduces values across the specified dimension of an n dimensional memref.
 To minimize the amount of memory allocated, we also add an inplace version of the dimension reduce 
-op, `reduce_dimension_inplace`. 
+op, `reduce_dimension_inplace`. Only the final dimension reduction uses the `reduce_dimension` op.
 
 Consider the following code with nested parallel loops. (A situation where trees are split across both
 threads and thread blocks could result in such generated code in Treebeard.)
@@ -99,7 +99,7 @@ builtin.module @MyModule  {
   }
 }
 ```
-
+## Use in Treebeard
 We now present an example specific to Treebeard. The schedule with which code is generated 
 is as below. `N_t` is the number of trees and `batch_size` is the batch size.
 ```C++
@@ -169,7 +169,85 @@ builtin.module @MyModule  {
 ```
 Now the `reduce` op can be lowered into a simple load-add-store. 
 
+## Multi-class Models
+```C++
+func.func @Prediction_Function(%arg0: memref<200x54xf32>, %arg1: memref<200xi8>) -> memref<200xi8> {
+  %0 = "decisionforest.ensemble"() { forest = #decisionforest<Forest = ( ReductionType = 0, #Trees = 800, InitialValue=0.5 ) }
+  %c200 = arith.constant 200 : index // number of rows
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index // number of classes
+  %cst = arith.constant 5.000000e-01 : f32
+  %result = memref.alloca() : memref<200x8xf32> // -> classes output <n_rows x n_classes>, this fill be further reduced to <n_rows x 1>
+  
+  %c800 = arith.constant 800 : index // num trees
+  %c0_3 = arith.constant 0 : index
+  %c1_4 = arith.constant 1 : index
+  %cst_5 = arith.constant 0.000000e+00 : f32
+  scf.parallel (%arg2) = (%c0_3) to (%c800) step (%c1_4) {
+    %subview = memref.subview %arg0[%arg2, 0] [1, 54] [1, 1] : memref<200x54xf32> to memref<1x54xf32, strided<[54, 1], offset: ?>>
+    %c800 = arith.constant 800 : index
+    %c0_3 = arith.constant 0 : index
+    %c1_4 = arith.constant 1 : index
+    %cst_5 = arith.constant 0.000000e+00 : f32
+    %1 = scf.for %arg3 = %c0 to %c200 step %c1 iter_args(%arg4 = %cst_5) -> (f32) {
+      %2 = "decisionforest.getTree"(%0, %arg2) : (!decisionforest<TreeEnsembleType(#Trees:800, rowType:memref<54xf32>, resultType:i8, reductionType:0)>, index) -> !decisionforest<TreeType(returnType:i8, tileSize:8, tileShapeType:i16, childIndexType:i1))>
+      %3 = "decisionforest.walk_decision_tree"(%2, %subview) {predicate = 11 : i64} : (!decisionforest<TreeType(returnType:i8, tileSize:8, tileShapeType:i16, childIndexType:i1))>, memref<1x54xf32, strided<[54, 1], offset: ?>>) -> f32
+      %4 = "decisionforest.getTreeClassId"(%0, %arg2) : (!decisionforest<TreeEnsembleType(#Trees:800, rowType:memref<54xf32>, resultType:i8, reductionType:0)>, index) -> i8
+      %5 = arith.index_cast %4 : i8 to index
+      reduce(%result, (%arg3, %5), %3) // reduce tree-walk result into the corresponding class.
+      scf.yield %arg4 : f32
+    }
+    scf.yield
+  }
+  reduce_dimension(%result, 0, %arg1) : <reduction_type = max_index> // this reduces into %arg1. If %arg1 is not passed, new allocation is created.
+  return %arg1 : memref<200xi8>
+}
+```
+
+```C++
+func.func @Prediction_Function(%arg0: memref<200x54xf32>, %arg1: memref<200xi8>) -> memref<200xi8> {
+  %0 = "decisionforest.ensemble"() { forest = #decisionforest<Forest = ( ReductionType = 0, #Trees = 800, InitialValue=0.5 ) }
+  %c200 = arith.constant 200 : index // number of rows
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index // number of classes
+  %cst = arith.constant 5.000000e-01 : f32
+  %result_1 = memref.alloca() : memref<200x8x800xf32> // -> classes output <n_rows x n_classes x n_trees>, this fill be further reduced to <n_rows x n_classes> and then to <n_rows x 1>
+
+  %c800 = arith.constant 800 : index // num trees
+  %c0_3 = arith.constant 0 : index
+  %c1_4 = arith.constant 1 : index
+  %cst_5 = arith.constant 0.000000e+00 : f32
+  scf.parallel (%arg2) = (%c0_3) to (%c800) step (%c1_4) {
+    %subview = memref.subview %arg0[%arg2, 0] [1, 54] [1, 1] : memref<200x54xf32> to memref<1x54xf32, strided<[54, 1], offset: ?>>
+    %c800 = arith.constant 800 : index
+    %c0_3 = arith.constant 0 : index
+    %c1_4 = arith.constant 1 : index
+    %cst_5 = arith.constant 0.000000e+00 : f32
+    %1 = scf.for %arg3 = %c0 to %c200 step %c1 iter_args(%arg4 = %cst_5) -> (f32) {
+      %2 = "decisionforest.getTree"(%0, %arg2) : (!decisionforest<TreeEnsembleType(#Trees:800, rowType:memref<54xf32>, resultType:i8, reductionType:0)>, index) -> !decisionforest<TreeType(returnType:i8, tileSize:8, tileShapeType:i16, childIndexType:i1))>
+      %3 = "decisionforest.walk_decision_tree"(%2, %subview) {predicate = 11 : i64} : (!decisionforest<TreeType(returnType:i8, tileSize:8, tileShapeType:i16, childIndexType:i1))>, memref<1x54xf32, strided<[54, 1], offset: ?>>) -> f32
+      %4 = "decisionforest.getTreeClassId"(%0, %arg2) : (!decisionforest<TreeEnsembleType(#Trees:800, rowType:memref<54xf32>, resultType:i8, reductionType:0)>, index) -> i8
+      %5 = arith.index_cast %4 : i8 to index
+      reduce(%result_1, (%arg3, %5, %arg3), %3) // reduce tree-walk result into the corresponding class.
+      scf.yield %arg4 : f32
+    }
+    scf.yield
+  }
+  reduce_dimension_inplace(%result_1, 2) : <reduction_type = add>
+  %subview = memref.subview %result_1[0, 0, 0] [200, 8, 1] [1, 1, 1] : memref<200x8x800xf32> to memref<200x8xf32, strided<[8, 1], offset: ?>>
+  reduce_dimension(%subview, 0, %arg1) : <reduction_type = max_index> // this reduces into %arg1. If %arg1 is not passed, new allocation is created.
+  return %arg1 : memref<200xi8>
+}
+```
 ## TODOs
+* How would we generate atomic ops for the accumulations on CPU and GPU when possible?
 * Is this set of ops and lowerings sufficient for multi-class models as well?
 * How do we handle multiple `reduce` ops in the same loop nest?
+  * When there are multiple `reduce` ops that are accumulating into the same memref in 
+  the same loop nest, it seems to be sufficient to make the set of conflicting loops 
+  the union of the conflicting loops of each of the `reduce` ops. We also need to add any 
+  loops that conflict with the inter-op dependencies to the list of conflicting loops. 
+  The memref will be privatized based on each conflicting loop as before.
 * Do these ops provide any benefit while compiling database queries?
