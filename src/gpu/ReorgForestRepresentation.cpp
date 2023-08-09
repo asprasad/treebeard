@@ -187,7 +187,6 @@ void ReorgForestSerializer::ReadData() {
   // m_featureIndices = m_json["FeatureIndices"];
   m_featureIndices.clear();
   ParseJSONList<std::vector<int32_t>, int32_t>(m_featureIndices, m_json["FeatureIndices"]);
-  // m_classIds = m_json["ClassIDs"];
   m_classIds.clear();
   ParseJSONList<std::vector<int8_t>, int8_t>(m_classIds, m_json["ClassIDs"]);
 }
@@ -220,8 +219,10 @@ void ReorgForestSerializer::Persist(mlir::decisionforest::DecisionForest& forest
   m_thresholds.resize(bufferSize, -1e6);
   m_featureIndices.resize(bufferSize, -1);
 
-  for (int32_t i=0 ; i<(int32_t)forest.NumTrees() ; ++i)
+  for (int32_t i=0 ; i<(int32_t)forest.NumTrees() ; ++i) {
     this->WriteSingleTreeIntoReorgBuffer(forest, i);
+    m_classIds.push_back(forest.GetTree(i).GetClassId());
+  }
 
   // TODO Write out a JSON file
   WriteJSONFile();
@@ -260,7 +261,7 @@ void ReorgForestSerializer::InitializeFeatureIndices() {
 void ReorgForestSerializer::InitializeBuffersImpl() {
   InitializeThresholds();
   InitializeFeatureIndices();
-  // InitializeSingleBuffer<int8_t, int8_t>("Init_ClassIDs", m_classIds, m_classIDMemref);
+  InitializeSingleBuffer<int8_t, int8_t>("Init_ClassIds", m_classIds, m_classIDMemref);
 }
 
 void ReorgForestSerializer::CallPredictionMethod(void* predictFuncPtr,
@@ -279,7 +280,7 @@ void ReorgForestSerializer::CallPredictionMethod(void* predictFuncPtr,
                      results.bufferPtr, results.alignedPtr, results.offset, results.lengths[0], results.strides[0],
                      m_thresholdMemref.bufferPtr, m_thresholdMemref.alignedPtr, m_thresholdMemref.offset, m_thresholdMemref.lengths[0], m_thresholdMemref.strides[0],
                      m_featureIndexMemref.bufferPtr, m_featureIndexMemref.alignedPtr, m_featureIndexMemref.offset, m_featureIndexMemref.lengths[0], m_featureIndexMemref.strides[0],
-                     nullptr, nullptr, 0, 0, 0);
+                     m_classIDMemref.bufferPtr, m_classIDMemref.alignedPtr, m_classIDMemref.offset, m_classIDMemref.lengths[0], m_classIDMemref.strides[0]);
     return;
 }
 
@@ -416,8 +417,10 @@ mlir::Value ReorgForestRepresentation::GenerateMoveToChild(mlir::Location locati
 }
 
 mlir::Value ReorgForestRepresentation::GenerateGetTreeClassId(mlir::ConversionPatternRewriter &rewriter, mlir::Operation *op, Value ensemble, Value treeIndex) {
-  assert (false && "Unimplemented");
-  return mlir::Value();
+  auto treeClassMemrefType = m_classInfoMemref.getType().cast<mlir::MemRefType>();
+
+  auto classId = rewriter.create<memref::LoadOp>(op->getLoc(), treeClassMemrefType.getElementType(), m_classInfoMemref, treeIndex);
+  return classId;
 }
 
 mlir::Value ReorgForestRepresentation::GenerateGetLeafValueOp(ConversionPatternRewriter &rewriter, 
@@ -605,7 +608,7 @@ void ReorgForestRepresentation::LowerCacheTreeOp(ConversionPatternRewriter &rewr
   auto threadNum = owningGPULaunchOp.getThreadIds();
 
   // TODO_Ashwin everything below assumes that thread blocks are 2D!
-  auto numThreads = rewriter.create<arith::MulIOp>(location, numThreadsX, numThreadsY);
+  rewriter.create<arith::MulIOp>(location, numThreadsX, numThreadsY);
   
   // index = numThreadsX*threadNum.Y + threadNum.X
   auto nxTimesTy = rewriter.create<arith::MulIOp>(location, numThreadsX, threadNum.y);
