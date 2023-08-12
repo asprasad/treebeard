@@ -312,6 +312,7 @@ struct GetRootOpLowering: public ConversionPattern {
   }
 };
 
+#ifdef TREEBEARD_GPU_SUPPORT
 struct GPUGetRootOpLowering: public ConversionPattern {
   std::shared_ptr<mlir::decisionforest::IRepresentation> m_representation;
   std::shared_ptr<decisionforest::GPUTraverseLoweringState> m_traverseLoweringState;
@@ -381,6 +382,7 @@ struct GPUGetRootOpLowering: public ConversionPattern {
     return mlir::success();
   }
 };
+#endif // TREEBEARD_GPU_SUPPORT
 
 struct IsLeafOpLowering: public ConversionPattern {
   std::shared_ptr<decisionforest::IRepresentation> m_representation;
@@ -465,6 +467,7 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
   }
 };
 
+#ifdef TREEBEARD_GPU_SUPPORT
 struct CooperativeTraverseTreeTileOpLowering : public ConversionPattern {
   std::shared_ptr<mlir::decisionforest::IRepresentation> m_representation;
   std::shared_ptr<decisionforest::GPUTraverseLoweringState> m_traverseTileLoweringState;
@@ -499,6 +502,7 @@ struct CooperativeTraverseTreeTileOpLowering : public ConversionPattern {
     return mlir::success();
   }
 };
+#endif // TREEBEARD_GPU_SUPPORT
 
 struct GetLeafValueOpLowering : public ConversionPattern {
   std::shared_ptr<decisionforest::IRepresentation> m_representation;
@@ -701,6 +705,7 @@ struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLowe
   }
 };
 
+#ifdef TREEBEARD_GPU_SUPPORT
 struct MidLevelIRToGPUMemrefLoweringPass: public PassWrapper<MidLevelIRToGPUMemrefLoweringPass, OperationPass<mlir::func::FuncOp>> {
   std::shared_ptr<decisionforest::IModelSerializer> m_serializer;
   std::shared_ptr<decisionforest::IRepresentation> m_representation;
@@ -754,6 +759,7 @@ struct MidLevelIRToGPUMemrefLoweringPass: public PassWrapper<MidLevelIRToGPUMemr
         signalPassFailure();
   }
 };
+#endif // TREEBEARD_GPU_SUPPORT
 
 } // anonymous namespace
 

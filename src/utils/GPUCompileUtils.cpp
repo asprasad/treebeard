@@ -30,6 +30,7 @@
 #include "GPUModelSerializers.h"
 #include "ReorgForestRepresentation.h"
 #include "CompileUtils.h"
+#include "LowerReduceOps.h"
 
 namespace TreeBeard
 {
@@ -42,6 +43,7 @@ mlir::ModuleOp LowerHIRModuleToGPU(mlir::ModuleOp module, TreebeardContext& tbCo
   auto serializer = tbContext.serializer;
 
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
+  mlir::decisionforest::LowerReduceOps(context, module);
   // module->dump();
 
   mlir::decisionforest::GreedilyMapParallelLoopsToGPU(module);

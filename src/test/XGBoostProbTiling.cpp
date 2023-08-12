@@ -23,6 +23,7 @@
 #include "TiledTree.h"
 #include "ModelSerializers.h"
 #include "Representations.h"
+#include "LowerReduceOps.h"
 
 using namespace mlir;
 using namespace mlir::decisionforest;
@@ -141,6 +142,7 @@ bool Test_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int64_t batchSize, 
   mlir::decisionforest::DoHybridTiling(context, module, options.tileSize, options.tileShapeBitWidth);
   mlir::decisionforest::DoReorderTreesByDepth(context, module, -1);
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
+  mlir::decisionforest::LowerReduceOps(context, module);
   auto representation = decisionforest::ConstructRepresentation();
   mlir::decisionforest::LowerEnsembleToMemrefs(context, 
                                                module,
@@ -282,6 +284,7 @@ bool TestXGBoostBenchmark_CodeGenForJSON_VariableBatchSize(TestArgs_t& args, int
   mlir::decisionforest::DoHybridTiling(context, module, options.tileSize, options.tileShapeBitWidth);
   mlir::decisionforest::DoReorderTreesByDepth(context, module, -1);
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
+  mlir::decisionforest::LowerReduceOps(context, module);
   auto representation = decisionforest::ConstructRepresentation();
   mlir::decisionforest::LowerEnsembleToMemrefs(context,
                                                module,

@@ -5,6 +5,7 @@
 #include "forestcreator.h"
 #include "xgboostparser.h"
 #include "TreebeardContext.h"
+#include "LowerReduceOps.h"
 
 namespace TreeBeard
 {
@@ -45,6 +46,7 @@ inline void LowerHIRModuleToLLVM(mlir::ModuleOp module, TreebeardContext &tbCont
     assert (!options.scheduleManipulator && "Cannot have a custom schedule manipulator and the inbuilt one together");
   }
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
+  mlir::decisionforest::LowerReduceOps(context, module);
   // module->dump();
   mlir::decisionforest::LowerEnsembleToMemrefs(context, module, tbContext.serializer, tbContext.representation);
   mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);

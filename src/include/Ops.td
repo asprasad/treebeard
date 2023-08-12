@@ -193,6 +193,41 @@ def WalkDecisionTreePeeledOp : DecisionForest_Op<"walkDecisionTreePeeled"> {
   let results = (outs LeafNodeValueType);
 } 
 
+// ----- Reduction Ops ------
+def ReductionValueType : AnyTypeOf<[F16, F32, F64]>;
+def TargetMemrefType : AnyTypeOf<[F16MemRef, F32MemRef, F64MemRef]>;
+
+def ReduceOp : DecisionForest_Op<"reduce"> {
+  let summary = "Accumulate a value into a memref.";
+  let description = "Accumulate a floating point value into an element of a memref"
+                    "specified by the indices.";
+
+  let arguments = (ins TargetMemrefType:$targetMemref,
+                       Variadic<Index>:$indices,
+                       ReductionValueType:$value);
+}
+
+def ReduceDimensionInplaceOp : DecisionForest_Op<"reduce_dimension_inplace"> {
+  let summary = "Reduce the specified dimension of a memref inplace.";
+  let description = "Reduce the specified dimension of a memref inplace."
+                    "The reduced value is stored at index 0 of the specified dimension.";
+
+  let arguments = (ins TargetMemrefType:$targetMemref,
+                       Variadic<Index>:$indices,
+                       Index:$dimension);
+}
+
+def ReduceDimensionOp : DecisionForest_Op<"reduce_dimension"> {
+  let summary = "Reduce the specified dimension of a memref and store result in target.";
+  let description = "Reduce the specified dimension of a memref and store result in the target memref."
+                    "The op overwrites values in the source memref (which is used as temporary storage for the reduction).";
+
+  let arguments = (ins TargetMemrefType:$targetMemref,
+                       TargetMemrefType:$sourceMemref,
+                       Index:$reductionDimension,
+                       Variadic<Index>:$reducedIndices);
+}
+
 // ----- Mid-level IR Ops ------
 
 def ThresholdValueType : AnyTypeOf<[F16, F32, F64]>;

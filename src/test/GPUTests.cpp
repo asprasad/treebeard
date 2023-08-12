@@ -32,6 +32,7 @@
 #include "CompileUtils.h"
 #include "GPUCompileUtils.h"
 #include "GPUSchedules.h"
+#include "LowerReduceOps.h"
 
 using namespace mlir;
 
@@ -229,6 +230,7 @@ bool CheckGPUModelInitialization_Scalar(TestArgs_t& args, ForestConstructor_t fo
 
   // module->dump();
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
+  mlir::decisionforest::LowerReduceOps(context, module);
   // module->dump();
 
   mlir::decisionforest::GreedilyMapParallelLoopsToGPU(module);
@@ -676,6 +678,7 @@ bool CheckGPUModelInitialization_ReorgForest(TestArgs_t& args, ForestConstructor
 
   // module->dump();
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
+  mlir::decisionforest::LowerReduceOps(context, module);
   // module->dump();
 
   mlir::decisionforest::GreedilyMapParallelLoopsToGPU(module);

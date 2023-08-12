@@ -353,10 +353,7 @@ void GenerateResultReduction(ConversionPatternRewriter &rewriter,
                              PredictOpLoweringState& state,
                              Value accumulatedValue,
                              Value rowIndex) {
-  // Generate the store back in to the result memref
-  auto currentMemrefElem = rewriter.create<memref::LoadOp>(location, state.resultMemref, ValueRange{rowIndex});
-  auto newMemrefElem = rewriter.create<arith::AddFOp>(location, state.resultMemrefType.getElementType(), accumulatedValue, currentMemrefElem);
-  rewriter.create<memref::StoreOp>(location, newMemrefElem, state.resultMemref, ValueRange{rowIndex});
+  rewriter.create<decisionforest::ReduceOp>(location, state.resultMemref, ValueRange{rowIndex}, accumulatedValue);
 }
 
 
@@ -629,17 +626,13 @@ struct PredictForestOpLowering: public ConversionPattern {
 
   void GenerateMultiClassAccumulate(ConversionPatternRewriter& rewriter, Location location, Value result, Value rowIndex, Value index, PredictOpLoweringState& state) const {
     if (state.isMultiClass) {
-      auto batchTreeClassMemref = GetRow(rewriter, location, state.treeClassesMemref, rowIndex, state.treeClassesMemrefType);
       auto classId = rewriter.create<decisionforest::GetTreeClassIdOp>(location, state.treeType.getResultType(), state.forestConst, index);
       auto classIdIndex = rewriter.create<arith::IndexCastOp>(location, rewriter.getIndexType(), static_cast<Value>(classId));
-      auto currentValue = rewriter.create<memref::LoadOp>(
-        location,
-        state.treeClassesMemrefType.getElementType(),
-        batchTreeClassMemref,
-        ValueRange(llvm::ArrayRef<Value>{state.zeroIndexConst, classIdIndex}));
-      
-      auto accumulatedValue = rewriter.create<arith::AddFOp>(location, state.dataMemrefType.getElementType(), currentValue, result);
-      rewriter.create<memref::StoreOp>(location, static_cast<Value>(accumulatedValue), batchTreeClassMemref, ValueRange({state.zeroIndexConst, classIdIndex}));
+
+      rewriter.create<decisionforest::ReduceOp>(location, 
+                                                state.treeClassesMemref,
+                                                ValueRange{rowIndex, classIdIndex.getResult()},
+                                                result);
     }
   }
 

@@ -11,7 +11,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "xgboostparser.h"
 #include "TiledTree.h"
-
+#include "LowerReduceOps.h"
 #include "TestUtilsCommon.h"
 #include "ForestTestUtils.h"
 #include "ModelSerializers.h"
@@ -831,6 +831,7 @@ bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
 
   // module->dump();
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
+  mlir::decisionforest::LowerReduceOps(context, module);
   // module->dump();
   auto representation = decisionforest::ConstructRepresentation();
   mlir::decisionforest::LowerEnsembleToMemrefs(context,
@@ -879,6 +880,10 @@ bool Test_ForestCodeGen_VariableBatchSize(TestArgs_t& args, ForestConstructor_t 
   // module->dump();
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
   // module->dump();
+
+  mlir::decisionforest::LowerReduceOps(context, module);
+  // module->dump();
+
   auto representation = decisionforest::ConstructRepresentation();
   mlir::decisionforest::LowerEnsembleToMemrefs(context,
                                                module,
@@ -1842,6 +1847,8 @@ TestDescriptor testList[] = {
 #else // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
+  TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize2),
+  // TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
   // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep),
   // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg),
   // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep_F32I16),
@@ -1864,20 +1871,20 @@ TestDescriptor testList[] = {
   // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32),
   // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32),
 
-  TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Reorg_Scalar),
-  TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar),
-  TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_2TreeXGB_Reorg_Scalar_f32i16),
-  TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar_f32i16),
+  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Reorg_Scalar),
+  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar),
+  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_2TreeXGB_Reorg_Scalar_f32i16),
+  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar_f32i16),
 
-  TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Array_Scalar),
-  TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_4TreeXGB_Array_Scalar),
-  TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_2TreeXGB_Array_Scalar_f32i16),
-  TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Array_Scalar_f32i16),
+  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Array_Scalar),
+  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_4TreeXGB_Array_Scalar),
+  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_2TreeXGB_Array_Scalar_f32i16),
+  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Array_Scalar_f32i16),
 
-  TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Sparse_Scalar),
-  TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar),
-  TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_2TreeXGB_Sparse_Scalar_f32i16),
-  TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar_f32i16),
+  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Sparse_Scalar),
+  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar),
+  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_2TreeXGB_Sparse_Scalar_f32i16),
+  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar_f32i16),
 };
 #endif // RUN_ALL_TESTS
 

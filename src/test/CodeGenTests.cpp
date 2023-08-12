@@ -23,6 +23,7 @@
 #include "TiledTree.h"
 #include "ModelSerializers.h"
 #include "Representations.h"
+#include "LowerReduceOps.h"
 
 using namespace mlir;
 using namespace mlir::decisionforest;
@@ -512,6 +513,7 @@ bool Test_TiledCodeGeneration_SingleTreeModels_BatchSize1(TestArgs_t& args, Fore
   if (scheduleManipulator)
     scheduleManipulator(irGenerator.GetSchedule());
   decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
+  mlir::decisionforest::LowerReduceOps(context, module);
   // module->dump();
   auto representation = decisionforest::ConstructRepresentation();
   decisionforest::LowerEnsembleToMemrefs(context, 
@@ -784,6 +786,7 @@ bool Test_ModelInitialization(TestArgs_t& args, ForestConstructor_t forestConstr
   auto module = irGenerator.GetEvaluationFunction();
 
   decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
+  mlir::decisionforest::LowerReduceOps(context, module);
   auto representation = decisionforest::ConstructRepresentation();
   decisionforest::LowerEnsembleToMemrefs(context,
                                          module,
@@ -1223,6 +1226,7 @@ bool Test_UniformTiling_BatchSize1(TestArgs_t& args,
   auto module = irGenerator.GetEvaluationFunction();
   decisionforest::DoUniformTiling(context, module, tileSize, tileShapeBitWidth, makeAllLeavesSameDepth);
   decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
+  mlir::decisionforest::LowerReduceOps(context, module);
   // module->dump();
   auto representation = decisionforest::ConstructRepresentation();
   decisionforest::LowerEnsembleToMemrefs(context,
