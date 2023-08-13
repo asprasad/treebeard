@@ -207,25 +207,29 @@ def ReduceOp : DecisionForest_Op<"reduce"> {
                        ReductionValueType:$value);
 }
 
-def ReduceDimensionInplaceOp : DecisionForest_Op<"reduce_dimension_inplace"> {
+def ReduceDimensionInplaceOp : DecisionForest_Op<"reduce_dimension_inplace", [AttrSizedOperandSegments]> {
   let summary = "Reduce the specified dimension of a memref inplace.";
   let description = "Reduce the specified dimension of a memref inplace."
                     "The reduced value is stored at index 0 of the specified dimension.";
 
   let arguments = (ins TargetMemrefType:$targetMemref,
+                       Index:$dimension,
                        Variadic<Index>:$indices,
-                       Index:$dimension);
+                       Variadic<Index>:$rangeStart,
+                       Variadic<Index>:$rangeEnd);
 }
 
 def ReduceDimensionOp : DecisionForest_Op<"reduce_dimension"> {
   let summary = "Reduce the specified dimension of a memref and store result in target.";
   let description = "Reduce the specified dimension of a memref and store result in the target memref."
-                    "The op overwrites values in the source memref (which is used as temporary storage for the reduction).";
+                    "The op copies reduced values to the target memre. Reduced dimesions is the list" 
+                    "of dimensions that have been previously reduced (i.e. the set of dimensions where"
+                    "we should index with a 0).";
 
   let arguments = (ins TargetMemrefType:$targetMemref,
                        TargetMemrefType:$sourceMemref,
                        Index:$reductionDimension,
-                       Variadic<Index>:$reducedIndices);
+                       Variadic<Index>:$reducedDimensions);
 }
 
 // ----- Mid-level IR Ops ------
