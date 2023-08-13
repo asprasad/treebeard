@@ -108,15 +108,11 @@ builtin.module @MyModule  {
   
   The computation performed by the op is defined by the following equation.
   
-  $
-  memref[\vec{\boldsymbol{indices}}, 0, \vec{\boldsymbol{k}}] = \sum_{i=0}^{shape[dim]} memref[\vec{\boldsymbol{indices}}, i, \vec{\boldsymbol{k}}]\quad   \forall \vec{\boldsymbol{k}} \in \left[[rangeStart_0, rangeEnd_0), ... , [rangeStart_n, rangeEnd_n)\right]
-  $  
+  $memref[\vec{\boldsymbol{indices}}, 0, \vec{\boldsymbol{k}}] = \sum_{i=0}^{shape[dim]} memref[\vec{\boldsymbol{indices}}, i, \vec{\boldsymbol{k}}]\quad   \forall \vec{\boldsymbol{k}} \in \left[[rangeStart_0, rangeEnd_0), ... , [rangeStart_n, rangeEnd_n)\right]$  
 
 * **`reduce_dimension(targetMemref, memref, dim, [indices], [rangeStart], [rangeEnd])`** Same as the `reduce_dimension_implace` except that the result is written into `targetMemref`. The computation performed by the op is as follows.
 
-  $
-  targetMemref[\vec{\boldsymbol{k}}] = \sum_{i=0}^{shape[dim]} memref[\vec{\boldsymbol{indices}}, i, \vec{\boldsymbol{k}}]\quad   \forall \vec{\boldsymbol{k}} \in \left[[rangeStart_0, rangeEnd_0), ... , [rangeStart_n, rangeEnd_n)\right]
-  $
+  $targetMemref[\vec{\boldsymbol{k}}] = \sum_{i=0}^{shape[dim]} memref[\vec{\boldsymbol{indices}}, i, \vec{\boldsymbol{k}}]\quad   \forall \vec{\boldsymbol{k}} \in \left[[rangeStart_0, rangeEnd_0), ... , [rangeStart_n, rangeEnd_n)\right]$
 
 ## Use in Treebeard
 We now present an example specific to Treebeard. The schedule with which code is generated 
