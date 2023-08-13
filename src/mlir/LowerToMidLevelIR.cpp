@@ -207,6 +207,18 @@ struct LoopConstructor {
     loweringState.forestConst = cacheTrees;
   }
   
+  void AddCustomLoopAttributes(LoopType loop, const decisionforest::IndexVariable& indexVar) {
+    if (indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kBatch) {
+      loop->setAttr("batchLoop", m_rewriter.getUnitAttr());
+    } 
+    else if (indexVar.GetType() == decisionforest::IndexVariable::IndexVariableType::kTree) {
+      loop->setAttr("treeLoop", m_rewriter.getUnitAttr());
+    } 
+    else {
+      llvm_unreachable("Unknown index variable type");
+    }
+  }
+
   LoopConstructor(const std::list<const decisionforest::IndexVariable*>& indexVars,
                   PredictOpLoweringState& loweringState,
                   Location location,
@@ -219,6 +231,7 @@ struct LoopConstructor {
     : m_rewriter(rewriter), m_loweringState(loweringState)
   {
     m_loop = rewriter.create<LoopType>(location, start, end, steps);
+    AddCustomLoopAttributes(m_loop, *indexVars.front());
     rewriter.setInsertionPointToStart(m_loop.getBody());
 
     // This function should only be called with a single index variable.
@@ -253,6 +266,7 @@ struct LoopConstructor {
 
     : m_rewriter(rewriter), m_loweringState(loweringState)
   {
+    // TODO_Ashwin How do we add the treeLoop or batchLoop attributes to multi-index loops?
     auto oldDataValue = loweringState.data;
     auto oldDataMemrefType = loweringState.dataMemrefType;
     auto oldForestValue = loweringState.forestConst;
@@ -298,6 +312,7 @@ struct LoopConstructor {
     : m_rewriter(rewriter), m_loweringState(loweringState)
   {
     m_loop = rewriter.create<LoopType>(location, start, end, step, loopArgs);
+    AddCustomLoopAttributes(m_loop, index);
     rewriter.setInsertionPointToStart(m_loop.getBody());
     
     auto batchLoopIndices = batchIndexVars;
@@ -323,6 +338,7 @@ struct LoopConstructor {
     : m_rewriter(rewriter), m_loweringState(loweringState)
   {
     m_loop = rewriter.create<LoopType>(location, start, end, step);
+    AddCustomLoopAttributes(m_loop, index);
     rewriter.setInsertionPointToStart(m_loop.getBody());
     
     auto batchLoopIndices = batchIndexVars;
