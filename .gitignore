@@ -3,7 +3,6 @@ debug/
 release/
 runtime_test_binaries/
 test/python/treelite_generated_code
-.vscode/
 *.so
 libtreebeard-runtime.so.*
 *.treebeard-globals.json
