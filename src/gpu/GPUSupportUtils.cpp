@@ -1,7 +1,7 @@
 #ifdef TREEBEARD_GPU_SUPPORT
 
-#include <vector>
 #include "Dialect.h"
+#include <vector>
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -11,10 +11,13 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
+
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/GPU/Transforms/ParallelLoopMapper.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/Transforms/ParallelLoopMapper.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
+
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
 
 #include "llvm/ADT/DenseSet.h"
@@ -24,17 +27,17 @@
 
 using namespace mlir;
 
-namespace 
-{
+namespace {
 
 // Replace all uses of the input argument memref with the gpu memref inside
 // the gpu kernel
-void ReplaceCPUReferencesWithGPUMemref(const llvm::DenseMap<Value, Value>& cpuToGPUMemrefMap) {
-  for (auto& cpuToGPUMemrefPair: cpuToGPUMemrefMap) {
+void ReplaceCPUReferencesWithGPUMemref(
+    const llvm::DenseMap<Value, Value> &cpuToGPUMemrefMap) {
+  for (auto &cpuToGPUMemrefPair : cpuToGPUMemrefMap) {
     Value cpuMemref = cpuToGPUMemrefPair.first;
     Value gpuMemref = cpuToGPUMemrefPair.second;
-    for (auto& use: cpuMemref.getUses()) {
-      auto *owningOp=use.getOwner();
+    for (auto &use : cpuMemref.getUses()) {
+      auto *owningOp = use.getOwner();
       gpu::LaunchOp gpuLaunchOp = owningOp->getParentOfType<gpu::LaunchOp>();
       if (gpuLaunchOp) {
         owningOp->replaceUsesOfWith(cpuMemref, gpuMemref);
@@ -58,7 +61,7 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
       std::vector<Value> memrefsInFuncOp;
       std::vector<Value> memrefsUsedPostGpuLaunch;
 
-      for (auto& arg : func.getArguments()) {
+      for (auto &arg : func.getArguments()) {
         if (arg.getType().isa<MemRefType>())
           memrefsInFuncOp.push_back(arg);
       }
@@ -75,7 +78,7 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
             }
 
             if (opIsAfterGpuLaunch) {
-              op.walk([&](Operation* operation) {
+              op.walk([&](Operation *operation) {
                 for (const auto &operand : operation->getOperands()) {
                   if (operand.getType().isa<MemRefType>())
                     memrefsUsedPostGpuLaunch.push_back(operand);
@@ -95,15 +98,16 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
 
       // Determine memrefs to be transferred to and from the gpu.
       llvm::DenseSet<Value> requiresTransferToGpu, requiresTransferFromGpu;
-      for (auto& result : memrefsInFuncOp) {
-        for (auto& use : result.getUses()) {
-          auto *owningOp=use.getOwner();
+      for (auto &result : memrefsInFuncOp) {
+        for (auto &use : result.getUses()) {
+          auto *owningOp = use.getOwner();
           auto launchOp = owningOp->getParentOfType<gpu::LaunchOp>();
           if (launchOp) {
-            requiresTransferToGpu.insert(result); 
+            requiresTransferToGpu.insert(result);
 
-            // Relies on the fact that we currently don't allocate anything on the GPU for the output
-            // without allocating on the input side. If we do allocate, that needs to be handled separately.
+            // Relies on the fact that we currently don't allocate anything on
+            // the GPU for the output without allocating on the input side. If
+            // we do allocate, that needs to be handled separately.
             for (auto &postGpuResult : memrefsUsedPostGpuLaunch) {
               if (postGpuResult == result) {
                 requiresTransferFromGpu.insert(result);
@@ -114,24 +118,30 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
       }
 
       gpu::LaunchOp gpuLaunchOp;
-      func.walk([&](gpu::LaunchOp launchOp){
+      func.walk([&](gpu::LaunchOp launchOp) {
         builder.setInsertionPoint(launchOp.getOperation());
         gpuLaunchOp = launchOp;
       });
 
-      auto waitOp = builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{});
+      auto waitOp = builder.create<gpu::WaitOp>(
+          location, gpu::AsyncTokenType::get(module.getContext()),
+          ValueRange{});
       Value waitToken = waitOp.getAsyncToken();
 
       llvm::DenseMap<Value, Value> cpuToGpuMemrefMap, gpuToCpuMemrefMap;
 
       // Generate input transfers.
-      // #TODOSampath - Each transfer doesn't have to wait for subsequent transfers. 
-      // We can collect the wait tokens in a vector and wait for all of them using the gpu::WaitOp
-      for (auto& transferToGpu : requiresTransferToGpu) {
-        auto inputAlloc = builder.create<gpu::AllocOp>(location, transferToGpu.getType(), waitToken.getType(), 
-                                                       ValueRange{waitToken}, ValueRange{}, ValueRange{});
-        auto inputTransfer = builder.create<gpu::MemcpyOp>(location, inputAlloc.getAsyncToken().getType(), ValueRange{inputAlloc.getAsyncToken()}, 
-                                                           inputAlloc.getMemref(), static_cast<Value>(transferToGpu));
+      // #TODOSampath - Each transfer doesn't have to wait for subsequent
+      // transfers. We can collect the wait tokens in a vector and wait for all
+      // of them using the gpu::WaitOp
+      for (auto &transferToGpu : requiresTransferToGpu) {
+        auto inputAlloc = builder.create<gpu::AllocOp>(
+            location, transferToGpu.getType(), waitToken.getType(),
+            ValueRange{waitToken}, ValueRange{}, ValueRange{});
+        auto inputTransfer = builder.create<gpu::MemcpyOp>(
+            location, inputAlloc.getAsyncToken().getType(),
+            ValueRange{inputAlloc.getAsyncToken()}, inputAlloc.getMemref(),
+            static_cast<Value>(transferToGpu));
         waitToken = inputTransfer.getAsyncToken();
         cpuToGpuMemrefMap[transferToGpu] = inputAlloc.getMemref();
 
@@ -141,35 +151,42 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
       }
 
       // Wait for all the transfers and allocs before the gpu.launch to finish
-      /*auto waitForTransfersAndAllocs =*/ builder.create<gpu::WaitOp>(location, Type(), ValueRange{waitToken});
+      /*auto waitForTransfersAndAllocs =*/builder.create<gpu::WaitOp>(
+          location, Type(), ValueRange{waitToken});
 
       // Add the transfers as an async dependency to the gpu.launch op.
       // gpuLaunchOp.addAsyncDependency(waitToken);
 
       builder.setInsertionPointAfter(gpuLaunchOp.getOperation());
-      
-      auto waitForGpuKernel = builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{});
+
+      auto waitForGpuKernel = builder.create<gpu::WaitOp>(
+          location, gpu::AsyncTokenType::get(module.getContext()),
+          ValueRange{});
       waitToken = waitForGpuKernel.getAsyncToken();
       // waitToken = gpuLaunchOp.getAsyncToken();
 
       // Copy out any values that are needed by the CPU.
-      for (auto&cpuGpuPair : gpuToCpuMemrefMap) {
+      for (auto &cpuGpuPair : gpuToCpuMemrefMap) {
         auto cpuMemRef = cpuGpuPair.first;
         auto gpuMemRef = cpuGpuPair.second;
 
-        auto outputTransfer = builder.create<gpu::MemcpyOp>(location, waitToken.getType(), waitToken, cpuMemRef, gpuMemRef);
+        auto outputTransfer = builder.create<gpu::MemcpyOp>(
+            location, waitToken.getType(), waitToken, cpuMemRef, gpuMemRef);
         waitToken = outputTransfer.getAsyncToken();
       }
 
-      // auto waitForTransfers = builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()), waitToken);
-      // waitToken = waitForTransfers.getAsyncToken();
+      // auto waitForTransfers = builder.create<gpu::WaitOp>(location,
+      // gpu::AsyncTokenType::get(module.getContext()), waitToken); waitToken =
+      // waitForTransfers.getAsyncToken();
 
-      // Deallocate the GPU memory. 
-      // #TODOSampath - Assumes that we haven't allocated anything that we haven't used to transfer memory from CPU.
-      for (auto& cpuGpuMemrefPairs : cpuToGpuMemrefMap) {
-        auto dealloc = builder.create<gpu::DeallocOp>(location, waitToken.getType(), waitToken, cpuGpuMemrefPairs.second);
+      // Deallocate the GPU memory.
+      // #TODOSampath - Assumes that we haven't allocated anything that we
+      // haven't used to transfer memory from CPU.
+      for (auto &cpuGpuMemrefPairs : cpuToGpuMemrefMap) {
+        auto dealloc = builder.create<gpu::DeallocOp>(
+            location, waitToken.getType(), waitToken, cpuGpuMemrefPairs.second);
         waitToken = dealloc.getAsyncToken();
-      } 
+      }
 
       // wait for final dealloc.
       builder.create<gpu::WaitOp>(location, Type(), waitToken);
@@ -182,10 +199,8 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
 
 } // anonymous namespace
 
-namespace mlir
-{
-namespace decisionforest
-{
+namespace mlir {
+namespace decisionforest {
 
 void GreedilyMapParallelLoopsToGPU(mlir::ModuleOp module) {
   mlir::PassManager pm(module.getContext());
@@ -197,7 +212,8 @@ void GreedilyMapParallelLoopsToGPU(mlir::ModuleOp module) {
   }
 }
 
-void ConvertParallelLoopsToGPU(mlir::MLIRContext& context, mlir::ModuleOp module) {
+void ConvertParallelLoopsToGPU(mlir::MLIRContext &context,
+                               mlir::ModuleOp module) {
   mlir::PassManager pm(&context);
   mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
   optPM.addPass(createParallelLoopToGpuPass());
@@ -210,7 +226,7 @@ void ConvertParallelLoopsToGPU(mlir::MLIRContext& context, mlir::ModuleOp module
   AddGPUAllocationsAndTransfers(module);
 }
 
-void OutlineGPUKernels(mlir::MLIRContext& context, mlir::ModuleOp module) {
+void OutlineGPUKernels(mlir::MLIRContext &context, mlir::ModuleOp module) {
   mlir::PassManager pm(&context);
   pm.addPass(createGpuKernelOutliningPass());
 
@@ -219,16 +235,19 @@ void OutlineGPUKernels(mlir::MLIRContext& context, mlir::ModuleOp module) {
   }
 }
 
-void RunCanonicalizerPass(mlir::MLIRContext& context, mlir::ModuleOp module) {
+void RunCanonicalizerPass(mlir::MLIRContext &context, mlir::ModuleOp module) {
   mlir::PassManager pm(&context);
-  pm.addPass(createCanonicalizerPass());
+  mlir::GreedyRewriteConfig config;
+  std::vector<std::string> disabledPatterns = {
+      "(anonymous namespace)::MergeNestedParallelLoops"};
+  pm.addPass(createCanonicalizerPass(config, disabledPatterns));
 
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Canonicalizer pass failed.\n";
   }
 }
 
-} // decisionforest
-} // mlir
+} // namespace decisionforest
+} // namespace mlir
 
 #endif // TREEBEARD_GPU_SUPPORT

@@ -13,3 +13,4 @@ libtreebeard-runtime.so.*
 *.gz
 docs/MICRO*2022/*.pdf
 .cache
+.vscode/launch.json

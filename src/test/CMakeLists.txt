@@ -9,7 +9,8 @@ StatsTests.cpp
 XGBoostProbTiling.cpp
 ONNXTests.cpp
 GPUTests.cpp
-GPUSyntheticXGBTests.cpp)
+GPUSyntheticXGBTests.cpp
+ReductionTests.cpp)
 
 target_sources(treebeard-runtime 
 PRIVATE

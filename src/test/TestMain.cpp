@@ -1,113 +1,128 @@
-#include <vector>
-#include <sstream>
-#include <chrono>
-#include "TreeTilingUtils.h"
 #include "ExecutionHelpers.h"
-#include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/IR/SCF.h"
-#include "mlir/Dialect/Math/IR/Math.h"
-#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
-#include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "xgboostparser.h"
-#include "TiledTree.h"
-#include "LowerReduceOps.h"
-#include "TestUtilsCommon.h"
 #include "ForestTestUtils.h"
+#include "GPUExecutionHelper.h"
+#include "GPUSupportUtils.h"
+#include "LowerReduceOps.h"
 #include "ModelSerializers.h"
 #include "Representations.h"
-#include "GPUSupportUtils.h"
-#include "GPUExecutionHelper.h"
+#include "TestUtilsCommon.h"
+#include "TiledTree.h"
+#include "TreeTilingUtils.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "xgboostparser.h"
+#include <chrono>
+#include <sstream>
+#include <vector>
 
 using namespace mlir::decisionforest;
 
-namespace TreeBeard
-{
-namespace test
-{
+namespace TreeBeard {
+namespace test {
 
 // Codegen tests
-bool Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1(TestArgs_t& args);
-bool Test_LoadTileThresholdOp_DoubleInt32_TileSize1(TestArgs_t& args);
-bool Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args);
-bool Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_1Tree_BatchSize8_TileSize2_4Pipelined(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_1Tree_BatchSize8_TlieSize4_4Pipelined(TestArgs_t& args);
+bool Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1(TestArgs_t &args);
+bool Test_LoadTileThresholdOp_DoubleInt32_TileSize1(TestArgs_t &args);
+bool Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1(TestArgs_t &args);
+bool Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1(
+    TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize8_TileSize2_4Pipelined(
+    TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize8_TlieSize4_4Pipelined(
+    TestArgs_t &args);
 bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_4Pipelined(TestArgs_t &args);
-bool Test_RandomXGBoostJSONs_1Tree_BatchSize2(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_1Tree_BatchSize4(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_2Trees_BatchSize1(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_2Trees_BatchSize2(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_2Trees_BatchSize4(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_4Trees_BatchSize1(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_4Trees_BatchSize2(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_4Trees_BatchSize4(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_1Tree_BatchSize1_Float(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_1Tree_BatchSize2_Float(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_1Tree_BatchSize4_Float(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_2Trees_BatchSize1_Float(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_2Trees_BatchSize2_Float(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_2Trees_BatchSize4_Float(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_4Trees_BatchSize1_Float(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_4Trees_BatchSize2_Float(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float(TestArgs_t& args);
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize2(TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize4(TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_2Trees_BatchSize1(TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_2Trees_BatchSize2(TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_2Trees_BatchSize4(TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_4Trees_BatchSize1(TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_4Trees_BatchSize2(TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_4Trees_BatchSize4(TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize1_Float(TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize2_Float(TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize4_Float(TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_2Trees_BatchSize1_Float(TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_2Trees_BatchSize2_Float(TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_2Trees_BatchSize4_Float(TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_4Trees_BatchSize1_Float(TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_4Trees_BatchSize2_Float(TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float(TestArgs_t &args);
 
 // Tiled Codegen tests
-bool Test_TiledCodeGeneration_RightHeavy_BatchSize1(TestArgs_t& args);
-bool Test_TiledCodeGeneration_LeftHeavy_BatchSize1(TestArgs_t& args);
-bool Test_TiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape(TestArgs_t& args);
-bool Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape(TestArgs_t& args);
-bool Test_TiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape(TestArgs_t& args);
-bool Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape(TestArgs_t& args);
-bool Test_TiledCodeGeneration_BalancedTree_BatchSize1(TestArgs_t& args);
-bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1(TestArgs_t& args);
-bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize(TestArgs_t& args);
-bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize(TestArgs_t& args);
+bool Test_TiledCodeGeneration_RightHeavy_BatchSize1(TestArgs_t &args);
+bool Test_TiledCodeGeneration_LeftHeavy_BatchSize1(TestArgs_t &args);
+bool Test_TiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape(
+    TestArgs_t &args);
+bool Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape(
+    TestArgs_t &args);
+bool Test_TiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape(
+    TestArgs_t &args);
+bool Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape(
+    TestArgs_t &args);
+bool Test_TiledCodeGeneration_BalancedTree_BatchSize1(TestArgs_t &args);
+bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1(TestArgs_t &args);
+bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize(
+    TestArgs_t &args);
+bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize(
+    TestArgs_t &args);
 
 // Tiled Init Tests
-bool Test_ModelInit_LeftHeavy(TestArgs_t& args);
-bool Test_ModelInit_RightHeavy(TestArgs_t& args);
-bool Test_ModelInit_RightAndLeftHeavy(TestArgs_t& args);
-bool Test_ModelInit_Balanced(TestArgs_t& args);
-bool Test_ModelInit_LeftHeavy_Int8TileShape(TestArgs_t& args);
-bool Test_ModelInit_LeftHeavy_Int16TileShape(TestArgs_t& args);
-bool Test_ModelInit_RightHeavy_Int8TileShape(TestArgs_t& args);
-bool Test_ModelInit_RightHeavy_Int16TileShape(TestArgs_t& args);
-bool Test_ModelInit_Balanced_Int8TileShape(TestArgs_t& args);
-bool Test_ModelInit_Balanced_Int16TileShape(TestArgs_t& args);
-bool Test_ModelInit_RightAndLeftHeavy_Int8TileShape(TestArgs_t& args);
-bool Test_ModelInit_RightAndLeftHeavy_Int16TileShape(TestArgs_t& args);
+bool Test_ModelInit_LeftHeavy(TestArgs_t &args);
+bool Test_ModelInit_RightHeavy(TestArgs_t &args);
+bool Test_ModelInit_RightAndLeftHeavy(TestArgs_t &args);
+bool Test_ModelInit_Balanced(TestArgs_t &args);
+bool Test_ModelInit_LeftHeavy_Int8TileShape(TestArgs_t &args);
+bool Test_ModelInit_LeftHeavy_Int16TileShape(TestArgs_t &args);
+bool Test_ModelInit_RightHeavy_Int8TileShape(TestArgs_t &args);
+bool Test_ModelInit_RightHeavy_Int16TileShape(TestArgs_t &args);
+bool Test_ModelInit_Balanced_Int8TileShape(TestArgs_t &args);
+bool Test_ModelInit_Balanced_Int16TileShape(TestArgs_t &args);
+bool Test_ModelInit_RightAndLeftHeavy_Int8TileShape(TestArgs_t &args);
+bool Test_ModelInit_RightAndLeftHeavy_Int16TileShape(TestArgs_t &args);
 
 // Uniform Tiling Tests
-bool Test_UniformTiling_LeftHeavy_BatchSize1(TestArgs_t& args);
+bool Test_UniformTiling_LeftHeavy_BatchSize1(TestArgs_t &args);
 bool Test_UniformTiling_RightHeavy_BatchSize1(TestArgs_t &args);
 bool Test_UniformTiling_Balanced_BatchSize1(TestArgs_t &args);
 bool Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1(TestArgs_t &args);
-bool Test_UniformTiling_LeftHeavy_BatchSize1_Int8TileShape(TestArgs_t& args);
+bool Test_UniformTiling_LeftHeavy_BatchSize1_Int8TileShape(TestArgs_t &args);
 bool Test_UniformTiling_RightHeavy_BatchSize1_Int8TileShape(TestArgs_t &args);
 bool Test_UniformTiling_Balanced_BatchSize1_Int8TileShape(TestArgs_t &args);
-bool Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1_Int8TileShape(TestArgs_t &args);
-bool Test_UniformTiling_LeftHeavy_BatchSize1_Int16TileShape(TestArgs_t& args);
+bool Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1_Int8TileShape(
+    TestArgs_t &args);
+bool Test_UniformTiling_LeftHeavy_BatchSize1_Int16TileShape(TestArgs_t &args);
 bool Test_UniformTiling_RightHeavy_BatchSize1_Int16TileShape(TestArgs_t &args);
 bool Test_UniformTiling_Balanced_BatchSize1_Int16TileShape(TestArgs_t &args);
-bool Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1_Int16TileShape(TestArgs_t &args);
+bool Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1_Int16TileShape(
+    TestArgs_t &args);
 
-bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args);
-bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize1(TestArgs_t& args);
-bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize1(TestArgs_t& args);
-bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize2(TestArgs_t& args);
-bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize2(TestArgs_t& args);
-bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize2(TestArgs_t& args);
-bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4(TestArgs_t& args);
-bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4_Int8TileShape(TestArgs_t& args);
-bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4_Int16TileShape(TestArgs_t& args);
-bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4(TestArgs_t& args);
-bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4_Int8TileShape(TestArgs_t& args);
-bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4_Int16TileShape(TestArgs_t& args);
-bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4(TestArgs_t& args);
-bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4_Int8TileShape(TestArgs_t& args);
-bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4_Int16TileShape(TestArgs_t& args);
+bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t &args);
+bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize1(TestArgs_t &args);
+bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize1(TestArgs_t &args);
+bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize2(TestArgs_t &args);
+bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize2(TestArgs_t &args);
+bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize2(TestArgs_t &args);
+bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4(TestArgs_t &args);
+bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4_Int8TileShape(
+    TestArgs_t &args);
+bool Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4_Int16TileShape(
+    TestArgs_t &args);
+bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4(TestArgs_t &args);
+bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4_Int8TileShape(
+    TestArgs_t &args);
+bool Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4_Int16TileShape(
+    TestArgs_t &args);
+bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4(TestArgs_t &args);
+bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4_Int8TileShape(
+    TestArgs_t &args);
+bool Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4_Int16TileShape(
+    TestArgs_t &args);
 
 // XGBoost benchmark models tests
 bool Test_Scalar_Abalone(TestArgs_t &args);
@@ -205,40 +220,50 @@ bool Test_TileSize4_Year_OneTreeAtATimeSchedule(TestArgs_t &args);
 bool Test_TileSize8_Year_OneTreeAtATimeSchedule(TestArgs_t &args);
 
 // Sparse XGBoost Scalar Tests
-bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t& args);
-bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize2(TestArgs_t& args);
-bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize4(TestArgs_t& args);
-bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize1(TestArgs_t& args);
-bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize2(TestArgs_t& args);
-bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize4(TestArgs_t& args);
-bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize1(TestArgs_t& args);
-bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize2(TestArgs_t& args);
-bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize4(TestArgs_t& args);
-bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1_Float(TestArgs_t& args);
-bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize2_Float(TestArgs_t& args);
-bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize4_Float(TestArgs_t& args);
-bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize1_Float(TestArgs_t& args);
-bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize2_Float(TestArgs_t& args);
-bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize4_Float(TestArgs_t& args);
-bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize1_Float(TestArgs_t& args);
-bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize2_Float(TestArgs_t& args);
-bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize4_Float(TestArgs_t& args);
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1(TestArgs_t &args);
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize2(TestArgs_t &args);
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize4(TestArgs_t &args);
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize1(TestArgs_t &args);
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize2(TestArgs_t &args);
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize4(TestArgs_t &args);
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize1(TestArgs_t &args);
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize2(TestArgs_t &args);
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize4(TestArgs_t &args);
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1_Float(TestArgs_t &args);
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize2_Float(TestArgs_t &args);
+bool Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize4_Float(TestArgs_t &args);
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize1_Float(TestArgs_t &args);
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize2_Float(TestArgs_t &args);
+bool Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize4_Float(TestArgs_t &args);
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize1_Float(TestArgs_t &args);
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize2_Float(TestArgs_t &args);
+bool Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize4_Float(TestArgs_t &args);
 
 // Sparse Tiled Code Gen
-bool Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1(TestArgs_t& args);
-bool Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize(TestArgs_t& args);
-bool Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize(TestArgs_t& args);
-bool Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1(TestArgs_t& args);
-bool Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1(TestArgs_t& args);
-bool Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape(TestArgs_t& args);
-bool Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape(TestArgs_t& args);
-bool Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape(TestArgs_t& args);
-bool Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape(TestArgs_t& args);
+bool Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1(
+    TestArgs_t &args);
+bool Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize(
+    TestArgs_t &args);
+bool Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize(
+    TestArgs_t &args);
+bool Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1(TestArgs_t &args);
+bool Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1(TestArgs_t &args);
+bool Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape(
+    TestArgs_t &args);
+bool Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape(
+    TestArgs_t &args);
+bool Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape(
+    TestArgs_t &args);
+bool Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape(
+    TestArgs_t &args);
 
 // XGBoost Sparse Uniform Tiling Tests
-bool Test_SparseUniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4(TestArgs_t& args);
-bool Test_SparseUniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4(TestArgs_t& args);
-bool Test_SparseUniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4(TestArgs_t& args);
+bool Test_SparseUniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4(
+    TestArgs_t &args);
+bool Test_SparseUniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4(
+    TestArgs_t &args);
+bool Test_SparseUniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4(
+    TestArgs_t &args);
 
 // Sparse XGBoost Benchmark Correctness Tests
 bool Test_SparseScalar_Abalone(TestArgs_t &args);
@@ -366,9 +391,12 @@ bool Test_SparseProbabilisticTiling_TileSize8_Year(TestArgs_t &args);
 
 // Make all leaves equal depth tests
 bool Test_UniformTiling_Balanced_BatchSize1_EqualDepth(TestArgs_t &args);
-bool Test_RandomXGBoostJSONs_1Tree_BatchSize4_EqualDepth_TileSize8(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_2Trees_BatchSize4_EqualDepth_TileSize8(TestArgs_t& args);
-bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_EqualDepth_TileSize8(TestArgs_t& args);
+bool Test_RandomXGBoostJSONs_1Tree_BatchSize4_EqualDepth_TileSize8(
+    TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_2Trees_BatchSize4_EqualDepth_TileSize8(
+    TestArgs_t &args);
+bool Test_RandomXGBoostJSONs_4Trees_BatchSize4_EqualDepth_TileSize8(
+    TestArgs_t &args);
 bool Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth(TestArgs_t &args);
 bool Test_TileSize8_AirlineOHE_TestInputs_MakeLeavesSameDepth(TestArgs_t &args);
 bool Test_TileSize8_Airline_TestInputs_MakeLeavesSameDepth(TestArgs_t &args);
@@ -381,17 +409,20 @@ bool Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth(TestArgs_t &args);
 bool Test_TileSize8_Abalone_TestInputs_ReorderTrees(TestArgs_t &args);
 
 // Split schedule tests
-bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_SplitTreeLoop(TestArgs_t& args);
+bool Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_SplitTreeLoop(
+    TestArgs_t &args);
 bool Test_TileSize8_Abalone_TestInputs_SplitTreeLoopSchedule(TestArgs_t &args);
 bool Test_TileSize8_Abalone_TestInputs_SplitTreeLoopSchedule(TestArgs_t &args);
-bool Test_TileSize8_AirlineOHE_TestInputs_SplitTreeLoopSchedule(TestArgs_t &args);
+bool Test_TileSize8_AirlineOHE_TestInputs_SplitTreeLoopSchedule(
+    TestArgs_t &args);
 bool Test_TileSize8_Airline_TestInputs_SplitTreeLoopSchedule(TestArgs_t &args);
 bool Test_TileSize8_Bosch_TestInputs_SplitTreeLoopSchedule(TestArgs_t &args);
 bool Test_TileSize8_Epsilon_TestInputs_SplitTreeLoopSchedule(TestArgs_t &args);
 bool Test_TileSize8_Higgs_TestInputs_SplitTreeLoopSchedule(TestArgs_t &args);
 bool Test_TileSize8_Year_TestInputs_SplitTreeLoopSchedule(TestArgs_t &args);
 bool Test_TileSize8_Abalone_TestInputs_SwapAndSplitTreeIndex(TestArgs_t &args);
-bool Test_TileSize8_AirlineOHE_TestInputs_SwapAndSplitTreeIndex(TestArgs_t &args);
+bool Test_TileSize8_AirlineOHE_TestInputs_SwapAndSplitTreeIndex(
+    TestArgs_t &args);
 bool Test_TileSize8_Airline_TestInputs_SwapAndSplitTreeIndex(TestArgs_t &args);
 bool Test_TileSize8_Bosch_TestInputs_SwapAndSplitTreeIndex(TestArgs_t &args);
 bool Test_TileSize8_Epsilon_TestInputs_SwapAndSplitTreeIndex(TestArgs_t &args);
@@ -408,15 +439,21 @@ bool Test_TileSize8_Higgs_TestInputs_ParallelBatch(TestArgs_t &args);
 bool Test_TileSize8_Year_TestInputs_ParallelBatch(TestArgs_t &args);
 
 // Peeling
-bool Test_WalkPeeling_BalancedTree_TileSize2(TestArgs_t& args);
-bool Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4(TestArgs_t& args);
-bool Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4(TestArgs_t& args);
-bool Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4(TestArgs_t& args);
-bool Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4(TestArgs_t& args);
-bool Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4(TestArgs_t& args);
+bool Test_WalkPeeling_BalancedTree_TileSize2(TestArgs_t &args);
+bool Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4(
+    TestArgs_t &args);
+bool Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4(
+    TestArgs_t &args);
+bool Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4(
+    TestArgs_t &args);
+bool Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4(
+    TestArgs_t &args);
+bool Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4(
+    TestArgs_t &args);
 bool Test_PeeledHybridProbabilisticTiling_TileSize8_Abalone(TestArgs_t &args);
 bool Test_PeeledHybridProbabilisticTiling_TileSize8_Airline(TestArgs_t &args);
-bool Test_PeeledHybridProbabilisticTiling_TileSize8_AirlineOHE(TestArgs_t &args);
+bool Test_PeeledHybridProbabilisticTiling_TileSize8_AirlineOHE(
+    TestArgs_t &args);
 bool Test_PeeledHybridProbabilisticTiling_TileSize8_Covtype(TestArgs_t &args);
 bool Test_PeeledHybridProbabilisticTiling_TileSize8_Letters(TestArgs_t &args);
 bool Test_PeeledHybridProbabilisticTiling_TileSize8_Epsilon(TestArgs_t &args);
@@ -427,204 +464,245 @@ bool Test_PeeledHybridProbabilisticTiling_TileSize8_Year(TestArgs_t &args);
 bool Test_ONNX_TileSize8_Abalone(TestArgs_t &args);
 
 // GPU model initialization tests
-bool Test_GPUModelInit_LeftHeavy_Scalar_DoubleInt(TestArgs_t& args);
-bool Test_GPUModelInit_RightHeavy_Scalar_DoubleInt(TestArgs_t& args);
-bool Test_GPUModelInit_Balanced_Scalar_DoubleInt(TestArgs_t& args);
-bool Test_GPUModelInit_LeftAndRightHeavy_Scalar_DoubleInt(TestArgs_t& args);
-bool Test_GPUModelInit_LeftHeavy_Scalar_FloatInt(TestArgs_t& args);
-bool Test_GPUModelInit_RightHeavy_Scalar_FloatInt(TestArgs_t& args);
-bool Test_GPUModelInit_Balanced_Scalar_FloatInt(TestArgs_t& args);
-bool Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt(TestArgs_t& args);
-bool Test_GPUModelInit_LeftHeavy_Scalar_FloatInt16(TestArgs_t& args);
-bool Test_GPUModelInit_RightHeavy_Scalar_FloatInt16(TestArgs_t& args);
-bool Test_GPUModelInit_Balanced_Scalar_FloatInt16(TestArgs_t& args);
-bool Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt16(TestArgs_t& args);
+bool Test_GPUModelInit_LeftHeavy_Scalar_DoubleInt(TestArgs_t &args);
+bool Test_GPUModelInit_RightHeavy_Scalar_DoubleInt(TestArgs_t &args);
+bool Test_GPUModelInit_Balanced_Scalar_DoubleInt(TestArgs_t &args);
+bool Test_GPUModelInit_LeftAndRightHeavy_Scalar_DoubleInt(TestArgs_t &args);
+bool Test_GPUModelInit_LeftHeavy_Scalar_FloatInt(TestArgs_t &args);
+bool Test_GPUModelInit_RightHeavy_Scalar_FloatInt(TestArgs_t &args);
+bool Test_GPUModelInit_Balanced_Scalar_FloatInt(TestArgs_t &args);
+bool Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt(TestArgs_t &args);
+bool Test_GPUModelInit_LeftHeavy_Scalar_FloatInt16(TestArgs_t &args);
+bool Test_GPUModelInit_RightHeavy_Scalar_FloatInt16(TestArgs_t &args);
+bool Test_GPUModelInit_Balanced_Scalar_FloatInt16(TestArgs_t &args);
+bool Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt16(TestArgs_t &args);
 
-bool Test_GPUModelInit_LeftHeavy_Reorg_DoubleInt(TestArgs_t& args);
-bool Test_GPUModelInit_RightHeavy_Reorg_DoubleInt(TestArgs_t& args);
-bool Test_GPUModelInit_Balanced_Reorg_DoubleInt(TestArgs_t& args);
-bool Test_GPUModelInit_LeftAndRightHeavy_Reorg_DoubleInt(TestArgs_t& args);
-bool Test_GPUModelInit_LeftHeavy_Reorg_FloatInt(TestArgs_t& args);
-bool Test_GPUModelInit_RightHeavy_Reorg_FloatInt(TestArgs_t& args);
-bool Test_GPUModelInit_Balanced_Reorg_FloatInt(TestArgs_t& args);
-bool Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt(TestArgs_t& args);
-bool Test_GPUModelInit_LeftHeavy_Reorg_FloatInt16(TestArgs_t& args);
-bool Test_GPUModelInit_RightHeavy_Reorg_FloatInt16(TestArgs_t& args);
-bool Test_GPUModelInit_Balanced_Reorg_FloatInt16(TestArgs_t& args);
-bool Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt16(TestArgs_t& args);
+bool Test_GPUModelInit_LeftHeavy_Reorg_DoubleInt(TestArgs_t &args);
+bool Test_GPUModelInit_RightHeavy_Reorg_DoubleInt(TestArgs_t &args);
+bool Test_GPUModelInit_Balanced_Reorg_DoubleInt(TestArgs_t &args);
+bool Test_GPUModelInit_LeftAndRightHeavy_Reorg_DoubleInt(TestArgs_t &args);
+bool Test_GPUModelInit_LeftHeavy_Reorg_FloatInt(TestArgs_t &args);
+bool Test_GPUModelInit_RightHeavy_Reorg_FloatInt(TestArgs_t &args);
+bool Test_GPUModelInit_Balanced_Reorg_FloatInt(TestArgs_t &args);
+bool Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt(TestArgs_t &args);
+bool Test_GPUModelInit_LeftHeavy_Reorg_FloatInt16(TestArgs_t &args);
+bool Test_GPUModelInit_RightHeavy_Reorg_FloatInt16(TestArgs_t &args);
+bool Test_GPUModelInit_Balanced_Reorg_FloatInt16(TestArgs_t &args);
+bool Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt16(TestArgs_t &args);
 
 // GPU basic code generation tests
-bool Test_GPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32(TestArgs_t& args);
-bool Test_GPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32(TestArgs_t& args);
-bool Test_GPUCodeGeneration_Balanced_DoubleInt32_BatchSize32(TestArgs_t& args);
-bool Test_GPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32(TestArgs_t& args);
-bool Test_GPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32(TestArgs_t& args);
-bool Test_GPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32(TestArgs_t& args);
-bool Test_GPUCodeGeneration_Balanced_FloatInt16_BatchSize32(TestArgs_t& args);
-bool Test_GPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32(TestArgs_t& args);
+bool Test_GPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32(TestArgs_t &args);
+bool Test_GPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32(
+    TestArgs_t &args);
+bool Test_GPUCodeGeneration_Balanced_DoubleInt32_BatchSize32(TestArgs_t &args);
+bool Test_GPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32(
+    TestArgs_t &args);
+bool Test_GPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32(TestArgs_t &args);
+bool Test_GPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32(TestArgs_t &args);
+bool Test_GPUCodeGeneration_Balanced_FloatInt16_BatchSize32(TestArgs_t &args);
+bool Test_GPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32(
+    TestArgs_t &args);
 
-bool Test_SparseGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32(TestArgs_t& args);
-bool Test_SparseGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32(TestArgs_t& args);
-bool Test_SparseGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32(TestArgs_t& args);
-bool Test_SparseGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32(TestArgs_t& args);
-bool Test_SparseGPUCodeGeneration_LeftHeavy_FloatInt16_ChI16_BatchSize32(TestArgs_t& args);
-bool Test_SparseGPUCodeGeneration_RightHeavy_FloatInt16_ChI16_BatchSize32(TestArgs_t& args);
-bool Test_SparseGPUCodeGeneration_Balanced_FloatInt16_ChI16_BatchSize32(TestArgs_t& args);
-bool Test_SparseGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_ChI16_BatchSize32(TestArgs_t& args);
+bool Test_SparseGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32(
+    TestArgs_t &args);
+bool Test_SparseGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32(
+    TestArgs_t &args);
+bool Test_SparseGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32(
+    TestArgs_t &args);
+bool Test_SparseGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32(
+    TestArgs_t &args);
+bool Test_SparseGPUCodeGeneration_LeftHeavy_FloatInt16_ChI16_BatchSize32(
+    TestArgs_t &args);
+bool Test_SparseGPUCodeGeneration_RightHeavy_FloatInt16_ChI16_BatchSize32(
+    TestArgs_t &args);
+bool Test_SparseGPUCodeGeneration_Balanced_FloatInt16_ChI16_BatchSize32(
+    TestArgs_t &args);
+bool Test_SparseGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_ChI16_BatchSize32(
+    TestArgs_t &args);
 
-bool Test_ReorgGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32(TestArgs_t& args);
-bool Test_ReorgGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32(TestArgs_t& args);
-bool Test_ReorgGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32(TestArgs_t& args);
-bool Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32(TestArgs_t& args);
-bool Test_ReorgGPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32(TestArgs_t& args);
-bool Test_ReorgGPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32(TestArgs_t& args);
-bool Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32(TestArgs_t& args);
-bool Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32(TestArgs_t& args);
+bool Test_ReorgGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32(
+    TestArgs_t &args);
+bool Test_ReorgGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32(
+    TestArgs_t &args);
+bool Test_ReorgGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32(
+    TestArgs_t &args);
+bool Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32(
+    TestArgs_t &args);
+bool Test_ReorgGPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32(
+    TestArgs_t &args);
+bool Test_ReorgGPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32(
+    TestArgs_t &args);
+bool Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32(
+    TestArgs_t &args);
+bool Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32(
+    TestArgs_t &args);
 
-bool Test_SimpleSharedMem_LeftHeavy(TestArgs_t& args);
-bool Test_SimpleSharedMem_LeftRightAndBalanced(TestArgs_t& args);
-bool Test_SimpleSharedMem_LeftHeavy_F32I16(TestArgs_t& args);
-bool Test_SimpleSharedMem_LeftRightAndBalanced_F32I16(TestArgs_t& args);
+bool Test_SimpleSharedMem_LeftHeavy(TestArgs_t &args);
+bool Test_SimpleSharedMem_LeftRightAndBalanced(TestArgs_t &args);
+bool Test_SimpleSharedMem_LeftHeavy_F32I16(TestArgs_t &args);
+bool Test_SimpleSharedMem_LeftRightAndBalanced_F32I16(TestArgs_t &args);
 
-bool Test_SimpleSharedMem_LeftHeavy_ReorgRep(TestArgs_t& args);
-bool Test_SimpleSharedMem_LeftRightAndBalanced_Reorg(TestArgs_t& args);
-bool Test_SimpleSharedMem_LeftHeavy_ReorgRep_F32I16(TestArgs_t& args);
-bool Test_SimpleSharedMem_LeftRightAndBalanced_Reorg_F32I16(TestArgs_t& args);
+bool Test_SimpleSharedMem_LeftHeavy_ReorgRep(TestArgs_t &args);
+bool Test_SimpleSharedMem_LeftRightAndBalanced_Reorg(TestArgs_t &args);
+bool Test_SimpleSharedMem_LeftHeavy_ReorgRep_F32I16(TestArgs_t &args);
+bool Test_SimpleSharedMem_LeftRightAndBalanced_Reorg_F32I16(TestArgs_t &args);
 
-bool Test_SimpleSharedMem_LeftHeavy_SparseRep(TestArgs_t& args);
-bool Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep(TestArgs_t& args);
-bool Test_SimpleSharedMem_LeftHeavy_SparseRep_F32I16(TestArgs_t& args);
-bool Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep_F32I16(TestArgs_t& args);
+bool Test_SimpleSharedMem_LeftHeavy_SparseRep(TestArgs_t &args);
+bool Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep(TestArgs_t &args);
+bool Test_SimpleSharedMem_LeftHeavy_SparseRep_F32I16(TestArgs_t &args);
+bool Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep_F32I16(
+    TestArgs_t &args);
 
-bool Test_GPUCodeGeneration_Covtype_ArrayRep_DoubleInt32_BatchSize32(TestArgs_t& args);
-bool Test_GPUCodeGeneration_Covtype_SparseRep_DoubleInt32_BatchSize32(TestArgs_t& args);
-bool Test_GPUCodeGeneration_Covtype_ReorgRep_DoubleInt32_BatchSize32(TestArgs_t& args);
+bool Test_GPUCodeGeneration_Covtype_ArrayRep_DoubleInt32_BatchSize32(
+    TestArgs_t &args);
+bool Test_GPUCodeGeneration_Covtype_SparseRep_DoubleInt32_BatchSize32(
+    TestArgs_t &args);
+bool Test_GPUCodeGeneration_Covtype_ReorgRep_DoubleInt32_BatchSize32(
+    TestArgs_t &args);
 
-bool Test_InputSharedMem_LeftRightAndBalanced(TestArgs_t& args);
-bool Test_InputSharedMem_LeftHeavy(TestArgs_t& args);
-bool Test_InputSharedMem_RightHeavy(TestArgs_t& args);
+bool Test_InputSharedMem_LeftRightAndBalanced(TestArgs_t &args);
+bool Test_InputSharedMem_LeftHeavy(TestArgs_t &args);
+bool Test_InputSharedMem_RightHeavy(TestArgs_t &args);
 
-// Basic tiled tests 
-bool Test_TiledSparseGPU_LeftHeavy_DblI32_B32_TSz2(TestArgs_t& args);
-bool Test_TiledSparseGPU_RightHeavy_DblI32_B32_TSz2(TestArgs_t& args);
-bool Test_TiledSparseGPU_Balanced_DblI32_B32_TSz2(TestArgs_t& args);
-bool Test_TiledSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2(TestArgs_t& args);
-bool Test_TiledSparseGPU_LeftHeavy_FltI16_B32_TSz2(TestArgs_t& args);
-bool Test_TiledSparseGPU_RightHeavy_FltI16_B32_TSz2(TestArgs_t& args);
-bool Test_TiledSparseGPU_Balanced_FltI16_B32_TSz2(TestArgs_t& args);
-bool Test_TiledSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2(TestArgs_t& args);
+// Basic tiled tests
+bool Test_TiledSparseGPU_LeftHeavy_DblI32_B32_TSz2(TestArgs_t &args);
+bool Test_TiledSparseGPU_RightHeavy_DblI32_B32_TSz2(TestArgs_t &args);
+bool Test_TiledSparseGPU_Balanced_DblI32_B32_TSz2(TestArgs_t &args);
+bool Test_TiledSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2(TestArgs_t &args);
+bool Test_TiledSparseGPU_LeftHeavy_FltI16_B32_TSz2(TestArgs_t &args);
+bool Test_TiledSparseGPU_RightHeavy_FltI16_B32_TSz2(TestArgs_t &args);
+bool Test_TiledSparseGPU_Balanced_FltI16_B32_TSz2(TestArgs_t &args);
+bool Test_TiledSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2(TestArgs_t &args);
 
-bool Test_TiledArrayGPU_LeftHeavy_DblI32_B32_TSz2(TestArgs_t& args);
-bool Test_TiledArrayGPU_RightHeavy_DblI32_B32_TSz2(TestArgs_t& args);
-bool Test_TiledArrayGPU_Balanced_DblI32_B32_TSz2(TestArgs_t& args);
-bool Test_TiledArrayGPU_LeftAndRightHeavy_DblI32_B32_TSz2(TestArgs_t& args);
-bool Test_TiledArrayGPU_LeftHeavy_FltI16_B32_TSz2(TestArgs_t& args);
-bool Test_TiledArrayGPU_RightHeavy_FltI16_B32_TSz2(TestArgs_t& args);
-bool Test_TiledArrayGPU_Balanced_FltI16_B32_TSz2(TestArgs_t& args);
-bool Test_TiledArrayGPU_LeftAndRightHeavy_FltI16_B32_TSz2(TestArgs_t& args);
+bool Test_TiledArrayGPU_LeftHeavy_DblI32_B32_TSz2(TestArgs_t &args);
+bool Test_TiledArrayGPU_RightHeavy_DblI32_B32_TSz2(TestArgs_t &args);
+bool Test_TiledArrayGPU_Balanced_DblI32_B32_TSz2(TestArgs_t &args);
+bool Test_TiledArrayGPU_LeftAndRightHeavy_DblI32_B32_TSz2(TestArgs_t &args);
+bool Test_TiledArrayGPU_LeftHeavy_FltI16_B32_TSz2(TestArgs_t &args);
+bool Test_TiledArrayGPU_RightHeavy_FltI16_B32_TSz2(TestArgs_t &args);
+bool Test_TiledArrayGPU_Balanced_FltI16_B32_TSz2(TestArgs_t &args);
+bool Test_TiledArrayGPU_LeftAndRightHeavy_FltI16_B32_TSz2(TestArgs_t &args);
 
 // Tiling + Shared memory
-bool Test_TiledCachedArrayGPU_LeftHeavy_DblI32_B32_TSz2(TestArgs_t& args);
-bool Test_TiledCachedArrayGPU_RightHeavy_DblI32_B32_TSz2(TestArgs_t& args);
-bool Test_TiledCachedArrayGPU_Balanced_DblI32_B32_TSz2(TestArgs_t& args);
-bool Test_TiledCachedArrayGPU_LeftAndRightHeavy_DblI32_B32_TSz2(TestArgs_t& args);
-bool Test_TiledCachedArrayGPU_LeftRightAndBalanced_DblI32_B32_TSz2(TestArgs_t& args);
-bool Test_TiledCachedArrayGPU_LeftHeavy_FltI16_B32_TSz2(TestArgs_t& args);
-bool Test_TiledCachedArrayGPU_RightHeavy_FltI16_B32_TSz2(TestArgs_t& args);
-bool Test_TiledCachedArrayGPU_Balanced_FltI16_B32_TSz2(TestArgs_t& args);
-bool Test_TiledCachedArrayGPU_LeftAndRightHeavy_FltI16_B32_TSz2(TestArgs_t& args);
-bool Test_TiledCachedArrayGPU_LeftRightAndBalanced_FltI16_B32_TSz2(TestArgs_t& args);
+bool Test_TiledCachedArrayGPU_LeftHeavy_DblI32_B32_TSz2(TestArgs_t &args);
+bool Test_TiledCachedArrayGPU_RightHeavy_DblI32_B32_TSz2(TestArgs_t &args);
+bool Test_TiledCachedArrayGPU_Balanced_DblI32_B32_TSz2(TestArgs_t &args);
+bool Test_TiledCachedArrayGPU_LeftAndRightHeavy_DblI32_B32_TSz2(
+    TestArgs_t &args);
+bool Test_TiledCachedArrayGPU_LeftRightAndBalanced_DblI32_B32_TSz2(
+    TestArgs_t &args);
+bool Test_TiledCachedArrayGPU_LeftHeavy_FltI16_B32_TSz2(TestArgs_t &args);
+bool Test_TiledCachedArrayGPU_RightHeavy_FltI16_B32_TSz2(TestArgs_t &args);
+bool Test_TiledCachedArrayGPU_Balanced_FltI16_B32_TSz2(TestArgs_t &args);
+bool Test_TiledCachedArrayGPU_LeftAndRightHeavy_FltI16_B32_TSz2(
+    TestArgs_t &args);
+bool Test_TiledCachedArrayGPU_LeftRightAndBalanced_FltI16_B32_TSz2(
+    TestArgs_t &args);
 
-bool Test_TiledCachedSparseGPU_LeftHeavy_DblI32_B32_TSz2(TestArgs_t& args);
-bool Test_TiledCachedSparseGPU_RightHeavy_DblI32_B32_TSz2(TestArgs_t& args);
-bool Test_TiledCachedSparseGPU_Balanced_DblI32_B32_TSz2(TestArgs_t& args);
-bool Test_TiledCachedSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2(TestArgs_t& args);
-bool Test_TiledCachedSparseGPU_LeftRightAndBalanced_DblI32_B32_TSz2(TestArgs_t& args);
-bool Test_TiledCachedSparseGPU_LeftHeavy_FltI16_B32_TSz2(TestArgs_t& args);
-bool Test_TiledCachedSparseGPU_RightHeavy_FltI16_B32_TSz2(TestArgs_t& args);
-bool Test_TiledCachedSparseGPU_Balanced_FltI16_B32_TSz2(TestArgs_t& args);
-bool Test_TiledCachedSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2(TestArgs_t& args);
-bool Test_TiledCachedSparseGPU_LeftRightAndBalanced_FltI16_B32_TSz2(TestArgs_t& args);
+bool Test_TiledCachedSparseGPU_LeftHeavy_DblI32_B32_TSz2(TestArgs_t &args);
+bool Test_TiledCachedSparseGPU_RightHeavy_DblI32_B32_TSz2(TestArgs_t &args);
+bool Test_TiledCachedSparseGPU_Balanced_DblI32_B32_TSz2(TestArgs_t &args);
+bool Test_TiledCachedSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2(
+    TestArgs_t &args);
+bool Test_TiledCachedSparseGPU_LeftRightAndBalanced_DblI32_B32_TSz2(
+    TestArgs_t &args);
+bool Test_TiledCachedSparseGPU_LeftHeavy_FltI16_B32_TSz2(TestArgs_t &args);
+bool Test_TiledCachedSparseGPU_RightHeavy_FltI16_B32_TSz2(TestArgs_t &args);
+bool Test_TiledCachedSparseGPU_Balanced_FltI16_B32_TSz2(TestArgs_t &args);
+bool Test_TiledCachedSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2(
+    TestArgs_t &args);
+bool Test_TiledCachedSparseGPU_LeftRightAndBalanced_FltI16_B32_TSz2(
+    TestArgs_t &args);
 
 // Random XGBoost GPU tests
-bool Test_GPU_1TreeXGB_Array_Scalar(TestArgs_t& args);
-bool Test_GPU_2TreeXGB_Array_Scalar(TestArgs_t& args);
-bool Test_GPU_4TreeXGB_Array_Scalar(TestArgs_t& args);
-bool Test_GPU_1TreeXGB_Array_Scalar_f32i16(TestArgs_t& args);
-bool Test_GPU_2TreeXGB_Array_Scalar_f32i16(TestArgs_t& args);
-bool Test_GPU_4TreeXGB_Array_Scalar_f32i16(TestArgs_t& args);
-bool Test_GPU_1TreeXGB_Sparse_Scalar(TestArgs_t& args);
-bool Test_GPU_2TreeXGB_Sparse_Scalar(TestArgs_t& args);
-bool Test_GPU_4TreeXGB_Sparse_Scalar(TestArgs_t& args);
-bool Test_GPU_1TreeXGB_Sparse_Scalar_f32i16(TestArgs_t& args);
-bool Test_GPU_2TreeXGB_Sparse_Scalar_f32i16(TestArgs_t& args);
-bool Test_GPU_4TreeXGB_Sparse_Scalar_f32i16(TestArgs_t& args);
-bool Test_GPU_1TreeXGB_Reorg_Scalar(TestArgs_t& args);
-bool Test_GPU_2TreeXGB_Reorg_Scalar(TestArgs_t& args);
-bool Test_GPU_4TreeXGB_Reorg_Scalar(TestArgs_t& args);
-bool Test_GPU_1TreeXGB_Reorg_Scalar_f32i16(TestArgs_t& args);
-bool Test_GPU_2TreeXGB_Reorg_Scalar_f32i16(TestArgs_t& args);
-bool Test_GPU_4TreeXGB_Reorg_Scalar_f32i16(TestArgs_t& args);
+bool Test_GPU_1TreeXGB_Array_Scalar(TestArgs_t &args);
+bool Test_GPU_2TreeXGB_Array_Scalar(TestArgs_t &args);
+bool Test_GPU_4TreeXGB_Array_Scalar(TestArgs_t &args);
+bool Test_GPU_1TreeXGB_Array_Scalar_f32i16(TestArgs_t &args);
+bool Test_GPU_2TreeXGB_Array_Scalar_f32i16(TestArgs_t &args);
+bool Test_GPU_4TreeXGB_Array_Scalar_f32i16(TestArgs_t &args);
+bool Test_GPU_1TreeXGB_Sparse_Scalar(TestArgs_t &args);
+bool Test_GPU_2TreeXGB_Sparse_Scalar(TestArgs_t &args);
+bool Test_GPU_4TreeXGB_Sparse_Scalar(TestArgs_t &args);
+bool Test_GPU_1TreeXGB_Sparse_Scalar_f32i16(TestArgs_t &args);
+bool Test_GPU_2TreeXGB_Sparse_Scalar_f32i16(TestArgs_t &args);
+bool Test_GPU_4TreeXGB_Sparse_Scalar_f32i16(TestArgs_t &args);
+bool Test_GPU_1TreeXGB_Reorg_Scalar(TestArgs_t &args);
+bool Test_GPU_2TreeXGB_Reorg_Scalar(TestArgs_t &args);
+bool Test_GPU_4TreeXGB_Reorg_Scalar(TestArgs_t &args);
+bool Test_GPU_1TreeXGB_Reorg_Scalar_f32i16(TestArgs_t &args);
+bool Test_GPU_2TreeXGB_Reorg_Scalar_f32i16(TestArgs_t &args);
+bool Test_GPU_4TreeXGB_Reorg_Scalar_f32i16(TestArgs_t &args);
 
 // Random XGB tests - tile size 4
-bool Test_GPU_1TreeXGB_Array_Tile4(TestArgs_t& args);
-bool Test_GPU_2TreeXGB_Array_Tile4(TestArgs_t& args);
-bool Test_GPU_4TreeXGB_Array_Tile4(TestArgs_t& args);
-bool Test_GPU_1TreeXGB_Array_Tile4_f32i16(TestArgs_t& args);
-bool Test_GPU_2TreeXGB_Array_Tile4_f32i16(TestArgs_t& args);
-bool Test_GPU_4TreeXGB_Array_Tile4_f32i16(TestArgs_t& args);
+bool Test_GPU_1TreeXGB_Array_Tile4(TestArgs_t &args);
+bool Test_GPU_2TreeXGB_Array_Tile4(TestArgs_t &args);
+bool Test_GPU_4TreeXGB_Array_Tile4(TestArgs_t &args);
+bool Test_GPU_1TreeXGB_Array_Tile4_f32i16(TestArgs_t &args);
+bool Test_GPU_2TreeXGB_Array_Tile4_f32i16(TestArgs_t &args);
+bool Test_GPU_4TreeXGB_Array_Tile4_f32i16(TestArgs_t &args);
 
-bool Test_GPU_1TreeXGB_Sparse_Tile4(TestArgs_t& args);
-bool Test_GPU_2TreeXGB_Sparse_Tile4(TestArgs_t& args);
-bool Test_GPU_4TreeXGB_Sparse_Tile4(TestArgs_t& args);
-bool Test_GPU_1TreeXGB_Sparse_Tile4_f32i16(TestArgs_t& args);
-bool Test_GPU_2TreeXGB_Sparse_Tile4_f32i16(TestArgs_t& args);
-bool Test_GPU_4TreeXGB_Sparse_Tile4_f32i16(TestArgs_t& args);
+bool Test_GPU_1TreeXGB_Sparse_Tile4(TestArgs_t &args);
+bool Test_GPU_2TreeXGB_Sparse_Tile4(TestArgs_t &args);
+bool Test_GPU_4TreeXGB_Sparse_Tile4(TestArgs_t &args);
+bool Test_GPU_1TreeXGB_Sparse_Tile4_f32i16(TestArgs_t &args);
+bool Test_GPU_2TreeXGB_Sparse_Tile4_f32i16(TestArgs_t &args);
+bool Test_GPU_4TreeXGB_Sparse_Tile4_f32i16(TestArgs_t &args);
 
 // Shared forest Random XGB Tests - Scalar
-bool Test_GPU_SharedForest_1TreeXGB_Array_Scalar(TestArgs_t& args);
-bool Test_GPU_SharedForest_2TreeXGB_Array_Scalar(TestArgs_t& args);
-bool Test_GPU_SharedForest_4TreeXGB_Array_Scalar(TestArgs_t& args);
-bool Test_GPU_SharedForest_1TreeXGB_Array_Scalar_f32i16(TestArgs_t& args);
-bool Test_GPU_SharedForest_2TreeXGB_Array_Scalar_f32i16(TestArgs_t& args);
-bool Test_GPU_SharedForest_4TreeXGB_Array_Scalar_f32i16(TestArgs_t& args);
+bool Test_GPU_SharedForest_1TreeXGB_Array_Scalar(TestArgs_t &args);
+bool Test_GPU_SharedForest_2TreeXGB_Array_Scalar(TestArgs_t &args);
+bool Test_GPU_SharedForest_4TreeXGB_Array_Scalar(TestArgs_t &args);
+bool Test_GPU_SharedForest_1TreeXGB_Array_Scalar_f32i16(TestArgs_t &args);
+bool Test_GPU_SharedForest_2TreeXGB_Array_Scalar_f32i16(TestArgs_t &args);
+bool Test_GPU_SharedForest_4TreeXGB_Array_Scalar_f32i16(TestArgs_t &args);
 
-bool Test_GPU_SharedForest_1TreeXGB_Sparse_Scalar(TestArgs_t& args);
-bool Test_GPU_SharedForest_2TreeXGB_Sparse_Scalar(TestArgs_t& args);
-bool Test_GPU_SharedForest_4TreeXGB_Sparse_Scalar(TestArgs_t& args);
-bool Test_GPU_SharedForest_1TreeXGB_Sparse_Scalar_f32i16(TestArgs_t& args);
-bool Test_GPU_SharedForest_2TreeXGB_Sparse_Scalar_f32i16(TestArgs_t& args);
-bool Test_GPU_SharedForest_4TreeXGB_Sparse_Scalar_f32i16(TestArgs_t& args);
+bool Test_GPU_SharedForest_1TreeXGB_Sparse_Scalar(TestArgs_t &args);
+bool Test_GPU_SharedForest_2TreeXGB_Sparse_Scalar(TestArgs_t &args);
+bool Test_GPU_SharedForest_4TreeXGB_Sparse_Scalar(TestArgs_t &args);
+bool Test_GPU_SharedForest_1TreeXGB_Sparse_Scalar_f32i16(TestArgs_t &args);
+bool Test_GPU_SharedForest_2TreeXGB_Sparse_Scalar_f32i16(TestArgs_t &args);
+bool Test_GPU_SharedForest_4TreeXGB_Sparse_Scalar_f32i16(TestArgs_t &args);
 
-bool Test_GPU_SharedForest_1TreeXGB_Reorg_Scalar(TestArgs_t& args);
-bool Test_GPU_SharedForest_2TreeXGB_Reorg_Scalar(TestArgs_t& args);
-bool Test_GPU_SharedForest_4TreeXGB_Reorg_Scalar(TestArgs_t& args);
-bool Test_GPU_SharedForest_1TreeXGB_Reorg_Scalar_f32i16(TestArgs_t& args);
-bool Test_GPU_SharedForest_2TreeXGB_Reorg_Scalar_f32i16(TestArgs_t& args);
-bool Test_GPU_SharedForest_4TreeXGB_Reorg_Scalar_f32i16(TestArgs_t& args);
+bool Test_GPU_SharedForest_1TreeXGB_Reorg_Scalar(TestArgs_t &args);
+bool Test_GPU_SharedForest_2TreeXGB_Reorg_Scalar(TestArgs_t &args);
+bool Test_GPU_SharedForest_4TreeXGB_Reorg_Scalar(TestArgs_t &args);
+bool Test_GPU_SharedForest_1TreeXGB_Reorg_Scalar_f32i16(TestArgs_t &args);
+bool Test_GPU_SharedForest_2TreeXGB_Reorg_Scalar_f32i16(TestArgs_t &args);
+bool Test_GPU_SharedForest_4TreeXGB_Reorg_Scalar_f32i16(TestArgs_t &args);
 
-bool Test_GPU_CachePartialForest1Tree_2TreeXGB_Sparse_Scalar(TestArgs_t& args);
-bool Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar(TestArgs_t& args);
-bool Test_GPU_CachePartialForest2Trees_2TreeXGB_Sparse_Scalar_f32i16(TestArgs_t& args);
-bool Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar_f32i16(TestArgs_t& args);
+bool Test_GPU_CachePartialForest1Tree_2TreeXGB_Sparse_Scalar(TestArgs_t &args);
+bool Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar(TestArgs_t &args);
+bool Test_GPU_CachePartialForest2Trees_2TreeXGB_Sparse_Scalar_f32i16(
+    TestArgs_t &args);
+bool Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar_f32i16(
+    TestArgs_t &args);
 
-bool Test_GPU_CachePartialForest1Tree_2TreeXGB_Array_Scalar(TestArgs_t& args);
-bool Test_GPU_CachePartialForest1Tree_4TreeXGB_Array_Scalar(TestArgs_t& args);
-bool Test_GPU_CachePartialForest2Trees_2TreeXGB_Array_Scalar_f32i16(TestArgs_t& args);
-bool Test_GPU_CachePartialForest2Trees_4TreeXGB_Array_Scalar_f32i16(TestArgs_t& args);
+bool Test_GPU_CachePartialForest1Tree_2TreeXGB_Array_Scalar(TestArgs_t &args);
+bool Test_GPU_CachePartialForest1Tree_4TreeXGB_Array_Scalar(TestArgs_t &args);
+bool Test_GPU_CachePartialForest2Trees_2TreeXGB_Array_Scalar_f32i16(
+    TestArgs_t &args);
+bool Test_GPU_CachePartialForest2Trees_4TreeXGB_Array_Scalar_f32i16(
+    TestArgs_t &args);
 
-bool Test_GPU_CachePartialForest1Tree_2TreeXGB_Reorg_Scalar(TestArgs_t& args);
-bool Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar(TestArgs_t& args);
-bool Test_GPU_CachePartialForest2Trees_2TreeXGB_Reorg_Scalar_f32i16(TestArgs_t& args);
-bool Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar_f32i16(TestArgs_t& args);
+bool Test_GPU_CachePartialForest1Tree_2TreeXGB_Reorg_Scalar(TestArgs_t &args);
+bool Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar(TestArgs_t &args);
+bool Test_GPU_CachePartialForest2Trees_2TreeXGB_Reorg_Scalar_f32i16(
+    TestArgs_t &args);
+bool Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar_f32i16(
+    TestArgs_t &args);
 
-void InitializeVectorWithRandValues(std::vector<double>& vec) {
-  for(size_t i=0 ; i<vec.size() ; ++i)
-    vec[i] = (double)rand()/RAND_MAX;
+// Tree parallelization tests
+bool Test_TreePar_LeftRightAndBalanced_DblI32(TestArgs_t &args);
+bool Test_NestedTreePar_LeftRightAndBalanced_DblI32(TestArgs_t &args);
+
+void InitializeVectorWithRandValues(std::vector<double> &vec) {
+  for (size_t i = 0; i < vec.size(); ++i)
+    vec[i] = (double)rand() / RAND_MAX;
 }
 
-template<typename ThresholdType, typename IndexType>
-bool Test_BufferInit_RightHeavy(TestArgs_t& args) {
+template <typename ThresholdType, typename IndexType>
+bool Test_BufferInit_RightHeavy(TestArgs_t &args) {
   using TileType = NumericalTileType_Packed<ThresholdType, IndexType>;
 
   MLIRContext context;
@@ -635,65 +713,81 @@ bool Test_BufferInit_RightHeavy(TestArgs_t& args) {
   auto expectedArray = AddRightHeavyTree<TileType>(forest);
 
   // Construct basic tree types for the tree
-  // (Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type thresholdType, Type featureIndexType
+  // (Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type
+  // thresholdType, Type featureIndexType
   auto thresholdType = TreeBeard::GetMLIRType(ThresholdType(), builder);
   auto indexType = TreeBeard::GetMLIRType(IndexType(), builder);
-  auto treeType = mlir::decisionforest::TreeType::get(thresholdType, 1 /*tileSize*/, thresholdType, indexType);
-  //(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType, Type treeType)
-  auto forestType = mlir::decisionforest::TreeEnsembleType::get(thresholdType, 1, thresholdType /*HACK type doesn't matter for this test*/,
-                                                                mlir::decisionforest::ReductionType::kAdd, treeType);
-  
-  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
-  decisionforest::ConstructModelSerializer(GetGlobalJSONNameForTests())->Persist(forest, forestType);
-  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
+  auto treeType = mlir::decisionforest::TreeType::get(
+      thresholdType, 1 /*tileSize*/, thresholdType, indexType);
+  //(Type resultType, size_t numTrees, Type rowType, ReductionType
+  // reductionType, Type treeType)
+  auto forestType = mlir::decisionforest::TreeEnsembleType::get(
+      thresholdType, 1,
+      thresholdType /*HACK type doesn't matter for this test*/,
+      mlir::decisionforest::ReductionType::kAdd, treeType);
+
+  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(
+      GetGlobalJSONNameForTests());
+  decisionforest::ConstructModelSerializer(GetGlobalJSONNameForTests())
+      ->Persist(forest, forestType);
+  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(
+      GetGlobalJSONNameForTests());
   mlir::decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
 
-  std::vector<TileType> serializedTree(std::pow(2, 3) - 1); //Depth of the tree is 3, so this is the size of the dense array
-  // InitializeBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets)
+  std::vector<TileType> serializedTree(
+      std::pow(2, 3) -
+      1); // Depth of the tree is 3, so this is the size of the dense array
+  // InitializeBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth,
+  // int32_t indexBitWidth, std::vector<int32_t>& treeOffsets)
   std::vector<int32_t> offsets(1, -1);
-  int32_t thresholdSize = sizeof(ThresholdType)*8;
-  int32_t indexSize = sizeof(IndexType)*8;
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeBuffer(serializedTree.data(), 1, thresholdSize, indexSize, offsets);
+  int32_t thresholdSize = sizeof(ThresholdType) * 8;
+  int32_t indexSize = sizeof(IndexType) * 8;
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeBuffer(
+      serializedTree.data(), 1, thresholdSize, indexSize, offsets);
   Test_ASSERT(expectedArray == serializedTree);
   Test_ASSERT(offsets[0] == 0);
-  
+
   std::vector<int64_t> offsetVec(1, -1);
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(offsetVec.data(), 1, thresholdSize, indexSize);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(
+      offsetVec.data(), 1, thresholdSize, indexSize);
   Test_ASSERT(offsetVec[0] == 0);
-  
+
   std::vector<int64_t> lengthVec(1, -1);
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthVec.data(), 1, thresholdSize, indexSize);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(
+      lengthVec.data(), 1, thresholdSize, indexSize);
   Test_ASSERT(lengthVec[0] == 7);
 
   return true;
 }
 
-bool Test_BufferInitializationWithOneTree_RightHeavy(TestArgs_t& args) {
+bool Test_BufferInitializationWithOneTree_RightHeavy(TestArgs_t &args) {
   return Test_BufferInit_RightHeavy<double, int32_t>(args);
 }
 
-bool Test_BufferInitializationWithOneTree_RightHeavy_Int16(TestArgs_t& args) {
+bool Test_BufferInitializationWithOneTree_RightHeavy_Int16(TestArgs_t &args) {
   return Test_BufferInit_RightHeavy<double, int16_t>(args);
 }
 
-bool Test_BufferInitializationWithOneTree_RightHeavy_Int8(TestArgs_t& args) {
+bool Test_BufferInitializationWithOneTree_RightHeavy_Int8(TestArgs_t &args) {
   return Test_BufferInit_RightHeavy<double, int8_t>(args);
 }
 
-bool Test_BufferInitializationWithOneTree_RightHeavy_Float(TestArgs_t& args) {
+bool Test_BufferInitializationWithOneTree_RightHeavy_Float(TestArgs_t &args) {
   return Test_BufferInit_RightHeavy<float, int32_t>(args);
 }
 
-bool Test_BufferInitializationWithOneTree_RightHeavy_FloatInt16(TestArgs_t& args) {
+bool Test_BufferInitializationWithOneTree_RightHeavy_FloatInt16(
+    TestArgs_t &args) {
   return Test_BufferInit_RightHeavy<float, int16_t>(args);
 }
 
-bool Test_BufferInitializationWithOneTree_RightHeavy_FloatInt8(TestArgs_t& args) {
+bool Test_BufferInitializationWithOneTree_RightHeavy_FloatInt8(
+    TestArgs_t &args) {
   return Test_BufferInit_RightHeavy<float, int8_t>(args);
 }
 
-template<typename ThresholdType, typename IndexType>
-bool Test_BufferInitialization_TwoTrees(TestArgs_t& args) {
+template <typename ThresholdType, typename IndexType>
+bool Test_BufferInitialization_TwoTrees(TestArgs_t &args) {
   using TileType = NumericalTileType_Packed<ThresholdType, IndexType>;
 
   MLIRContext context;
@@ -703,124 +797,161 @@ bool Test_BufferInitialization_TwoTrees(TestArgs_t& args) {
   mlir::decisionforest::DecisionForest forest;
   auto expectedArray = AddRightHeavyTree<TileType>(forest);
   auto expectedArray2 = AddLeftHeavyTree<TileType>(forest);
-  expectedArray.insert(std::end(expectedArray), std::begin(expectedArray2), std::end(expectedArray2));
+  expectedArray.insert(std::end(expectedArray), std::begin(expectedArray2),
+                       std::end(expectedArray2));
 
   // Construct basic tree types for the tree
-  // (Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type thresholdType, Type featureIndexType
+  // (Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type
+  // thresholdType, Type featureIndexType
   auto thresholdType = TreeBeard::GetMLIRType(ThresholdType(), builder);
   auto indexType = TreeBeard::GetMLIRType(IndexType(), builder);
-  auto treeType = mlir::decisionforest::TreeType::get(thresholdType, 1 /*tileSize*/, thresholdType, indexType);
-  //(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType, Type treeType)
-  auto forestType = mlir::decisionforest::TreeEnsembleType::get(thresholdType, 1, thresholdType /*HACK type doesn't matter for this test*/,
-                                                                mlir::decisionforest::ReductionType::kAdd, treeType);
-  
-  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
-  decisionforest::ConstructModelSerializer(GetGlobalJSONNameForTests())->Persist(forest, forestType);
-  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
+  auto treeType = mlir::decisionforest::TreeType::get(
+      thresholdType, 1 /*tileSize*/, thresholdType, indexType);
+  //(Type resultType, size_t numTrees, Type rowType, ReductionType
+  // reductionType, Type treeType)
+  auto forestType = mlir::decisionforest::TreeEnsembleType::get(
+      thresholdType, 1,
+      thresholdType /*HACK type doesn't matter for this test*/,
+      mlir::decisionforest::ReductionType::kAdd, treeType);
+
+  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(
+      GetGlobalJSONNameForTests());
+  decisionforest::ConstructModelSerializer(GetGlobalJSONNameForTests())
+      ->Persist(forest, forestType);
+  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(
+      GetGlobalJSONNameForTests());
   mlir::decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
 
-  std::vector<TileType> serializedTree(2*(std::pow(2, 3) - 1)); //Depth of the tree is 3, so this is the size of the dense array
-  // InitializeBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets)
-  int32_t thresholdSize = sizeof(ThresholdType)*8;
-  int32_t indexSize = sizeof(IndexType)*8;
+  std::vector<TileType> serializedTree(
+      2 *
+      (std::pow(2, 3) -
+       1)); // Depth of the tree is 3, so this is the size of the dense array
+  // InitializeBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth,
+  // int32_t indexBitWidth, std::vector<int32_t>& treeOffsets)
+  int32_t thresholdSize = sizeof(ThresholdType) * 8;
+  int32_t indexSize = sizeof(IndexType) * 8;
   std::vector<int32_t> offsets(2, -1);
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeBuffer(serializedTree.data(), 1, thresholdSize, indexSize, offsets);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeBuffer(
+      serializedTree.data(), 1, thresholdSize, indexSize, offsets);
   Test_ASSERT(expectedArray == serializedTree);
   Test_ASSERT(offsets[0] == 0);
   Test_ASSERT(offsets[1] == 7);
 
   std::vector<int64_t> offsetVec(2, -1);
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(offsetVec.data(), 1, thresholdSize, indexSize);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(
+      offsetVec.data(), 1, thresholdSize, indexSize);
   Test_ASSERT(offsetVec[0] == 0);
   Test_ASSERT(offsetVec[1] == 7);
 
   std::vector<int64_t> lengthVec(2, -1);
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthVec.data(), 1, thresholdSize, indexSize);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(
+      lengthVec.data(), 1, thresholdSize, indexSize);
   Test_ASSERT(lengthVec[0] == 7);
   Test_ASSERT(lengthVec[1] == 7);
 
   return true;
 }
 
-bool Test_BufferInitializationWithOneTree_LeftHeavy(TestArgs_t& args) {
+bool Test_BufferInitializationWithOneTree_LeftHeavy(TestArgs_t &args) {
   using DoubleInt32Tile = NumericalTileType_Packed<double, int32_t>;
 
   MLIRContext context;
   TreeBeard::InitializeMLIRContext(context);
 
   mlir::decisionforest::DecisionForest forest;
-  auto expectedArray = AddLeftHeavyTree<DoubleInt32Tile>(forest);  
+  auto expectedArray = AddLeftHeavyTree<DoubleInt32Tile>(forest);
 
   // Construct basic tree types for the tree
-  // (Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type thresholdType, Type featureIndexType
+  // (Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type
+  // thresholdType, Type featureIndexType
   auto doubleType = mlir::Float64Type::get(&context);
   auto int32Type = mlir::IntegerType::get(&context, 32);
-  auto treeType = mlir::decisionforest::TreeType::get(doubleType, 1 /*tileSize*/, doubleType, int32Type);
-  //(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType, Type treeType)
-  auto forestType = mlir::decisionforest::TreeEnsembleType::get(doubleType, 1, doubleType /*HACK type doesn't matter for this test*/,
-                                                                mlir::decisionforest::ReductionType::kAdd, treeType);
-  
-  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
-  decisionforest::ConstructModelSerializer(GetGlobalJSONNameForTests())->Persist(forest, forestType);
-  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
-  mlir::decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
-  
-  std::vector<DoubleInt32Tile> serializedTree(std::pow(2, 3) - 1); //Depth of the tree is 3, so this is the size of the dense array
+  auto treeType = mlir::decisionforest::TreeType::get(
+      doubleType, 1 /*tileSize*/, doubleType, int32Type);
+  //(Type resultType, size_t numTrees, Type rowType, ReductionType
+  // reductionType, Type treeType)
+  auto forestType = mlir::decisionforest::TreeEnsembleType::get(
+      doubleType, 1, doubleType /*HACK type doesn't matter for this test*/,
+      mlir::decisionforest::ReductionType::kAdd, treeType);
 
-  // InitializeBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth, int32_t indexBitWidth, std::vector<int32_t>& treeOffsets)
+  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(
+      GetGlobalJSONNameForTests());
+  decisionforest::ConstructModelSerializer(GetGlobalJSONNameForTests())
+      ->Persist(forest, forestType);
+  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(
+      GetGlobalJSONNameForTests());
+  mlir::decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
+
+  std::vector<DoubleInt32Tile> serializedTree(
+      std::pow(2, 3) -
+      1); // Depth of the tree is 3, so this is the size of the dense array
+
+  // InitializeBuffer(void* bufPtr, int32_t tileSize, int32_t thresholdBitWidth,
+  // int32_t indexBitWidth, std::vector<int32_t>& treeOffsets)
   std::vector<int32_t> offsets(1, -1);
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeBuffer(serializedTree.data(), 1, 64, 32, offsets);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeBuffer(
+      serializedTree.data(), 1, 64, 32, offsets);
   Test_ASSERT(expectedArray == serializedTree);
   Test_ASSERT(offsets[0] == 0);
 
   std::vector<int64_t> offsetVec(1, -1);
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(offsetVec.data(), 1, 64, 32);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(
+      offsetVec.data(), 1, 64, 32);
   Test_ASSERT(offsetVec[0] == 0);
 
   std::vector<int64_t> lengthVec(1, -1);
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthVec.data(), 1, 64, 32);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(
+      lengthVec.data(), 1, 64, 32);
   Test_ASSERT(lengthVec[0] == 7);
 
   return true;
 }
 
-bool Test_BufferInitializationWithTwoTrees(TestArgs_t& args) {
+bool Test_BufferInitializationWithTwoTrees(TestArgs_t &args) {
   return Test_BufferInitialization_TwoTrees<double, int32_t>(args);
 }
 
-bool Test_BufferInitializationWithTwoTrees_Int16(TestArgs_t& args) {
+bool Test_BufferInitializationWithTwoTrees_Int16(TestArgs_t &args) {
   return Test_BufferInitialization_TwoTrees<double, int16_t>(args);
 }
 
-bool Test_BufferInitializationWithTwoTrees_Int8(TestArgs_t& args) {
+bool Test_BufferInitializationWithTwoTrees_Int8(TestArgs_t &args) {
   return Test_BufferInitialization_TwoTrees<double, int8_t>(args);
 }
 
-bool Test_BufferInitializationWithTwoTrees_Float(TestArgs_t& args) {
+bool Test_BufferInitializationWithTwoTrees_Float(TestArgs_t &args) {
   return Test_BufferInitialization_TwoTrees<float, int32_t>(args);
 }
 
-bool Test_BufferInitializationWithTwoTrees_FloatInt16(TestArgs_t& args) {
+bool Test_BufferInitializationWithTwoTrees_FloatInt16(TestArgs_t &args) {
   return Test_BufferInitialization_TwoTrees<float, int16_t>(args);
 }
 
-bool Test_BufferInitializationWithTwoTrees_FloatInt8(TestArgs_t& args) {
+bool Test_BufferInitializationWithTwoTrees_FloatInt8(TestArgs_t &args) {
   return Test_BufferInitialization_TwoTrees<float, int8_t>(args);
 }
 
 // IR Tests
-bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestConstructor, std::vector< std::vector<double> >& inputData,
-                                   int32_t childIndexBitWidth=1, ScheduleManipulator_t scheduleManipulator=nullptr) {
-  auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
-  auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);
+bool Test_ForestCodeGen_BatchSize1(
+    TestArgs_t &args, ForestConstructor_t forestConstructor,
+    std::vector<std::vector<double>> &inputData, int32_t childIndexBitWidth = 1,
+    ScheduleManipulator_t scheduleManipulator = nullptr) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  auto serializer =
+      decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);
 
   MLIRContext context;
   TreeBeard::InitializeMLIRContext(context);
 
-  FixedTreeIRConstructor<> irConstructor(context, serializer, 1, forestConstructor);
+  FixedTreeIRConstructor<> irConstructor(context, serializer, 1,
+                                         forestConstructor);
   irConstructor.ConstructForest();
-  // If sparse representation is turned on, then child index bit width should be passed
-  assert (!mlir::decisionforest::UseSparseTreeRepresentation || childIndexBitWidth!=1 );
+  // If sparse representation is turned on, then child index bit width should be
+  // passed
+  assert(!mlir::decisionforest::UseSparseTreeRepresentation ||
+         childIndexBitWidth != 1);
   irConstructor.SetChildIndexBitWidth(childIndexBitWidth);
   auto module = irConstructor.GetEvaluationFunction();
 
@@ -834,9 +965,7 @@ bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   mlir::decisionforest::LowerReduceOps(context, module);
   // module->dump();
   auto representation = decisionforest::ConstructRepresentation();
-  mlir::decisionforest::LowerEnsembleToMemrefs(context,
-                                               module,
-                                               serializer,
+  mlir::decisionforest::LowerEnsembleToMemrefs(context, module, serializer,
                                                representation);
   // module->dump();
   mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
@@ -844,12 +973,13 @@ bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   mlir::decisionforest::LowerToLLVM(context, module, representation);
   // module->dump();
   // mlir::decisionforest::dumpLLVMIR(module);
-  decisionforest::InferenceRunner inferenceRunner(serializer, module, 1, 64, 32);
-  
+  decisionforest::InferenceRunner inferenceRunner(serializer, module, 1, 64,
+                                                  32);
+
   // inferenceRunner.PrintLengthsArray();
   // inferenceRunner.PrintOffsetsArray();
-  
-  for(auto& row : inputData) {
+
+  for (auto &row : inputData) {
     double result = -1;
     inferenceRunner.RunInference<double, double>(row.data(), &result);
     double expectedResult = irConstructor.GetForest().Predict(row);
@@ -858,16 +988,21 @@ bool Test_ForestCodeGen_BatchSize1(TestArgs_t& args, ForestConstructor_t forestC
   return true;
 }
 
-bool Test_ForestCodeGen_VariableBatchSize(TestArgs_t& args, ForestConstructor_t forestConstructor, 
-                                          int64_t batchSize, std::vector< std::vector<double> >& inputData, int32_t childIndexBitWidth=1,
-                                          ScheduleManipulator_t scheduleManipulator=nullptr) {
-  auto modelGlobalsJSONPath = TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(TreeBeard::test::GetGlobalJSONNameForTests());
-  auto serializer = decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);                                            
+bool Test_ForestCodeGen_VariableBatchSize(
+    TestArgs_t &args, ForestConstructor_t forestConstructor, int64_t batchSize,
+    std::vector<std::vector<double>> &inputData, int32_t childIndexBitWidth = 1,
+    ScheduleManipulator_t scheduleManipulator = nullptr) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  auto serializer =
+      decisionforest::ConstructModelSerializer(modelGlobalsJSONPath);
 
   MLIRContext context;
   TreeBeard::InitializeMLIRContext(context);
 
-  FixedTreeIRConstructor<> irConstructor(context, serializer, batchSize, forestConstructor);
+  FixedTreeIRConstructor<> irConstructor(context, serializer, batchSize,
+                                         forestConstructor);
   irConstructor.ConstructForest();
   irConstructor.SetChildIndexBitWidth(childIndexBitWidth);
   auto module = irConstructor.GetEvaluationFunction();
@@ -876,7 +1011,7 @@ bool Test_ForestCodeGen_VariableBatchSize(TestArgs_t& args, ForestConstructor_t 
     auto schedule = irConstructor.GetSchedule();
     scheduleManipulator(schedule);
   }
-  
+
   // module->dump();
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
   // module->dump();
@@ -885,27 +1020,27 @@ bool Test_ForestCodeGen_VariableBatchSize(TestArgs_t& args, ForestConstructor_t 
   // module->dump();
 
   auto representation = decisionforest::ConstructRepresentation();
-  mlir::decisionforest::LowerEnsembleToMemrefs(context,
-                                               module,
-                                               serializer,
+  mlir::decisionforest::LowerEnsembleToMemrefs(context, module, serializer,
                                                representation);
   mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();
   mlir::decisionforest::LowerToLLVM(context, module, representation);
   // module->dump();
   // mlir::decisionforest::dumpLLVMIR(module);
-  decisionforest::InferenceRunner inferenceRunner(serializer, module, 1, 64, 32);
-  
+  decisionforest::InferenceRunner inferenceRunner(serializer, module, 1, 64,
+                                                  32);
+
   // inferenceRunner.PrintLengthsArray();
   // inferenceRunner.PrintOffsetsArray();
-  
-  for(auto& batch : inputData) {
-    assert (batch.size() % batchSize == 0);
-    size_t rowSize = batch.size()/batchSize;
+
+  for (auto &batch : inputData) {
+    assert(batch.size() % batchSize == 0);
+    size_t rowSize = batch.size() / batchSize;
     std::vector<double> result(batchSize, -1);
     inferenceRunner.RunInference<double, double>(batch.data(), result.data());
-    for(int64_t rowIdx=0 ; rowIdx<batchSize ; ++rowIdx) {
-      std::vector<double> row(batch.begin() + rowIdx*rowSize, batch.begin() + (rowIdx+1)*rowSize);
+    for (int64_t rowIdx = 0; rowIdx < batchSize; ++rowIdx) {
+      std::vector<double> row(batch.begin() + rowIdx * rowSize,
+                              batch.begin() + (rowIdx + 1) * rowSize);
       double expectedResult = irConstructor.GetForest().Predict(row);
       Test_ASSERT(FPEqual(result[rowIdx], expectedResult));
     }
@@ -924,151 +1059,195 @@ std::vector<std::vector<double>> GetBatchSize1Data() {
 std::vector<std::vector<double>> GetBatchSize2Data() {
   std::vector<double> inputData1 = {0.1, 0.2, 0.4, 0.3, 0.25,
                                     0.1, 0.2, 0.6, 0.3, 0.25};
-  std::vector<std::vector<double>> data = { inputData1 };
+  std::vector<std::vector<double>> data = {inputData1};
   return data;
 }
 
-bool Test_CodeGeneration_LeftHeavy_BatchSize1(TestArgs_t& args) {
+bool Test_CodeGeneration_LeftHeavy_BatchSize1(TestArgs_t &args) {
   auto data = GetBatchSize1Data();
-  return Test_ForestCodeGen_BatchSize1(args, AddLeftHeavyTree<DoubleInt32Tile>, data);
+  return Test_ForestCodeGen_BatchSize1(args, AddLeftHeavyTree<DoubleInt32Tile>,
+                                       data);
 }
 
-bool Test_CodeGeneration_RightHeavy_BatchSize1(TestArgs_t& args) {
+bool Test_CodeGeneration_RightHeavy_BatchSize1(TestArgs_t &args) {
   auto data = GetBatchSize1Data();
-  return Test_ForestCodeGen_BatchSize1(args, AddRightHeavyTree<DoubleInt32Tile>, data);
+  return Test_ForestCodeGen_BatchSize1(args, AddRightHeavyTree<DoubleInt32Tile>,
+                                       data);
 }
 
-bool Test_CodeGeneration_RightAndLeftHeavy_BatchSize1(TestArgs_t& args) {
+bool Test_CodeGeneration_RightAndLeftHeavy_BatchSize1(TestArgs_t &args) {
   auto data = GetBatchSize1Data();
-  return Test_ForestCodeGen_BatchSize1(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, data);
+  return Test_ForestCodeGen_BatchSize1(
+      args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, data);
 }
 
-bool Test_CodeGeneration_LeftHeavy_BatchSize2(TestArgs_t& args) {
+bool Test_CodeGeneration_LeftHeavy_BatchSize2(TestArgs_t &args) {
   auto data = GetBatchSize2Data();
-  return Test_ForestCodeGen_VariableBatchSize(args, AddLeftHeavyTree<DoubleInt32Tile>, 2, data);
+  return Test_ForestCodeGen_VariableBatchSize(
+      args, AddLeftHeavyTree<DoubleInt32Tile>, 2, data);
 }
 
-bool Test_CodeGeneration_RightHeavy_BatchSize2(TestArgs_t& args) {
+bool Test_CodeGeneration_RightHeavy_BatchSize2(TestArgs_t &args) {
   auto data = GetBatchSize2Data();
-  return Test_ForestCodeGen_VariableBatchSize(args, AddRightHeavyTree<DoubleInt32Tile>, 2, data);
+  return Test_ForestCodeGen_VariableBatchSize(
+      args, AddRightHeavyTree<DoubleInt32Tile>, 2, data);
 }
 
-bool Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2(TestArgs_t& args) {
+bool Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2(
+    TestArgs_t &args) {
   auto data = GetBatchSize2Data();
-  return Test_ForestCodeGen_VariableBatchSize(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 2, data);
+  return Test_ForestCodeGen_VariableBatchSize(
+      args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 2, data);
 }
 
 // ===----------------------------------------=== //
 // Basic non-trivial schedule code gen tests
 // ===----------------------------------------=== //
 
-bool Test_CodeGeneration_LeftHeavy_BatchSize2_XGBoostSchedule(TestArgs_t& args) {
+bool Test_CodeGeneration_LeftHeavy_BatchSize2_XGBoostSchedule(
+    TestArgs_t &args) {
   auto data = GetBatchSize2Data();
-  return Test_ForestCodeGen_VariableBatchSize(args, AddLeftHeavyTree<DoubleInt32Tile>, 2, data, 1, OneTreeAtATimeSchedule);
+  return Test_ForestCodeGen_VariableBatchSize(
+      args, AddLeftHeavyTree<DoubleInt32Tile>, 2, data, 1,
+      OneTreeAtATimeSchedule);
 }
 
-bool Test_CodeGeneration_RightHeavy_BatchSize2_XGBoostSchedule(TestArgs_t& args) {
+bool Test_CodeGeneration_RightHeavy_BatchSize2_XGBoostSchedule(
+    TestArgs_t &args) {
   auto data = GetBatchSize2Data();
-  return Test_ForestCodeGen_VariableBatchSize(args, AddRightHeavyTree<DoubleInt32Tile>, 2, data, 1, OneTreeAtATimeSchedule);
+  return Test_ForestCodeGen_VariableBatchSize(
+      args, AddRightHeavyTree<DoubleInt32Tile>, 2, data, 1,
+      OneTreeAtATimeSchedule);
 }
 
-bool Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_XGBoostSchedule(TestArgs_t& args) {
+bool Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_XGBoostSchedule(
+    TestArgs_t &args) {
   auto data = GetBatchSize2Data();
-  return Test_ForestCodeGen_VariableBatchSize(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 2, data, 1, OneTreeAtATimeSchedule);
+  return Test_ForestCodeGen_VariableBatchSize(
+      args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 2, data, 1,
+      OneTreeAtATimeSchedule);
 }
 
-bool Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_UnrollTreeLoop(TestArgs_t& args) {
+bool Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_UnrollTreeLoop(
+    TestArgs_t &args) {
   auto data = GetBatchSize2Data();
-  return Test_ForestCodeGen_VariableBatchSize(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 2, data, 1, UnrollTreeLoop);
+  return Test_ForestCodeGen_VariableBatchSize(
+      args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 2, data, 1,
+      UnrollTreeLoop);
 }
 
 // ===----------------------------------------=== //
 // Basic CPU input caching schedule code gen tests
 // ===----------------------------------------=== //
 
-void BasicCachedSchedule(mlir::decisionforest::Schedule* schedule) {
-  auto& batchIndexVar = schedule->GetBatchIndex();
+void BasicCachedSchedule(mlir::decisionforest::Schedule *schedule) {
+  auto &batchIndexVar = schedule->GetBatchIndex();
 
-  auto& b0 = schedule->NewIndexVariable("b0");
-  auto& b1 = schedule->NewIndexVariable("b1");
-  
+  auto &b0 = schedule->NewIndexVariable("b0");
+  auto &b1 = schedule->NewIndexVariable("b1");
+
   schedule->Tile(batchIndexVar, b0, b1, 2);
   schedule->Cache(b0);
 }
 
-void PopulateDataForBatchSize(std::vector<std::vector<double>>& inputData, int32_t batchSize, int32_t numBatches) {
-  for (int32_t i=0; i<numBatches ; ++i) {
+void PopulateDataForBatchSize(std::vector<std::vector<double>> &inputData,
+                              int32_t batchSize, int32_t numBatches) {
+  for (int32_t i = 0; i < numBatches; ++i) {
     inputData.emplace_back(std::vector<double>());
-    auto& firstVec = inputData.back();
-    for (int32_t j=0 ; j<batchSize/2 ; ++j) {
-      auto data=GetBatchSize2Data();
+    auto &firstVec = inputData.back();
+    for (int32_t j = 0; j < batchSize / 2; ++j) {
+      auto data = GetBatchSize2Data();
       firstVec.insert(firstVec.end(), data.front().begin(), data.front().end());
     }
   }
 }
 
-bool Test_CodeGeneration_LeftHeavy_BatchSize8_CacheInputSchedule(TestArgs_t& args) {
+bool Test_CodeGeneration_LeftHeavy_BatchSize8_CacheInputSchedule(
+    TestArgs_t &args) {
   std::vector<std::vector<double>> inputData;
   PopulateDataForBatchSize(inputData, 8, 4);
-  return Test_ForestCodeGen_VariableBatchSize(args, AddLeftHeavyTree<DoubleInt32Tile>, 8, inputData, 1, BasicCachedSchedule);
+  return Test_ForestCodeGen_VariableBatchSize(
+      args, AddLeftHeavyTree<DoubleInt32Tile>, 8, inputData, 1,
+      BasicCachedSchedule);
 }
 
-bool Test_CodeGeneration_RightHeavy_BatchSize2_CacheInputSchedule(TestArgs_t& args) {
+bool Test_CodeGeneration_RightHeavy_BatchSize2_CacheInputSchedule(
+    TestArgs_t &args) {
   std::vector<std::vector<double>> inputData;
   PopulateDataForBatchSize(inputData, 8, 4);
-  return Test_ForestCodeGen_VariableBatchSize(args, AddRightHeavyTree<DoubleInt32Tile>, 8, inputData, 1, BasicCachedSchedule);
+  return Test_ForestCodeGen_VariableBatchSize(
+      args, AddRightHeavyTree<DoubleInt32Tile>, 8, inputData, 1,
+      BasicCachedSchedule);
 }
 
-bool Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_CacheInputSchedule(TestArgs_t& args) {
+bool Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_CacheInputSchedule(
+    TestArgs_t &args) {
   std::vector<std::vector<double>> inputData;
   PopulateDataForBatchSize(inputData, 8, 4);
-  return Test_ForestCodeGen_VariableBatchSize(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 8, inputData, 1, BasicCachedSchedule);
+  return Test_ForestCodeGen_VariableBatchSize(
+      args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 8, inputData, 1,
+      BasicCachedSchedule);
 }
 
 // ===----------------------------------------=== //
 // Basic sparse code gen tests
 // ===----------------------------------------=== //
 
-bool Test_SparseCodeGeneration_LeftHeavy_BatchSize1_I32ChildIdx(TestArgs_t& args) {
+bool Test_SparseCodeGeneration_LeftHeavy_BatchSize1_I32ChildIdx(
+    TestArgs_t &args) {
   decisionforest::UseSparseTreeRepresentation = true;
   auto data = GetBatchSize1Data();
-  return Test_ForestCodeGen_BatchSize1(args, AddLeftHeavyTree<DoubleInt32Tile>, data, 32);
+  return Test_ForestCodeGen_BatchSize1(args, AddLeftHeavyTree<DoubleInt32Tile>,
+                                       data, 32);
 }
 
-bool Test_SparseCodeGeneration_RightHeavy_BatchSize1_I32ChildIdx(TestArgs_t& args) {
+bool Test_SparseCodeGeneration_RightHeavy_BatchSize1_I32ChildIdx(
+    TestArgs_t &args) {
   decisionforest::UseSparseTreeRepresentation = true;
   auto data = GetBatchSize1Data();
-  return Test_ForestCodeGen_BatchSize1(args, AddRightHeavyTree<DoubleInt32Tile>, data, 32);
+  return Test_ForestCodeGen_BatchSize1(args, AddRightHeavyTree<DoubleInt32Tile>,
+                                       data, 32);
 }
 
-bool Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize1_I32ChildIdx(TestArgs_t& args) {
+bool Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize1_I32ChildIdx(
+    TestArgs_t &args) {
   decisionforest::UseSparseTreeRepresentation = true;
   auto data = GetBatchSize1Data();
-  return Test_ForestCodeGen_BatchSize1(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, data, 32);
+  return Test_ForestCodeGen_BatchSize1(
+      args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, data, 32);
 }
 
-bool Test_SparseCodeGeneration_LeftHeavy_BatchSize2_I32ChildIdx(TestArgs_t& args) {
+bool Test_SparseCodeGeneration_LeftHeavy_BatchSize2_I32ChildIdx(
+    TestArgs_t &args) {
   decisionforest::UseSparseTreeRepresentation = true;
   auto data = GetBatchSize2Data();
-  return Test_ForestCodeGen_VariableBatchSize(args, AddLeftHeavyTree<DoubleInt32Tile>, 2, data, 32);
+  return Test_ForestCodeGen_VariableBatchSize(
+      args, AddLeftHeavyTree<DoubleInt32Tile>, 2, data, 32);
 }
 
-bool Test_SparseCodeGeneration_RightHeavy_BatchSize2_I32ChildIdx(TestArgs_t& args) {
+bool Test_SparseCodeGeneration_RightHeavy_BatchSize2_I32ChildIdx(
+    TestArgs_t &args) {
   decisionforest::UseSparseTreeRepresentation = true;
   auto data = GetBatchSize2Data();
-  return Test_ForestCodeGen_VariableBatchSize(args, AddRightHeavyTree<DoubleInt32Tile>, 2, data, 32);
+  return Test_ForestCodeGen_VariableBatchSize(
+      args, AddRightHeavyTree<DoubleInt32Tile>, 2, data, 32);
 }
 
-bool Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx(TestArgs_t& args) {
+bool Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx(
+    TestArgs_t &args) {
   decisionforest::UseSparseTreeRepresentation = true;
   auto data = GetBatchSize2Data();
-  return Test_ForestCodeGen_VariableBatchSize(args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 2, data, 32);
+  return Test_ForestCodeGen_VariableBatchSize(
+      args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>, 2, data, 32);
 }
 
 // Tests for Tiled Buffer Initialization
-template<typename ThresholdType, typename IndexType>
-bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t forestConstructor, std::vector<int32_t>& tileIDs) {
-  using VectorTileType = NumericalVectorTileType_Packed<ThresholdType, IndexType, 3>;
+template <typename ThresholdType, typename IndexType>
+bool Test_BufferInit_SingleTree_Tiled(TestArgs_t &args,
+                                      ForestConstructor_t forestConstructor,
+                                      std::vector<int32_t> &tileIDs) {
+  using VectorTileType =
+      NumericalVectorTileType_Packed<ThresholdType, IndexType, 3>;
 
   MLIRContext context;
   TreeBeard::InitializeMLIRContext(context);
@@ -1078,22 +1257,32 @@ bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t fore
   forestConstructor(forest);
 
   // Construct basic tree types for the tree
-  // (Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type thresholdType, Type featureIndexType
+  // (Type resultType, const TreeTilingDescriptor& tilingDescriptor, Type
+  // thresholdType, Type featureIndexType
   auto thresholdType = TreeBeard::GetMLIRType(ThresholdType(), builder);
   auto indexType = TreeBeard::GetMLIRType(IndexType(), builder);
-  
+
   int32_t tileSize = 3;
-  decisionforest::TreeTilingDescriptor tilingDescriptor(tileSize /*tile size*/, 4 /*num tiles*/, tileIDs, decisionforest::TilingType::kRegular);
+  decisionforest::TreeTilingDescriptor tilingDescriptor(
+      tileSize /*tile size*/, 4 /*num tiles*/, tileIDs,
+      decisionforest::TilingType::kRegular);
   forest.GetTree(0).SetTilingDescriptor(tilingDescriptor);
 
-  auto treeType = mlir::decisionforest::TreeType::get(thresholdType, tilingDescriptor.MaxTileSize(), thresholdType, indexType);
-  //(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType, Type treeType)
+  auto treeType = mlir::decisionforest::TreeType::get(
+      thresholdType, tilingDescriptor.MaxTileSize(), thresholdType, indexType);
+  //(Type resultType, size_t numTrees, Type rowType, ReductionType
+  // reductionType, Type treeType)
   std::vector<Type> treeTypes = {treeType};
-  auto forestType = mlir::decisionforest::TreeEnsembleType::get(thresholdType, 1, thresholdType /*HACK type doesn't matter for this test*/,
-                                                                mlir::decisionforest::ReductionType::kAdd, treeTypes);
-  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
-  decisionforest::ConstructModelSerializer(GetGlobalJSONNameForTests())->Persist(forest, forestType);
-  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(GetGlobalJSONNameForTests());
+  auto forestType = mlir::decisionforest::TreeEnsembleType::get(
+      thresholdType, 1,
+      thresholdType /*HACK type doesn't matter for this test*/,
+      mlir::decisionforest::ReductionType::kAdd, treeTypes);
+  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(
+      GetGlobalJSONNameForTests());
+  decisionforest::ConstructModelSerializer(GetGlobalJSONNameForTests())
+      ->Persist(forest, forestType);
+  mlir::decisionforest::ForestJSONReader::GetInstance().SetFilePath(
+      GetGlobalJSONNameForTests());
   mlir::decisionforest::ForestJSONReader::GetInstance().ParseJSONFile();
 
   mlir::decisionforest::TiledTree tiledTree(forest.GetTree(0));
@@ -1104,129 +1293,149 @@ bool Test_BufferInit_SingleTree_Tiled(TestArgs_t& args, ForestConstructor_t fore
   auto tileShapeIDs = tiledTree.SerializeTileShapeIDs();
 
   std::vector<int32_t> offsets(1, -1);
-  int32_t thresholdSize = sizeof(ThresholdType)*8;
-  int32_t indexSize = sizeof(IndexType)*8;
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeBuffer(serializedTree.data(), tileSize, thresholdSize, indexSize, offsets);
-  for(int32_t i=0 ; i<numTiles ; ++i) {
-    for (int32_t j=0 ; j<tileSize ; ++j) {
-      Test_ASSERT(FPEqual(serializedTree[i].threshold[j], thresholds[i*tileSize + j]));
-      Test_ASSERT(serializedTree[i].index[j] == featureIndices[i*tileSize + j]);
+  int32_t thresholdSize = sizeof(ThresholdType) * 8;
+  int32_t indexSize = sizeof(IndexType) * 8;
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeBuffer(
+      serializedTree.data(), tileSize, thresholdSize, indexSize, offsets);
+  for (int32_t i = 0; i < numTiles; ++i) {
+    for (int32_t j = 0; j < tileSize; ++j) {
+      Test_ASSERT(FPEqual(serializedTree[i].threshold[j],
+                          thresholds[i * tileSize + j]));
+      Test_ASSERT(serializedTree[i].index[j] ==
+                  featureIndices[i * tileSize + j]);
     }
     // std::cout << tileShapeIDs[i] << std::endl;
     Test_ASSERT(tileShapeIDs[i] == serializedTree[i].tileShapeID);
   }
   Test_ASSERT(offsets[0] == 0);
-  
+
   std::vector<int64_t> offsetVec(1, -1);
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(offsetVec.data(), tileSize, thresholdSize, indexSize);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeOffsetBuffer(
+      offsetVec.data(), tileSize, thresholdSize, indexSize);
   Test_ASSERT(offsetVec[0] == 0);
-  
+
   std::vector<int64_t> lengthVec(1, -1);
-  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(lengthVec.data(), tileSize, thresholdSize, indexSize);
+  mlir::decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(
+      lengthVec.data(), tileSize, thresholdSize, indexSize);
   Test_ASSERT(lengthVec[0] == numTiles);
 
   return true;
 }
 
-bool Test_BufferInitializationWithOneTree_RightHeavy_Tiled(TestArgs_t& args) {
+bool Test_BufferInitializationWithOneTree_RightHeavy_Tiled(TestArgs_t &args) {
   using TileType = NumericalTileType_Packed<double, int32_t>;
-  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 3 }; // The root and one of its children are in one tile and all leaves are in separate tiles
-  return Test_BufferInit_SingleTree_Tiled<double, int32_t>(args, AddRightHeavyTree<TileType>, tileIDs);
+  std::vector<int32_t> tileIDs = {
+      0, 0, 1, 2, 3}; // The root and one of its children are in one tile and
+                      // all leaves are in separate tiles
+  return Test_BufferInit_SingleTree_Tiled<double, int32_t>(
+      args, AddRightHeavyTree<TileType>, tileIDs);
 }
 
-bool Test_BufferInitializationWithOneTree_LeftHeavy_Tiled(TestArgs_t& args) {
+bool Test_BufferInitializationWithOneTree_LeftHeavy_Tiled(TestArgs_t &args) {
   using TileType = NumericalTileType_Packed<double, int32_t>;
-  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 3 }; // The root and one of its children are in one tile and all leaves are in separate tiles
-  return Test_BufferInit_SingleTree_Tiled<double, int32_t>(args, AddLeftHeavyTree<TileType>, tileIDs);
+  std::vector<int32_t> tileIDs = {
+      0, 0, 1, 2, 3}; // The root and one of its children are in one tile and
+                      // all leaves are in separate tiles
+  return Test_BufferInit_SingleTree_Tiled<double, int32_t>(
+      args, AddLeftHeavyTree<TileType>, tileIDs);
 }
 
-bool Test_BufferInitializationWithOneTree_Balanced_Tiled(TestArgs_t& args) {
+bool Test_BufferInitializationWithOneTree_Balanced_Tiled(TestArgs_t &args) {
   using TileType = NumericalTileType_Packed<double, int32_t>;
-  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 0, 3, 4 };
-  return Test_BufferInit_SingleTree_Tiled<double, int32_t>(args, AddBalancedTree<TileType>, tileIDs);
+  std::vector<int32_t> tileIDs = {0, 0, 1, 2, 0, 3, 4};
+  return Test_BufferInit_SingleTree_Tiled<double, int32_t>(
+      args, AddBalancedTree<TileType>, tileIDs);
 }
 
 // ===-------------------------------------------------------------=== //
 // Tiled Tree Tests
 // ===-------------------------------------------------------------=== //
-bool CheckAllLeavesAreAtSameDepth(mlir::decisionforest::TiledTree* tiledTree) {
+bool CheckAllLeavesAreAtSameDepth(mlir::decisionforest::TiledTree *tiledTree) {
   auto depth = tiledTree->GetTreeDepth();
-  for (int32_t i=0 ; i<(int32_t)tiledTree->NumTiles() ; ++i) {
-    auto& tile = tiledTree->GetTile(i);
+  for (int32_t i = 0; i < (int32_t)tiledTree->NumTiles(); ++i) {
+    auto &tile = tiledTree->GetTile(i);
     if (!tile.IsLeafTile())
       continue;
     auto tilePtr = &tile;
     int32_t leafDepth = 1;
-    while (tilePtr->GetParent() != decisionforest::DecisionTree::INVALID_NODE_INDEX) {
+    while (tilePtr->GetParent() !=
+           decisionforest::DecisionTree::INVALID_NODE_INDEX) {
       tilePtr = &(tiledTree->GetTile(tilePtr->GetParent()));
       ++leafDepth;
     }
     Test_ASSERT(leafDepth == depth);
   }
-  return true;  
+  return true;
 }
 
-bool Test_PadTiledTree_BalancedTree_TileSize2(TestArgs_t& args) {
+bool Test_PadTiledTree_BalancedTree_TileSize2(TestArgs_t &args) {
   decisionforest::DecisionTree decisionTree;
   InitializeBalancedTree(decisionTree);
-  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 5, 3, 4 };
-  
-  decisionforest::TreeTilingDescriptor tilingDescriptor(2, 6, tileIDs, decisionforest::TilingType::kRegular);
+  std::vector<int32_t> tileIDs = {0, 0, 1, 2, 5, 3, 4};
+
+  decisionforest::TreeTilingDescriptor tilingDescriptor(
+      2, 6, tileIDs, decisionforest::TilingType::kRegular);
   decisionTree.SetTilingDescriptor(tilingDescriptor);
 
   auto tiledTree = decisionTree.GetTiledTree();
   tiledTree->MakeAllLeavesSameDepth();
-  // std::string dotFile = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/tiledTree.dot";
+  // std::string dotFile =
+  // "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/tiledTree.dot";
   // tiledTree->WriteDOTFile(dotFile);
   return CheckAllLeavesAreAtSameDepth(tiledTree);
 }
 
-bool Test_PadTiledTree_BalancedTree_TileSize2_2(TestArgs_t& args) {
+bool Test_PadTiledTree_BalancedTree_TileSize2_2(TestArgs_t &args) {
   decisionforest::DecisionTree decisionTree;
   InitializeBalancedTree(decisionTree);
-  std::vector<int32_t> tileIDs = { 0, 5, 1, 2, 0, 3, 4 };
-  
-  decisionforest::TreeTilingDescriptor tilingDescriptor(2, 6, tileIDs, decisionforest::TilingType::kRegular);
+  std::vector<int32_t> tileIDs = {0, 5, 1, 2, 0, 3, 4};
+
+  decisionforest::TreeTilingDescriptor tilingDescriptor(
+      2, 6, tileIDs, decisionforest::TilingType::kRegular);
   decisionTree.SetTilingDescriptor(tilingDescriptor);
 
   auto tiledTree = decisionTree.GetTiledTree();
   tiledTree->MakeAllLeavesSameDepth();
-  // std::string dotFile = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/tiledTree.dot";
+  // std::string dotFile =
+  // "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/tiledTree.dot";
   // tiledTree->WriteDOTFile(dotFile);
   return CheckAllLeavesAreAtSameDepth(tiledTree);
 }
 
-bool Test_PadTiledTree_BalancedTree_TileSize3(TestArgs_t& args) {
+bool Test_PadTiledTree_BalancedTree_TileSize3(TestArgs_t &args) {
   decisionforest::DecisionTree decisionTree;
   InitializeBalancedTree(decisionTree);
-  std::vector<int32_t> tileIDs = { 0, 0, 1, 2, 0, 3, 4 };
-  
-  decisionforest::TreeTilingDescriptor tilingDescriptor(3, 5, tileIDs, decisionforest::TilingType::kRegular);
+  std::vector<int32_t> tileIDs = {0, 0, 1, 2, 0, 3, 4};
+
+  decisionforest::TreeTilingDescriptor tilingDescriptor(
+      3, 5, tileIDs, decisionforest::TilingType::kRegular);
   decisionTree.SetTilingDescriptor(tilingDescriptor);
 
   auto tiledTree = decisionTree.GetTiledTree();
   tiledTree->MakeAllLeavesSameDepth();
-  // std::string dotFile = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/tiledTree.dot";
+  // std::string dotFile =
+  // "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/tiledTree.dot";
   // tiledTree->WriteDOTFile(dotFile);
   return CheckAllLeavesAreAtSameDepth(tiledTree);
 }
 
-bool Test_SplitSchedule(TestArgs_t& args) {
+bool Test_SplitSchedule(TestArgs_t &args) {
   mlir::decisionforest::Schedule schedule(64, 1000);
-  auto& t1 = schedule.NewIndexVariable("t1");
-  auto& t2 = schedule.NewIndexVariable("t2");
-  auto& t21 = schedule.NewIndexVariable("t21");
-  auto& t22 = schedule.NewIndexVariable("t22");
+  auto &t1 = schedule.NewIndexVariable("t1");
+  auto &t2 = schedule.NewIndexVariable("t2");
+  auto &t21 = schedule.NewIndexVariable("t21");
+  auto &t22 = schedule.NewIndexVariable("t22");
   schedule.Tile(schedule.GetTreeIndex(), t1, t2, 4);
   decisionforest::Schedule::IndexVariableMapType indexMap, indexMap1;
   schedule.Split(t2, t21, t22, 2, indexMap1);
-  auto& b1 = schedule.NewIndexVariable("b1");
-  auto& b2 = schedule.NewIndexVariable("b2");
-  auto& b21 = schedule.NewIndexVariable("b21");
-  auto& b22 = schedule.NewIndexVariable("b22");
+  auto &b1 = schedule.NewIndexVariable("b1");
+  auto &b2 = schedule.NewIndexVariable("b2");
+  auto &b21 = schedule.NewIndexVariable("b21");
+  auto &b22 = schedule.NewIndexVariable("b22");
   schedule.Split(schedule.GetBatchIndex(), b1, b2, 32, indexMap);
   schedule.Split(b2, b21, b22, 48, indexMap);
-  std::string dotFile = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/debug/temp/split_schedule.dot";
+  std::string dotFile = "/home/ashwin/mlir-build/llvm-project/mlir/examples/"
+                        "tree-heavy/debug/temp/split_schedule.dot";
   schedule.WriteToDOTFile(dotFile);
   return true;
 }
@@ -1917,120 +2126,151 @@ TestDescriptor testList[] = {
     TEST_LIST_ENTRY(
         Test_GPU_CachePartialForest2Trees_4TreeXGB_Array_Scalar_f32i16),
 #endif // TREEBEARD_GPU_SUPPORT
+    // Parallelize across trees
+    TEST_LIST_ENTRY(Test_TreePar_LeftRightAndBalanced_DblI32),
+    TEST_LIST_ENTRY(Test_NestedTreePar_LeftRightAndBalanced_DblI32),
 };
 
-#else // RUN_ALL_TESTS
+#else  // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-  TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize2),
-  // TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
-  // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep),
-  // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg),
-  // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep_F32I16),
-  // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg_F32I16),
-  // TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Reorg_Scalar),
-  // TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Reorg_Scalar),
-  // // TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Reorg_Scalar),
-  // TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Reorg_Scalar_f32i16),
-  // TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Reorg_Scalar_f32i16),
-  // TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Reorg_Scalar_f32i16),
+    // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep),
+    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg),
+    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep_F32I16),
+    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg_F32I16),
 
-  // TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Reorg_DoubleInt),
+    // TEST_LIST_ENTRY(Test_TreePar_LeftRightAndBalanced_DblI32),
+    // TEST_LIST_ENTRY(Test_NestedTreePar_LeftRightAndBalanced_DblI32),
+    // TEST_LIST_ENTRY(Test_TreePar_LeftRightAndBalanced_DblI32),
+    // TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
+    // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep),
+    // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg),
+    // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep_F32I16),
+    // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg_F32I16),
+    // TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Reorg_Scalar),
+    // TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Reorg_Scalar),
+    // // TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Reorg_Scalar),
+    // TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Reorg_Scalar_f32i16),
+    // TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Reorg_Scalar_f32i16),
+    // TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Reorg_Scalar_f32i16),
 
-  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
-  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
-  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
-  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
-  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32),
-  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32),
-  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32),
-  // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32),
+    // TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Reorg_DoubleInt),
 
-  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Reorg_Scalar),
-  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar),
-  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_2TreeXGB_Reorg_Scalar_f32i16),
-  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar_f32i16),
+    // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
+    // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
+    // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
+    // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
+    // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32),
+    // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32),
+    // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32),
+    // TEST_LIST_ENTRY(Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32),
 
-  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Array_Scalar),
-  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_4TreeXGB_Array_Scalar),
-  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_2TreeXGB_Array_Scalar_f32i16),
-  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Array_Scalar_f32i16),
+    // TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Reorg_Scalar),
+    // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar),
+    // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_2TreeXGB_Reorg_Scalar_f32i16),
+    // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar_f32i16),
 
-  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Sparse_Scalar),
-  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar),
-  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_2TreeXGB_Sparse_Scalar_f32i16),
-  // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar_f32i16),
+    // TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Array_Scalar),
+    // TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_4TreeXGB_Array_Scalar),
+    // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_2TreeXGB_Array_Scalar_f32i16),
+    // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Array_Scalar_f32i16),
+
+    // TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Sparse_Scalar),
+    // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar),
+    // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_2TreeXGB_Sparse_Scalar_f32i16),
+    // TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar_f32i16),
 };
 #endif // RUN_ALL_TESTS
 
 TestDescriptor sanityTestList[] = {
-  TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth),
-  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_MakeLeavesSameDepth),
-  TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_MakeLeavesSameDepth),
-  TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_MakeLeavesSameDepth),
-  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_MakeLeavesSameDepth),
-  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_MakeLeavesSameDepth),
-  TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth),
-  TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Covtype_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_ParallelBatch),
-  TEST_LIST_ENTRY(Test_WalkPeeling_BalancedTree_TileSize2),
-  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
-  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4),
-  TEST_LIST_ENTRY(Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
-  TEST_LIST_ENTRY(Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
-  TEST_LIST_ENTRY(Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Year),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Epsilon),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Higgs),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_AirlineOHE),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Covtype),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Airline),
-  TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Abalone),
+    TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth),
+    TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_MakeLeavesSameDepth),
+    TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_MakeLeavesSameDepth),
+    TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_MakeLeavesSameDepth),
+    TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_MakeLeavesSameDepth),
+    TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_MakeLeavesSameDepth),
+    TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth),
+    TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_ParallelBatch),
+    TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_ParallelBatch),
+    TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_ParallelBatch),
+    TEST_LIST_ENTRY(Test_TileSize8_Covtype_TestInputs_ParallelBatch),
+    TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_ParallelBatch),
+    TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_ParallelBatch),
+    TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_ParallelBatch),
+    TEST_LIST_ENTRY(Test_WalkPeeling_BalancedTree_TileSize2),
+    TEST_LIST_ENTRY(
+        Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
+    TEST_LIST_ENTRY(
+        Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4),
+    TEST_LIST_ENTRY(
+        Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
+    TEST_LIST_ENTRY(
+        Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
+    TEST_LIST_ENTRY(
+        Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
+    TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Year),
+    TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Epsilon),
+    TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Higgs),
+    TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_AirlineOHE),
+    TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Covtype),
+    TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Airline),
+    TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Abalone),
 
-  // Remove extra hop tests
-  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
-  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Airline),
-  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_AirlineOHE),
-  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Epsilon),
-  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Higgs),
-  TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Year),
-  TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs),
-  TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs),
-  TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4),
-  TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
-  TEST_LIST_ENTRY(Test_SparseUniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
-  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape),
-  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape),
-  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize),
-  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1),
-  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize),
-  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1),
-  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape),
-  TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape),
-  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize1_I32ChildIdx),
-  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize1_I32ChildIdx),
-  TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize2_I32ChildIdx),
-  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightHeavy_BatchSize2_I32ChildIdx),
-  TEST_LIST_ENTRY(Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx),
-  TEST_LIST_ENTRY(Test_TileSize8_Airline),
-  TEST_LIST_ENTRY(Test_TileSize8_Bosch),
-  TEST_LIST_ENTRY(Test_TileSize8_Epsilon),
-  TEST_LIST_ENTRY(Test_TileSize8_Higgs),
-  TEST_LIST_ENTRY(Test_TileSize8_Year),
-  TEST_LIST_ENTRY(Test_TileSize3_Abalone),
-  TEST_LIST_ENTRY(Test_TileSize4_Abalone),
-  TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize8_TileSize2_4Pipelined),
-  TEST_LIST_ENTRY(Test_SparseTileSize8_4Pipelined_Bosch),
-  TEST_LIST_ENTRY(Test_TileSize8_Abalone_4Pipelined_TestInputs),
+    // Remove extra hop tests
+    TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
+    TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Airline),
+    TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_AirlineOHE),
+    TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Epsilon),
+    TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Higgs),
+    TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Year),
+    TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs),
+    TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs),
+    TEST_LIST_ENTRY(
+        Test_SparseUniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4),
+    TEST_LIST_ENTRY(
+        Test_SparseUniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
+    TEST_LIST_ENTRY(
+        Test_SparseUniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
+    TEST_LIST_ENTRY(
+        Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape),
+    TEST_LIST_ENTRY(
+        Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape),
+    TEST_LIST_ENTRY(
+        Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize),
+    TEST_LIST_ENTRY(
+        Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1),
+    TEST_LIST_ENTRY(
+        Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize),
+    TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1),
+    TEST_LIST_ENTRY(
+        Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape),
+    TEST_LIST_ENTRY(
+        Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape),
+    TEST_LIST_ENTRY(
+        Test_SparseCodeGeneration_RightHeavy_BatchSize1_I32ChildIdx),
+    TEST_LIST_ENTRY(
+        Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize1_I32ChildIdx),
+    TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize2_I32ChildIdx),
+    TEST_LIST_ENTRY(
+        Test_SparseCodeGeneration_RightHeavy_BatchSize2_I32ChildIdx),
+    TEST_LIST_ENTRY(
+        Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx),
+    TEST_LIST_ENTRY(Test_TileSize8_Airline),
+    TEST_LIST_ENTRY(Test_TileSize8_Bosch),
+    TEST_LIST_ENTRY(Test_TileSize8_Epsilon),
+    TEST_LIST_ENTRY(Test_TileSize8_Higgs),
+    TEST_LIST_ENTRY(Test_TileSize8_Year),
+    TEST_LIST_ENTRY(Test_TileSize3_Abalone),
+    TEST_LIST_ENTRY(Test_TileSize4_Abalone),
+    TEST_LIST_ENTRY(
+        Test_RandomXGBoostJSONs_1Tree_BatchSize8_TileSize2_4Pipelined),
+    TEST_LIST_ENTRY(Test_SparseTileSize8_4Pipelined_Bosch),
+    TEST_LIST_ENTRY(Test_TileSize8_Abalone_4Pipelined_TestInputs),
 };
 
 const size_t numTests = sizeof(testList) / sizeof(testList[0]);
-const size_t numSanityTests = sizeof(sanityTestList) / sizeof(sanityTestList[0]);
+const size_t numSanityTests =
+    sizeof(sanityTestList) / sizeof(sanityTestList[0]);
 // void PrintExceptionInfo(std::exception_ptr eptr) {
 // 	try {
 // 		if (eptr) {
@@ -2052,60 +2292,70 @@ const std::string boldBlue("\033[1;34m");
 const std::string white("\033[0;37m");
 const std::string underline("\033[4m");
 
-bool RunTest(TestDescriptor test, TestArgs_t& args, size_t testNum) {
-	std::string errStr;
-	std::cout << white << testNum << ". Running test " << blue << test.m_testName << reset << ".... ";
-	bool pass = false;
+bool RunTest(TestDescriptor test, TestArgs_t &args, size_t testNum) {
+  std::string errStr;
+  std::cout << white << testNum << ". Running test " << blue << test.m_testName
+            << reset << ".... ";
+  bool pass = false;
   // try
-  std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
-	{
-		pass = test.m_testFunc(args);
-	}
+  std::chrono::steady_clock::time_point begin =
+      std::chrono::steady_clock::now();
+  { pass = test.m_testFunc(args); }
   std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-	// catch s(...)
-	// {
-	// 	std::exception_ptr eptr = std::current_exception();
-	// 	std::cout << "Crashed with exception ";
-	// 	PrintExceptionInfo(eptr);
-	// 	pass = false;
-	// }
-  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
-	std::cout << (pass ? green + "Passed" : red + "Failed") << white + " (Duration : " << duration << " ms)" << reset << std::endl;
-	return pass;
+  // catch s(...)
+  // {
+  // 	std::exception_ptr eptr = std::current_exception();
+  // 	std::cout << "Crashed with exception ";
+  // 	PrintExceptionInfo(eptr);
+  // 	pass = false;
+  // }
+  auto duration =
+      std::chrono::duration_cast<std::chrono::milliseconds>(end - begin)
+          .count();
+  std::cout << (pass ? green + "Passed" : red + "Failed")
+            << white + " (Duration : " << duration << " ms)" << reset
+            << std::endl;
+  return pass;
 }
 
 void RunTestsImpl(TestDescriptor *testsToRun, size_t numberOfTests) {
- 	bool overallPass = true;
+  bool overallPass = true;
 
   std::cout << "Running Treebeard Tests " << std::endl << std::endl;
   int32_t numPassed = 0;
-  std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
+  std::chrono::steady_clock::time_point begin =
+      std::chrono::steady_clock::now();
   for (size_t i = 0; i < numberOfTests; ++i) {
     TestArgs_t args;
-    
+
     // Disable sparse code generation by default
     decisionforest::UseSparseTreeRepresentation = false;
-    mlir::decisionforest::ForestJSONReader::GetInstance().SetChildIndexBitWidth(-1);
-    
-    bool pass = RunTest(testsToRun[i], args, i+1);
+    mlir::decisionforest::ForestJSONReader::GetInstance().SetChildIndexBitWidth(
+        -1);
+
+    bool pass = RunTest(testsToRun[i], args, i + 1);
     numPassed += pass ? 1 : 0;
     overallPass = overallPass && pass;
   }
   std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-  auto totalTime = std::chrono::duration_cast<std::chrono::seconds>(end - begin).count();
+  auto totalTime =
+      std::chrono::duration_cast<std::chrono::seconds>(end - begin).count();
 
-  std::cout << std::endl << boldBlue << underline << numPassed << "/" << numberOfTests << reset << white << " tests passed.";
-  std::cout << underline << (overallPass ? boldGreen + "\nTest Suite Passed." : boldRed + "\nTest Suite Failed.") << reset;
-  std::cout << std::endl <<"Total time taken : " << totalTime << " seconds." << std::endl << std::endl;
+  std::cout << std::endl
+            << boldBlue << underline << numPassed << "/" << numberOfTests
+            << reset << white << " tests passed.";
+  std::cout << underline
+            << (overallPass ? boldGreen + "\nTest Suite Passed."
+                            : boldRed + "\nTest Suite Failed.")
+            << reset;
+  std::cout << std::endl
+            << "Total time taken : " << totalTime << " seconds." << std::endl
+            << std::endl;
 }
 
-void RunTests() {
-  RunTestsImpl(testList, numTests);
-}
+void RunTests() { RunTestsImpl(testList, numTests); }
 
-void RunSanityTests() {
-  RunTestsImpl(sanityTestList, numSanityTests);
-}
+void RunSanityTests() { RunTestsImpl(sanityTestList, numSanityTests); }
 
-} // test
-} // TreeBeard
+} // namespace test
+} // namespace TreeBeard

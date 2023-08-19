@@ -219,7 +219,7 @@ def ReduceDimensionInplaceOp : DecisionForest_Op<"reduce_dimension_inplace", [At
                        Variadic<Index>:$rangeEnd);
 }
 
-def ReduceDimensionOp : DecisionForest_Op<"reduce_dimension"> {
+def ReduceDimensionOp : DecisionForest_Op<"reduce_dimension", [AttrSizedOperandSegments]> {
   let summary = "Reduce the specified dimension of a memref and store result in target.";
   let description = "Reduce the specified dimension of a memref and store result in the target memref."
                     "The op copies reduced values to the target memre. Reduced dimesions is the list" 
@@ -229,7 +229,9 @@ def ReduceDimensionOp : DecisionForest_Op<"reduce_dimension"> {
   let arguments = (ins TargetMemrefType:$targetMemref,
                        TargetMemrefType:$sourceMemref,
                        Index:$reductionDimension,
-                       Variadic<Index>:$reducedDimensions);
+                       Variadic<Index>:$reducedDimensions,
+                       Variadic<Index>:$rangeStart,
+                       Variadic<Index>:$rangeEnd);
 }
 
 // ----- Mid-level IR Ops ------
@@ -495,5 +497,22 @@ def PrintIsLeafOp : DecisionForest_Op<"printIsLeaf", []> {
 def PrintVectorOp : DecisionForest_Op<"printVector", []> {
   let arguments = (ins I32:$kind, I32:$bitWidth, I32:$vectorSize, Variadic<AnyType>:$elements);
 }
+
+def PrintfOp : DecisionForest_Op<"printf", [MemoryEffects<[MemWrite]>]> {
+  let summary = "printf for debugging";
+  let description = [{
+    `printf` takes a literal format string `format` and an arbitrary number of
+    scalar arguments that should be printed.
+
+    The format string is a C-style printf string, subject to any restrictions
+    imposed by one's target platform.
+  }];
+  let arguments = (ins StrAttr:$format,
+                   Variadic<AnyTypeOf<[AnyInteger, Index, AnyFloat]>>:$args);
+  let assemblyFormat = [{
+    $format attr-dict ($args^ `:` type($args))?
+  }];
+}
+
 
 #endif // TREE_HEAVY_OPS

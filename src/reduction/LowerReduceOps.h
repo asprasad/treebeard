@@ -1,16 +1,16 @@
 #ifndef _LOWERREDUCEOPS_H_
 #define _LOWERREDUCEOPS_H_
 
-namespace mlir
-{
+namespace mlir {
 
 class MLIRContext;
 class ModuleOp;
 
-namespace decisionforest
-{
+namespace decisionforest {
 
-void LowerReduceOps(mlir::MLIRContext& context, mlir::ModuleOp module);
+void LowerReduceOps(mlir::MLIRContext &context, mlir::ModuleOp module);
+void legalizeReductions(mlir::MLIRContext &context, mlir::ModuleOp module);
+void lowerLinalgToLoops(mlir::MLIRContext &context, mlir::ModuleOp module);
 
 } // end namespace decisionforest
 } // end namespace mlir
