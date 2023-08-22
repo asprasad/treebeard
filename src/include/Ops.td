@@ -109,6 +109,17 @@ def UnrollLoopAttr : Attr<
   let convertFromStorage = "$_self";
 }
 
+def ReductionTypeAttr: Attr<
+  CPred<"$_self.isa<::mlir::decisionforest::ReductionTypeAttribute>()">,
+  "Reduction type attribute"> {
+
+  let storageType = [{ ::mlir::decisionforest::ReductionTypeAttribute }];
+  let returnType = [{ ::mlir::decisionforest::ReductionTypeAttribute }];
+  
+  let constBuilderCall = "::mlir::decisionforest::ReductionTypeAttribute::get()";
+  let convertFromStorage = "$_self";
+}
+
 //-------   Operations   ----------------------
 
 class DecisionForest_Op<string mnemonic, list<Trait> traits = []> : 
@@ -202,7 +213,8 @@ def ReduceOp : DecisionForest_Op<"reduce"> {
   let description = "Accumulate a floating point value into an element of a memref"
                     "specified by the indices.";
 
-  let arguments = (ins TargetMemrefType:$targetMemref,
+  let arguments = (ins ReductionTypeAttr:$reductionType,
+                       TargetMemrefType:$targetMemref,
                        Variadic<Index>:$indices,
                        ReductionValueType:$value);
 }
@@ -212,7 +224,8 @@ def ReduceDimensionInplaceOp : DecisionForest_Op<"reduce_dimension_inplace", [At
   let description = "Reduce the specified dimension of a memref inplace."
                     "The reduced value is stored at index 0 of the specified dimension.";
 
-  let arguments = (ins TargetMemrefType:$targetMemref,
+  let arguments = (ins ReductionTypeAttr:$reductionType,
+                       TargetMemrefType:$targetMemref,
                        Index:$dimension,
                        Variadic<Index>:$indices,
                        Variadic<Index>:$rangeStart,
@@ -226,7 +239,8 @@ def ReduceDimensionOp : DecisionForest_Op<"reduce_dimension", [AttrSizedOperandS
                     "of dimensions that have been previously reduced (i.e. the set of dimensions where"
                     "we should index with a 0).";
 
-  let arguments = (ins TargetMemrefType:$targetMemref,
+  let arguments = (ins ReductionTypeAttr:$reductionType,
+                       TargetMemrefType:$targetMemref,
                        TargetMemrefType:$sourceMemref,
                        Index:$reductionDimension,
                        Variadic<Index>:$reducedDimensions,

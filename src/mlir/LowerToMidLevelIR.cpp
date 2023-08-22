@@ -2,6 +2,7 @@
 // #include "Passes.h"
 #include "OpLoweringUtils.h"
 
+#include "ReductionTypeAttribute.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -14,7 +15,6 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
-
 #include "llvm/Target/TargetMachine.h"
 
 using namespace mlir;
@@ -384,8 +384,13 @@ template <typename LoopType> struct LoopConstructor {
 void GenerateResultReduction(ConversionPatternRewriter &rewriter,
                              Location location, PredictOpLoweringState &state,
                              Value accumulatedValue, Value rowIndex) {
+  auto reductionAttrType =
+      decisionforest::ReductionAttrType::get(state.treeType.getContext());
+  auto reductionTypeAttribute = decisionforest::ReductionTypeAttribute::get(
+      reductionAttrType, decisionforest::Reduction::kAdd);
   rewriter.create<decisionforest::ReduceOp>(
-      location, state.resultMemref, ValueRange{rowIndex}, accumulatedValue);
+      location, reductionTypeAttribute, state.resultMemref,
+      ValueRange{rowIndex}, accumulatedValue);
 }
 
 struct PredictForestOpLowering : public ConversionPattern {
@@ -707,8 +712,13 @@ struct PredictForestOpLowering : public ConversionPattern {
       auto classIdIndex = rewriter.create<arith::IndexCastOp>(
           location, rewriter.getIndexType(), static_cast<Value>(classId));
 
+      auto reductionAttrType =
+          decisionforest::ReductionAttrType::get(state.treeType.getContext());
+      auto reductionTypeAttribute = decisionforest::ReductionTypeAttribute::get(
+          reductionAttrType, decisionforest::Reduction::kSoftMax);
+
       rewriter.create<decisionforest::ReduceOp>(
-          location, state.treeClassesMemref,
+          location, reductionTypeAttribute, state.treeClassesMemref,
           ValueRange{rowIndex, classIdIndex.getResult()}, result);
     }
   }
