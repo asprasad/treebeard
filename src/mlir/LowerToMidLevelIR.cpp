@@ -1198,7 +1198,6 @@ struct PredictForestOpLowering : public ConversionPattern {
           indexVar, state, location, rewriter, startConst, stopConst, stepConst,
           batchIndices, treeIndices);
       scf::ForOp loop = loopConstructor.GetLoop();
-      rewriter.setInsertionPointToStart(loop.getBody());
       batchIndices.push_back(loop.getInductionVar());
       GenerateBatchIndexLeafLoopBody(rewriter, location, indexVar, batchIndices,
                                      treeType, tree, treeIndex, state);

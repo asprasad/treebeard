@@ -8,9 +8,12 @@ class ModuleOp;
 
 namespace decisionforest {
 
-void LowerReduceOps(mlir::MLIRContext &context, mlir::ModuleOp module);
 void legalizeReductions(mlir::MLIRContext &context, mlir::ModuleOp module);
+void legalizeReductionsAndCanonicalize(mlir::MLIRContext &context,
+                                       mlir::ModuleOp module);
 void lowerLinalgToLoops(mlir::MLIRContext &context, mlir::ModuleOp module);
+void lowerReductionsAndCanonicalize(mlir::MLIRContext &context,
+                                    mlir::ModuleOp module);
 
 } // end namespace decisionforest
 } // end namespace mlir

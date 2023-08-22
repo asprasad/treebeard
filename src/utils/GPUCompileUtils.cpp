@@ -45,12 +45,13 @@ mlir::ModuleOp LowerHIRModuleToGPU(mlir::ModuleOp module,
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
   // module->dump();
 
-  mlir::decisionforest::LowerReduceOps(context, module);
+  mlir::decisionforest::legalizeReductionsAndCanonicalize(context, module);
   // module->dump();
 
   // mlir::decisionforest::GreedilyMapParallelLoopsToGPU(module);
 
   mlir::decisionforest::ConvertParallelLoopsToGPU(context, module);
+  mlir::decisionforest::lowerReductionsAndCanonicalize(context, module);
 
   // module->dump();
   decisionforest::RunCanonicalizerPass(context, module);

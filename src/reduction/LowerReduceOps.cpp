@@ -350,16 +350,17 @@ void lowerReduceToMemref(mlir::MLIRContext &context, mlir::ModuleOp module) {
   // llvm::DebugFlag = false;
 }
 
-void LowerReduceOps(mlir::MLIRContext &context, mlir::ModuleOp module) {
-  // module->dump();
+void legalizeReductionsAndCanonicalize(mlir::MLIRContext &context,
+                                       mlir::ModuleOp module) {
   decisionforest::legalizeReductions(context, module);
   decisionforest::RunCanonicalizerPass(context, module);
-  // module->dump();
+}
+
+void lowerReductionsAndCanonicalize(mlir::MLIRContext &context,
+                                    mlir::ModuleOp module) {
   decisionforest::lowerLinalgToLoops(context, module);
   decisionforest::lowerReduceToMemref(context, module);
-  // module->dump();
   decisionforest::RunCanonicalizerPass(context, module);
-  // module->dump();
 }
 
 } // namespace decisionforest

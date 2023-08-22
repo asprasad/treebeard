@@ -197,6 +197,68 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
   });
 }
 
+struct MakeGPULoopsPerfectlyNestedPass
+    : public PassWrapper<MakeGPULoopsPerfectlyNestedPass,
+                         OperationPass<mlir::func::FuncOp>> {
+
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<gpu::GPUDialect, scf::SCFDialect>();
+  }
+
+  StringRef getMappingAttrName() const { return "mapping"; }
+
+  gpu::ParallelLoopDimMappingAttr
+  getMappingAttr(scf::ParallelOp parallelOp) const {
+    auto mappingAttr = parallelOp->getAttr(getMappingAttrName());
+    if (!mappingAttr)
+      return nullptr;
+    auto mappingArrayAttr = mappingAttr.cast<ArrayAttr>();
+    return mappingArrayAttr[0].cast<gpu::ParallelLoopDimMappingAttr>();
+  }
+
+  bool isBatchLoop(scf::ParallelOp parallelOp) const {
+    auto mappingAttr = getMappingAttr(parallelOp);
+    if (!mappingAttr)
+      return false;
+    return mappingAttr.getProcessor() == gpu::Processor::BlockX ||
+           mappingAttr.getProcessor() == gpu::Processor::BlockY ||
+           mappingAttr.getProcessor() == gpu::Processor::BlockZ;
+  }
+
+  void makeGPULoopsPerfectlyNested() {
+    auto func = this->getOperation();
+    func.walk([&](scf::ParallelOp parallelOp) {
+      // If this loop is a batch loop and has a parent loop that
+      // is also a batch loop, then move all operations in between
+      // the two loops into the child loop
+      auto parentParallelOp = parallelOp->getParentOfType<scf::ParallelOp>();
+      if (!parentParallelOp)
+        return;
+      auto parentLoopMappingAttr = getMappingAttr(parentParallelOp);
+      if (!parentLoopMappingAttr)
+        return;
+      auto loopMappingAttr = getMappingAttr(parallelOp);
+      if (!loopMappingAttr)
+        return;
+      if (!isBatchLoop(parallelOp) || !isBatchLoop(parentParallelOp))
+        return;
+      // Move all the ops in the parent loop that are before the child
+      // loop into the child loop
+      auto parentLoopBody = parentParallelOp.getBody();
+      auto &parentLoopBodyOps = parentLoopBody->getOperations();
+      auto loopBody = parallelOp.getBody();
+      auto &firstOp = loopBody->front();
+      for (auto &op : parentLoopBodyOps) {
+        if (&op == parallelOp.getOperation())
+          break;
+        op.moveBefore(&firstOp);
+      }
+    });
+  }
+
+  void runOnOperation() final { makeGPULoopsPerfectlyNested(); }
+};
+
 } // anonymous namespace
 
 namespace mlir {
@@ -216,6 +278,7 @@ void ConvertParallelLoopsToGPU(mlir::MLIRContext &context,
                                mlir::ModuleOp module) {
   mlir::PassManager pm(&context);
   mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
+  // optPM.addPass(std::make_unique<MakeGPULoopsPerfectlyNestedPass>());
   optPM.addPass(createParallelLoopToGpuPass());
 
   if (mlir::failed(pm.run(module))) {
