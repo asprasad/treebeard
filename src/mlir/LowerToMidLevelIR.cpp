@@ -2,7 +2,7 @@
 // #include "Passes.h"
 #include "OpLoweringUtils.h"
 
-#include "ReductionTypeAttribute.h"
+#include "ReductionOpAttributes.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -106,6 +106,7 @@ void InsertPrintElementOp(ConversionPatternRewriter &rewriter,
 
 typedef struct {
   bool isMultiClass;
+  int32_t numClasses;
 
   // Memrefs and Types
   Value treeClassesMemref;
@@ -381,16 +382,42 @@ template <typename LoopType> struct LoopConstructor {
   LoopType GetInnerLoop() { return m_innerLoop; }
 };
 
+void GenerateMultiClassAccumulate(ConversionPatternRewriter &rewriter,
+                                  Location location, Value result,
+                                  Value rowIndex, Value treeIndex,
+                                  PredictOpLoweringState &state) {
+  if (state.isMultiClass) {
+    auto classId = rewriter.create<decisionforest::GetTreeClassIdOp>(
+        location, state.treeType.getResultType(), state.forestConst, treeIndex);
+    auto classIdIndex = rewriter.create<arith::IndexCastOp>(
+        location, rewriter.getIndexType(), static_cast<Value>(classId));
+
+    auto reductionTypeAttribute = decisionforest::createReductionTypeAttribute(
+        state.treeType.getContext(), decisionforest::Reduction::kArgMax);
+
+    auto reduceOp = rewriter.create<decisionforest::ReduceOp>(
+        location, reductionTypeAttribute, state.resultMemref,
+        ValueRange{rowIndex, classIdIndex.getResult()}, result);
+
+    reduceOp->setAttr(decisionforest::getArgMaxLengthAttributeName(),
+                      rewriter.getI32IntegerAttr(state.numClasses));
+  }
+}
+
 void GenerateResultReduction(ConversionPatternRewriter &rewriter,
                              Location location, PredictOpLoweringState &state,
-                             Value accumulatedValue, Value rowIndex) {
-  auto reductionAttrType =
-      decisionforest::ReductionAttrType::get(state.treeType.getContext());
-  auto reductionTypeAttribute = decisionforest::ReductionTypeAttribute::get(
-      reductionAttrType, decisionforest::Reduction::kAdd);
-  rewriter.create<decisionforest::ReduceOp>(
-      location, reductionTypeAttribute, state.resultMemref,
-      ValueRange{rowIndex}, accumulatedValue);
+                             Value accumulatedValue, Value rowIndex,
+                             Value treeIndex) {
+  if (state.isMultiClass) {
+    GenerateMultiClassAccumulate(rewriter, location, accumulatedValue, rowIndex,
+                                 treeIndex, state);
+  } else {
+    auto reductionTypeAttribute = decisionforest::createReductionTypeAttribute(
+        state.treeType.getContext(), decisionforest::Reduction::kAdd);
+    rewriter.create<decisionforest::ReduceOp>(
+        location, reductionTypeAttribute, state.resultMemref,
+        ValueRange{rowIndex}, accumulatedValue);
+  }
 }
 
 struct PredictForestOpLowering : public ConversionPattern {
@@ -477,6 +504,7 @@ struct PredictForestOpLowering : public ConversionPattern {
 
     state.isMultiClass =
         forestAttribute.GetDecisionForest().IsMultiClassClassifier();
+    state.numClasses = forestAttribute.GetDecisionForest().GetNumClasses();
     state.treeType =
         forestType.getTreeType(0).cast<mlir::decisionforest::TreeType>();
 
@@ -702,27 +730,6 @@ struct PredictForestOpLowering : public ConversionPattern {
     rewriter.setInsertionPointAfter(batchLoop);
   }
 
-  void GenerateMultiClassAccumulate(ConversionPatternRewriter &rewriter,
-                                    Location location, Value result,
-                                    Value rowIndex, Value index,
-                                    PredictOpLoweringState &state) const {
-    if (state.isMultiClass) {
-      auto classId = rewriter.create<decisionforest::GetTreeClassIdOp>(
-          location, state.treeType.getResultType(), state.forestConst, index);
-      auto classIdIndex = rewriter.create<arith::IndexCastOp>(
-          location, rewriter.getIndexType(), static_cast<Value>(classId));
-
-      auto reductionAttrType =
-          decisionforest::ReductionAttrType::get(state.treeType.getContext());
-      auto reductionTypeAttribute = decisionforest::ReductionTypeAttribute::get(
-          reductionAttrType, decisionforest::Reduction::kSoftMax);
-
-      rewriter.create<decisionforest::ReduceOp>(
-          location, reductionTypeAttribute, state.treeClassesMemref,
-          ValueRange{rowIndex, classIdIndex.getResult()}, result);
-    }
-  }
-
   Value GenerateTreeIndexLeafLoopBody(
       ConversionPatternRewriter &rewriter, Location location,
       const decisionforest::IndexVariable &indexVar,
@@ -847,9 +854,9 @@ struct PredictForestOpLowering : public ConversionPattern {
         rewriter.create<decisionforest::PrintTreePredictionOp>(
             location, walkOp.getResult(i), finalTreeIndices[i]);
       }
-      // auto updatedResultTensor = rewriter.create<tensor::InsertOp>(location,
-      // resultMemrefType, accumulatedValue,
-      // treeLoop.getBody()->getArguments()[1], i);
+      // auto updatedResultTensor =
+      // rewriter.create<tensor::InsertOp>(location, resultMemrefType,
+      // accumulatedValue, treeLoop.getBody()->getArguments()[1], i);
     }
 
     return prevAccumulatorValue;
@@ -888,13 +895,12 @@ struct PredictForestOpLowering : public ConversionPattern {
             accumulatedValue);
       }
 
-      // Don't accumulate into memref in case of multiclass.
-      if (state.isMultiClass)
-        return;
+      Value treeIndex =
+          decisionforest::SumOfValues(rewriter, location, treeIndices);
 
       // Generate the store back in to the result memref
       GenerateResultReduction(rewriter, location, state, accumulatedValue,
-                              rowIndex);
+                              rowIndex, treeIndex);
     } else if (indexVar.Pipelined()) {
       auto range = indexVar.GetRange();
       int32_t peeledLoopStart =
@@ -925,13 +931,12 @@ struct PredictForestOpLowering : public ConversionPattern {
                                       static_cast<Value>(accumulatedValue));
       }
 
-      // Don't accumulate into memref in case of multiclass.
-      if (!state.isMultiClass) {
-        // Generate the store back in to the result memref
-        auto accumulatedValue = loop.getResults()[0];
-        GenerateResultReduction(rewriter, location, state, accumulatedValue,
-                                rowIndex);
-      }
+      Value treeIndex =
+          decisionforest::SumOfValues(rewriter, location, treeIndices);
+      // Generate the store back in to the result memref
+      auto accumulatedValue = loop.getResults()[0];
+      GenerateResultReduction(rewriter, location, state, accumulatedValue,
+                              rowIndex, treeIndex);
 
       if (peeledLoopStart < range.m_stop) {
         stopConst =
@@ -958,11 +963,11 @@ struct PredictForestOpLowering : public ConversionPattern {
                                         static_cast<Value>(accumulatedValue));
         }
 
-        if (!state.isMultiClass) {
-          Value accumulatedValue = peeledLoop.getResults()[0];
-          GenerateResultReduction(rewriter, location, state, accumulatedValue,
-                                  rowIndex);
-        }
+        Value treeIndex =
+            decisionforest::SumOfValues(rewriter, location, treeIndices);
+        Value accumulatedValue = peeledLoop.getResults()[0];
+        GenerateResultReduction(rewriter, location, state, accumulatedValue,
+                                rowIndex, treeIndex);
       }
     } else {
       // Generate leaf loop for tree index var
@@ -994,12 +999,12 @@ struct PredictForestOpLowering : public ConversionPattern {
         loopResult = loop.getResult(0);
       }
 
-      // Don't accumulate into memref in case of multiclass.
-      if (state.isMultiClass)
-        return;
+      Value treeIndex =
+          decisionforest::SumOfValues(rewriter, location, treeIndices);
 
       // Generate the store back in to the result memref
-      GenerateResultReduction(rewriter, location, state, loopResult, rowIndex);
+      GenerateResultReduction(rewriter, location, state, loopResult, rowIndex,
+                              treeIndex);
 
       // rewriter.create<gpu::PrintfOp>(location, "Writing result[%d] = %lf +
       // %lf: %lf\n", ValueRange{rowIndex, currentMemrefElem,
@@ -1043,19 +1048,13 @@ struct PredictForestOpLowering : public ConversionPattern {
         location, treeResultTypes, unrollLoopAttr, state.cmpPredicate, trees,
         rows);
     for (size_t i = 0; i < rowIndices.size(); i++) {
-      // Don't accumulate into memref in case of multiclass.
-      if (state.isMultiClass) {
-        GenerateMultiClassAccumulate(rewriter, location, walkOp.getResult(i),
-                                     rowIndices[i], treeIndex, state);
-      } else {
-        // Accumulate the tree prediction and generate the store back in to the
-        // result memref
-        GenerateResultReduction(rewriter, location, state, walkOp.getResult(i),
-                                rowIndices[i]);
-        if (mlir::decisionforest::InsertDebugHelpers) {
-          rewriter.create<decisionforest::PrintTreePredictionOp>(
-              location, walkOp.getResult(i), treeIndex);
-        }
+      // Accumulate the tree prediction and generate the store back in to
+      // the result memref
+      GenerateResultReduction(rewriter, location, state, walkOp.getResult(i),
+                              rowIndices[i], treeIndex);
+      if (mlir::decisionforest::InsertDebugHelpers) {
+        rewriter.create<decisionforest::PrintTreePredictionOp>(
+            location, walkOp.getResult(i), treeIndex);
       }
     }
   }
@@ -1094,16 +1093,11 @@ struct PredictForestOpLowering : public ConversionPattern {
       // APFloat((double)0), treeType.getThresholdType().cast<FloatType>());
     }
 
-    GenerateMultiClassAccumulate(rewriter, location, static_cast<Value>(walkOp),
-                                 rowIndex, treeIndex, state);
-
-    // Don't accumulate into memref in case of multiclass.
-    if (state.isMultiClass)
-      return;
-
     // Accumulate the tree prediction and generate the store back in to the
     // result memref
-    GenerateResultReduction(rewriter, location, state, walkOp, rowIndex);
+    GenerateResultReduction(rewriter, location, state, walkOp, rowIndex,
+                            treeIndex);
+
     if (mlir::decisionforest::InsertDebugHelpers) {
       Value treePred = walkOp;
       if (!treePred.getType().isF64())

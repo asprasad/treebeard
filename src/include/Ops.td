@@ -235,7 +235,7 @@ def ReduceDimensionInplaceOp : DecisionForest_Op<"reduce_dimension_inplace", [At
 def ReduceDimensionOp : DecisionForest_Op<"reduce_dimension", [AttrSizedOperandSegments]> {
   let summary = "Reduce the specified dimension of a memref and store result in target.";
   let description = "Reduce the specified dimension of a memref and store result in the target memref."
-                    "The op copies reduced values to the target memre. Reduced dimesions is the list" 
+                    "The op copies reduced values to the target memref. Reduced dimesions is the list" 
                     "of dimensions that have been previously reduced (i.e. the set of dimensions where"
                     "we should index with a 0).";
 

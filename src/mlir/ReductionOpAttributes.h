@@ -12,8 +12,12 @@ namespace mlir {
 namespace decisionforest {
 enum Reduction {
   kAdd,
-  kSoftMax,
+  kArgMax,
 };
+
+inline std::string getArgMaxLengthAttributeName() {
+  return "decisionforest::reduce_op::argmax_length";
+}
 
 struct ReductionTypeAttrStorage : public ::mlir::AttributeStorage {
   ReductionTypeAttrStorage(::mlir::Type type, Reduction reductionType)
@@ -36,7 +40,7 @@ struct ReductionTypeAttrStorage : public ::mlir::AttributeStorage {
     switch (m_reductionType) {
     case Reduction::kAdd:
       return "Add";
-    case Reduction::kSoftMax:
+    case Reduction::kArgMax:
       return "SoftMax";
     default:
       assert(false && "Unknown reduction type");
@@ -79,9 +83,15 @@ public:
 
   void Print(::mlir::DialectAsmPrinter &os) {
     std::string reductionType = getImpl()->getReductionTypeString();
-    os << "Reduction = " << reductionType;
+    os << "ReductionType = " << reductionType;
   }
 };
+
+inline ReductionTypeAttribute
+createReductionTypeAttribute(MLIRContext *context, Reduction reductionType) {
+  auto reductionAttrType = ReductionAttrType::get(context);
+  return ReductionTypeAttribute::get(reductionAttrType, reductionType);
+}
 
 } // namespace decisionforest
 } // namespace mlir

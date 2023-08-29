@@ -74,12 +74,78 @@ struct ReduceOpLowering : public ConversionPattern {
 };
 
 struct ReduceDimensionOpLowering : public ConversionPattern {
+  void generateArgMax(ConversionPatternRewriter &rewriter, Location location,
+                      int32_t argMaxLen, Value targetMemref, Value sourceMemref,
+                      std::vector<Value> &&targetIndices,
+                      std::vector<Value> &&sourceIndices) const {
+
+    auto zeroIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
+    auto oneIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 1);
+    auto argMaxLenConst =
+        rewriter.create<arith::ConstantIndexOp>(location, argMaxLen);
+
+    auto sourceMemrefType =
+        sourceMemref.getType().cast<MemRefType>().getElementType();
+
+    sourceIndices.push_back(zeroIndexConst);
+    auto firstValue = rewriter.create<memref::LoadOp>(
+        location, sourceMemrefType, static_cast<Value>(sourceMemref),
+        sourceIndices);
+    sourceIndices.pop_back();
+
+    auto maxClassLoop = rewriter.create<scf::ForOp>(
+        location, oneIndexConst, argMaxLenConst, oneIndexConst,
+        ValueRange({static_cast<Value>(firstValue),
+                    static_cast<Value>(zeroIndexConst)}));
+
+    rewriter.setInsertionPointToStart(maxClassLoop.getBody());
+
+    auto k = maxClassLoop.getInductionVar();
+    sourceIndices.push_back(k);
+    auto currentValue = rewriter.create<memref::LoadOp>(
+        location, sourceMemrefType, static_cast<Value>(sourceMemref),
+        sourceIndices);
+    sourceIndices.pop_back();
+
+    auto maxValue = maxClassLoop.getLoopBody().getArgument(1);
+    auto maxIndex = maxClassLoop.getLoopBody().getArgument(2);
+
+    auto compareResult = rewriter.create<arith::CmpFOp>(
+        location, mlir::arith::CmpFPredicate::OGT, maxValue, currentValue);
+
+    auto ifElse = rewriter.create<scf::IfOp>(
+        location, TypeRange({sourceMemrefType, k.getType()}), compareResult,
+        true);
+    {
+      auto thenBodyBuilder = ifElse.getThenBodyBuilder();
+      thenBodyBuilder.create<scf::YieldOp>(location,
+                                           ValueRange({maxValue, maxIndex}));
+    }
+    {
+      auto elseBodyBuilder = ifElse.getElseBodyBuilder();
+      elseBodyBuilder.create<scf::YieldOp>(
+          location, ValueRange({static_cast<Value>(currentValue),
+                                static_cast<Value>(k)}));
+    }
+
+    rewriter.create<scf::YieldOp>(location, ifElse.getResults());
+
+    rewriter.setInsertionPointAfter(maxClassLoop);
+
+    auto result = rewriter.create<arith::IndexCastOp>(
+        location, targetMemref.getType().cast<MemRefType>().getElementType(),
+        static_cast<Value>(maxClassLoop.getResult(1)));
+    rewriter.create<memref::StoreOp>(location, result, targetMemref,
+                                     targetIndices);
+  }
+
   void generateSimpleReductionLoopNest(
       Location location, ConversionPatternRewriter &rewriter,
       Value sourceMemref, Value targetMemref,
       mlir::Operation::operand_range reducedDims,
       std::vector<Value> &rangeStart, std::vector<Value> &rangeEnd,
-      int64_t reductionDim) const {
+      int64_t reductionDim, decisionforest::Reduction reduction,
+      int32_t argMaxLen) const {
 
     // Iterate [rangeStart, rangeEnd)
     auto oneIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 1);
@@ -98,12 +164,13 @@ struct ReduceDimensionOpLowering : public ConversionPattern {
     }
     // for each value, sum over the reduction dimension
     auto zeroIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
-    auto reductionDimSize =
-        sourceMemref.getType().cast<MemRefType>().getDimSize(reductionDim);
+    auto sourceMemrefType = sourceMemref.getType().cast<MemRefType>();
+    auto targetMemrefType = targetMemref.getType().cast<MemRefType>();
+
+    auto reductionDimSize = sourceMemrefType.getDimSize(reductionDim);
     auto reductionDimSizeConst =
         rewriter.create<arith::ConstantIndexOp>(location, reductionDimSize);
-    auto memrefElemType =
-        sourceMemref.getType().cast<MemRefType>().getElementType();
+    auto memrefElemType = sourceMemrefType.getElementType();
     auto zeroFloatConst = decisionforest::createFloatConst(location, rewriter,
                                                            memrefElemType, 0.0);
     auto reductionLoop = rewriter.create<scf::ForOp>(
@@ -117,26 +184,62 @@ struct ReduceDimensionOpLowering : public ConversionPattern {
     memrefIndex.insert(memrefIndex.end(), reducedDims.size(), zeroIndexConst);
     memrefIndex.insert(memrefIndex.end(), loopIVs.begin(), loopIVs.end());
 
-    auto loadVal =
-        rewriter.create<memref::LoadOp>(location, sourceMemref, memrefIndex);
-
-    // rewriter.create<decisionforest::PrintfOp>(
-    //     location, "Index: %ld, %ld, %ld, Value: %lf\n",
-    //     ValueRange{memrefIndex[0], memrefIndex[1], memrefIndex[2],
-    //                loadVal.getResult()});
-    auto accumulator = reductionLoop.getRegionIterArgs().front();
-    auto addVal = rewriter.create<arith::AddFOp>(location, loadVal.getResult(),
-                                                 accumulator);
-    rewriter.create<scf::YieldOp>(location, addVal.getResult());
-
-    rewriter.setInsertionPointAfter(reductionLoop);
-
-    // Write value to target memref
     std::vector<Value> resultIndex(loopIVs.begin(), loopIVs.end());
+    if (reduction == decisionforest::Reduction::kArgMax) {
+      generateArgMax(rewriter, location, argMaxLen, targetMemref, sourceMemref,
+                     std::move(memrefIndex), std::move(memrefIndex));
 
-    rewriter.create<memref::StoreOp>(location,
-                                     reductionLoop.getResults().front(),
-                                     targetMemref, resultIndex);
+    } else if (memrefIndex.size() < (size_t)sourceMemrefType.getRank()) {
+      std::vector<Value> trailingDims;
+      for (size_t j = memrefIndex.size();
+           j < (size_t)sourceMemrefType.getRank(); ++j) {
+        auto start = rewriter.create<arith::ConstantIndexOp>(location, 0);
+        auto end = rewriter.create<arith::ConstantIndexOp>(
+            location, sourceMemrefType.getDimSize(j));
+        auto loop = rewriter.create<scf::ForOp>(location, start, end,
+                                                oneIndexConst.getResult());
+        trailingDims.push_back(loop.getInductionVar());
+        rewriter.setInsertionPointToStart(loop.getBody());
+      }
+      memrefIndex.insert(memrefIndex.end(), trailingDims.begin(),
+                         trailingDims.end());
+      auto loadVal =
+          rewriter.create<memref::LoadOp>(location, sourceMemref, memrefIndex);
+
+      // The number of trailing dimensions in the target memref should be the
+      // same as the number of trailing dims in the source memref.
+      assert((targetMemrefType.getRank() - resultIndex.size()) ==
+             trailingDims.size());
+      resultIndex.insert(resultIndex.end(), trailingDims.begin(),
+                         trailingDims.end());
+      auto loadResultIndexVal =
+          rewriter.create<memref::LoadOp>(location, targetMemref, resultIndex);
+      auto addVal = rewriter.create<arith::AddFOp>(
+          location, loadVal.getResult(), loadResultIndexVal.getResult());
+      rewriter.create<memref::StoreOp>(location, addVal.getResult(),
+                                       targetMemref, resultIndex);
+      rewriter.create<scf::YieldOp>(location, zeroFloatConst);
+
+    } else {
+
+      auto loadVal =
+          rewriter.create<memref::LoadOp>(location, sourceMemref, memrefIndex);
+
+      // rewriter.create<decisionforest::PrintfOp>(
+      //     location, "Index: %ld, %ld, %ld, Value: %lf\n",
+      //     ValueRange{memrefIndex[0], memrefIndex[1], memrefIndex[2],
+      //                loadVal.getResult()});
+      auto accumulator = reductionLoop.getRegionIterArgs().front();
+      auto addVal = rewriter.create<arith::AddFOp>(
+          location, loadVal.getResult(), accumulator);
+      rewriter.create<scf::YieldOp>(location, addVal.getResult());
+
+      rewriter.setInsertionPointAfter(reductionLoop);
+
+      rewriter.create<memref::StoreOp>(location,
+                                       reductionLoop.getResults().front(),
+                                       targetMemref, resultIndex);
+    }
 
     rewriter.setInsertionPointAfter(outermostLoop);
   }
@@ -165,6 +268,15 @@ struct ReduceDimensionOpLowering : public ConversionPattern {
     // auto sourceMemrefType = sourceMemref.getType().cast<MemRefType>();
     auto targetMemref = reduceOp.getTargetMemref();
 
+    auto reductionType = reduceOp.getReductionTypeAttr().getReductionType();
+    int32_t argMaxLength = 0;
+    if (reductionType == decisionforest::Reduction::kArgMax) {
+      argMaxLength =
+          reduceOp->getAttr(decisionforest::getArgMaxLengthAttributeName())
+              .cast<IntegerAttr>()
+              .getInt();
+    }
+
     assert(rangeStart.size() != 0);
     assert(rangeStart.size() == rangeEnd.size());
     std::vector<Value> rangeStartVec(rangeStart.begin(), rangeStart.end());
@@ -185,7 +297,8 @@ struct ReduceDimensionOpLowering : public ConversionPattern {
     // }
     generateSimpleReductionLoopNest(location, rewriter, sourceMemref,
                                     targetMemref, reducedDims, rangeStartVec,
-                                    rangeEndVec, reductionDimVal);
+                                    rangeEndVec, reductionDimVal, reductionType,
+                                    argMaxLength);
     rewriter.eraseOp(op);
     return mlir::success();
   }
@@ -216,12 +329,11 @@ struct ReduceInplaceOpLowering : public ConversionPattern {
     }
     // for each value, sum over the reduction dimension
     auto zeroIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
-    auto reductionDimSize =
-        targetMemref.getType().cast<MemRefType>().getDimSize(reductionDim);
+    auto targetMemrefType = targetMemref.getType().cast<MemRefType>();
+    auto reductionDimSize = targetMemrefType.getDimSize(reductionDim);
     auto reductionDimSizeConst =
         rewriter.create<arith::ConstantIndexOp>(location, reductionDimSize);
-    auto memrefElemType =
-        targetMemref.getType().cast<MemRefType>().getElementType();
+    auto memrefElemType = targetMemrefType.getElementType();
     auto zeroFloatConst = decisionforest::createFloatConst(location, rewriter,
                                                            memrefElemType, 0.0);
     auto reductionLoop = rewriter.create<scf::ForOp>(
@@ -234,23 +346,57 @@ struct ReduceInplaceOpLowering : public ConversionPattern {
     memrefIndex.push_back(reductionLoopIV);
     memrefIndex.insert(memrefIndex.end(), loopIVs.begin(), loopIVs.end());
 
-    auto loadVal =
-        rewriter.create<memref::LoadOp>(location, targetMemref, memrefIndex);
-    auto accumulator = reductionLoop.getRegionIterArgs().front();
-    auto addVal = rewriter.create<arith::AddFOp>(location, loadVal.getResult(),
-                                                 accumulator);
-    rewriter.create<scf::YieldOp>(location, addVal.getResult());
+    // if there are dimensions after the reduction dimension, then we need to
+    // add them up element-wise
+    if (memrefIndex.size() < (size_t)targetMemrefType.getRank()) {
+      std::vector<Value> trailingDims;
+      for (size_t j = memrefIndex.size();
+           j < (size_t)targetMemrefType.getRank(); ++j) {
+        auto start = rewriter.create<arith::ConstantIndexOp>(location, 0);
+        auto end = rewriter.create<arith::ConstantIndexOp>(
+            location, targetMemrefType.getDimSize(j));
+        auto loop = rewriter.create<scf::ForOp>(location, start, end,
+                                                oneIndexConst.getResult());
+        trailingDims.push_back(loop.getInductionVar());
+        rewriter.setInsertionPointToStart(loop.getBody());
+      }
+      memrefIndex.insert(memrefIndex.end(), trailingDims.begin(),
+                         trailingDims.end());
+      auto loadVal =
+          rewriter.create<memref::LoadOp>(location, targetMemref, memrefIndex);
 
-    rewriter.setInsertionPointAfter(reductionLoop);
+      std::vector<Value> resultIndex(indices.begin(), indices.end());
+      resultIndex.push_back(zeroIndexConst);
+      resultIndex.insert(resultIndex.end(), loopIVs.begin(), loopIVs.end());
+      resultIndex.insert(resultIndex.end(), trailingDims.begin(),
+                         trailingDims.end());
+      auto loadResultIndexVal =
+          rewriter.create<memref::LoadOp>(location, targetMemref, resultIndex);
+      auto addVal = rewriter.create<arith::AddFOp>(
+          location, loadVal.getResult(), loadResultIndexVal.getResult());
+      rewriter.create<memref::StoreOp>(location, addVal.getResult(),
+                                       targetMemref, resultIndex);
+      rewriter.create<scf::YieldOp>(location, zeroFloatConst);
 
-    // Write value to target memref
-    std::vector<Value> resultIndex(indices.begin(), indices.end());
-    resultIndex.push_back(zeroIndexConst);
-    resultIndex.insert(resultIndex.end(), loopIVs.begin(), loopIVs.end());
+    } else {
+      auto loadVal =
+          rewriter.create<memref::LoadOp>(location, targetMemref, memrefIndex);
+      auto accumulator = reductionLoop.getRegionIterArgs().front();
+      auto addVal = rewriter.create<arith::AddFOp>(
+          location, loadVal.getResult(), accumulator);
+      rewriter.create<scf::YieldOp>(location, addVal.getResult());
 
-    rewriter.create<memref::StoreOp>(location,
-                                     reductionLoop.getResults().front(),
-                                     targetMemref, resultIndex);
+      rewriter.setInsertionPointAfter(reductionLoop);
+
+      // Write value to target memref
+      std::vector<Value> resultIndex(indices.begin(), indices.end());
+      resultIndex.push_back(zeroIndexConst);
+      resultIndex.insert(resultIndex.end(), loopIVs.begin(), loopIVs.end());
+
+      rewriter.create<memref::StoreOp>(location,
+                                       reductionLoop.getResults().front(),
+                                       targetMemref, resultIndex);
+    }
 
     rewriter.setInsertionPointAfter(outermostLoop);
   }
