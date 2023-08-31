@@ -48,28 +48,32 @@ mlir::ModuleOp LowerHIRModuleToGPU(mlir::ModuleOp module,
   mlir::decisionforest::legalizeReductionsAndCanonicalize(context, module);
   // module->dump();
 
+  mlir::decisionforest::convertToCooperativeReduceAndCanonicalize(context,
+                                                                  module);
+  // module->dump();
+
   // mlir::decisionforest::GreedilyMapParallelLoopsToGPU(module);
 
   mlir::decisionforest::ConvertParallelLoopsToGPU(context, module);
-  mlir::decisionforest::lowerReductionsAndCanonicalize(context, module);
-
   // module->dump();
-  decisionforest::RunCanonicalizerPass(context, module);
+
+  mlir::decisionforest::lowerReductionsAndCanonicalize(context, module);
+  // module->dump();
+
+  // Commenting since previous pass runs canonicalizer
+  // decisionforest::RunCanonicalizerPass(context, module);
   // module->dump();
 
   if (tileSize > 1)
     decisionforest::ConvertTraverseToSimtTraverse(context, module);
   // module->dump();
-  // return true;
 
   mlir::decisionforest::LowerGPUEnsembleToMemrefs(context, module, serializer,
                                                   representation);
   // module->dump();
-  // return true;
 
   mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();
-  // return true;
 
   mlir::decisionforest::LowerGPUToLLVM(context, module, representation);
   // module->dump();

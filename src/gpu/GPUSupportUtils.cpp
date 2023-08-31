@@ -29,6 +29,8 @@ using namespace mlir;
 
 namespace {
 
+StringRef getMappingAttrName() { return "mapping"; }
+
 // Replace all uses of the input argument memref with the gpu memref inside
 // the gpu kernel
 void ReplaceCPUReferencesWithGPUMemref(
@@ -45,6 +47,10 @@ void ReplaceCPUReferencesWithGPUMemref(
         // Workaround for a bug in the use chains of the second arg
         gpuLaunchOp.walk([&](memref::LoadOp loadOp) {
           loadOp->replaceUsesOfWith(cpuMemref, gpuMemref);
+        });
+
+        gpuLaunchOp.walk([&](decisionforest::ReduceOp reduceOp) {
+          reduceOp->replaceUsesOfWith(cpuMemref, gpuMemref);
         });
       }
     }
@@ -205,26 +211,6 @@ struct MakeGPULoopsPerfectlyNestedPass
     registry.insert<gpu::GPUDialect, scf::SCFDialect>();
   }
 
-  StringRef getMappingAttrName() const { return "mapping"; }
-
-  gpu::ParallelLoopDimMappingAttr
-  getMappingAttr(scf::ParallelOp parallelOp) const {
-    auto mappingAttr = parallelOp->getAttr(getMappingAttrName());
-    if (!mappingAttr)
-      return nullptr;
-    auto mappingArrayAttr = mappingAttr.cast<ArrayAttr>();
-    return mappingArrayAttr[0].cast<gpu::ParallelLoopDimMappingAttr>();
-  }
-
-  bool isBatchLoop(scf::ParallelOp parallelOp) const {
-    auto mappingAttr = getMappingAttr(parallelOp);
-    if (!mappingAttr)
-      return false;
-    return mappingAttr.getProcessor() == gpu::Processor::BlockX ||
-           mappingAttr.getProcessor() == gpu::Processor::BlockY ||
-           mappingAttr.getProcessor() == gpu::Processor::BlockZ;
-  }
-
   void makeGPULoopsPerfectlyNested() {
     auto func = this->getOperation();
     func.walk([&](scf::ParallelOp parallelOp) {
@@ -234,13 +220,15 @@ struct MakeGPULoopsPerfectlyNestedPass
       auto parentParallelOp = parallelOp->getParentOfType<scf::ParallelOp>();
       if (!parentParallelOp)
         return;
-      auto parentLoopMappingAttr = getMappingAttr(parentParallelOp);
+      auto parentLoopMappingAttr =
+          decisionforest::getMappingAttr(parentParallelOp);
       if (!parentLoopMappingAttr)
         return;
-      auto loopMappingAttr = getMappingAttr(parallelOp);
+      auto loopMappingAttr = decisionforest::getMappingAttr(parallelOp);
       if (!loopMappingAttr)
         return;
-      if (!isBatchLoop(parallelOp) || !isBatchLoop(parentParallelOp))
+      if (!decisionforest::isThreadBlockLoop(parallelOp) ||
+          !decisionforest::isThreadBlockLoop(parentParallelOp))
         return;
       // Move all the ops in the parent loop that are before the child
       // loop into the child loop
@@ -263,6 +251,32 @@ struct MakeGPULoopsPerfectlyNestedPass
 
 namespace mlir {
 namespace decisionforest {
+
+gpu::ParallelLoopDimMappingAttr getMappingAttr(scf::ParallelOp parallelOp) {
+  auto mappingAttr = parallelOp->getAttr(getMappingAttrName());
+  if (!mappingAttr)
+    return nullptr;
+  auto mappingArrayAttr = mappingAttr.cast<ArrayAttr>();
+  return mappingArrayAttr[0].cast<gpu::ParallelLoopDimMappingAttr>();
+}
+
+bool isThreadBlockLoop(scf::ParallelOp parallelOp) {
+  auto mappingAttr = getMappingAttr(parallelOp);
+  if (!mappingAttr)
+    return false;
+  return mappingAttr.getProcessor() == gpu::Processor::BlockX ||
+         mappingAttr.getProcessor() == gpu::Processor::BlockY ||
+         mappingAttr.getProcessor() == gpu::Processor::BlockZ;
+}
+
+bool isThreadLoop(scf::ParallelOp parallelOp) {
+  auto mappingAttr = getMappingAttr(parallelOp);
+  if (!mappingAttr)
+    return false;
+  return mappingAttr.getProcessor() == gpu::Processor::ThreadX ||
+         mappingAttr.getProcessor() == gpu::Processor::ThreadY ||
+         mappingAttr.getProcessor() == gpu::Processor::ThreadZ;
+}
 
 void GreedilyMapParallelLoopsToGPU(mlir::ModuleOp module) {
   mlir::PassManager pm(module.getContext());

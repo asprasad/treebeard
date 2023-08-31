@@ -82,6 +82,37 @@ void TahoeSharedDataStrategy(decisionforest::Schedule &schedule) {
   schedule.Reorder({&b0, &treeIndex, &b1});
 }
 
+void tahoeSharedDataStrategy_MultipleRowsPerBlock(
+    decisionforest::Schedule &schedule, int32_t numRowsPerBlock) {
+  /*
+    for b0 = 1:N_rows step numRowsPerBlock <Grid.x>
+      for b1 = 1:numRowsPerBlock step 1 <Block.x>
+        for tree = 1:N_trees step 1 <Block.y>
+          for b2 = 1:1 step 1 -- CacheRow
+            WalkDecisionTree
+  */
+
+  auto &batchIndex = schedule.GetBatchIndex();
+  auto &treeIndex = schedule.GetTreeIndex();
+
+  auto &b0 = schedule.NewIndexVariable("b0");
+  auto &b1_initial = schedule.NewIndexVariable("b1_initial");
+  auto &b1 = schedule.NewIndexVariable("b1");
+  auto &b2 = schedule.NewIndexVariable("b2");
+
+  schedule.Tile(batchIndex, b0, b1_initial, numRowsPerBlock);
+  schedule.Tile(b1_initial, b1, b2, 1);
+  b0.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::Grid,
+                     decisionforest::IndexVariable::Dimension::X);
+  b1.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::ThreadBlock,
+                     decisionforest::IndexVariable::Dimension::X);
+  treeIndex.SetGPUDimension(
+      decisionforest::IndexVariable::GPUConstruct::ThreadBlock,
+      decisionforest::IndexVariable::Dimension::Y);
+  schedule.Reorder({&b0, &b1, &treeIndex, &b2});
+  schedule.Cache(b0);
+}
+
 void TahoeSharedPartialForestStrategy(decisionforest::Schedule &schedule,
                                       int32_t treesPerThreadBlock,
                                       int32_t rowsPerThreadBlock) {

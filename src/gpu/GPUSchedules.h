@@ -1,24 +1,25 @@
 #ifndef _GPUSCHEDULES_H_
 #define _GPUSCHEDULES_H_
 
-#include <functional>
 #include "schedule.h"
 
-namespace mlir
-{
-namespace decisionforest
-{
+namespace mlir {
+namespace decisionforest {
 
-void GPUBasicSchedule(decisionforest::Schedule& schedule, int32_t gridXSize);
-void TahoeSharedForestStrategy(decisionforest::Schedule& schedule, int32_t rowsPerThreadBlock);
-void TahoeSharedDataStrategy_Modified(decisionforest::Schedule& schedule, int32_t rowsPerThreadBlock);
-void TahoeSharedDataStrategy(decisionforest::Schedule& schedule);
-void TahoeSharedPartialForestStrategy(decisionforest::Schedule& schedule,
+void GPUBasicSchedule(decisionforest::Schedule &schedule, int32_t gridXSize);
+void TahoeSharedForestStrategy(decisionforest::Schedule &schedule,
+                               int32_t rowsPerThreadBlock);
+void TahoeSharedDataStrategy_Modified(decisionforest::Schedule &schedule,
+                                      int32_t rowsPerThreadBlock);
+void TahoeSharedDataStrategy(decisionforest::Schedule &schedule);
+void tahoeSharedDataStrategy_MultipleRowsPerBlock(
+    decisionforest::Schedule &schedule, int32_t numRowsPerBlock);
+void TahoeSharedPartialForestStrategy(decisionforest::Schedule &schedule,
                                       int32_t treesPerThreadBlock,
                                       int32_t rowsPerThreadBlock);
-void CachePartialForestStrategy(decisionforest::Schedule& schedule,
+void CachePartialForestStrategy(decisionforest::Schedule &schedule,
                                 int32_t treesToCache,
-                                int32_t rowsPerThreadBlock);                                      
+                                int32_t rowsPerThreadBlock);
 
 } // end namespace decisionforest
 } // end namespace mlir

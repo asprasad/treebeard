@@ -24,8 +24,11 @@ namespace decisionforest {
 // Defined in GPURepresentations.cpp
 int64_t GetConstantIntValueFromMLIRValue(Value val);
 
-Value createFloatConst(Location location, ConversionPatternRewriter &rewriter,
-                       Type type, double floatVal) {
+mlir::gpu::KernelDim3 GetThreadID(mlir::Operation *op);
+mlir::gpu::KernelDim3 GetBlockID(mlir::Operation *op);
+
+Value createFloatConst(Location location, OpBuilder &rewriter, Type type,
+                       double floatVal) {
   auto floatType = type.cast<mlir::FloatType>();
   if (type.isa<mlir::Float32Type>()) {
     return rewriter.create<arith::ConstantFloatOp>(
@@ -303,6 +306,134 @@ struct ReduceInplaceOpLowering : public ConversionPattern {
   }
 };
 
+struct CooperativeReduceDimensionOpLowering : public ConversionPattern {
+
+  CooperativeReduceDimensionOpLowering(MLIRContext *ctx)
+      : ConversionPattern(mlir::decisionforest::CooperativeReduceDimensionOp::
+                              getOperationName(),
+                          1 /*benefit*/, ctx) {}
+
+  std::tuple<Value, Value> generateLocalThreadId(
+      Location location, ConversionPatternRewriter &rewriter,
+      decisionforest::CooperativeReduceDimensionOp reduceOp) const {
+
+    auto threadId = decisionforest::GetThreadID(reduceOp);
+    auto localThreadIdX = rewriter.create<arith::SubIOp>(
+        location, threadId.x, reduceOp.getBlockXStart());
+    auto localThreadIdY = rewriter.create<arith::SubIOp>(
+        location, threadId.y, reduceOp.getBlockYStart());
+    // auto localThreadIdZ = rewriter.create<arith::SubIOp>(
+    //     location, threadId.z, reduceOp.getBlockZStart());
+
+    auto startZ = decisionforest::GetConstantIntValueFromMLIRValue(
+        reduceOp.getBlockZStart());
+    auto endZ = decisionforest::GetConstantIntValueFromMLIRValue(
+        reduceOp.getBlockZEnd());
+    assert(startZ == 0 && endZ == 1 &&
+           "Only 2D thread blocks supported for now");
+
+    auto numThreadsX = rewriter.create<arith::SubIOp>(
+        location, reduceOp.getBlockXEnd(), reduceOp.getBlockXStart());
+    // index = numThreadsX*threadNum.Y + threadNum.X
+    auto nxTimesTy =
+        rewriter.create<arith::MulIOp>(location, numThreadsX, localThreadIdY);
+    auto localThreadId = rewriter.create<arith::AddIOp>(
+        location, static_cast<Value>(nxTimesTy), localThreadIdX);
+
+    auto numThreadsY = rewriter.create<arith::SubIOp>(
+        location, reduceOp.getBlockYEnd(), reduceOp.getBlockYStart());
+    auto numThreads = rewriter.create<arith::MulIOp>(
+        location, numThreadsX, static_cast<Value>(numThreadsY));
+
+    return std::make_tuple(localThreadId, numThreads);
+  }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    auto reduceOp =
+        AssertOpIsOfType<decisionforest::CooperativeReduceDimensionOp>(op);
+    auto location = reduceOp.getLoc();
+
+    // The values for the outer indices. These are fixed
+    auto reducedDims = reduceOp.getReducedDimensions();
+    assert(reducedDims.empty());
+
+    auto reductionDim = reduceOp.getReductionDimension();
+    auto reductionDimVal =
+        decisionforest::GetConstantIntValueFromMLIRValue(reductionDim);
+    assert(reductionDimVal == 0);
+
+    auto rangeStart = reduceOp.getRangeStart();
+    auto rangeEnd = reduceOp.getRangeEnd();
+
+    auto sourceMemref = reduceOp.getSourceMemref();
+    // auto sourceMemrefType = sourceMemref.getType().cast<MemRefType>();
+    auto targetMemref = reduceOp.getTargetMemref();
+
+    assert(rangeStart.size() == 1);
+    assert(rangeStart.size() == rangeEnd.size());
+    std::vector<Value> rangeStartVec(rangeStart.begin(), rangeStart.end());
+    std::vector<Value> rangeEndVec(rangeEnd.begin(), rangeEnd.end());
+
+    auto localThreadIdAndNumThreads =
+        generateLocalThreadId(location, rewriter, reduceOp);
+    auto localThreadId = std::get<0>(localThreadIdAndNumThreads);
+    auto numThreads = std::get<1>(localThreadIdAndNumThreads);
+
+    rewriter.create<gpu::BarrierOp>(location);
+
+    auto elemType = sourceMemref.getType().cast<MemRefType>().getElementType();
+    // for i = start[0] to end[0] step numThreads
+    auto loop = rewriter.create<scf::ForOp>(location, rangeStartVec[0],
+                                            rangeEndVec[0], numThreads);
+    rewriter.setInsertionPointToStart(loop.getBody());
+    auto loopIV = loop.getInductionVar();
+    auto threadIndex =
+        rewriter.create<arith::AddIOp>(location, loopIV, localThreadId);
+    // // if (threadIndex < end[0])
+    auto cmpOp = rewriter.create<arith::CmpIOp>(
+        location, arith::CmpIPredicate::slt, threadIndex, rangeEndVec[0]);
+    auto ifOp = rewriter.create<scf::IfOp>(location, cmpOp,
+                                           /*hasElseRegion=*/false);
+    {
+      auto ifBodyBuilder = ifOp.getThenBodyBuilder();
+      auto zeroConst = decisionforest::createFloatConst(location, ifBodyBuilder,
+                                                        elemType, 0.0);
+      auto reductionDimSize =
+          sourceMemref.getType().cast<MemRefType>().getDimSize(reductionDimVal);
+      auto reductionDimSizeConst = ifBodyBuilder.create<arith::ConstantIndexOp>(
+          location, reductionDimSize);
+      auto zeroIndexConst =
+          ifBodyBuilder.create<arith::ConstantIndexOp>(location, 0);
+      auto oneIndexConst =
+          ifBodyBuilder.create<arith::ConstantIndexOp>(location, 1);
+      auto reductionLoop = ifBodyBuilder.create<scf::ForOp>(
+          location, zeroIndexConst.getResult(),
+          reductionDimSizeConst.getResult(), oneIndexConst.getResult(),
+          ValueRange{zeroConst});
+      ifBodyBuilder.setInsertionPointToStart(reductionLoop.getBody());
+      std::vector<Value> memrefIndex{reductionLoop.getInductionVar(),
+                                     threadIndex};
+      auto loadVal = ifBodyBuilder.create<memref::LoadOp>(
+          location, sourceMemref, memrefIndex);
+      auto accumulator = reductionLoop.getBody()->getArguments()[1];
+      auto addVal = ifBodyBuilder.create<arith::AddFOp>(
+          location, loadVal.getResult(), accumulator);
+      ifBodyBuilder.create<scf::YieldOp>(location, addVal.getResult());
+      ifBodyBuilder.setInsertionPointAfter(reductionLoop);
+      // Write value to target memref
+      std::vector<Value> resultIndex{threadIndex};
+      ifBodyBuilder.create<memref::StoreOp>(location,
+                                            reductionLoop.getResults().front(),
+                                            targetMemref, resultIndex);
+    }
+    // rewriter.setInsertionPointAfter(loop);
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
+
 struct LowerReductionOps
     : public PassWrapper<LowerReductionOps, OperationPass<mlir::func::FuncOp>> {
 
@@ -320,11 +451,15 @@ struct LowerReductionOps
 
     target.addIllegalOp<decisionforest::ReduceOp,
                         decisionforest::ReduceDimensionInplaceOp,
-                        decisionforest::ReduceDimensionOp>();
+                        decisionforest::ReduceDimensionOp,
+                        decisionforest::CooperativeReduceDimensionOp,
+                        decisionforest::CooperativeReduceInplaceOp>();
 
     RewritePatternSet patterns(&getContext());
-    patterns.add<ReduceOpLowering, ReduceInplaceOpLowering,
-                 ReduceDimensionOpLowering>(&getContext());
+    patterns
+        .add<ReduceOpLowering, ReduceInplaceOpLowering,
+             ReduceDimensionOpLowering, CooperativeReduceDimensionOpLowering>(
+            &getContext());
 
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
@@ -360,6 +495,7 @@ void lowerReductionsAndCanonicalize(mlir::MLIRContext &context,
                                     mlir::ModuleOp module) {
   decisionforest::lowerLinalgToLoops(context, module);
   decisionforest::lowerReduceToMemref(context, module);
+  // module->dump();
   decisionforest::RunCanonicalizerPass(context, module);
 }
 
