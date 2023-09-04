@@ -703,6 +703,8 @@ bool Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInpMultiRow_FltI16_B32(
     TestArgs_t &args);
 bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_TahoeShdInpMultiRow_FltI16_B32(
     TestArgs_t &args);
+bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_IterShdPartialForest_FltI16_B32(
+    TestArgs_t &args);
 
 void InitializeVectorWithRandValues(std::vector<double> &vec) {
   for (size_t i = 0; i < vec.size(); ++i)
@@ -2148,25 +2150,20 @@ TestDescriptor testList[] = {
         Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInpMultiRow_FltI16_B32),
     TEST_LIST_ENTRY(
         Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInp_FltI16_B32),
+    TEST_LIST_ENTRY(
+        Test_ScalarSparseGPU_TwiceLeftRightBalanced_IterShdPartialForest_FltI16_B32),
 #endif // TREEBEARD_GPU_SUPPORT
 };
 
-#else // RUN_ALL_TESTS
+#else  // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-// Parallelize across trees
-// TEST_LIST_ENTRY(Test_TreePar_LeftRightAndBalanced_DblI32),
-// TEST_LIST_ENTRY(Test_NestedTreePar_LeftRightAndBalanced_DblI32),
-
-#ifdef TREEBEARD_GPU_SUPPORT
+    // Parallelize across trees
+    // TEST_LIST_ENTRY(Test_TreePar_LeftRightAndBalanced_DblI32),
+    // TEST_LIST_ENTRY(Test_NestedTreePar_LeftRightAndBalanced_DblI32),
     // GPU Parallelize across trees
     TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_TwiceLeftRightBalanced_TahoeShdInpMultiRow_FltI16_B32),
-    TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInpMultiRow_FltI16_B32),
-    TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInp_FltI16_B32),
-#endif // TREEBEARD_GPU_SUPPORT
+        Test_ScalarSparseGPU_TwiceLeftRightBalanced_IterShdPartialForest_FltI16_B32),
     // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep),
     // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg),
     // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep_F32I16),

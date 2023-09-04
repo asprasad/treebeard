@@ -143,6 +143,26 @@ template <typename LoopType> struct LoopConstructor {
   MemRefType m_oldDataMemrefType;
   Value m_oldInputIndexOffset;
 
+  std::list<Value>
+  removeGPUThreadIndexVars(std::list<Value> &loopInductionVars,
+                           const decisionforest::IndexVariable &indexVar) {
+    std::list<Value> result;
+    auto indexVarType = indexVar.GetType();
+    auto parentIndexVar = indexVar.GetContainingLoop();
+    auto iter = loopInductionVars.rbegin();
+    while (iter != loopInductionVars.rend()) {
+      assert(parentIndexVar);
+      if (parentIndexVar->GetType() == indexVarType &&
+          parentIndexVar->GetGPUDimension().construct !=
+              decisionforest::IndexVariable::GPUConstruct::ThreadBlock) {
+        result.push_front(*iter);
+      }
+      ++iter;
+      parentIndexVar = parentIndexVar->GetContainingLoop();
+    }
+    return result;
+  }
+
   void InsertCacheRowsOpIfNeeded(const decisionforest::IndexVariable &indexVar,
                                  PredictOpLoweringState &loweringState,
                                  Location location,
@@ -195,13 +215,14 @@ template <typename LoopType> struct LoopConstructor {
     if (!indexVar.Cache())
       return;
 
-    treeIndexVars.push_back(loopIndex);
+    auto treeLoopIVs = removeGPUThreadIndexVars(treeIndexVars, indexVar);
+    treeLoopIVs.push_back(loopIndex);
 
     assert(loopIndex.getType().isa<IndexType>());
     assert(step.getType().isa<IndexType>());
 
     auto startIndex =
-        decisionforest::SumOfValues(rewriter, location, treeIndexVars);
+        decisionforest::SumOfValues(rewriter, location, treeLoopIVs);
     auto endIndex = rewriter.create<arith::AddIOp>(location, startIndex, step);
     auto ensembleType = loweringState.forestConst.getType()
                             .cast<decisionforest::TreeEnsembleType>();
@@ -973,7 +994,7 @@ struct PredictForestOpLowering : public ConversionPattern {
             indexVar, state, location, rewriter, startConst, stopConst,
             stepConst, ValueRange{zeroConst}, batchIndices, treeIndices);
         scf::ForOp loop = loopConstructor.GetLoop();
-        rewriter.setInsertionPointToStart(loop.getBody());
+        // rewriter.setInsertionPointToStart(loop.getBody());
         treeIndices.push_back(loop.getInductionVar());
         auto accumulatedValue = GenerateTreeIndexLeafLoopBody(
             rewriter, location, indexVar, treeIndices, state, row, rowIndex,

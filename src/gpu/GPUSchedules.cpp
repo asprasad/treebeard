@@ -143,6 +143,38 @@ void TahoeSharedPartialForestStrategy(decisionforest::Schedule &schedule,
                      decisionforest::IndexVariable::Dimension::X);
 }
 
+// Every thread block processes multiple rows and processes
+// several trees at a time. It also caches the trees in shared memory.
+void iterativeCachedPartialForestStrategy(decisionforest::Schedule &schedule,
+                                          int32_t treesPerIteration,
+                                          int32_t rowsPerThreadBlock) {
+  auto &batchIndex = schedule.GetBatchIndex();
+  auto &treeIndex = schedule.GetTreeIndex();
+
+  auto &b0 = schedule.NewIndexVariable("b0");
+  auto &b1 = schedule.NewIndexVariable("b1");
+
+  auto &t0 = schedule.NewIndexVariable("t0");
+  // auto &t0Inner = schedule.NewIndexVariable("t0Inner");
+  auto &t1 = schedule.NewIndexVariable("t1");
+  // auto &t2 = schedule.NewIndexVariable("t2");
+
+  schedule.Tile(batchIndex, b0, b1, rowsPerThreadBlock);
+
+  schedule.Tile(treeIndex, t0, t1, treesPerIteration);
+  // schedule.Tile(t0Inner, t1, t2, treesPerThreadBlock);
+  schedule.Cache(t0);
+  schedule.Reorder(
+      std::vector<decisionforest::IndexVariable *>{&b0, &t1, &b1, &t0});
+
+  b0.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::Grid,
+                     decisionforest::IndexVariable::Dimension::X);
+  b1.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::ThreadBlock,
+                     decisionforest::IndexVariable::Dimension::X);
+  t1.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::ThreadBlock,
+                     decisionforest::IndexVariable::Dimension::Y);
+}
+
 void CachePartialForestStrategy(decisionforest::Schedule &schedule,
                                 int32_t treesToCache,
                                 int32_t rowsPerThreadBlock) {
