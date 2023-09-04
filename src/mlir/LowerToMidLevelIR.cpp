@@ -520,15 +520,15 @@ struct PredictForestOpLowering : public ConversionPattern {
         rewriter, location, dataMemrefType.getElementType(), initialValue);
 
     // Initialize members for multi-class classification
-    if (state.isMultiClass) {
-      state.treeClassesMemrefType = MemRefType::get(
-          {batchSize,
-           (int64_t)forestAttribute.GetDecisionForest().GetNumClasses()},
-          dataMemrefType.getElementType());
+    // if (state.isMultiClass) {
+    //   state.treeClassesMemrefType = MemRefType::get(
+    //       {batchSize,
+    //        (int64_t)forestAttribute.GetDecisionForest().GetNumClasses()},
+    //       dataMemrefType.getElementType());
 
-      state.treeClassesMemref = rewriter.create<memref::AllocaOp>(
-          location, state.treeClassesMemrefType);
-    }
+    //   state.treeClassesMemref = rewriter.create<memref::AllocaOp>(
+    //       location, state.treeClassesMemrefType);
+    // }
 
     state.data = operands[0];
     state.dataMemrefType = dataMemrefType;
@@ -648,29 +648,29 @@ struct PredictForestOpLowering : public ConversionPattern {
                                         Location location,
                                         PredictOpLoweringState &state) const {
     if (state.isMultiClass) {
-      auto outerLoop = rewriter.create<scf::ForOp>(
-          location, state.zeroIndexConst, state.batchSizeConst,
-          state.oneIndexConst);
-      rewriter.setInsertionPointToStart(outerLoop.getBody());
-      {
-        auto i = outerLoop.getInductionVar();
-        auto row = GetRow(rewriter, location, state.treeClassesMemref, i,
-                          state.treeClassesMemrefType);
-        auto innerLoop = rewriter.create<scf::ForOp>(
-            location, state.zeroIndexConst, state.numClassesConst,
-            state.oneIndexConst);
-        rewriter.setInsertionPointToStart(innerLoop.getBody());
-        {
-          auto j = innerLoop.getInductionVar();
+      // auto outerLoop = rewriter.create<scf::ForOp>(
+      //     location, state.zeroIndexConst, state.batchSizeConst,
+      //     state.oneIndexConst);
+      // rewriter.setInsertionPointToStart(outerLoop.getBody());
+      // {
+      //   auto i = outerLoop.getInductionVar();
+      //   auto row = GetRow(rewriter, location, state.treeClassesMemref, i,
+      //                     state.treeClassesMemrefType);
+      //   auto innerLoop = rewriter.create<scf::ForOp>(
+      //       location, state.zeroIndexConst, state.numClassesConst,
+      //       state.oneIndexConst);
+      //   rewriter.setInsertionPointToStart(innerLoop.getBody());
+      //   {
+      //     auto j = innerLoop.getInductionVar();
 
-          rewriter.create<memref::StoreOp>(
-              location, static_cast<Value>(state.initialValueConst),
-              static_cast<Value>(row),
-              ValueRange(llvm::ArrayRef<Value>{state.zeroIndexConst, j}));
-          rewriter.setInsertionPointAfter(innerLoop);
-        }
-      }
-      rewriter.setInsertionPointAfter(outerLoop);
+      //     rewriter.create<memref::StoreOp>(
+      //         location, static_cast<Value>(state.initialValueConst),
+      //         static_cast<Value>(row),
+      //         ValueRange(llvm::ArrayRef<Value>{state.zeroIndexConst, j}));
+      //     rewriter.setInsertionPointAfter(innerLoop);
+      //   }
+      // }
+      // rewriter.setInsertionPointAfter(outerLoop);
     }
   }
 
@@ -699,7 +699,8 @@ struct PredictForestOpLowering : public ConversionPattern {
                         decisionforest::PredictionTransformation predTransform,
                         PredictOpLoweringState &state) const {
 
-    if (predTransform == decisionforest::PredictionTransformation::kIdentity)
+    if (predTransform == decisionforest::PredictionTransformation::kIdentity ||
+        predTransform == decisionforest::PredictionTransformation::kSoftMax)
       return;
 
     // assert (resultMemrefType.getElementType().isa<mlir::FloatType>());
@@ -719,9 +720,6 @@ struct PredictForestOpLowering : public ConversionPattern {
     if (predTransform == decisionforest::PredictionTransformation::kSigmoid)
       transformedValue =
           GenSigmoid(rewriter, static_cast<Value>(memrefElem), location);
-    else if (predTransform ==
-             decisionforest::PredictionTransformation::kSoftMax)
-      transformedValue = GenArgMax(rewriter, location, state, i);
     else
       assert(false && "Unsupported prediction transformation.");
 
@@ -769,18 +767,8 @@ struct PredictForestOpLowering : public ConversionPattern {
       // auto printResult = rewriter.create<gpu::PrintfOp>(location, "Result
       // [%d]: %lf\t", ValueRange{rowIndex, static_cast<Value>(walkOp)});
     }
-    GenerateMultiClassAccumulate(rewriter, location, static_cast<Value>(walkOp),
-                                 rowIndex, treeIndex, state);
-
-    if (state.isMultiClass)
-      return prevAccumulatorValue;
-
-    // Accumulate the tree prediction
-    assert(forestType.getReductionType() ==
-           decisionforest::ReductionType::kAdd);
-    auto accumulatedValue = rewriter.create<arith::AddFOp>(
-        location, state.resultMemrefType.getElementType(), prevAccumulatorValue,
-        walkOp);
+    GenerateResultReduction(rewriter, location, state,
+                            static_cast<Value>(walkOp), rowIndex, treeIndex);
 
     if (mlir::decisionforest::InsertDebugHelpers) {
       Value treePred = walkOp;
@@ -793,7 +781,7 @@ struct PredictForestOpLowering : public ConversionPattern {
     // auto updatedResultTensor = rewriter.create<tensor::InsertOp>(location,
     // resultMemrefType, accumulatedValue,
     // treeLoop.getBody()->getArguments()[1], i);
-    return accumulatedValue;
+    return prevAccumulatorValue;
   }
 
   Value GeneratePipelinedTreeIndexLeafLoopBody(
@@ -894,13 +882,6 @@ struct PredictForestOpLowering : public ConversionPattern {
             rewriter, location, indexVar, treeIndices, state, row, rowIndex,
             accumulatedValue);
       }
-
-      Value treeIndex =
-          decisionforest::SumOfValues(rewriter, location, treeIndices);
-
-      // Generate the store back in to the result memref
-      GenerateResultReduction(rewriter, location, state, accumulatedValue,
-                              rowIndex, treeIndex);
     } else if (indexVar.Pipelined()) {
       auto range = indexVar.GetRange();
       int32_t peeledLoopStart =
@@ -998,13 +979,6 @@ struct PredictForestOpLowering : public ConversionPattern {
         // rewriter.setInsertionPointAfter(loop);
         loopResult = loop.getResult(0);
       }
-
-      Value treeIndex =
-          decisionforest::SumOfValues(rewriter, location, treeIndices);
-
-      // Generate the store back in to the result memref
-      GenerateResultReduction(rewriter, location, state, loopResult, rowIndex,
-                              treeIndex);
 
       // rewriter.create<gpu::PrintfOp>(location, "Writing result[%d] = %lf +
       // %lf: %lf\n", ValueRange{rowIndex, currentMemrefElem,

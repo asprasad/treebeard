@@ -181,7 +181,7 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
     decisionforest::helpers::SaveAndRestoreInsertionPoint saveIP(rewriter);
 
     // Set insertion point to start of owning function
-    auto owningFunc = loops[0]->getParentOfType<mlir::func::FuncOp>();
+    auto owningFunc = reduceOp->getParentOfType<mlir::func::FuncOp>();
     rewriter.setInsertionPointToStart(&owningFunc.getBody().front());
 
     auto privatizedBufferType = constructPrivatizedBufferType(
@@ -278,13 +278,13 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
     // At this point we should have reduced all the tree walks for the
     // surrounding batch loops (all tree walks for all batches if no surrounding
     // loops exist). Hence we reduce (0,0,0, ... batchStart, batchEnd)
-    auto reductionDimConst =
-        rewriter.create<arith::ConstantIndexOp>(reduceOp->getLoc(), 0);
+    auto reductionDimConst = rewriter.create<arith::ConstantIndexOp>(
+        reduceOp->getLoc(), targetMemrefType.getShape().size() - 1);
 
     // At this point, we should have reduced everything except last dimensions
     // representing the batch and class weights.
     auto numberOfReducedDims = privateBufferMemrefType.getShape().size() -
-                               targetMemrefType.getShape().size();
+                               targetMemrefType.getShape().size() - 1;
     std::vector<Value> reducedDimensions;
     for (size_t j = 0; j < numberOfReducedDims; ++j) {
       reducedDimensions.push_back(
@@ -320,14 +320,15 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
     }
     auto reductionType = reductionTypeAttr.getReductionType();
     if (reductionType == mlir::decisionforest::Reduction::kArgMax &&
-        op->getAttr(mlir::decisionforest::getArgMaxLengthAttributeName())) {
+        !op->getAttr(mlir::decisionforest::getArgMaxLengthAttributeName())) {
       llvm::errs() << "Argmax reduction requires ArgMaxLength attribute\n";
       return mlir::failure();
     }
 
     auto location = reduceOp->getLoc();
     auto conflictingLoops = getConflictingLoops(reduceOp);
-    assert(conflictingLoops.size() != 0);
+    assert(conflictingLoops.size() != 0 ||
+           reductionType == decisionforest::Reduction::kArgMax);
     auto targetMemrefType =
         reduceOp.getTargetMemref().getType().cast<MemRefType>();
     auto privatizedBuffer = createOrGetPrivatizedBuffer(
@@ -436,7 +437,11 @@ struct LegalizeReductions
         [&](decisionforest::ReduceOp op) {
           if (op->getAttr("legalizedReduce"))
             return true;
-          return getConflictingLoops(op).size() == 0;
+          // We still need to legalize reduction of argmax even if there aren't
+          // any conflicting loops.
+          return getConflictingLoops(op).size() == 0 &&
+                 op.getReductionTypeAttr().getReductionType() ==
+                     decisionforest::Reduction::kAdd;
         });
 
     RewritePatternSet patterns(&getContext());

@@ -173,21 +173,26 @@ struct ReduceDimensionOpLowering : public ConversionPattern {
     auto memrefElemType = sourceMemrefType.getElementType();
     auto zeroFloatConst = decisionforest::createFloatConst(location, rewriter,
                                                            memrefElemType, 0.0);
-    auto reductionLoop = rewriter.create<scf::ForOp>(
-        location, zeroIndexConst.getResult(), reductionDimSizeConst.getResult(),
-        oneIndexConst.getResult(), ValueRange{zeroFloatConst});
-    rewriter.setInsertionPointToStart(reductionLoop.getBody());
 
-    auto reductionLoopIV = reductionLoop.getInductionVar();
+    scf::ForOp reductionLoop;
     std::vector<Value> memrefIndex;
-    memrefIndex.push_back(reductionLoopIV);
+    if (reduction != decisionforest::Reduction::kArgMax) {
+      reductionLoop = rewriter.create<scf::ForOp>(
+          location, zeroIndexConst.getResult(),
+          reductionDimSizeConst.getResult(), oneIndexConst.getResult(),
+          ValueRange{zeroFloatConst});
+      rewriter.setInsertionPointToStart(reductionLoop.getBody());
+
+      auto reductionLoopIV = reductionLoop.getInductionVar();
+      memrefIndex.push_back(reductionLoopIV);
+    }
     memrefIndex.insert(memrefIndex.end(), reducedDims.size(), zeroIndexConst);
     memrefIndex.insert(memrefIndex.end(), loopIVs.begin(), loopIVs.end());
-
     std::vector<Value> resultIndex(loopIVs.begin(), loopIVs.end());
     if (reduction == decisionforest::Reduction::kArgMax) {
       generateArgMax(rewriter, location, argMaxLen, targetMemref, sourceMemref,
                      std::move(memrefIndex), std::move(memrefIndex));
+      // rewriter.create<scf::YieldOp>(location, zeroFloatConst);
 
     } else if (memrefIndex.size() < (size_t)sourceMemrefType.getRank()) {
       std::vector<Value> trailingDims;

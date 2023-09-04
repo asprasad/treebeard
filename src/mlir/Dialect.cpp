@@ -128,6 +128,9 @@ void DecisionForestDialect::printAttribute(
   } else if (attr.isa<UnrollLoopAttribute>()) {
     auto unrollLoopAttr = attr.cast<UnrollLoopAttribute>();
     unrollLoopAttr.Print(os);
+  } else if (attr.isa<ReductionTypeAttribute>()) {
+    auto reductionTypeAttr = attr.cast<ReductionTypeAttribute>();
+    reductionTypeAttr.Print(os);
   } else {
     assert(false && "Unknow attribute");
   }

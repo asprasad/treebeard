@@ -205,8 +205,8 @@ def WalkDecisionTreePeeledOp : DecisionForest_Op<"walkDecisionTreePeeled"> {
 } 
 
 // ----- Reduction Ops ------
-def ReductionValueType : AnyTypeOf<[F16, F32, F64]>;
-def TargetMemrefType : AnyTypeOf<[F16MemRef, F32MemRef, F64MemRef]>;
+def ReductionValueType : AnyTypeOf<[I8, F16, F32, F64]>;
+def TargetMemrefType : AnyTypeOf<[I8MemRef, F16MemRef, F32MemRef, F64MemRef]>;
 
 def ReduceOp : DecisionForest_Op<"reduce"> {
   let summary = "Accumulate a value into a memref.";
