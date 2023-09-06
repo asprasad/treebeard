@@ -204,7 +204,8 @@ def ReduceOp : DecisionForest_Op<"reduce"> {
 
   let arguments = (ins TargetMemrefType:$targetMemref,
                        Variadic<Index>:$indices,
-                       ReductionValueType:$value);
+                       ReductionValueType:$value,
+                       F64Attr:$initialValue);
 }
 
 def ReduceDimensionInplaceOp : DecisionForest_Op<"reduce_dimension_inplace", [AttrSizedOperandSegments]> {
@@ -231,7 +232,8 @@ def ReduceDimensionOp : DecisionForest_Op<"reduce_dimension", [AttrSizedOperandS
                        Index:$reductionDimension,
                        Variadic<Index>:$reducedDimensions,
                        Variadic<Index>:$rangeStart,
-                       Variadic<Index>:$rangeEnd);
+                       Variadic<Index>:$rangeEnd,
+                       F64Attr:$initialValue);
 }
 
 def CooperativeReduceInplaceOp : DecisionForest_Op<"cooperative_reduce_dimension_inplace", [AttrSizedOperandSegments]> {
@@ -263,7 +265,8 @@ def CooperativeReduceDimensionOp : DecisionForest_Op<"cooperative_reduce_dimensi
                        Variadic<Index>:$rangeStart,
                        Variadic<Index>:$rangeEnd,
                        Index:$blockXStart, Index:$blockYStart, Index:$blockZStart,
-                       Index:$blockXEnd, Index:$blockYEnd, Index:$blockZEnd);
+                       Index:$blockXEnd, Index:$blockYEnd, Index:$blockZEnd,
+                       F64Attr:$initialValue);
 }
 
 // ----- Mid-level IR Ops ------

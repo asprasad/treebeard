@@ -257,7 +257,7 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
         constructPrivatizedReductionIndex(rewriter, conflictingLoops, reduceOp);
     auto legalizedReduce = rewriter.create<decisionforest::ReduceOp>(
         location, privatizedBuffer, privatizedReductionIndex,
-        reduceOp.getValue());
+        reduceOp.getValue(), reduceOp.getInitialValueAttr());
     legalizedReduce->setAttr("legalizedReduce", rewriter.getUnitAttr());
 
     // Add partial reductions at the exit of each of the conflicting loops
@@ -286,7 +286,7 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
         rewriter.create<decisionforest::ReduceDimensionOp>(
             location, reduceOp.getTargetMemref(), privatizedBuffer,
             reductionDimConst, reducedDimensions, ValueRange{rangeStart},
-            ValueRange{rangeEnd});
+            ValueRange{rangeEnd}, reduceOp.getInitialValueAttr());
 
       } else {
         std::vector<Value> indices;

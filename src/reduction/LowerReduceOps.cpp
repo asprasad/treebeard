@@ -82,7 +82,7 @@ struct ReduceDimensionOpLowering : public ConversionPattern {
       Value sourceMemref, Value targetMemref,
       mlir::Operation::operand_range reducedDims,
       std::vector<Value> &rangeStart, std::vector<Value> &rangeEnd,
-      int64_t reductionDim) const {
+      int64_t reductionDim, double initialValue) const {
 
     // Iterate [rangeStart, rangeEnd)
     auto oneIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 1);
@@ -107,11 +107,11 @@ struct ReduceDimensionOpLowering : public ConversionPattern {
         rewriter.create<arith::ConstantIndexOp>(location, reductionDimSize);
     auto memrefElemType =
         sourceMemref.getType().cast<MemRefType>().getElementType();
-    auto zeroFloatConst = decisionforest::createFloatConst(location, rewriter,
-                                                           memrefElemType, 0.0);
+    auto initialValueConst = decisionforest::createFloatConst(
+        location, rewriter, memrefElemType, initialValue);
     auto reductionLoop = rewriter.create<scf::ForOp>(
         location, zeroIndexConst.getResult(), reductionDimSizeConst.getResult(),
-        oneIndexConst.getResult(), ValueRange{zeroFloatConst});
+        oneIndexConst.getResult(), ValueRange{initialValueConst});
     rewriter.setInsertionPointToStart(reductionLoop.getBody());
 
     auto reductionLoopIV = reductionLoop.getInductionVar();
@@ -186,9 +186,10 @@ struct ReduceDimensionOpLowering : public ConversionPattern {
     //     rangeEndVec.push_back(dimSizeConst);
     //   }
     // }
-    generateSimpleReductionLoopNest(location, rewriter, sourceMemref,
-                                    targetMemref, reducedDims, rangeStartVec,
-                                    rangeEndVec, reductionDimVal);
+    generateSimpleReductionLoopNest(
+        location, rewriter, sourceMemref, targetMemref, reducedDims,
+        rangeStartVec, rangeEndVec, reductionDimVal,
+        reduceOp.getInitialValue().convertToDouble());
     rewriter.eraseOp(op);
     return mlir::success();
   }
@@ -225,11 +226,11 @@ struct ReduceInplaceOpLowering : public ConversionPattern {
         rewriter.create<arith::ConstantIndexOp>(location, reductionDimSize);
     auto memrefElemType =
         targetMemref.getType().cast<MemRefType>().getElementType();
-    auto zeroFloatConst = decisionforest::createFloatConst(location, rewriter,
-                                                           memrefElemType, 0.0);
+    auto initialValConst = decisionforest::createFloatConst(
+        location, rewriter, memrefElemType, 0.0);
     auto reductionLoop = rewriter.create<scf::ForOp>(
         location, zeroIndexConst.getResult(), reductionDimSizeConst.getResult(),
-        oneIndexConst.getResult(), ValueRange{zeroFloatConst});
+        oneIndexConst.getResult(), ValueRange{initialValConst});
     rewriter.setInsertionPointToStart(reductionLoop.getBody());
 
     auto reductionLoopIV = reductionLoop.getInductionVar();
@@ -398,8 +399,9 @@ struct CooperativeReduceDimensionOpLowering : public ConversionPattern {
                                            /*hasElseRegion=*/false);
     {
       auto ifBodyBuilder = ifOp.getThenBodyBuilder();
-      auto zeroConst = decisionforest::createFloatConst(location, ifBodyBuilder,
-                                                        elemType, 0.0);
+      auto initialValConst = decisionforest::createFloatConst(
+          location, ifBodyBuilder, elemType,
+          reduceOp.getInitialValue().convertToDouble());
       auto reductionDimSize =
           sourceMemref.getType().cast<MemRefType>().getDimSize(reductionDimVal);
       auto reductionDimSizeConst = ifBodyBuilder.create<arith::ConstantIndexOp>(
@@ -411,7 +413,7 @@ struct CooperativeReduceDimensionOpLowering : public ConversionPattern {
       auto reductionLoop = ifBodyBuilder.create<scf::ForOp>(
           location, zeroIndexConst.getResult(),
           reductionDimSizeConst.getResult(), oneIndexConst.getResult(),
-          ValueRange{zeroConst});
+          ValueRange{initialValConst});
       ifBodyBuilder.setInsertionPointToStart(reductionLoop.getBody());
       std::vector<Value> memrefIndex{reductionLoop.getInductionVar(),
                                      threadIndex};

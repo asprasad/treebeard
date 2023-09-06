@@ -100,7 +100,7 @@ struct ReduceToCooperativeReduceOp : public ConversionPattern {
         reduceOp.getReductionDimension(), reduceOp.getReducedDimensions(),
         reduceOp.getRangeStart(), reduceOp.getRangeEnd(), startIndices.at(0),
         startIndices.at(1), startIndices.at(2), endIndices.at(0),
-        endIndices.at(1), endIndices.at(2));
+        endIndices.at(1), endIndices.at(2), reduceOp.getInitialValueAttr());
     rewriter.eraseOp(op);
     return mlir::success();
   }

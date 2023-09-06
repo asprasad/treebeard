@@ -706,6 +706,13 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_TahoeShdInpMultiRow_FltI16_B32(
 bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_IterShdPartialForest_FltI16_B32(
     TestArgs_t &args);
 
+// GPU Synthetic XGB Models Tree Parallelization Tests
+bool Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Sparse_Scalar(TestArgs_t &args);
+bool Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Reorg_Scalar_f32i16(
+    TestArgs_t &args);
+bool Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Reorg_Scalar_f32i16(
+    TestArgs_t &args);
+
 void InitializeVectorWithRandValues(std::vector<double> &vec) {
   for (size_t i = 0; i < vec.size(); ++i)
     vec[i] = (double)rand() / RAND_MAX;
@@ -1452,7 +1459,7 @@ bool Test_SplitSchedule(TestArgs_t &args) {
   return true;
 }
 
-#define RUN_ALL_TESTS
+// #define RUN_ALL_TESTS
 
 #ifdef RUN_ALL_TESTS
 TestDescriptor testList[] = {
@@ -2152,6 +2159,11 @@ TestDescriptor testList[] = {
         Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInp_FltI16_B32),
     TEST_LIST_ENTRY(
         Test_ScalarSparseGPU_TwiceLeftRightBalanced_IterShdPartialForest_FltI16_B32),
+    TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Sparse_Scalar),
+    TEST_LIST_ENTRY(
+        Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Reorg_Scalar_f32i16),
+    TEST_LIST_ENTRY(
+        Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Reorg_Scalar_f32i16),
 #endif // TREEBEARD_GPU_SUPPORT
 };
 
@@ -2162,8 +2174,11 @@ TestDescriptor testList[] = {
     // TEST_LIST_ENTRY(Test_TreePar_LeftRightAndBalanced_DblI32),
     // TEST_LIST_ENTRY(Test_NestedTreePar_LeftRightAndBalanced_DblI32),
     // GPU Parallelize across trees
+    TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Sparse_Scalar),
     TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_TwiceLeftRightBalanced_IterShdPartialForest_FltI16_B32),
+        Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Reorg_Scalar_f32i16),
+    TEST_LIST_ENTRY(
+        Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Reorg_Scalar_f32i16),
     // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep),
     // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg),
     // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep_F32I16),

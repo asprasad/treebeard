@@ -129,6 +129,7 @@ typedef struct {
   mlir::decisionforest::TreeType treeType;
   mlir::Value forestConst;
   mlir::arith::CmpFPredicateAttr cmpPredicate;
+  mlir::decisionforest::DecisionForestAttribute forestAttribute;
 } PredictOpLoweringState;
 
 template <typename LoopType> struct LoopConstructor {
@@ -402,11 +403,21 @@ template <typename LoopType> struct LoopConstructor {
   LoopType GetInnerLoop() { return m_innerLoop; }
 };
 
+FloatAttr getForestInitialOffsetAttr(
+    ConversionPatternRewriter &rewriter,
+    decisionforest::DecisionForestAttribute forestAttribute) {
+  auto initialValue = forestAttribute.GetDecisionForest().GetInitialOffset();
+  return rewriter.getF64FloatAttr(initialValue);
+}
+
 void GenerateResultReduction(ConversionPatternRewriter &rewriter,
                              Location location, PredictOpLoweringState &state,
                              Value accumulatedValue, Value rowIndex) {
-  rewriter.create<decisionforest::ReduceOp>(
-      location, state.resultMemref, ValueRange{rowIndex}, accumulatedValue);
+  auto initialValAttr =
+      getForestInitialOffsetAttr(rewriter, state.forestAttribute);
+  rewriter.create<decisionforest::ReduceOp>(location, state.resultMemref,
+                                            ValueRange{rowIndex},
+                                            accumulatedValue, initialValAttr);
 }
 
 struct PredictForestOpLowering : public ConversionPattern {
@@ -521,6 +532,7 @@ struct PredictForestOpLowering : public ConversionPattern {
     state.data = operands[0];
     state.dataMemrefType = dataMemrefType;
     state.cmpPredicate = forestOp.getPredicateAttr();
+    state.forestAttribute = forestAttribute;
   }
 
   Value GenSigmoid(ConversionPatternRewriter &rewriter, Value operand,
@@ -727,10 +739,12 @@ struct PredictForestOpLowering : public ConversionPattern {
           location, state.treeType.getResultType(), state.forestConst, index);
       auto classIdIndex = rewriter.create<arith::IndexCastOp>(
           location, rewriter.getIndexType(), static_cast<Value>(classId));
-
+      auto initialValueAttr =
+          getForestInitialOffsetAttr(rewriter, state.forestAttribute);
       rewriter.create<decisionforest::ReduceOp>(
           location, state.treeClassesMemref,
-          ValueRange{rowIndex, classIdIndex.getResult()}, result);
+          ValueRange{rowIndex, classIdIndex.getResult()}, result,
+          initialValueAttr);
     }
   }
 
