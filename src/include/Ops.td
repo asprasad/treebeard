@@ -222,30 +222,35 @@ def ReduceOp : DecisionForest_Op<"reduce"> {
 def ReduceDimensionInplaceOp : DecisionForest_Op<"reduce_dimension_inplace", [AttrSizedOperandSegments]> {
   let summary = "Reduce the specified dimension of a memref inplace.";
   let description = "Reduce the specified dimension of a memref inplace."
-                    "The reduced value is stored at index 0 of the specified dimension.";
+                    "The reduced value is stored at index 0 of the specified dimension."
+                    "The (pre, post)ReductionDimension* indices are used to determine which subset of the memref to reduce.";
 
   let arguments = (ins ReductionTypeAttr:$reductionType,
                        TargetMemrefType:$targetMemref,
-                       Index:$dimension,
-                       Variadic<Index>:$indices,
-                       Variadic<Index>:$rangeStart,
-                       Variadic<Index>:$rangeEnd);
+                       Variadic<Index>:$preReductionDimensionStart,
+                       Variadic<Index>:$preReductionDimensionEnd,
+                       Index:$reductionDimension,
+                       Variadic<Index>:$postReductionDimensionStart,
+                       Variadic<Index>:$postReductionDimensionEnd);
 }
 
 def ReduceDimensionOp : DecisionForest_Op<"reduce_dimension", [AttrSizedOperandSegments]> {
   let summary = "Reduce the specified dimension of a memref and store result in target.";
   let description = "Reduce the specified dimension of a memref and store result in the target memref."
                     "The op copies reduced values to the target memref. Reduced dimesions is the list" 
-                    "of dimensions that have been previously reduced (i.e. the set of dimensions where"
-                    "we should index with a 0).";
+                    "The (pre, post)ReductionDimension* indices are used to determine which subset of the memref to reduce."
+                    "The mappedDimensions are used to the indices of the target memref."
+                    "For eached mapped dimension, the corresponding source memref is mapped 1:1.";
 
   let arguments = (ins ReductionTypeAttr:$reductionType,
                        TargetMemrefType:$targetMemref,
                        TargetMemrefType:$sourceMemref,
+                       Variadic<Index>:$mappedDimensions,
+                       Variadic<Index>:$preReductionDimensionStart,
+                       Variadic<Index>:$preReductionDimensionEnd,
                        Index:$reductionDimension,
-                       Variadic<Index>:$reducedDimensions,
-                       Variadic<Index>:$rangeStart,
-                       Variadic<Index>:$rangeEnd);
+                       Variadic<Index>:$postReductionDimensionStart,
+                       Variadic<Index>:$postReductionDimensionEnd);
 }
 
 // ----- Mid-level IR Ops ------
