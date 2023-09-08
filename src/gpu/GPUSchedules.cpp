@@ -148,6 +148,15 @@ void TahoeSharedPartialForestStrategy(decisionforest::Schedule &schedule,
 void iterativeCachedPartialForestStrategy(decisionforest::Schedule &schedule,
                                           int32_t treesPerIteration,
                                           int32_t rowsPerThreadBlock) {
+  /*
+    for b0 = 1:N_rows step rowsPerTB <Grid.x>
+      for t1 = 1:treesPerIteration step 1 <Block.y>
+        for b1 = 1:rowsPerTB step 1 <Block.x>
+          for t0 = 1:N_trees step treesPerIteration
+            start = t0
+            CacheTrees(start, treesPerIteration)
+            WalkDecisionTree
+  */                                            
   auto &batchIndex = schedule.GetBatchIndex();
   auto &treeIndex = schedule.GetTreeIndex();
 
