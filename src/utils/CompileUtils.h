@@ -58,7 +58,8 @@ inline void LowerHIRModuleToLLVM(mlir::ModuleOp module,
   }
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
   // module->dump();
-  mlir::decisionforest::LowerReduceOps(context, module);
+  mlir::decisionforest::legalizeReductionsAndCanonicalize(context, module);
+  mlir::decisionforest::lowerReductionsAndCanonicalize(context, module);
   // module->dump();
   // return;
   mlir::decisionforest::LowerEnsembleToMemrefs(

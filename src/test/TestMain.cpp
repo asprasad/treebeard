@@ -696,6 +696,48 @@ bool Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar_f32i16(
 bool Test_TreePar_LeftRightAndBalanced_DblI32(TestArgs_t &args);
 bool Test_NestedTreePar_LeftRightAndBalanced_DblI32(TestArgs_t &args);
 
+// GPU Tree parallelization tests
+bool Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInp_FltI16_B32(
+    TestArgs_t &args);
+bool Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInpMultiRow_FltI16_B32(
+    TestArgs_t &args);
+bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_TahoeShdInpMultiRow_FltI16_B32(
+    TestArgs_t &args);
+bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_IterShdPartialForest_FltI16_B32(
+    TestArgs_t &args);
+
+// GPU Synthetic XGB Models Tree Parallelization Tests
+bool Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Sparse_Scalar(TestArgs_t &args);
+bool Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Sparse_Scalar(TestArgs_t &args);
+bool Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Sparse_Scalar_f32i16(
+    TestArgs_t &args);
+bool Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Sparse_Scalar_f32i16(
+    TestArgs_t &args);
+bool Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Array_Scalar(TestArgs_t &args);
+bool Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Array_Scalar(TestArgs_t &args);
+bool Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Array_Scalar_f32i16(
+    TestArgs_t &args);
+bool Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Array_Scalar_f32i16(
+    TestArgs_t &args);
+bool Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Reorg_Scalar(TestArgs_t &args);
+bool Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Reorg_Scalar(TestArgs_t &args);
+bool Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Reorg_Scalar_f32i16(
+    TestArgs_t &args);
+bool Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Reorg_Scalar_f32i16(
+    TestArgs_t &args);
+bool Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Scalar(
+    TestArgs_t &args);
+bool Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Scalar_f32i16(
+    TestArgs_t &args);
+bool Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Array_Scalar(
+    TestArgs_t &args);
+bool Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Array_Scalar_f32i16(
+    TestArgs_t &args);
+bool Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Reorg_Scalar(
+    TestArgs_t &args);
+bool Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Reorg_Scalar_f32i16(
+    TestArgs_t &args);
+
 void InitializeVectorWithRandValues(std::vector<double> &vec) {
   for (size_t i = 0; i < vec.size(); ++i)
     vec[i] = (double)rand() / RAND_MAX;
@@ -962,7 +1004,8 @@ bool Test_ForestCodeGen_BatchSize1(
 
   // module->dump();
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
-  mlir::decisionforest::LowerReduceOps(context, module);
+  mlir::decisionforest::legalizeReductionsAndCanonicalize(context, module);
+  mlir::decisionforest::lowerReductionsAndCanonicalize(context, module);
   // module->dump();
   auto representation = decisionforest::ConstructRepresentation();
   mlir::decisionforest::LowerEnsembleToMemrefs(context, module, serializer,
@@ -1016,7 +1059,8 @@ bool Test_ForestCodeGen_VariableBatchSize(
   mlir::decisionforest::LowerFromHighLevelToMidLevelIR(context, module);
   // module->dump();
 
-  mlir::decisionforest::LowerReduceOps(context, module);
+  mlir::decisionforest::legalizeReductionsAndCanonicalize(context, module);
+  mlir::decisionforest::lowerReductionsAndCanonicalize(context, module);
   // module->dump();
 
   auto representation = decisionforest::ConstructRepresentation();
@@ -2129,15 +2173,71 @@ TestDescriptor testList[] = {
     // Parallelize across trees
     TEST_LIST_ENTRY(Test_TreePar_LeftRightAndBalanced_DblI32),
     TEST_LIST_ENTRY(Test_NestedTreePar_LeftRightAndBalanced_DblI32),
+
+#ifdef TREEBEARD_GPU_SUPPORT
+    // GPU Parallelize across trees
+    TEST_LIST_ENTRY(
+        Test_ScalarSparseGPU_TwiceLeftRightBalanced_TahoeShdInpMultiRow_FltI16_B32),
+    TEST_LIST_ENTRY(
+        Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInpMultiRow_FltI16_B32),
+    TEST_LIST_ENTRY(
+        Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInp_FltI16_B32),
+    TEST_LIST_ENTRY(
+        Test_ScalarSparseGPU_TwiceLeftRightBalanced_IterShdPartialForest_FltI16_B32),
+    TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Sparse_Scalar),
+    TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Sparse_Scalar),
+    TEST_LIST_ENTRY(
+        Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Sparse_Scalar_f32i16),
+    TEST_LIST_ENTRY(
+        Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Sparse_Scalar_f32i16),
+    TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Array_Scalar),
+    TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Array_Scalar),
+    TEST_LIST_ENTRY(
+        Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Array_Scalar_f32i16),
+    TEST_LIST_ENTRY(
+        Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Array_Scalar_f32i16),
+    TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Reorg_Scalar),
+    TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Reorg_Scalar),
+    TEST_LIST_ENTRY(
+        Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Reorg_Scalar_f32i16),
+    TEST_LIST_ENTRY(
+        Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Reorg_Scalar_f32i16),
+    TEST_LIST_ENTRY(
+        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Array_Scalar_f32i16),
+    TEST_LIST_ENTRY(
+        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Scalar),
+    TEST_LIST_ENTRY(
+        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Scalar_f32i16),
+    TEST_LIST_ENTRY(
+        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Reorg_Scalar),
+    TEST_LIST_ENTRY(
+        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Reorg_Scalar_f32i16),
+#endif // TREEBEARD_GPU_SUPPORT
 };
 
 #else  // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-    // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep),
-    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg),
-    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep_F32I16),
-    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg_F32I16),
+    // Parallelize across trees
+    // TEST_LIST_ENTRY(Test_TreePar_LeftRightAndBalanced_DblI32),
+    // TEST_LIST_ENTRY(Test_NestedTreePar_LeftRightAndBalanced_DblI32),
+    // GPU Parallelize across trees
+    // TEST_LIST_ENTRY(
+    //     Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Array_Scalar),
+    TEST_LIST_ENTRY(
+        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Array_Scalar_f32i16),
+    TEST_LIST_ENTRY(
+        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Scalar),
+    TEST_LIST_ENTRY(
+        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Scalar_f32i16),
+    TEST_LIST_ENTRY(
+        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Reorg_Scalar),
+    TEST_LIST_ENTRY(
+        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Reorg_Scalar_f32i16),
+    // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep)
+    // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg),
+    // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep_F32I16),
+    // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg_F32I16),
 
     // TEST_LIST_ENTRY(Test_TreePar_LeftRightAndBalanced_DblI32),
     // TEST_LIST_ENTRY(Test_NestedTreePar_LeftRightAndBalanced_DblI32),
