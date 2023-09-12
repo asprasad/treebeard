@@ -717,6 +717,9 @@ void ReorgForestRepresentation::LowerCacheTreeOp(
   assert(forestType.doAllTreesHaveSameType() &&
          forestType.doAllTreesHaveSameTileSize());
 
+  // All threads need to be synchronized before we can start caching
+  rewriter.create<gpu::BarrierOp>(location);
+
   // TODO_Ashwin This is a BUG!! We may not always have a for loop surrounding a
   // cache operation The surrounding loops for grid and thread block have
   // already been lowered to gpu.launch!!

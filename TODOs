@@ -31,7 +31,7 @@
 -----------------------
 **ISSUES**
 -------------------
-- **BUG** Not waiting for traverses to finish before overwriting cache (need to insert a barrier before writing into the cache)
+- [Fixed] **BUG** Not waiting for traverses to finish before overwriting cache (need to insert a barrier before writing into the cache)
 - **BUG** Not checking bounds while expanding the number of accessed rows
 - **BUG** Assuming that all threads always access different rows and same tree. Need to analyze if one or more thread block dimensions traverse rows. Only generate SIMT traverse for the appropriate dimensions
 - **BUG** Need to check if walk divergence is possible before rewriting to SIMT
