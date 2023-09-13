@@ -23,8 +23,6 @@ namespace mlir {
 namespace decisionforest {
 
 // Defined in GPURepresentations.cpp
-int64_t GetConstantIntValueFromMLIRValue(Value val);
-
 mlir::gpu::KernelDim3 GetThreadID(mlir::Operation *op);
 mlir::gpu::KernelDim3 GetBlockID(mlir::Operation *op);
 
@@ -77,19 +75,6 @@ struct ReduceOpLowering : public ConversionPattern {
   }
 };
 
-bool isLoopRangeOne(Value start, Value end) {
-  if (start.getDefiningOp() && end.getDefiningOp() &&
-      start.getDefiningOp()->hasTrait<OpTrait::ConstantLike>() &&
-      end.getDefiningOp()->hasTrait<OpTrait::ConstantLike>()) {
-
-    auto startConst = decisionforest::GetConstantIntValueFromMLIRValue(start);
-    auto endConst = decisionforest::GetConstantIntValueFromMLIRValue(end);
-    return (endConst - startConst) == 1;
-  }
-
-  return false;
-}
-
 void generateArgMax(ConversionPatternRewriter &rewriter, Location location,
                     scf::ForOp reductionLoop, Value targetMemref,
                     Value sourceMemref, std::vector<Value> &&targetIndices,
@@ -138,7 +123,7 @@ std::set<int32_t> getMappedDimensionAsInteger(
     const mlir::Operation::operand_range &mappedDimensions) {
   std::set<int32_t> mappedDims;
   for (auto dim : mappedDimensions) {
-    auto dimVal = decisionforest::GetConstantIntValueFromMLIRValue(dim);
+    auto dimVal = GetConstantIntValueFromMLIRValue(dim);
     mappedDims.insert(dimVal);
   }
   return mappedDims;
@@ -174,7 +159,7 @@ LogicalResult generateSimpleReductionLoopNest(
     mlir::Operation::operand_range &&preReductionDimEnd, int64_t reductionDim,
     mlir::Operation::operand_range &&postReductionDimStart,
     mlir::Operation::operand_range &&postReductionDimEnd,
-    decisionforest::Reduction reduction) {
+    decisionforest::Reduction reduction, Value initialValueConst = Value()) {
 
   // Iterate [rangeStart, rangeEnd)
   auto oneIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 1);
@@ -216,7 +201,7 @@ LogicalResult generateSimpleReductionLoopNest(
 
   ValueRange reductionLoopArgs;
   if (reduction == decisionforest::Reduction::kAdd) {
-    reductionLoopArgs = ValueRange{};
+    reductionLoopArgs = ValueRange{initialValueConst};
   } else {
     if (!targetMemrefType.getElementType().isIntOrIndex()) {
       llvm::errs() << "Illegal result type for ArgMax reduction. Should be "
@@ -229,22 +214,11 @@ LogicalResult generateSimpleReductionLoopNest(
     reductionLoopArgs = ValueRange{minusInfConst, indexConst};
   }
 
-  auto reductionLoop = rewriter.create<scf::ForOp>(
-      location,
-      inplace ? oneIndexConst.getResult() : zeroIndexConst.getResult(),
-      reductionDimSizeConst.getResult(), oneIndexConst.getResult(),
-      reductionLoopArgs);
-  if (outermostLoop == nullptr) {
-    outermostLoop = reductionLoop.getOperation();
-  }
-
   // If in-place reduction, include the result dimension.
   if (inplace) {
     resultIndex.push_back(zeroIndexConst);
   }
 
-  loopIVs.push_back(reductionLoop.getInductionVar());
-  rewriter.setInsertionPointToStart(reductionLoop.getBody());
   for (auto startEndPair :
        llvm::zip(postReductionDimStart, postReductionDimEnd)) {
 
@@ -256,17 +230,32 @@ LogicalResult generateSimpleReductionLoopNest(
                                     outermostLoop);
   }
 
-  if (reduction == decisionforest::Reduction::kAdd) {
+  // Include any trailing dimensions that may have not been specified.
+  for (size_t j = loopIVs.size() + 1 /*exclude reduction dimension*/;
+       j < (size_t)sourceMemrefType.getRank(); ++j) {
+    auto start = rewriter.create<arith::ConstantIndexOp>(location, 0);
+    auto end = rewriter.create<arith::ConstantIndexOp>(
+        location, sourceMemrefType.getDimSize(j));
+    addLoopIfNeededAndUpdateIndices(rewriter, location, loopIVs, resultIndex,
+                                    mappedDimSet, start, end, oneIndexConst,
+                                    outermostLoop);
+  }
 
-    for (size_t j = loopIVs.size(); j < (size_t)sourceMemrefType.getRank();
-         ++j) {
-      auto start = rewriter.create<arith::ConstantIndexOp>(location, 0);
-      auto end = rewriter.create<arith::ConstantIndexOp>(
-          location, sourceMemrefType.getDimSize(j));
-      addLoopIfNeededAndUpdateIndices(rewriter, location, loopIVs, resultIndex,
-                                      mappedDimSet, start, end, oneIndexConst,
-                                      outermostLoop);
-    }
+  auto reductionLoop = rewriter.create<scf::ForOp>(
+      location,
+      inplace ? oneIndexConst.getResult() : zeroIndexConst.getResult(),
+      reductionDimSizeConst.getResult(), oneIndexConst.getResult(),
+      reductionLoopArgs);
+  if (outermostLoop == nullptr) {
+    outermostLoop = reductionLoop.getOperation();
+  }
+
+  rewriter.setInsertionPointToStart(reductionLoop.getBody());
+  // Insert at the point where reduction dim is supposed to appear.
+  loopIVs.insert(loopIVs.begin() + reductionDim,
+                 reductionLoop.getInductionVar());
+
+  if (reduction == decisionforest::Reduction::kAdd) {
 
     if ((size_t)targetMemrefType.getRank() != resultIndex.size()) {
       llvm::errs() << "Target memref index and result index do not match\n";
@@ -276,13 +265,15 @@ LogicalResult generateSimpleReductionLoopNest(
     auto loadVal =
         rewriter.create<memref::LoadOp>(location, sourceMemref, loopIVs);
 
-    auto loadResultIndexVal =
-        rewriter.create<memref::LoadOp>(location, targetMemref, resultIndex);
-    auto addVal = rewriter.create<arith::AddFOp>(
-        location, loadVal.getResult(), loadResultIndexVal.getResult());
-    rewriter.create<memref::StoreOp>(location, addVal.getResult(), targetMemref,
-                                     resultIndex);
+    auto accumulator = reductionLoop.getLoopBody().getArgument(0);
+    auto addVal = rewriter.create<arith::AddFOp>(location, loadVal.getResult(),
+                                                 accumulator);
+    rewriter.create<scf::YieldOp>(location, addVal.getResult());
+    rewriter.setInsertionPointAfter(reductionLoop);
+    rewriter.create<memref::StoreOp>(location, reductionLoop.getResult(0),
+                                     targetMemref, resultIndex);
   } else {
+
     if ((size_t)reductionDim != (loopIVs.size() - 1)) {
       llvm::errs()
           << "Wrong reduction dimension. It should be the last dimension\n";
@@ -323,19 +314,22 @@ struct ReduceDimensionOpLowering : public ConversionPattern {
     auto mappedDimSet = getMappedDimensionAsInteger(mappedDimensions);
 
     auto reductionDim = reduceOp.getReductionDimension();
-    auto reductionDimVal =
-        decisionforest::GetConstantIntValueFromMLIRValue(reductionDim);
+    auto reductionDimVal = GetConstantIntValueFromMLIRValue(reductionDim);
 
     auto sourceMemref = reduceOp.getSourceMemref();
     auto targetMemref = reduceOp.getTargetMemref();
 
     auto reductionType = reduceOp.getReductionTypeAttr().getReductionType();
+    auto initialValue = decisionforest::createFloatConst(
+        location, rewriter,
+        sourceMemref.getType().cast<MemRefType>().getElementType(),
+        reduceOp.getInitialValue().convertToDouble());
 
     auto result = generateSimpleReductionLoopNest(
         location, rewriter, targetMemref, sourceMemref, std::move(mappedDimSet),
         std::move(preReducedDimStart), std::move(preReducedDimEnd),
         reductionDimVal, std::move(postReducedDimStart),
-        std::move(postReducedDimEnd), reductionType);
+        std::move(postReducedDimEnd), reductionType, initialValue);
 
     if (failed(result)) {
       return result;
@@ -365,8 +359,7 @@ struct ReduceInplaceOpLowering : public ConversionPattern {
     auto postReducedDimEnd = reduceOp.getPostReductionDimensionEnd();
 
     auto reductionDim = reduceOp.getReductionDimension();
-    auto reductionDimVal =
-        decisionforest::GetConstantIntValueFromMLIRValue(reductionDim);
+    auto reductionDimVal = GetConstantIntValueFromMLIRValue(reductionDim);
 
     auto sourceMemref = reduceOp.getTargetMemref();
     auto reductionType = reduceOp.getReductionTypeAttr().getReductionType();
@@ -413,10 +406,8 @@ struct CooperativeReduceDimensionOpLowering : public ConversionPattern {
     // auto localThreadIdZ = rewriter.create<arith::SubIOp>(
     //     location, threadId.z, reduceOp.getBlockZStart());
 
-    auto startZ = decisionforest::GetConstantIntValueFromMLIRValue(
-        reduceOp.getBlockZStart());
-    auto endZ = decisionforest::GetConstantIntValueFromMLIRValue(
-        reduceOp.getBlockZEnd());
+    auto startZ = GetConstantIntValueFromMLIRValue(reduceOp.getBlockZStart());
+    auto endZ = GetConstantIntValueFromMLIRValue(reduceOp.getBlockZEnd());
     assert(startZ == 0 && endZ == 1 &&
            "Only 2D thread blocks supported for now");
 
@@ -448,8 +439,7 @@ struct CooperativeReduceDimensionOpLowering : public ConversionPattern {
     assert(reducedDims.empty());
 
     auto reductionDim = reduceOp.getReductionDimension();
-    auto reductionDimVal =
-        decisionforest::GetConstantIntValueFromMLIRValue(reductionDim);
+    auto reductionDimVal = GetConstantIntValueFromMLIRValue(reductionDim);
     assert(reductionDimVal == 0);
 
     auto rangeStart = reduceOp.getRangeStart();

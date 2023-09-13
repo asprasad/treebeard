@@ -32,8 +32,6 @@ using namespace mlir;
 namespace mlir {
 namespace decisionforest {
 
-// Defined in GPURepresentations.cpp
-int64_t GetConstantIntValueFromMLIRValue(Value val);
 // Defined in LowerToMidLevelIR.cpp
 Value SumOfValues(ConversionPatternRewriter &rewriter, Location location,
                   std::list<Value> &values);
@@ -314,7 +312,8 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
     auto reduceDimOp = rewriter.create<decisionforest::ReduceDimensionOp>(
         reduceOp->getLoc(), argMaxReductionTypeAttr, reduceOp.getTargetMemref(),
         privatizedBuffer, ValueRange{mappedDimension}, preReductionStart,
-        preReductionEnd, reductionDimConst, ValueRange{}, ValueRange{});
+        preReductionEnd, reductionDimConst, ValueRange{}, ValueRange{},
+        reduceOp.getInitialValueAttr());
     reduceDimOp->setAttr(argMaxLengthAttrName, argMaxLengthAttr);
   }
 

@@ -93,14 +93,41 @@ struct ReduceToCooperativeReduceOp : public ConversionPattern {
       endIndices.push_back(
           rewriter.create<arith::ConstantIndexOp>(location, 1));
     }
+
     assert(startIndices.size() == endIndices.size());
+
+    std::vector<Value> reducedDimensions;
+    for (auto startEnd : llvm::zip(reduceOp.getPreReductionDimensionStart(),
+                                   reduceOp.getPreReductionDimensionEnd())) {
+      auto start = std::get<0>(startEnd);
+      auto end = std::get<1>(startEnd);
+      if (isLoopRangeOne(start, end)) {
+        int32_t dim = GetConstantIntValueFromMLIRValue(start);
+        reducedDimensions.push_back(
+            rewriter.create<arith::ConstantIndexOp>(location, dim));
+      }
+    }
+    Value rangeStart, rangeEnd;
+    for (auto startEnd : llvm::zip(reduceOp.getPostReductionDimensionStart(),
+                                   reduceOp.getPostReductionDimensionEnd())) {
+      auto start = std::get<0>(startEnd);
+      auto end = std::get<1>(startEnd);
+      if (isLoopRangeOne(start, end)) {
+        int32_t dim = GetConstantIntValueFromMLIRValue(start);
+        reducedDimensions.push_back(
+            rewriter.create<arith::ConstantIndexOp>(location, dim));
+      } else {
+        rangeStart = start;
+        rangeEnd = end;
+      }
+    }
     // Create the cooperative reduce op
     rewriter.create<decisionforest::CooperativeReduceDimensionOp>(
         location, reduceOp.getTargetMemref(), reduceOp.getSourceMemref(),
-        reduceOp.getReductionDimension(), reduceOp.getReducedDimensions(),
-        reduceOp.getRangeStart(), reduceOp.getRangeEnd(), startIndices.at(0),
-        startIndices.at(1), startIndices.at(2), endIndices.at(0),
-        endIndices.at(1), endIndices.at(2), reduceOp.getInitialValueAttr());
+        reduceOp.getReductionDimension(), reducedDimensions, rangeStart,
+        rangeEnd, startIndices.at(0), startIndices.at(1), startIndices.at(2),
+        endIndices.at(0), endIndices.at(1), endIndices.at(2),
+        reduceOp.getInitialValueAttr());
     rewriter.eraseOp(op);
     return mlir::success();
   }
