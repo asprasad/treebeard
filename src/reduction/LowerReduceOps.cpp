@@ -201,7 +201,13 @@ LogicalResult generateSimpleReductionLoopNest(
 
   ValueRange reductionLoopArgs;
   if (reduction == decisionforest::Reduction::kAdd) {
-    reductionLoopArgs = ValueRange{initialValueConst};
+    if (!initialValueConst) {
+      auto zeroConstant = decisionforest::createFloatConst(location, rewriter,
+                                                           memrefElemType, 0.0);
+      reductionLoopArgs = ValueRange{zeroConstant};
+    } else {
+      reductionLoopArgs = ValueRange{initialValueConst};
+    }
   } else {
     if (!targetMemrefType.getElementType().isIntOrIndex()) {
       llvm::errs() << "Illegal result type for ArgMax reduction. Should be "
@@ -219,6 +225,9 @@ LogicalResult generateSimpleReductionLoopNest(
     resultIndex.push_back(zeroIndexConst);
   }
 
+  // Push-back empty value for the reduction dimension. Will be filled later.
+  loopIVs.push_back(Value());
+
   for (auto startEndPair :
        llvm::zip(postReductionDimStart, postReductionDimEnd)) {
 
@@ -231,8 +240,7 @@ LogicalResult generateSimpleReductionLoopNest(
   }
 
   // Include any trailing dimensions that may have not been specified.
-  for (size_t j = loopIVs.size() + 1 /*exclude reduction dimension*/;
-       j < (size_t)sourceMemrefType.getRank(); ++j) {
+  for (size_t j = loopIVs.size(); j < (size_t)sourceMemrefType.getRank(); ++j) {
     auto start = rewriter.create<arith::ConstantIndexOp>(location, 0);
     auto end = rewriter.create<arith::ConstantIndexOp>(
         location, sourceMemrefType.getDimSize(j));
@@ -240,11 +248,8 @@ LogicalResult generateSimpleReductionLoopNest(
                                     mappedDimSet, start, end, oneIndexConst,
                                     outermostLoop);
   }
-
   auto reductionLoop = rewriter.create<scf::ForOp>(
-      location,
-      inplace ? oneIndexConst.getResult() : zeroIndexConst.getResult(),
-      reductionDimSizeConst.getResult(), oneIndexConst.getResult(),
+      location, zeroIndexConst, reductionDimSizeConst, oneIndexConst,
       reductionLoopArgs);
   if (outermostLoop == nullptr) {
     outermostLoop = reductionLoop.getOperation();
@@ -252,8 +257,7 @@ LogicalResult generateSimpleReductionLoopNest(
 
   rewriter.setInsertionPointToStart(reductionLoop.getBody());
   // Insert at the point where reduction dim is supposed to appear.
-  loopIVs.insert(loopIVs.begin() + reductionDim,
-                 reductionLoop.getInductionVar());
+  loopIVs[reductionDim] = reductionLoop.getInductionVar();
 
   if (reduction == decisionforest::Reduction::kAdd) {
 
@@ -265,7 +269,7 @@ LogicalResult generateSimpleReductionLoopNest(
     auto loadVal =
         rewriter.create<memref::LoadOp>(location, sourceMemref, loopIVs);
 
-    auto accumulator = reductionLoop.getLoopBody().getArgument(0);
+    auto accumulator = reductionLoop.getLoopBody().getArgument(1);
     auto addVal = rewriter.create<arith::AddFOp>(location, loadVal.getResult(),
                                                  accumulator);
     rewriter.create<scf::YieldOp>(location, addVal.getResult());
