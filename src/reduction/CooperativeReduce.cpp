@@ -96,36 +96,25 @@ struct ReduceToCooperativeReduceOp : public ConversionPattern {
 
     assert(startIndices.size() == endIndices.size());
 
-    std::vector<Value> reducedDimensions;
-    for (auto startEnd : llvm::zip(reduceOp.getPreReductionDimensionStart(),
-                                   reduceOp.getPreReductionDimensionEnd())) {
-      auto start = std::get<0>(startEnd);
-      auto end = std::get<1>(startEnd);
-      if (isLoopRangeOne(start, end)) {
-        int32_t dim = GetConstantIntValueFromMLIRValue(start);
-        reducedDimensions.push_back(
-            rewriter.create<arith::ConstantIndexOp>(location, dim));
-      }
+    if (reduceOp.getPreReductionDimensionStart().size() > 0 ||
+        reduceOp.getPreReductionDimensionEnd().size() > 0) {
+      llvm::errs() << "Pre reduction dimensions not supported yet\n";
+      return mlir::failure();
     }
-    Value rangeStart, rangeEnd;
-    for (auto startEnd : llvm::zip(reduceOp.getPostReductionDimensionStart(),
-                                   reduceOp.getPostReductionDimensionEnd())) {
-      auto start = std::get<0>(startEnd);
-      auto end = std::get<1>(startEnd);
-      if (isLoopRangeOne(start, end)) {
-        int32_t dim = GetConstantIntValueFromMLIRValue(start);
-        reducedDimensions.push_back(
-            rewriter.create<arith::ConstantIndexOp>(location, dim));
-      } else {
-        rangeStart = start;
-        rangeEnd = end;
-      }
+
+    if (reduceOp.getPostReductionDimensionStart().size() != 1 ||
+        reduceOp.getPostReductionDimensionEnd().size() != 1) {
+      llvm::errs() << "Number of post-reduction dimensions should be 1\n";
+      return mlir::failure();
     }
+
+    Value rangeStart = reduceOp.getPostReductionDimensionStart().front();
+    Value rangeEnd = reduceOp.getPostReductionDimensionEnd().front();
     // Create the cooperative reduce op
     rewriter.create<decisionforest::CooperativeReduceDimensionOp>(
         location, reduceOp.getTargetMemref(), reduceOp.getSourceMemref(),
-        reduceOp.getReductionDimension(), reducedDimensions, rangeStart,
-        rangeEnd, startIndices.at(0), startIndices.at(1), startIndices.at(2),
+        reduceOp.getReductionDimension(), ValueRange{}, rangeStart, rangeEnd,
+        startIndices.at(0), startIndices.at(1), startIndices.at(2),
         endIndices.at(0), endIndices.at(1), endIndices.at(2),
         reduceOp.getInitialValueAttr());
     rewriter.eraseOp(op);
@@ -153,8 +142,12 @@ struct ConvertReductionsToCooperativeReductions
         math::MathDialect, arith::ArithDialect, func::FuncDialect,
         gpu::GPUDialect>();
 
-    target.addIllegalOp<decisionforest::ReduceDimensionOp,
-                        decisionforest::ReduceDimensionInplaceOp>();
+    target.addDynamicallyLegalOp<decisionforest::ReduceDimensionOp>(
+        [](decisionforest::ReduceDimensionOp op) {
+          return op.getReductionTypeAttr().getReductionType() ==
+                 decisionforest::Reduction::kArgMax;
+        });
+    target.addIllegalOp<decisionforest::ReduceDimensionInplaceOp>();
 
     RewritePatternSet patterns(&getContext());
     patterns.add<ReduceToCooperativeReduceOp>(patterns.getContext());
