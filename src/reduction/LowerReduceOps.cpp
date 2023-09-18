@@ -199,27 +199,6 @@ LogicalResult generateSimpleReductionLoopNest(
       rewriter.create<arith::ConstantIndexOp>(location, reductionDimSize);
   auto memrefElemType = sourceMemrefType.getElementType();
 
-  ValueRange reductionLoopArgs;
-  if (reduction == decisionforest::Reduction::kAdd) {
-    if (!initialValueConst) {
-      auto zeroConstant = decisionforest::createFloatConst(location, rewriter,
-                                                           memrefElemType, 0.0);
-      reductionLoopArgs = ValueRange{zeroConstant};
-    } else {
-      reductionLoopArgs = ValueRange{initialValueConst};
-    }
-  } else {
-    if (!targetMemrefType.getElementType().isIntOrIndex()) {
-      llvm::errs() << "Illegal result type for ArgMax reduction. Should be "
-                      "an Integer type.\n";
-      return mlir::failure();
-    }
-    auto indexConst = rewriter.create<arith::ConstantIndexOp>(location, -1);
-    auto minusInfConst = decisionforest::createFloatConst(
-        location, rewriter, memrefElemType, -INFINITY);
-    reductionLoopArgs = ValueRange{minusInfConst, indexConst};
-  }
-
   // If in-place reduction, include the result dimension.
   if (inplace) {
     resultIndex.push_back(zeroIndexConst);
@@ -248,6 +227,30 @@ LogicalResult generateSimpleReductionLoopNest(
                                     mappedDimSet, start, end, oneIndexConst,
                                     outermostLoop);
   }
+
+  std::vector<Value> reductionLoopArgs;
+  if (reduction == decisionforest::Reduction::kAdd) {
+    if (!initialValueConst) {
+      auto zeroConstant = decisionforest::createFloatConst(location, rewriter,
+                                                           memrefElemType, 0.0);
+      reductionLoopArgs.push_back(zeroConstant);
+    } else {
+      reductionLoopArgs.push_back(initialValueConst);
+    }
+  } else {
+    if (!targetMemrefType.getElementType().isIntOrIndex()) {
+      llvm::errs() << "Illegal result type for ArgMax reduction. Should be "
+                      "an Integer type.\n";
+      return mlir::failure();
+    }
+    auto indexConst =
+        rewriter.create<arith::ConstantIndexOp>(location, 0).getResult();
+    auto minusInfConst = decisionforest::createFloatConst(
+        location, rewriter, memrefElemType, -INFINITY);
+    reductionLoopArgs.push_back(minusInfConst);
+    reductionLoopArgs.push_back(indexConst);
+  }
+
   auto reductionLoop = rewriter.create<scf::ForOp>(
       location, zeroIndexConst, reductionDimSizeConst, oneIndexConst,
       reductionLoopArgs);
