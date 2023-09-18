@@ -255,6 +255,9 @@ void LowerCacheRowsOpToGPU(ConversionPatternRewriter &rewriter,
   auto owningModule = cacheRowsOp->getParentOfType<mlir::ModuleOp>();
   assert(owningModule);
 
+  // All threads need to be synchronized before we can start caching
+  rewriter.create<gpu::BarrierOp>(location);
+
   std::string globalCacheBufferName =
       std::string("inputRowCache_") +
       std::to_string(reinterpret_cast<long long>(op));
@@ -620,6 +623,9 @@ void GPUArrayBasedRepresentation::LowerCacheTreeOp(
   assert(forestType.doAllTreesHaveSameType() &&
          forestType.doAllTreesHaveSameTileSize());
   auto treeType = forestType.getTreeType(0).cast<decisionforest::TreeType>();
+
+  // All threads need to be synchronized before we can start caching
+  rewriter.create<gpu::BarrierOp>(location);
 
   assert(ensembleConstantToMemrefsMap.find(ensembleConst.getOperation()) !=
          ensembleConstantToMemrefsMap.end());
@@ -1147,6 +1153,9 @@ void GPUSparseRepresentation::LowerCacheTreeOp(
   assert(forestType.doAllTreesHaveSameType() &&
          forestType.doAllTreesHaveSameTileSize());
   auto treeType = forestType.getTreeType(0).cast<decisionforest::TreeType>();
+
+  // All threads need to be synchronized before we can start caching
+  rewriter.create<gpu::BarrierOp>(location);
 
   assert(
       sparseEnsembleConstantToMemrefsMap.find(ensembleConst.getOperation()) !=

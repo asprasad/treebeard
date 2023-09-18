@@ -17,6 +17,9 @@ void tahoeSharedDataStrategy_MultipleRowsPerBlock(
 void iterativeCachedPartialForestStrategy(decisionforest::Schedule &schedule,
                                           int32_t treesPerIteration,
                                           int32_t rowsPerThreadBlock);
+void iterativeCachedPartialForestStrategy_NoCache(
+    decisionforest::Schedule &schedule, int32_t treesPerIteration,
+    int32_t rowsPerThreadBlock);
 void TahoeSharedPartialForestStrategy(decisionforest::Schedule &schedule,
                                       int32_t treesPerThreadBlock,
                                       int32_t rowsPerThreadBlock);

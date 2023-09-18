@@ -438,7 +438,9 @@ struct GPUGetRootOpLowering : public ConversionPattern {
     rewriter.create<memref::StoreOp>(location, zeroConst.getResult(),
                                      globalRef.getResult(),
                                      ValueRange{threadIndex});
-    rewriter.create<gpu::BarrierOp>(location);
+    // Don't need this barrier since we are only supporting tile sizes < 32
+    // Anyway, we can guarantee that threads in a warp will not diverge
+    // rewriter.create<gpu::BarrierOp>(location);
 
     m_traverseLoweringState->getRootOpToShMemNodeArrayMap[op] = globalRef;
   }
