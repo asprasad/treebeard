@@ -53,64 +53,9 @@ static MemRefType getRowTypeFromArgumentType(MemRefType type) {
   return MemRefType::get({type.getShape()[1]}, type.getElementType());
 }
 
-void InsertPrintMemrefOp(ConversionPatternRewriter &rewriter, Location location,
-                         int32_t kind, int32_t bitWidth, int64_t tileSize,
-                         Value memref, Type elementType) {
-
-  /* Search for 'default argument promotions in C' to see why.
-   Making all this 64-bit to avoid unecessary noise. */
-  if (bitWidth < 64) {
-    bitWidth = 64;
-  }
-
-  auto tileSizeConst = rewriter.create<arith::ConstantIntOp>(
-      location, tileSize, rewriter.getI32Type());
-  auto kindConst = rewriter.create<arith::ConstantIntOp>(location, kind,
-                                                         rewriter.getI32Type());
-  auto bitWidthConst = rewriter.create<arith::ConstantIntOp>(
-      location, bitWidth, rewriter.getI32Type());
-
-  std::vector<Value> vectorValues;
-  for (int32_t i = 0; i < tileSize; ++i) {
-    auto index = rewriter.create<arith::ConstantIndexOp>(location, i);
-    auto ithValue = rewriter.create<memref::LoadOp>(
-        location, elementType, memref, static_cast<Value>(index));
-    if (kind == 0) { // Integer
-      auto i64Value = rewriter.create<arith::ExtSIOp>(
-          location, rewriter.getI64Type(), static_cast<Value>(ithValue));
-      vectorValues.push_back(i64Value);
-    } else {
-      auto doubleValue = rewriter.create<arith::ExtFOp>(
-          location, rewriter.getF64Type(), static_cast<Value>(ithValue));
-      vectorValues.push_back(doubleValue);
-    }
-  }
-  rewriter.create<decisionforest::PrintVectorOp>(location, kindConst,
-                                                 bitWidthConst, tileSizeConst,
-                                                 ValueRange(vectorValues));
-}
-
-void InsertPrintElementOp(ConversionPatternRewriter &rewriter,
-                          Location location, int32_t kind, int32_t bitWidth,
-                          Value value) {
-  auto tileSizeConst =
-      rewriter.create<arith::ConstantIntOp>(location, 1, rewriter.getI32Type());
-  auto kindConst = rewriter.create<arith::ConstantIntOp>(location, kind,
-                                                         rewriter.getI32Type());
-  auto bitWidthConst = rewriter.create<arith::ConstantIntOp>(
-      location, bitWidth, rewriter.getI32Type());
-
-  rewriter.create<decisionforest::PrintVectorOp>(
-      location, kindConst, bitWidthConst, tileSizeConst, ValueRange{value});
-}
-
 typedef struct {
   bool isMultiClass;
   int32_t numClasses;
-
-  // Memrefs and Types
-  Value treeClassesMemref;
-  MemRefType treeClassesMemrefType;
 
   Value resultMemref;
   MemRefType resultMemrefType;
@@ -554,17 +499,6 @@ struct PredictForestOpLowering : public ConversionPattern {
     state.initialValueConst = CreateFPConstant(
         rewriter, location, dataMemrefType.getElementType(), initialValue);
 
-    // Initialize members for multi-class classification
-    // if (state.isMultiClass) {
-    //   state.treeClassesMemrefType = MemRefType::get(
-    //       {batchSize,
-    //        (int64_t)forestAttribute.GetDecisionForest().GetNumClasses()},
-    //       dataMemrefType.getElementType());
-
-    //   state.treeClassesMemref = rewriter.create<memref::AllocaOp>(
-    //       location, state.treeClassesMemrefType);
-    // }
-
     state.data = operands[0];
     state.dataMemrefType = dataMemrefType;
     state.cmpPredicate = forestOp.getPredicateAttr();
@@ -597,73 +531,6 @@ struct PredictForestOpLowering : public ConversionPattern {
     return result;
   }
 
-  Value GenArgMax(ConversionPatternRewriter &rewriter, Location location,
-                  PredictOpLoweringState &state, Value index) const {
-    auto treeClassesMemref = GetRow(rewriter, location, state.treeClassesMemref,
-                                    index, state.treeClassesMemrefType);
-    auto treeClassElementType =
-        treeClassesMemref.getType().cast<MemRefType>().getElementType();
-
-    if (decisionforest::PrintVectors) {
-      InsertPrintMemrefOp(rewriter, location, 0,         /*int kind*/
-                          sizeof(float) * 8,             /*bit width*/
-                          state.numClassesConst.value(), /* nelts in memref */
-                          treeClassesMemref, treeClassElementType);
-    }
-
-    auto firstValue = rewriter.create<memref::LoadOp>(
-        location, treeClassElementType, static_cast<Value>(treeClassesMemref),
-        ValueRange(
-            llvm::ArrayRef<Value>{state.zeroIndexConst, state.zeroIndexConst}));
-
-    auto maxClassLoop = rewriter.create<scf::ForOp>(
-        location, state.oneIndexConst, state.numClassesConst,
-        state.oneIndexConst,
-        ValueRange({static_cast<Value>(firstValue),
-                    static_cast<Value>(state.zeroIndexConst)}));
-
-    rewriter.setInsertionPointToStart(maxClassLoop.getBody());
-
-    auto k = maxClassLoop.getInductionVar();
-    auto currentValue = rewriter.create<memref::LoadOp>(
-        location, treeClassElementType, static_cast<Value>(treeClassesMemref),
-        ValueRange(llvm::ArrayRef<Value>{state.zeroIndexConst, k}));
-
-    auto maxValue = maxClassLoop.getLoopBody().getArgument(1);
-    auto maxIndex = maxClassLoop.getLoopBody().getArgument(2);
-
-    auto compareResult = rewriter.create<arith::CmpFOp>(
-        location, mlir::arith::CmpFPredicate::OGT, maxValue, currentValue);
-
-    auto ifElse = rewriter.create<scf::IfOp>(
-        location, TypeRange({treeClassElementType, k.getType()}), compareResult,
-        true);
-    {
-      auto thenBodyBuilder = ifElse.getThenBodyBuilder();
-      thenBodyBuilder.create<scf::YieldOp>(location,
-                                           ValueRange({maxValue, maxIndex}));
-    }
-    {
-      auto elseBodyBuilder = ifElse.getElseBodyBuilder();
-      elseBodyBuilder.create<scf::YieldOp>(
-          location, ValueRange({static_cast<Value>(currentValue),
-                                static_cast<Value>(k)}));
-    }
-
-    rewriter.create<scf::YieldOp>(location, ifElse.getResults());
-
-    rewriter.setInsertionPointAfter(maxClassLoop);
-
-    if (decisionforest::PrintVectors) {
-      InsertPrintElementOp(rewriter, location, 1, sizeof(int64_t) * 8,
-                           maxClassLoop.getResult(1));
-    }
-
-    return rewriter.create<arith::IndexCastOp>(
-        location, state.treeType.getResultType(),
-        static_cast<Value>(maxClassLoop.getResult(1)));
-  }
-
   Value CreateFPConstant(ConversionPatternRewriter &rewriter, Location location,
                          Type type, double value) const {
     Value constValue;
@@ -678,36 +545,6 @@ struct PredictForestOpLowering : public ConversionPattern {
     else
       assert(false && "Unsupported floating point type");
     return constValue;
-  }
-
-  void InitializeTreeClassWeightsMemref(ConversionPatternRewriter &rewriter,
-                                        Location location,
-                                        PredictOpLoweringState &state) const {
-    if (state.isMultiClass) {
-      // auto outerLoop = rewriter.create<scf::ForOp>(
-      //     location, state.zeroIndexConst, state.batchSizeConst,
-      //     state.oneIndexConst);
-      // rewriter.setInsertionPointToStart(outerLoop.getBody());
-      // {
-      //   auto i = outerLoop.getInductionVar();
-      //   auto row = GetRow(rewriter, location, state.treeClassesMemref, i,
-      //                     state.treeClassesMemrefType);
-      //   auto innerLoop = rewriter.create<scf::ForOp>(
-      //       location, state.zeroIndexConst, state.numClassesConst,
-      //       state.oneIndexConst);
-      //   rewriter.setInsertionPointToStart(innerLoop.getBody());
-      //   {
-      //     auto j = innerLoop.getInductionVar();
-
-      //     rewriter.create<memref::StoreOp>(
-      //         location, static_cast<Value>(state.initialValueConst),
-      //         static_cast<Value>(row),
-      //         ValueRange(llvm::ArrayRef<Value>{state.zeroIndexConst, j}));
-      //     rewriter.setInsertionPointAfter(innerLoop);
-      //   }
-      // }
-      // rewriter.setInsertionPointAfter(outerLoop);
-    }
   }
 
   void InitializeResultMemref(ConversionPatternRewriter &rewriter,
@@ -1430,7 +1267,6 @@ struct PredictForestOpLowering : public ConversionPattern {
     InitPredictOpLoweringState(rewriter, location, state, forestOp, operands,
                                dataMemrefType, batchSize);
     InitializeResultMemref(rewriter, location, state);
-    InitializeTreeClassWeightsMemref(rewriter, location, state);
 
     auto scheduleAttribute = forestOp.getSchedule();
     auto &schedule = *scheduleAttribute.GetSchedule();
