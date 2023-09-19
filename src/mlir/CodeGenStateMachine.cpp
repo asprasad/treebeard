@@ -589,10 +589,12 @@ GPUVectorTraverseTileCodeGenerator::GPUVectorTraverseTileCodeGenerator(
 
 bool GPUVectorTraverseTileCodeGenerator::EmitNext(
     ConversionPatternRewriter &rewriter, Location &location) {
+
+  auto gpuLaunchOp = m_traverseTileOp->getParentOfType<gpu::LaunchOp>();
+  assert(gpuLaunchOp);
+
   switch (m_state) {
   case kInit: {
-    auto gpuLaunchOp = m_traverseTileOp->getParentOfType<gpu::LaunchOp>();
-    assert(gpuLaunchOp);
     m_threadBlockThreadId =
         GenerateLocalThreadId(rewriter, location, gpuLaunchOp);
     m_tileSizeConst =
@@ -605,6 +607,10 @@ bool GPUVectorTraverseTileCodeGenerator::EmitNext(
         m_traverseLoweringState->GetSharedMemoryResultsMatrix(
             gpuLaunchOp, rewriter, location, m_tileSize);
 
+    m_nodeToTraverseIndex = rewriter.create<decisionforest::NodeToIndexOp>(
+        location, rewriter.getIndexType(),
+        m_representation->GetThresholdsMemref(m_tree), m_nodeToTraverse);
+
     m_state = kLoadThreshold;
   } break;
   case kLoadThreshold: {
@@ -613,11 +619,48 @@ bool GPUVectorTraverseTileCodeGenerator::EmitNext(
     // compute the sum of tileElementConst and threadBaseId
     auto tileElementPlusThreadBaseId = rewriter.create<arith::AddIOp>(
         location, tileElementConst, m_threadBaseId);
+#ifdef TREEBEARD_GPU_USE_SHMEM_NODE_INDEX
     m_nodeIndex =
         rewriter
             .create<memref::LoadOp>(location, m_nodeIndexShMemBuffer,
                                     tileElementPlusThreadBaseId.getResult())
             .getResult();
+#else  // TREEBEARD_GPU_USE_SHMEM_NODE_INDEX
+    // Cast m_nodeToTraverseIndex to i32
+    auto nodeToTraverseIndexI32 = rewriter.create<arith::IndexCastOp>(
+        location, rewriter.getI32Type(), m_nodeToTraverseIndex);
+    // Cast tileElementPlusThreadBaseId.getResult() to i32
+    auto tileElementPlusThreadBaseIdI32 = rewriter.create<arith::IndexCastOp>(
+        location, rewriter.getI32Type(), tileElementPlusThreadBaseId);
+    // Cast m_tileSizeConst to i32
+    // auto tileSizeConstI32 = rewriter.create<arith::IndexCastOp>(
+    //     location, rewriter.getI32Type(), m_tileSizeConst);
+    auto numThreads = std::min(
+        32, static_cast<int32_t>(
+                decisionforest::GetNumberOfThreadsInThreadBlock(gpuLaunchOp)));
+    auto width = rewriter.create<arith::ConstantIntOp>(location, numThreads,
+                                                       rewriter.getI32Type());
+    auto nodeIndexShuffleOp = rewriter.create<gpu::ShuffleOp>(
+        location, nodeToTraverseIndexI32, tileElementPlusThreadBaseIdI32,
+        width.getResult(), gpu::ShuffleMode::IDX);
+    assert(nodeIndexShuffleOp.getShuffleResult() ==
+           nodeIndexShuffleOp.getResult(0));
+    // m_nodeIndex = cast nodeIndexShuffleOp.getShuffleResult() to Index
+    m_nodeIndex = rewriter.create<arith::IndexCastOp>(
+        location, rewriter.getIndexType(),
+        nodeIndexShuffleOp.getShuffleResult());
+    // Create a gpu.printf to print the block id, thread id, the arguments of
+    // the shuffle and the result
+
+    // auto blockIdx = GetBlockID(m_traverseTileOp);
+    // auto threadIdx = GetThreadID(m_traverseTileOp);
+    // rewriter.create<gpu::PrintfOp>(
+    //     location, "Block %ld, %d Thread %ld, %ld: Shuffle %d, %d, %d = %d\n",
+    //     ValueRange{blockIdx.x, blockIdx.y, threadIdx.x, threadIdx.y,
+    //                nodeToTraverseIndexI32, tileElementPlusThreadBaseIdI32,
+    //                width.getResult(),
+    //                nodeIndexShuffleOp.getShuffleResult()});
+#endif // TREEBEARD_GPU_USE_SHMEM_NODE_INDEX
     // Load threshold
     Value treeIndex = m_representation->GetTreeIndex(m_tree);
     m_loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(
@@ -692,10 +735,14 @@ bool GPUVectorTraverseTileCodeGenerator::EmitNext(
   case kLoadChildIndex: {
     // Load the element at m_threadBlockThreadId in m_nodeIndexShMemBuffer into
     // m_nodeIndex
+#ifdef TREEBEARD_GPU_USE_SHMEM_NODE_INDEX
     m_nodeIndex = rewriter
                       .create<memref::LoadOp>(location, m_nodeIndexShMemBuffer,
                                               m_threadBlockThreadId)
                       .getResult();
+#else  // TREEBEARD_GPU_USE_SHMEM_NODE_INDEX
+    m_nodeIndex = m_nodeToTraverseIndex;
+#endif // TREEBEARD_GPU_USE_SHMEM_NODE_INDEX
     m_extraLoads = m_representation->GenerateExtraLoads(location, rewriter,
                                                         m_tree, m_nodeIndex);
     m_state = kLoadTileShape;
@@ -803,6 +850,7 @@ bool GPUVectorTraverseTileCodeGenerator::EmitNext(
     //      blockIdx.y, threadIdx.x, threadIdx.y, m_loadTileShapeIndexOp,
     //      comparisonIndex, childIndex});
 
+#ifdef TREEBEARD_GPU_USE_SHMEM_NODE_INDEX
     // load the node index from m_nodeIndexShMemBuffer
     auto nodeIndexShMem = rewriter.create<memref::LoadOp>(
         location, m_nodeIndexShMemBuffer, m_threadBlockThreadId);
@@ -813,6 +861,11 @@ bool GPUVectorTraverseTileCodeGenerator::EmitNext(
     // Store newIndex into m_nodeIndexShMemBuffer at m_threadBlockThreadId
     rewriter.create<memref::StoreOp>(location, newIndex, m_nodeIndexShMemBuffer,
                                      m_threadBlockThreadId);
+#else  // TREEBEARD_GPU_USE_SHMEM_NODE_INDEX
+    Value newIndex = m_representation->GenerateMoveToChild(
+        location, rewriter, m_nodeToTraverseIndex, childIndex, m_tileSize,
+        m_extraLoads);
+#endif // TREEBEARD_GPU_USE_SHMEM_NODE_INDEX
 
     // node = indexToNode(index)
     // TODO_Ashwin Remove memref reference

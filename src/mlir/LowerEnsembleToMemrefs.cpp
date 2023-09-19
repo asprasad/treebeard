@@ -89,6 +89,10 @@ int64_t GetConstantIntValueFromMLIRValue(Value val);
 int64_t GetNumberOfThreadsInThreadBlock(gpu::LaunchOp gpuLaunchOp);
 Value GenerateLocalThreadId(ConversionPatternRewriter &rewriter,
                             Location location, gpu::LaunchOp launchOp);
+
+mlir::gpu::KernelDim3 GetThreadID(mlir::Operation *op);
+mlir::gpu::KernelDim3 GetBlockID(mlir::Operation *op);
+
 } // namespace decisionforest
 } // namespace mlir
 
@@ -452,7 +456,9 @@ struct GPUGetRootOpLowering : public ConversionPattern {
     auto getRootOp = AssertOpIsOfType<mlir::decisionforest::GetRootOp>(op);
     Value treeValue = operands[0];
 
+#ifdef TREEBEARD_GPU_USE_SHMEM_NODE_INDEX
     GenerateTreeIndexBuffers(rewriter, op, treeValue);
+#endif // #ifdef TREEBEARD_GPU_USE_SHMEM_NODE_INDEX
 
     auto nodeIndexConst =
         rewriter.create<arith::ConstantIndexOp>(op->getLoc(), 0);
@@ -647,6 +653,12 @@ struct GetLeafValueOpLowering : public ConversionPattern {
     if (decisionforest::InsertDebugHelpers) {
       rewriter.create<decisionforest::PrintTreeNodeOp>(location, nodeIndex);
     }
+
+    // auto blockIdx = GetBlockID(getLeafVal);
+    // auto threadIdx = GetThreadID(getLeafVal);
+    // rewriter.create<gpu::PrintfOp>(
+    //     location, "Block %ld, %d Thread %ld, %ld: getLeafValue\n",
+    //     ValueRange{blockIdx.x, blockIdx.y, threadIdx.x, threadIdx.y});
 
     auto leafValue = m_representation->GenerateGetLeafValueOp(
         rewriter, op, operands[0], nodeIndex);
