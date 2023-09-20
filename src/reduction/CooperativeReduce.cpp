@@ -93,14 +93,30 @@ struct ReduceToCooperativeReduceOp : public ConversionPattern {
       endIndices.push_back(
           rewriter.create<arith::ConstantIndexOp>(location, 1));
     }
+
     assert(startIndices.size() == endIndices.size());
+
+    if (reduceOp.getPreReductionDimensionStart().size() > 0 ||
+        reduceOp.getPreReductionDimensionEnd().size() > 0) {
+      llvm::errs() << "Pre reduction dimensions not supported yet\n";
+      return mlir::failure();
+    }
+
+    if (reduceOp.getPostReductionDimensionStart().size() != 1 ||
+        reduceOp.getPostReductionDimensionEnd().size() != 1) {
+      llvm::errs() << "Number of post-reduction dimensions should be 1\n";
+      return mlir::failure();
+    }
+
+    Value rangeStart = reduceOp.getPostReductionDimensionStart().front();
+    Value rangeEnd = reduceOp.getPostReductionDimensionEnd().front();
     // Create the cooperative reduce op
     rewriter.create<decisionforest::CooperativeReduceDimensionOp>(
         location, reduceOp.getTargetMemref(), reduceOp.getSourceMemref(),
-        reduceOp.getReductionDimension(), reduceOp.getReducedDimensions(),
-        reduceOp.getRangeStart(), reduceOp.getRangeEnd(), startIndices.at(0),
-        startIndices.at(1), startIndices.at(2), endIndices.at(0),
-        endIndices.at(1), endIndices.at(2), reduceOp.getInitialValueAttr());
+        reduceOp.getReductionDimension(), ValueRange{}, rangeStart, rangeEnd,
+        startIndices.at(0), startIndices.at(1), startIndices.at(2),
+        endIndices.at(0), endIndices.at(1), endIndices.at(2),
+        reduceOp.getInitialValueAttr());
     rewriter.eraseOp(op);
     return mlir::success();
   }
@@ -126,8 +142,12 @@ struct ConvertReductionsToCooperativeReductions
         math::MathDialect, arith::ArithDialect, func::FuncDialect,
         gpu::GPUDialect>();
 
-    target.addIllegalOp<decisionforest::ReduceDimensionOp,
-                        decisionforest::ReduceDimensionInplaceOp>();
+    target.addDynamicallyLegalOp<decisionforest::ReduceDimensionOp>(
+        [](decisionforest::ReduceDimensionOp op) {
+          return op.getReductionTypeAttr().getReductionType() ==
+                 decisionforest::Reduction::kArgMax;
+        });
+    target.addIllegalOp<decisionforest::ReduceDimensionInplaceOp>();
 
     RewritePatternSet patterns(&getContext());
     patterns.add<ReduceToCooperativeReduceOp>(patterns.getContext());

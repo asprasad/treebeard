@@ -85,7 +85,6 @@ void GenerateSimpleInitializer(const std::string &funcName,
                                Location location, ModuleOp module,
                                MemRefType memrefType);
 
-int64_t GetConstantIntValueFromMLIRValue(Value val);
 int64_t GetNumberOfThreadsInThreadBlock(gpu::LaunchOp gpuLaunchOp);
 Value GenerateLocalThreadId(ConversionPatternRewriter &rewriter,
                             Location location, gpu::LaunchOp launchOp);

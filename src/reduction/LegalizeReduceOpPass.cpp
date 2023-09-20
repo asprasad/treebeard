@@ -32,8 +32,6 @@ using namespace mlir;
 namespace mlir {
 namespace decisionforest {
 
-// Defined in GPURepresentations.cpp
-int64_t GetConstantIntValueFromMLIRValue(Value val);
 // Defined in LowerToMidLevelIR.cpp
 Value SumOfValues(ConversionPatternRewriter &rewriter, Location location,
                   std::list<Value> &values);
@@ -51,10 +49,23 @@ getConflictingLoops(decisionforest::ReduceOp reduceOp) {
   return conflictingLoops;
 }
 
-std::list<Value> getSurroundingBatchLoopIndices(scf::ParallelOp parFor) {
-  // Find all the indices of batch parfors
+Operation *getOutermostTreeLoopOp(decisionforest::ReduceOp reduceOp) {
+  auto owningOp = reduceOp->getParentOp();
+  Operation *outermostTreeLoopOp = nullptr;
+  while (owningOp) {
+    if (owningOp->getAttr("treeLoop")) {
+      outermostTreeLoopOp = owningOp;
+    }
+    owningOp = owningOp->getParentOp();
+  }
+  assert(outermostTreeLoopOp && "Outermost tree loop not found");
+  return outermostTreeLoopOp;
+}
+
+std::list<Value> getSurroundingBatchLoopIndices(Operation *op) {
+  // Find all the indices of batch loops
   std::list<Value> surroundingBatchLoopIndices;
-  auto parentOp = parFor->getParentOp();
+  auto parentOp = op->getParentOp();
   while (parentOp) {
     if (auto forOp = dyn_cast<scf::ForOp>(parentOp)) {
       if (forOp->getAttr("batchLoop")) {
@@ -75,8 +86,8 @@ std::list<Value> getSurroundingBatchLoopIndices(scf::ParallelOp parFor) {
   return surroundingBatchLoopIndices;
 }
 
-Value getImmediateParentBatchLoopStep(scf::ParallelOp parFor) {
-  auto parentOp = parFor->getParentOp();
+Value getImmediateParentBatchLoopStep(Operation *op) {
+  auto parentOp = op->getParentOp();
   while (parentOp) {
     if (auto forOp = dyn_cast<scf::ForOp>(parentOp)) {
       if (forOp->getAttr("batchLoop")) {
@@ -110,7 +121,8 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
   }
 
   MemRefType constructPrivatizedBufferType(
-      Type origBufferType,
+      Type origBufferType, Type inputValueType,
+      decisionforest::ReduceOp reduceOp,
       const std::vector<scf::ParallelOp> &conflictingLoops) const {
     std::vector<int64_t> privatizedShape;
     auto memrefType = origBufferType.cast<MemRefType>();
@@ -123,9 +135,17 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
     for (auto dim : memrefType.getShape()) {
       privatizedShape.push_back(dim);
     }
+    if (reduceOp.getReductionTypeAttr().getReductionType() ==
+        decisionforest::Reduction::kArgMax) {
+      privatizedShape.push_back(
+          reduceOp->getAttr(decisionforest::getArgMaxLengthAttributeName())
+              .cast<IntegerAttr>()
+              .getInt());
+    }
 
+    assert(inputValueType.isF32() || inputValueType.isF64());
     auto privatizedBufferType =
-        MemRefType::get(privatizedShape, memrefType.getElementType());
+        MemRefType::get(privatizedShape, inputValueType);
 
     return privatizedBufferType;
   }
@@ -148,7 +168,8 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
     rewriter.create<linalg::FillOp>(location, zero, allocatedMemref);
   }
 
-  Value createOrGetPrivatizedBuffer(Value originalBuffer,
+  Value createOrGetPrivatizedBuffer(Value originalBuffer, Value inputValue,
+                                    decisionforest::ReduceOp reduceOp,
                                     const std::vector<scf::ParallelOp> &loops,
                                     ConversionPatternRewriter &rewriter) const {
     auto iter = m_privatizationMap.find(originalBuffer.getAsOpaquePointer());
@@ -158,11 +179,11 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
     decisionforest::helpers::SaveAndRestoreInsertionPoint saveIP(rewriter);
 
     // Set insertion point to start of owning function
-    auto owningFunc = loops[0]->getParentOfType<mlir::func::FuncOp>();
+    auto owningFunc = reduceOp->getParentOfType<mlir::func::FuncOp>();
     rewriter.setInsertionPointToStart(&owningFunc.getBody().front());
 
-    auto privatizedBufferType =
-        constructPrivatizedBufferType(originalBuffer.getType(), loops);
+    auto privatizedBufferType = constructPrivatizedBufferType(
+        originalBuffer.getType(), inputValue.getType(), reduceOp, loops);
     auto privatizedBuffer = rewriter.create<memref::AllocaOp>(
         originalBuffer.getLoc(), privatizedBufferType);
     initializePrivatizedBuffer(privatizedBuffer, privatizedBufferType, rewriter,
@@ -174,7 +195,8 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
   void constructPrivatizedIndicesForConflictingLoops(
       ConversionPatternRewriter &rewriter, Location location,
       std::vector<scf::ParallelOp> &conflictingLoops,
-      std::vector<Value> &privatizedReductionIndex) const {
+      std::vector<Value> &preReductionIndexStart,
+      std::vector<Value> &preReductionIndexEnd) const {
 
     for (auto loop : conflictingLoops) {
       auto step = loop.getStep()[0];
@@ -185,8 +207,13 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
           rewriter.create<arith::SubIOp>(location, loopIndex, lowerBound);
       auto iterationNumber = rewriter.create<arith::DivSIOp>(
           location, loopIndexMinusLowerBound, step);
-      privatizedReductionIndex.insert(privatizedReductionIndex.begin(),
-                                      iterationNumber);
+      auto iterationNumberPlusOne = rewriter.create<arith::AddIOp>(
+          location, iterationNumber,
+          rewriter.create<arith::ConstantIndexOp>(location, 1));
+      preReductionIndexStart.insert(preReductionIndexStart.begin(),
+                                    iterationNumber);
+      preReductionIndexEnd.insert(preReductionIndexEnd.begin(),
+                                  iterationNumberPlusOne);
     }
   }
 
@@ -195,11 +222,12 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
       std::vector<scf::ParallelOp> &conflictingLoops,
       decisionforest::ReduceOp reduceOp) const {
 
-    std::vector<Value> privatizedReductionIndex;
+    std::vector<Value> privatizedReductionIndex, privatizedReductionIndexEnd;
     auto location = reduceOp->getLoc();
 
     constructPrivatizedIndicesForConflictingLoops(
-        rewriter, location, conflictingLoops, privatizedReductionIndex);
+        rewriter, location, conflictingLoops, privatizedReductionIndex,
+        privatizedReductionIndexEnd);
 
     privatizedReductionIndex.insert(privatizedReductionIndex.end(),
                                     reduceOp.getIndices().begin(),
@@ -208,13 +236,13 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
     return privatizedReductionIndex;
   }
 
-  std::tuple<Value, Value> constructRangeStartAndRangeEndIndices(
-      ConversionPatternRewriter &rewriter, scf::ParallelOp conflictingLoop,
-      Location location, MemRefType targetMemrefType) const {
+  std::tuple<Value, Value>
+  constructRangeStartAndRangeEndIndices(ConversionPatternRewriter &rewriter,
+                                        Operation *op, Location location,
+                                        MemRefType targetMemrefType) const {
     // Find all surrounding batch loops and add their indices to compute the
     // start.
-    auto surroundingBatchLoopIndices =
-        getSurroundingBatchLoopIndices(conflictingLoop);
+    auto surroundingBatchLoopIndices = getSurroundingBatchLoopIndices(op);
 
     if (surroundingBatchLoopIndices.size() == 0) {
       auto startIndex = rewriter.create<arith::ConstantIndexOp>(location, 0);
@@ -229,11 +257,64 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
 
     // Find the step of the nearest surrounding batch loop and add it to
     // the start to compute the end.
-    auto immediateParentStep = getImmediateParentBatchLoopStep(conflictingLoop);
+    auto immediateParentStep = getImmediateParentBatchLoopStep(op);
     auto endIndex = rewriter.create<arith::AddIOp>(location, startIndex,
                                                    immediateParentStep);
 
     return std::make_tuple(startIndex, endIndex.getResult());
+  }
+
+  void
+  addReduceDimensionOpForArgMax(decisionforest::ReduceOp reduceOp,
+                                Value privatizedBuffer,
+                                ConversionPatternRewriter &rewriter) const {
+    auto targetMemrefType =
+        reduceOp.getTargetMemref().getType().cast<MemRefType>();
+    auto argMaxReductionTypeAttr = decisionforest::createReductionTypeAttribute(
+        reduceOp.getContext(), decisionforest::Reduction::kArgMax);
+    auto argMaxLengthAttrName = decisionforest::getArgMaxLengthAttributeName();
+    auto argMaxLengthAttr = reduceOp->getAttr(argMaxLengthAttrName);
+    auto privateBufferMemrefType =
+        privatizedBuffer.getType().cast<MemRefType>();
+
+    auto outermostTreeLoopOp = getOutermostTreeLoopOp(reduceOp);
+    rewriter.setInsertionPointAfter(outermostTreeLoopOp);
+
+    // At this point we should have reduced all the tree walks for the
+    // surrounding batch loops (all tree walks for all batches if no surrounding
+    // loops exist). Hence we reduce (0,0,0, ... batchStart, batchEnd)
+    auto reductionDimConst = rewriter.create<arith::ConstantIndexOp>(
+        reduceOp->getLoc(), privateBufferMemrefType.getShape().size() - 1);
+
+    // At this point, we should have reduced everything except last dimensions
+    // representing the batch and class weights.
+    auto numberOfReducedDims = privateBufferMemrefType.getShape().size() -
+                               targetMemrefType.getShape().size() - 1;
+    std::vector<Value> preReductionStart, preReductionEnd;
+    for (size_t j = 0; j < numberOfReducedDims; ++j) {
+      preReductionStart.push_back(
+          rewriter.create<arith::ConstantIndexOp>(reduceOp->getLoc(), 0));
+      preReductionEnd.push_back(
+          rewriter.create<arith::ConstantIndexOp>(reduceOp->getLoc(), 1));
+    }
+
+    auto startAndEndTuple = constructRangeStartAndRangeEndIndices(
+        rewriter, outermostTreeLoopOp, reduceOp->getLoc(), targetMemrefType);
+    Value rangeStart = std::get<0>(startAndEndTuple);
+    Value rangeEnd = std::get<1>(startAndEndTuple);
+    preReductionStart.push_back(rangeStart);
+    preReductionEnd.push_back(rangeEnd);
+
+    // Mapped dimension corresponds to the batch row.
+    auto mappedDimension = rewriter.create<arith::ConstantIndexOp>(
+        reduceOp->getLoc(), privateBufferMemrefType.getShape().size() - 2);
+
+    auto reduceDimOp = rewriter.create<decisionforest::ReduceDimensionOp>(
+        reduceOp->getLoc(), argMaxReductionTypeAttr, reduceOp.getTargetMemref(),
+        privatizedBuffer, ValueRange{mappedDimension}, preReductionStart,
+        preReductionEnd, reductionDimConst, ValueRange{}, ValueRange{},
+        reduceOp.getInitialValueAttr());
+    reduceDimOp->setAttr(argMaxLengthAttrName, argMaxLengthAttr);
   }
 
   ReduceOpLegalizationPattern(MLIRContext *ctx,
@@ -246,23 +327,49 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     auto reduceOp = AssertOpIsOfType<mlir::decisionforest::ReduceOp>(op);
+    auto reductionTypeAttr = reduceOp.getReductionTypeAttr();
+    if (!reductionTypeAttr) {
+      llvm::errs() << "Reduction type attribute not found\n";
+      return mlir::failure();
+    }
+    auto reductionType = reductionTypeAttr.getReductionType();
+    if (reductionType == mlir::decisionforest::Reduction::kArgMax &&
+        !op->getAttr(mlir::decisionforest::getArgMaxLengthAttributeName())) {
+      llvm::errs() << "Argmax reduction requires ArgMaxLength attribute\n";
+      return mlir::failure();
+    }
+
     auto location = reduceOp->getLoc();
     auto conflictingLoops = getConflictingLoops(reduceOp);
-    assert(conflictingLoops.size() != 0);
+    assert(conflictingLoops.size() != 0 ||
+           reductionType == decisionforest::Reduction::kArgMax);
     auto targetMemrefType =
         reduceOp.getTargetMemref().getType().cast<MemRefType>();
     auto privatizedBuffer = createOrGetPrivatizedBuffer(
-        reduceOp.getTargetMemref(), conflictingLoops, rewriter);
+        reduceOp.getTargetMemref(), reduceOp.getValue(), reduceOp,
+        conflictingLoops, rewriter);
     auto privatizedReductionIndex =
         constructPrivatizedReductionIndex(rewriter, conflictingLoops, reduceOp);
+
+    // If we're not doing argmax, use the same reductionTypeAttribute as the one
+    // used in the original reduce op. ArgMax requires the intermediate reduces
+    // to be kAdd
+    auto newReductionTypeAttr =
+        reductionType == decisionforest::Reduction::kArgMax
+            ? decisionforest::createReductionTypeAttribute(
+                  op->getContext(), decisionforest::Reduction::kAdd)
+            : reductionTypeAttr;
+
     auto legalizedReduce = rewriter.create<decisionforest::ReduceOp>(
-        location, privatizedBuffer, privatizedReductionIndex,
-        reduceOp.getValue(), reduceOp.getInitialValueAttr());
+        location, newReductionTypeAttr, privatizedBuffer,
+        privatizedReductionIndex, reduceOp.getValue(),
+        reduceOp.getInitialValueAttr());
     legalizedReduce->setAttr("legalizedReduce", rewriter.getUnitAttr());
 
     // Add partial reductions at the exit of each of the conflicting loops
     for (size_t i = 0; i < conflictingLoops.size(); ++i) {
-      // TODO_Ashwin Still need to figure out if there are any outer batch loops
+      // TODO_Ashwin Still need to figure out if there are any outer batch
+      // loops
       bool lastLoop = i == conflictingLoops.size() - 1;
       auto &loop = conflictingLoops[i];
 
@@ -276,39 +383,56 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
       auto rangeStart = std::get<0>(rangeVals);
       auto rangeEnd = std::get<1>(rangeVals);
       assert(rangeStart && rangeEnd && "Range start and end cannot be null");
+      std::vector<Value> preReductionStart, preReductionEnd;
+      std::vector<Value> postReductionStart, postReductionEnd;
       if (lastLoop) {
-        std::vector<Value> reducedDimensions;
-        for (size_t j = 1; j < conflictingLoops.size(); ++j) {
-          reducedDimensions.push_back(
+        // These dimensions have already been reduced, so we pass (0, 1) for
+        // each of them
+        std::for_each(
+            conflictingLoops.begin() + 1, conflictingLoops.end(),
+            [&](auto loop) {
+              postReductionStart.push_back(
+                  rewriter.create<arith::ConstantIndexOp>(location, 0));
+              postReductionEnd.push_back(
+                  rewriter.create<arith::ConstantIndexOp>(location, 1));
+            });
+        postReductionStart.push_back(rangeStart);
+        postReductionEnd.push_back(rangeEnd);
+
+        std::vector<Value> mappedDimensions;
+        auto privatizedBufferType =
+            privatizedBuffer.getType().cast<MemRefType>();
+        for (size_t j = conflictingLoops.size();
+             j < privatizedBufferType.getShape().size(); ++j) {
+          mappedDimensions.push_back(
               rewriter.create<arith::ConstantIndexOp>(location, j));
         }
-
         rewriter.create<decisionforest::ReduceDimensionOp>(
-            location, reduceOp.getTargetMemref(), privatizedBuffer,
-            reductionDimConst, reducedDimensions, ValueRange{rangeStart},
-            ValueRange{rangeEnd}, reduceOp.getInitialValueAttr());
+            location, newReductionTypeAttr, reduceOp.getTargetMemref(),
+            privatizedBuffer, mappedDimensions, ValueRange{}, ValueRange{},
+            reductionDimConst, ValueRange{postReductionStart},
+            ValueRange{postReductionEnd}, reduceOp.getInitialValueAttr());
 
       } else {
-        std::vector<Value> indices;
-        std::vector<Value> rangeStartIndices, rangeEndIndices;
-        for (size_t j = i; j < i; ++j) {
-          rangeStartIndices.push_back(
-              rewriter.create<arith::ConstantIndexOp>(location, 0));
-          rangeEndIndices.push_back(
-              rewriter.create<arith::ConstantIndexOp>(location, 1));
-        }
         std::vector<scf::ParallelOp> surroundingConflictingLoops(
             conflictingLoops.begin() + i + 1, conflictingLoops.end());
         constructPrivatizedIndicesForConflictingLoops(
-            rewriter, location, surroundingConflictingLoops, indices);
+            rewriter, location, surroundingConflictingLoops, preReductionStart,
+            preReductionEnd);
 
-        rangeStartIndices.push_back(rangeStart);
-        rangeEndIndices.push_back(rangeEnd);
+        postReductionStart.push_back(rangeStart);
+        postReductionEnd.push_back(rangeEnd);
 
         rewriter.create<decisionforest::ReduceDimensionInplaceOp>(
-            location, privatizedBuffer, reductionDimConst, indices,
-            rangeStartIndices, rangeEndIndices);
+            location, newReductionTypeAttr, privatizedBuffer,
+            ValueRange{preReductionStart}, ValueRange{preReductionEnd},
+            reductionDimConst, ValueRange{postReductionStart},
+            ValueRange{postReductionEnd});
       }
+    }
+
+    if (reductionType == mlir::decisionforest::Reduction::kArgMax) {
+      addReduceDimensionOpForArgMax(reduceOp, privatizedBuffer, rewriter);
     }
 
     rewriter.eraseOp(op);
@@ -341,7 +465,11 @@ struct LegalizeReductions
         [&](decisionforest::ReduceOp op) {
           if (op->getAttr("legalizedReduce"))
             return true;
-          return getConflictingLoops(op).size() == 0;
+          // We still need to legalize reduction of argmax even if there aren't
+          // any conflicting loops.
+          return getConflictingLoops(op).size() == 0 &&
+                 op.getReductionTypeAttr().getReductionType() ==
+                     decisionforest::Reduction::kAdd;
         });
 
     RewritePatternSet patterns(&getContext());

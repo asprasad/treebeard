@@ -49,6 +49,10 @@ void ReplaceCPUReferencesWithGPUMemref(
           loadOp->replaceUsesOfWith(cpuMemref, gpuMemref);
         });
 
+        gpuLaunchOp.walk([&](memref::StoreOp storeOp) {
+          storeOp->replaceUsesOfWith(cpuMemref, gpuMemref);
+        });
+
         gpuLaunchOp.walk([&](decisionforest::ReduceOp reduceOp) {
           reduceOp->replaceUsesOfWith(cpuMemref, gpuMemref);
         });

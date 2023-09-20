@@ -428,15 +428,6 @@ void LowerCacheRowsOpToGPU(ConversionPatternRewriter &rewriter,
   rewriter.replaceOp(op, static_cast<Value>(getGlobal));
 }
 
-int64_t GetConstantIntValueFromMLIRValue(Value val) {
-  auto definingOp = val.getDefiningOp();
-  APInt constIntVal;
-  mlir::detail::constant_int_op_binder binder(&constIntVal);
-  bool match = binder.match(definingOp);
-  assert(match);
-  return constIntVal.getLimitedValue();
-}
-
 // NOTE : Assumes Canonicalization pass has been run!
 int64_t GetNumberOfThreadsInThreadBlock(gpu::LaunchOp gpuLaunchOp) {
   auto threadBlockSizeX =

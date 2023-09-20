@@ -5,6 +5,7 @@
 #include "DecisionTreeAttributes.h"
 #include "DecisionTreeTypes.h"
 #include "MemrefTypes.h"
+#include "ReductionOpAttributes.h"
 #include "ScheduleAttribute.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/BuiltinOps.h"
