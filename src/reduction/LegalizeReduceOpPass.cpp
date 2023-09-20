@@ -264,6 +264,16 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
     return std::make_tuple(startIndex, endIndex.getResult());
   }
 
+  void addReductionDimensionRangesForArgMax(
+      ConversionPatternRewriter &rewriter, Location location,
+      std::vector<Value> &reductionDimStart,
+      std::vector<Value> &reductionDimEnd, int32_t argMaxLength) const {
+    reductionDimStart.push_back(
+        rewriter.create<arith::ConstantIndexOp>(location, 0));
+    reductionDimEnd.push_back(
+        rewriter.create<arith::ConstantIndexOp>(location, argMaxLength));
+  }
+
   void
   addReduceDimensionOpForArgMax(decisionforest::ReduceOp reduceOp,
                                 Value privatizedBuffer,
@@ -399,6 +409,16 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
         postReductionStart.push_back(rangeStart);
         postReductionEnd.push_back(rangeEnd);
 
+        if (reductionType == mlir::decisionforest::Reduction::kArgMax) {
+          auto argMaxLength =
+              op->getAttr(mlir::decisionforest::getArgMaxLengthAttributeName())
+                  .cast<IntegerAttr>()
+                  .getInt();
+          addReductionDimensionRangesForArgMax(rewriter, location,
+                                               postReductionStart,
+                                               postReductionEnd, argMaxLength);
+        }
+
         std::vector<Value> mappedDimensions;
         auto privatizedBufferType =
             privatizedBuffer.getType().cast<MemRefType>();
@@ -422,6 +442,16 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
 
         postReductionStart.push_back(rangeStart);
         postReductionEnd.push_back(rangeEnd);
+
+        if (reductionType == mlir::decisionforest::Reduction::kArgMax) {
+          auto argMaxLength =
+              op->getAttr(mlir::decisionforest::getArgMaxLengthAttributeName())
+                  .cast<IntegerAttr>()
+                  .getInt();
+          addReductionDimensionRangesForArgMax(rewriter, location,
+                                               postReductionStart,
+                                               postReductionEnd, argMaxLength);
+        }
 
         rewriter.create<decisionforest::ReduceDimensionInplaceOp>(
             location, newReductionTypeAttr, privatizedBuffer,

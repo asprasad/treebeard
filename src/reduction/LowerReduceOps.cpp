@@ -134,17 +134,14 @@ void addLoopIfNeededAndUpdateIndices(
     std::vector<Value> &loopIVs, std::vector<Value> &resultIndex,
     std::set<int32_t> &mappedDimsSet, Value start, Value end,
     Value oneIndexConst, Operation *outermostLoop) {
-  if (isLoopRangeOne(start, end)) {
-    loopIVs.push_back(start);
-  } else {
-    auto loop =
-        rewriter.create<scf::ForOp>(location, start, end, oneIndexConst);
-    if (!outermostLoop) {
-      outermostLoop = loop.getOperation();
-    }
-    loopIVs.push_back(loop.getInductionVar());
-    rewriter.setInsertionPointToStart(loop.getBody());
+
+  auto loop = rewriter.create<scf::ForOp>(location, start, end, oneIndexConst);
+  if (!outermostLoop) {
+    outermostLoop = loop.getOperation();
   }
+
+  loopIVs.push_back(loop.getInductionVar());
+  rewriter.setInsertionPointToStart(loop.getBody());
 
   // If the last dimension is mapped, include it in the result index.
   if (mappedDimsSet.find(loopIVs.size() - 1) != mappedDimsSet.end()) {
@@ -178,16 +175,10 @@ LogicalResult generateSimpleReductionLoopNest(
                                     outermostLoop);
   }
 
-  if (preReductionDimStart.size() < (size_t)reductionDim) {
-    for (auto i = preReductionDimStart.size(); i < (size_t)reductionDim; i++) {
-
-      auto dimSize = sourceMemref.getType().cast<MemRefType>().getDimSize(i);
-      auto dimSizeConst =
-          rewriter.create<arith::ConstantIndexOp>(location, dimSize);
-      addLoopIfNeededAndUpdateIndices(
-          rewriter, location, loopIVs, resultIndex, mappedDimSet,
-          zeroIndexConst, dimSizeConst, oneIndexConst, outermostLoop);
-    }
+  if (preReductionDimEnd.size() != (size_t)reductionDim) {
+    llvm::errs() << "Reduction dimension should should immediately follow the "
+                    "Pre-Reduction dimensions\n";
+    return mlir::failure();
   }
 
   // for each value, sum over the reduction dimension
@@ -213,16 +204,6 @@ LogicalResult generateSimpleReductionLoopNest(
     auto start = std::get<0>(startEndPair);
     auto end = std::get<1>(startEndPair);
 
-    addLoopIfNeededAndUpdateIndices(rewriter, location, loopIVs, resultIndex,
-                                    mappedDimSet, start, end, oneIndexConst,
-                                    outermostLoop);
-  }
-
-  // Include any trailing dimensions that may have not been specified.
-  for (size_t j = loopIVs.size(); j < (size_t)sourceMemrefType.getRank(); ++j) {
-    auto start = rewriter.create<arith::ConstantIndexOp>(location, 0);
-    auto end = rewriter.create<arith::ConstantIndexOp>(
-        location, sourceMemrefType.getDimSize(j));
     addLoopIfNeededAndUpdateIndices(rewriter, location, loopIVs, resultIndex,
                                     mappedDimSet, start, end, oneIndexConst,
                                     outermostLoop);
@@ -261,6 +242,12 @@ LogicalResult generateSimpleReductionLoopNest(
   rewriter.setInsertionPointToStart(reductionLoop.getBody());
   // Insert at the point where reduction dim is supposed to appear.
   loopIVs[reductionDim] = reductionLoop.getInductionVar();
+
+  if (loopIVs.size() != (size_t)sourceMemrefType.getRank()) {
+    llvm::errs() << "LowerReduceOps: Not enough indices passed to address "
+                    "sourceMemref.\n";
+    return mlir::failure();
+  }
 
   if (reduction == decisionforest::Reduction::kAdd) {
 
