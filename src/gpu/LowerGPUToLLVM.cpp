@@ -69,8 +69,8 @@
 
 using namespace mlir;
 
-namespace
-{
+namespace mlir {
+namespace decisionforest {
 
 template <typename DerivedT>
 class ConvertGpuOpsToNVVMOpsBase : public ::mlir::OperationPass<gpu::GPUModuleOp> {
@@ -324,7 +324,8 @@ struct PrintModulePass : public PassWrapper<PrintModulePass, OperationPass<Modul
   }
 };
 
-} // namespace
+} // namespace decisionforest
+} // namespace mlir
 
 namespace mlir
 {

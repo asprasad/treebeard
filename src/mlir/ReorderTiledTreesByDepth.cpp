@@ -22,7 +22,8 @@
 
 using namespace mlir;
 
-namespace {
+namespace mlir {
+namespace decisionforest {
 
 template<typename T>
 T AssertOpIsOfType(Operation* operation) {
@@ -353,7 +354,8 @@ struct SplitTreeLoopByDepth : public PassWrapper<SplitTreeLoopByDepth, Operation
   }
 };
 
-} // anonymous namespace
+} // namespace decisionforest
+} // namespace mlir
 
 namespace mlir
 {

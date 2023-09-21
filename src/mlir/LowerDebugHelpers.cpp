@@ -13,9 +13,11 @@
 
 using namespace mlir;
 
-namespace
-{
-FlatSymbolRefAttr getOrInsertFunction(std::string& functionName, LLVM::LLVMFunctionType functionType, PatternRewriter &rewriter,
+namespace mlir {
+namespace decisionforest {
+FlatSymbolRefAttr getOrInsertFunction(std::string &functionName,
+                                      LLVM::LLVMFunctionType functionType,
+                                      PatternRewriter &rewriter,
                                       ModuleOp module) {
   auto *context = module.getContext();
   if (module.lookupSymbol<LLVM::LLVMFuncOp>(functionName))
@@ -348,7 +350,8 @@ struct PrintVectorOpLowering: public ConversionPattern {
   }
 };
 
-} // anonymous namespace
+} // namespace decisionforest
+} // namespace mlir
 
 namespace mlir
 {

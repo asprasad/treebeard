@@ -24,8 +24,10 @@
 
 using namespace mlir;
 
-namespace 
-{
+namespace mlir {
+namespace decisionforest {
+
+StringRef getMappingAttrName() { return "mapping"; }
 
 // Replace all uses of the input argument memref with the gpu memref inside
 // the gpu kernel
@@ -172,12 +174,6 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
   });
 }
 
-} // anonymous namespace
-
-namespace mlir
-{
-namespace decisionforest
-{
 
 void GreedilyMapParallelLoopsToGPU(mlir::ModuleOp module) {
   mlir::PassManager pm(module.getContext());
@@ -220,7 +216,7 @@ void RunCanonicalizerPass(mlir::MLIRContext& context, mlir::ModuleOp module) {
   }
 }
 
-} // decisionforest
-} // mlir
+} // namespace decisionforest
+} // namespace mlir
 
 #endif // TREEBEARD_GPU_SUPPORT

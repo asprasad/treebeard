@@ -18,7 +18,8 @@
 
 using namespace mlir;
 
-namespace {
+namespace mlir {
+namespace decisionforest {
 
 static MemRefType getRowTypeFromArgumentType(MemRefType type) {
   assert (type.hasRank() && "expected only rank shapes");
@@ -1321,7 +1322,8 @@ struct HighLevelIRToMidLevelIRLoweringPass: public PassWrapper<HighLevelIRToMidL
   }
 };
 
-} // anonymous namespace
+} // namespace decisionforest
+} // namespace mlir
 
 namespace mlir
 {
@@ -1344,5 +1346,5 @@ void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext& context, mlir::ModuleOp m
   // llvm::DebugFlag = false;
 }
 
-} // decisionforest
-} // mlir
+} // namespace decisionforest
+} // namespace mlir

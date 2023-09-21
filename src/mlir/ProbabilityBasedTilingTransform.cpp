@@ -21,8 +21,8 @@
 #include "OpLoweringUtils.h"
 #include "TiledTree.h"
 
-using namespace mlir;
-namespace {
+namespace mlir {
+namespace decisionforest {
 
 struct TileEnsembleAttribute : public RewritePattern {
   int32_t m_tileSize;
@@ -232,7 +232,8 @@ struct ProbabilityBasedTilingPass : public PassWrapper<ProbabilityBasedTilingPas
         signalPassFailure();
   }
 };
-} // anonymous namespace
+} // namespace decisionforest
+} // namespace mlir
 
 namespace mlir
 {
