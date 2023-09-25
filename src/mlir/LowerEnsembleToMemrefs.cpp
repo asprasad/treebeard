@@ -91,7 +91,8 @@ void GenerateSimpleInitializer(const std::string& funcName, ConversionPatternRew
 
 Value getLUT;
 
-namespace {
+namespace mlir {
+namespace decisionforest {
 
 struct EnsembleConstantOpLowering: public ConversionPattern {
   std::shared_ptr<decisionforest::IModelSerializer> m_serializer;
@@ -666,7 +667,8 @@ struct MidLevelIRToGPUMemrefLoweringPass: public PassWrapper<MidLevelIRToGPUMemr
   }
 };
 
-} // anonymous namespace
+} // namespace decisionforest
+} // namespace mlir
 
 namespace mlir
 {

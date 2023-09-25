@@ -32,8 +32,8 @@
 
 using namespace mlir;
 
-namespace
-{
+namespace mlir {
+namespace decisionforest {
 
 struct TraverseToCooperativeTraverseTreeTileOp : public ConversionPattern {
   TraverseToCooperativeTraverseTreeTileOp(MLIRContext *ctx) 
@@ -84,14 +84,8 @@ struct ConvertTraverseToCooperativeTraverse: public PassWrapper<ConvertTraverseT
   }
 };
 
-} // anonymous namespace
-
-namespace mlir
-{
-namespace decisionforest
-{
-
-void LowerGPUEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module) {
+void ConvertTraverseToSimtTraverse(mlir::MLIRContext &context,
+                                   mlir::ModuleOp module) {
   // llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
@@ -103,7 +97,7 @@ void LowerGPUEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module
   }
 }
 
-} // decisionforest
-} // mlir
+} // namespace decisionforest
+} // namespace mlir
 
 #endif

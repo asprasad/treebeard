@@ -14,8 +14,8 @@
 
 using namespace mlir;
 
-namespace
-{
+namespace mlir {
+namespace decisionforest {
 
 struct WalkDecisionTreeOpLowering: public ConversionPattern {
   WalkDecisionTreeOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::WalkDecisionTreeOp::getOperationName(), 1 /*benefit*/, ctx) {}
@@ -321,17 +321,10 @@ struct PipelinedWalkDecisionTreeOpLoweringPass: public PassWrapper<PipelinedWalk
   }
 };
 
-}
-
-namespace mlir
-{
-namespace decisionforest
-{
-
 void AddWalkDecisionTreeOpLoweringPass(mlir::OpPassManager &optPM) {
   optPM.addPass(std::make_unique<WalkDecisionTreeOpLoweringPass>());
   optPM.addPass(std::make_unique<PipelinedWalkDecisionTreeOpLoweringPass>());
 }
 
-}
-}
+} // namespace decisionforest
+} // namespace mlir

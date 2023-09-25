@@ -68,10 +68,6 @@ namespace decisionforest
 // Defined in LowerDebugHelpers.cpp
 void InsertPrintElementAddressIfNeeded(ConversionPatternRewriter& rewriter, Location location, ModuleOp module,
                                        Value extractMemrefBufferPointer, Value indexVal, Value actualIndex, Value elemIndexConst, Value elemPtr);
-}
-}
-
-namespace {
 
 struct DecisionForestToLLVMLoweringPass : public PassWrapper<DecisionForestToLLVMLoweringPass, OperationPass<ModuleOp>> {
   std::shared_ptr<decisionforest::IRepresentation> m_representation;
@@ -170,7 +166,8 @@ struct PrintModulePass : public PassWrapper<PrintModulePass, OperationPass<Modul
   }
 };
 
-} // end anonymous namespace
+} // namespace decisionforest
+} // namespace mlir
 
 namespace mlir
 {

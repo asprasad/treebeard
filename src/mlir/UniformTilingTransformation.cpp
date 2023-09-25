@@ -21,8 +21,8 @@
 #include "OpLoweringUtils.h"
 #include "Dialect.h"
 
-using namespace mlir;
-namespace {
+namespace mlir {
+namespace decisionforest {
 
 struct TileEnsembleAttribute : public RewritePattern {
   int32_t m_tileSize;
@@ -143,7 +143,8 @@ struct UniformTilingPass : public PassWrapper<UniformTilingPass, OperationPass<m
         signalPassFailure();
   }
 };
-} // anonymous namespace
+} // namespace decisionforest
+} // namespace mlir
 
 namespace mlir
 {
