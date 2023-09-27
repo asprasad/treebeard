@@ -15,6 +15,7 @@
 #include "llvm/Target/TargetMachine.h"
 
 #include "GPUSupportUtils.h"
+#include "LIRLoweringHelpers.h"
 #include "LowerReduceOps.h"
 
 using namespace mlir;
@@ -147,6 +148,79 @@ void addLoopIfNeededAndUpdateIndices(
   if (mappedDimsSet.find(loopIVs.size() - 1) != mappedDimsSet.end()) {
     resultIndex.push_back(loopIVs.back());
   }
+}
+
+LogicalResult generateAtomiceductionLoopNest(
+    Location location, ConversionPatternRewriter &rewriter, Value targetMemref,
+    Value sourceMemref, std::set<int32_t> &&mappedDimSet,
+    mlir::Operation::operand_range &&preReductionDimStart,
+    mlir::Operation::operand_range &&preReductionDimEnd, int64_t reductionDim,
+    Value reductionDimIndex,
+    mlir::Operation::operand_range &&postReductionDimStart,
+    mlir::Operation::operand_range &&postReductionDimEnd,
+    decisionforest::Reduction reduction, Value initialValueConst = Value()) {
+
+  decisionforest::helpers::SaveAndRestoreInsertionPoint saveInsertionPoint(
+      rewriter);
+
+  // Iterate [rangeStart, rangeEnd)
+  auto oneIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 1);
+  assert(sourceMemref != targetMemref);
+
+  Operation *outermostLoop = nullptr;
+  std::vector<Value> loopIVs;
+  std::vector<Value> resultIndex;
+  for (auto startEndPair :
+       llvm::zip(preReductionDimStart, preReductionDimEnd)) {
+    auto start = std::get<0>(startEndPair);
+    auto end = std::get<1>(startEndPair);
+    addLoopIfNeededAndUpdateIndices(rewriter, location, loopIVs, resultIndex,
+                                    mappedDimSet, start, end, oneIndexConst,
+                                    outermostLoop);
+  }
+
+  // All the dimensions prior to the reduction dimension should be specified.
+  assert(preReductionDimStart.size() == (size_t)reductionDim);
+
+  // for each value, sum over the reduction dimension
+  auto sourceMemrefType = sourceMemref.getType().cast<MemRefType>();
+  auto targetMemrefType = targetMemref.getType().cast<MemRefType>();
+
+  // Push-back empty value for the reduction dimension. Will be filled later.
+  loopIVs.push_back(Value());
+
+  for (auto startEndPair :
+       llvm::zip(postReductionDimStart, postReductionDimEnd)) {
+
+    auto start = std::get<0>(startEndPair);
+    auto end = std::get<1>(startEndPair);
+
+    addLoopIfNeededAndUpdateIndices(rewriter, location, loopIVs, resultIndex,
+                                    mappedDimSet, start, end, oneIndexConst,
+                                    outermostLoop);
+  }
+
+  // All dimensions have to be specified.
+  assert(static_cast<int64_t>(loopIVs.size()) == sourceMemrefType.getRank());
+
+  // Insert at the point where reduction dim is supposed to appear.
+  loopIVs[reductionDim] = reductionDimIndex;
+
+  assert(reduction == decisionforest::Reduction::kAdd);
+
+  if ((size_t)targetMemrefType.getRank() != resultIndex.size()) {
+    llvm::errs() << "Target memref index and result index do not match\n";
+    return mlir::failure();
+  }
+
+  auto loadVal =
+      rewriter.create<memref::LoadOp>(location, sourceMemref, loopIVs);
+
+  rewriter.create<memref::AtomicRMWOp>(
+      location, mlir::arith::AtomicRMWKind::addf, loadVal.getResult(),
+      targetMemref, resultIndex);
+
+  return mlir::success();
 }
 
 LogicalResult generateSimpleReductionLoopNest(
@@ -323,6 +397,58 @@ struct ReduceDimensionOpLowering : public ConversionPattern {
         location, rewriter, targetMemref, sourceMemref, std::move(mappedDimSet),
         std::move(preReducedDimStart), std::move(preReducedDimEnd),
         reductionDimVal, std::move(postReducedDimStart),
+        std::move(postReducedDimEnd), reductionType, initialValue);
+
+    if (failed(result)) {
+      return result;
+    }
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
+
+struct AtomicReduceDimensionOpLowering : public ConversionPattern {
+  AtomicReduceDimensionOpLowering(MLIRContext *ctx)
+      : ConversionPattern(
+            mlir::decisionforest::AtomicReduceDimensionOp::getOperationName(),
+            1 /*benefit*/, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    auto reduceOp =
+        AssertOpIsOfType<decisionforest::AtomicReduceDimensionOp>(op);
+    auto location = reduceOp.getLoc();
+
+    // The values for the outer indices. These are fixed
+    auto preReducedDimStart = reduceOp.getPreReductionDimensionStart();
+    auto preReducedDimEnd = reduceOp.getPreReductionDimensionEnd();
+    auto postReducedDimStart = reduceOp.getPostReductionDimensionStart();
+    auto postReducedDimEnd = reduceOp.getPostReductionDimensionEnd();
+    auto mappedDimensions = reduceOp.getMappedDimensions();
+    auto mappedDimSet = getMappedDimensionAsInteger(mappedDimensions);
+
+    auto reductionDim = reduceOp.getReductionDimension();
+    auto reductionDimVal = GetConstantIntValueFromMLIRValue(reductionDim);
+
+    auto reductionDimIndex = reduceOp.getReductionDimensionIndex();
+
+    auto sourceMemref = reduceOp.getSourceMemref();
+    auto targetMemref = reduceOp.getTargetMemref();
+
+    auto reductionType = reduceOp.getReductionTypeAttr().getReductionType();
+    // TODO_Ashwin Initial value is currently ignored. It is
+    // assumed that the target memref is already initialized with the
+    // initial value.
+    auto initialValue = decisionforest::createFloatConst(
+        location, rewriter,
+        sourceMemref.getType().cast<MemRefType>().getElementType(),
+        reduceOp.getInitialValue().convertToDouble());
+
+    auto result = generateAtomiceductionLoopNest(
+        location, rewriter, targetMemref, sourceMemref, std::move(mappedDimSet),
+        std::move(preReducedDimStart), std::move(preReducedDimEnd),
+        reductionDimVal, reductionDimIndex, std::move(postReducedDimStart),
         std::move(postReducedDimEnd), reductionType, initialValue);
 
     if (failed(result)) {
@@ -526,13 +652,14 @@ struct LowerReductionOps
                         decisionforest::ReduceDimensionInplaceOp,
                         decisionforest::ReduceDimensionOp,
                         decisionforest::CooperativeReduceDimensionOp,
-                        decisionforest::CooperativeReduceInplaceOp>();
+                        decisionforest::CooperativeReduceInplaceOp,
+                        decisionforest::AtomicReduceDimensionOp>();
 
     RewritePatternSet patterns(&getContext());
     patterns
         .add<ReduceOpLowering, ReduceInplaceOpLowering,
-             ReduceDimensionOpLowering, CooperativeReduceDimensionOpLowering>(
-            &getContext());
+             ReduceDimensionOpLowering, CooperativeReduceDimensionOpLowering,
+             AtomicReduceDimensionOpLowering>(&getContext());
 
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))

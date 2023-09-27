@@ -199,6 +199,13 @@ template <typename LoopType> struct LoopConstructor {
     } else {
       llvm_unreachable("Unknown index variable type");
     }
+
+    if (indexVar.AtomicReduce()) {
+      loop->setAttr("atomicReduce", m_rewriter.getUnitAttr());
+    }
+    if (indexVar.VectorReduce()) {
+      loop->setAttr("vectorReduce", m_rewriter.getUnitAttr());
+    }
   }
 
   LoopConstructor(

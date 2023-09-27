@@ -282,6 +282,18 @@ Schedule& Schedule::PeelWalk(IndexVariable& index, int32_t numberOfIterations) {
   return *this;
 }
 
+Schedule& Schedule::AtomicReduce(IndexVariable& index) {
+  assert (index.m_type == IndexVariable::IndexVariableType::kTree);
+  index.m_atomicReduce = true;
+  return *this;
+}
+
+Schedule& Schedule::VectorReduce(IndexVariable& index) {
+  assert (index.m_type == IndexVariable::IndexVariableType::kTree);
+  index.m_vectorReduce = true;
+  return *this;
+}
+
 void IndexVariable::Visit(IndexDerivationTreeVisitor& visitor) {
   visitor.VisitIndexVariable(*this);
 }

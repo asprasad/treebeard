@@ -124,6 +124,10 @@ protected:
   bool m_parallel = false;
   bool m_unrolled = false;
 
+  // Reduction optimizations
+  bool m_atomicReduce = false;
+  bool m_vectorReduce = false;
+
   int32_t m_treeWalkUnrollFactor = -1;
 
   int32_t m_iterationsToPeel = -1;
@@ -156,6 +160,9 @@ public:
   void SetTreeWalkUnrollFactor(int32_t unrollFactor) {
     m_treeWalkUnrollFactor = unrollFactor;
   }
+
+  bool AtomicReduce() const { return m_atomicReduce; }
+  bool VectorReduce() const { return m_vectorReduce; }
 
   bool PeelWalk() const { return m_peelWalk; }
   int32_t IterationsToPeel() const { return m_iterationsToPeel; }
@@ -222,6 +229,10 @@ public:
   Schedule &Unroll(IndexVariable &index);
   Schedule &PeelWalk(IndexVariable &index, int32_t numberOfIterations);
   Schedule &Cache(IndexVariable &index);
+
+  // Reductions
+  Schedule &AtomicReduce(IndexVariable &index);
+  Schedule &VectorReduce(IndexVariable &index);
 
   const IndexVariable *GetRootIndex() const { return &m_rootIndex; }
   IndexVariable &GetBatchIndex() { return m_batchIndex; }

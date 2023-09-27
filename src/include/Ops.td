@@ -220,6 +220,18 @@ def ReduceOp : DecisionForest_Op<"reduce"> {
                        F64Attr:$initialValue);
 }
 
+def AtomicReduceOp : DecisionForest_Op<"atomic_reduce"> {
+  let summary = "Atomically accumulate a value into a memref.";
+  let description = "Atomically accumulate a floating point value into an element of a memref"
+                    "specified by the indices.";
+
+  let arguments = (ins ReductionTypeAttr:$reductionType,
+                       TargetMemrefType:$targetMemref,
+                       Variadic<Index>:$indices,
+                       ReductionValueType:$value,
+                       F64Attr:$initialValue);
+}
+
 def ReduceDimensionInplaceOp : DecisionForest_Op<"reduce_dimension_inplace", [AttrSizedOperandSegments]> {
   let summary = "Reduce the specified dimension of a memref inplace.";
   let description = "Reduce the specified dimension of a memref inplace."
@@ -285,6 +297,27 @@ def CooperativeReduceDimensionOp : DecisionForest_Op<"cooperative_reduce_dimensi
                        Variadic<Index>:$rangeEnd,
                        Index:$blockXStart, Index:$blockYStart, Index:$blockZStart,
                        Index:$blockXEnd, Index:$blockYEnd, Index:$blockZEnd,
+                       F64Attr:$initialValue);
+}
+
+def AtomicReduceDimensionOp : DecisionForest_Op<"atomic_reduce_dimension", [AttrSizedOperandSegments]> {
+  let summary = "Reduce the specified dimension of a memref and store result in target.";
+  let description = "Reduce the specified dimension of a memref and store result in the target memref."
+                    "The op copies reduced values to the target memref. Reduced dimesions is the list" 
+                    "The (pre, post)ReductionDimension* indices are used to determine which subset of the memref to reduce."
+                    "The mappedDimensions are used to the indices of the target memref."
+                    "For eached mapped dimension, the corresponding source memref is mapped 1:1.";
+
+  let arguments = (ins ReductionTypeAttr:$reductionType,
+                       TargetMemrefType:$targetMemref,
+                       TargetMemrefType:$sourceMemref,
+                       Variadic<Index>:$mappedDimensions,
+                       Variadic<Index>:$preReductionDimensionStart,
+                       Variadic<Index>:$preReductionDimensionEnd,
+                       Index:$reductionDimension,
+                       Index:$reductionDimensionIndex,
+                       Variadic<Index>:$postReductionDimensionStart,
+                       Variadic<Index>:$postReductionDimensionEnd,
                        F64Attr:$initialValue);
 }
 

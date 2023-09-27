@@ -155,7 +155,7 @@ void iterativeCachedPartialForestStrategy(decisionforest::Schedule &schedule,
           for t0 = 1:N_trees step treesPerIteration
             start = t0
             CacheTrees(start, treesPerIteration)
-            WalkDecisionTree
+            WalkDecisionTree(t0+t1, b0+b1)
   */
   auto &batchIndex = schedule.GetBatchIndex();
   auto &treeIndex = schedule.GetTreeIndex();

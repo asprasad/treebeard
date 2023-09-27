@@ -17,6 +17,8 @@
         - Doesn't use shuffle, atomics, shared memory etc
         - May not be making the best use of threads (one thread is computing one full reduction)
     - No schedule support to control reduction code generation
+    - [GPU] We need some way to decide whether reductions will be cooperative or whether one thread will do one full reduction
+    - [GPU] How do we use shared memory for reductions?
 * Tree Tiling
     - Not clear that the current cooperative tiling strategy works with different schedules (threadblocks going over both trees and rows for ex) 
         - Cannot work with TahoeSharedDataStrategy because one TB processes only 1 row

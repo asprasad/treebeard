@@ -120,6 +120,11 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
     m_privatizationMap[originalBuffer.getAsOpaquePointer()] = privatizedBuffer;
   }
 
+  bool shouldAtomicallyReduce(scf::ParallelOp loop) const {
+    auto attr = loop->getAttr("atomicReduce");
+    return static_cast<bool>(attr);
+  }
+
   MemRefType constructPrivatizedBufferType(
       Type origBufferType, Type inputValueType,
       decisionforest::ReduceOp reduceOp,
@@ -192,6 +197,23 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
     return privatizedBuffer;
   }
 
+  std::tuple<Value, Value> constructPrivatizedIndicesForConflictingLoop(
+      ConversionPatternRewriter &rewriter, Location location,
+      scf::ParallelOp loop) const {
+    auto step = loop.getStep()[0];
+    auto lowerBound = loop.getLowerBound()[0];
+    auto loopIndex = loop.getInductionVars()[0];
+
+    auto loopIndexMinusLowerBound =
+        rewriter.create<arith::SubIOp>(location, loopIndex, lowerBound);
+    auto iterationNumber = rewriter.create<arith::DivSIOp>(
+        location, loopIndexMinusLowerBound, step);
+    auto iterationNumberPlusOne = rewriter.create<arith::AddIOp>(
+        location, iterationNumber,
+        rewriter.create<arith::ConstantIndexOp>(location, 1));
+    return std::make_tuple(iterationNumber, iterationNumberPlusOne);
+  }
+
   void constructPrivatizedIndicesForConflictingLoops(
       ConversionPatternRewriter &rewriter, Location location,
       std::vector<scf::ParallelOp> &conflictingLoops,
@@ -199,17 +221,10 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
       std::vector<Value> &preReductionIndexEnd) const {
 
     for (auto loop : conflictingLoops) {
-      auto step = loop.getStep()[0];
-      auto lowerBound = loop.getLowerBound()[0];
-      auto loopIndex = loop.getInductionVars()[0];
-
-      auto loopIndexMinusLowerBound =
-          rewriter.create<arith::SubIOp>(location, loopIndex, lowerBound);
-      auto iterationNumber = rewriter.create<arith::DivSIOp>(
-          location, loopIndexMinusLowerBound, step);
-      auto iterationNumberPlusOne = rewriter.create<arith::AddIOp>(
-          location, iterationNumber,
-          rewriter.create<arith::ConstantIndexOp>(location, 1));
+      auto range = constructPrivatizedIndicesForConflictingLoop(rewriter,
+                                                                location, loop);
+      auto iterationNumber = std::get<0>(range);
+      auto iterationNumberPlusOne = std::get<1>(range);
       preReductionIndexStart.insert(preReductionIndexStart.begin(),
                                     iterationNumber);
       preReductionIndexEnd.insert(preReductionIndexEnd.begin(),
@@ -383,7 +398,16 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
       bool lastLoop = i == conflictingLoops.size() - 1;
       auto &loop = conflictingLoops[i];
 
-      rewriter.setInsertionPointAfter(loop);
+      // if atomic, set the insertion point inside the loop
+      if (shouldAtomicallyReduce(loop)) {
+        auto &lastOp = loop.getBody()->back();
+        if (llvm::dyn_cast<scf::YieldOp>(&lastOp))
+          rewriter.setInsertionPoint(&lastOp);
+        else
+          rewriter.setInsertionPointToEnd(loop.getBody());
+      } else
+        rewriter.setInsertionPointAfter(loop);
+
       auto reductionDimNum = (conflictingLoops.size() - 1) - i;
       auto reductionDimConst =
           rewriter.create<arith::ConstantIndexOp>(location, reductionDimNum);
@@ -395,11 +419,11 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
       assert(rangeStart && rangeEnd && "Range start and end cannot be null");
       std::vector<Value> preReductionStart, preReductionEnd;
       std::vector<Value> postReductionStart, postReductionEnd;
-      if (lastLoop) {
+      if (lastLoop || shouldAtomicallyReduce(loop)) {
         // These dimensions have already been reduced, so we pass (0, 1) for
         // each of them
         std::for_each(
-            conflictingLoops.begin() + 1, conflictingLoops.end(),
+            conflictingLoops.begin(), conflictingLoops.begin() + i,
             [&](auto loop) {
               postReductionStart.push_back(
                   rewriter.create<arith::ConstantIndexOp>(location, 0));
@@ -409,16 +433,9 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
         postReductionStart.push_back(rangeStart);
         postReductionEnd.push_back(rangeEnd);
 
-        if (reductionType == mlir::decisionforest::Reduction::kArgMax) {
-          auto argMaxLength =
-              op->getAttr(mlir::decisionforest::getArgMaxLengthAttributeName())
-                  .cast<IntegerAttr>()
-                  .getInt();
-          addReductionDimensionRangesForArgMax(rewriter, location,
-                                               postReductionStart,
-                                               postReductionEnd, argMaxLength);
-        }
-
+        // This is the set of dimensions that correspond to the
+        // the dims in the original result memref. (the dimension
+        // corresponding to the batch in TB)
         std::vector<Value> mappedDimensions;
         auto privatizedBufferType =
             privatizedBuffer.getType().cast<MemRefType>();
@@ -427,12 +444,38 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
           mappedDimensions.push_back(
               rewriter.create<arith::ConstantIndexOp>(location, j));
         }
-        rewriter.create<decisionforest::ReduceDimensionOp>(
-            location, newReductionTypeAttr, reduceOp.getTargetMemref(),
-            privatizedBuffer, mappedDimensions, ValueRange{}, ValueRange{},
-            reductionDimConst, ValueRange{postReductionStart},
-            ValueRange{postReductionEnd}, reduceOp.getInitialValueAttr());
-
+        if (shouldAtomicallyReduce(loop)) {
+          std::vector<Value> preReductionStart, preReductionEnd;
+          // These should be (j, j+1) where j is the loop index
+          // of each of the surrounding conflicting loops
+          std::for_each(
+              conflictingLoops.begin() + i + 1, conflictingLoops.end(),
+              [&](scf::ParallelOp loop) {
+                auto indexVar = loop.getInductionVars()[0];
+                postReductionStart.push_back(indexVar);
+                auto oneIndexConst =
+                    rewriter.create<arith::ConstantIndexOp>(location, 1);
+                postReductionEnd.push_back(rewriter.create<arith::AddIOp>(
+                    location, indexVar, oneIndexConst));
+              });
+          auto range = constructPrivatizedIndicesForConflictingLoop(
+              rewriter, location, loop);
+          // Create an atomic reduce op within the loop
+          rewriter.create<decisionforest::AtomicReduceDimensionOp>(
+              location, newReductionTypeAttr, reduceOp.getTargetMemref(),
+              privatizedBuffer, ValueRange{mappedDimensions},
+              ValueRange{preReductionStart}, ValueRange{preReductionEnd},
+              reductionDimConst, std::get<0>(range),
+              ValueRange{postReductionStart}, ValueRange{postReductionEnd},
+              reduceOp.getInitialValueAttr());
+          break;
+        } else {
+          rewriter.create<decisionforest::ReduceDimensionOp>(
+              location, newReductionTypeAttr, reduceOp.getTargetMemref(),
+              privatizedBuffer, mappedDimensions, ValueRange{}, ValueRange{},
+              reductionDimConst, ValueRange{postReductionStart},
+              ValueRange{postReductionEnd}, reduceOp.getInitialValueAttr());
+        }
       } else {
         std::vector<scf::ParallelOp> surroundingConflictingLoops(
             conflictingLoops.begin() + i + 1, conflictingLoops.end());
