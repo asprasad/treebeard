@@ -204,7 +204,8 @@ template <typename LoopType> struct LoopConstructor {
       loop->setAttr("atomicReduce", m_rewriter.getUnitAttr());
     }
     if (indexVar.VectorReduce()) {
-      loop->setAttr("vectorReduce", m_rewriter.getUnitAttr());
+      loop->setAttr("vectorReduce",
+                    m_rewriter.getI32IntegerAttr(indexVar.VectorReduceWidth()));
     }
   }
 

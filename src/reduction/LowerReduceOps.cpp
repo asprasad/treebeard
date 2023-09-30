@@ -130,13 +130,15 @@ std::set<int32_t> getMappedDimensionAsInteger(
   return mappedDims;
 }
 
-void addLoopIfNeededAndUpdateIndices(
-    ConversionPatternRewriter &rewriter, Location location,
-    std::vector<Value> &loopIVs, std::vector<Value> &resultIndex,
-    std::set<int32_t> &mappedDimsSet, Value start, Value end,
-    Value oneIndexConst, Operation *outermostLoop) {
+void addLoopIfNeededAndUpdateIndices(ConversionPatternRewriter &rewriter,
+                                     Location location,
+                                     std::vector<Value> &loopIVs,
+                                     std::vector<Value> &resultIndex,
+                                     std::set<int32_t> &mappedDimsSet,
+                                     Value start, Value end, Value stepConst,
+                                     Operation *outermostLoop) {
 
-  auto loop = rewriter.create<scf::ForOp>(location, start, end, oneIndexConst);
+  auto loop = rewriter.create<scf::ForOp>(location, start, end, stepConst);
   if (!outermostLoop) {
     outermostLoop = loop.getOperation();
   }
@@ -230,7 +232,8 @@ LogicalResult generateSimpleReductionLoopNest(
     mlir::Operation::operand_range &&preReductionDimEnd, int64_t reductionDim,
     mlir::Operation::operand_range &&postReductionDimStart,
     mlir::Operation::operand_range &&postReductionDimEnd,
-    decisionforest::Reduction reduction, Value initialValueConst = Value()) {
+    decisionforest::Reduction reduction, int32_t vectorWidth = -1,
+    Value initialValueConst = Value()) {
 
   // Iterate [rangeStart, rangeEnd)
   auto oneIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 1);
@@ -274,25 +277,36 @@ LogicalResult generateSimpleReductionLoopNest(
 
   for (auto startEndPair :
        llvm::zip(postReductionDimStart, postReductionDimEnd)) {
-
     auto start = std::get<0>(startEndPair);
     auto end = std::get<1>(startEndPair);
-
+    bool lastLoop = (end == postReductionDimEnd.back()) &&
+                    (start == postReductionDimStart.back());
+    auto stepConst = oneIndexConst;
+    // If
+    if (lastLoop && vectorWidth > 1) {
+      stepConst =
+          rewriter.create<arith::ConstantIndexOp>(location, vectorWidth);
+    }
     addLoopIfNeededAndUpdateIndices(rewriter, location, loopIVs, resultIndex,
-                                    mappedDimSet, start, end, oneIndexConst,
+                                    mappedDimSet, start, end, stepConst,
                                     outermostLoop);
   }
 
   std::vector<Value> reductionLoopArgs;
   if (reduction == decisionforest::Reduction::kAdd) {
-    if (!initialValueConst) {
-      auto zeroConstant = decisionforest::createFloatConst(location, rewriter,
+    if (!initialValueConst)
+      initialValueConst = decisionforest::createFloatConst(location, rewriter,
                                                            memrefElemType, 0.0);
-      reductionLoopArgs.push_back(zeroConstant);
+    if (vectorWidth > 1) {
+      auto vectorType = VectorType::get(vectorWidth, memrefElemType);
+      auto vectorInitialValue = rewriter.create<vector::SplatOp>(
+          location, vectorType, initialValueConst);
+      reductionLoopArgs.push_back(vectorInitialValue);
     } else {
       reductionLoopArgs.push_back(initialValueConst);
     }
   } else {
+    assert(vectorWidth == -1);
     if (!targetMemrefType.getElementType().isIntOrIndex()) {
       llvm::errs() << "Illegal result type for ArgMax reduction. Should be "
                       "an Integer type.\n";
@@ -330,16 +344,30 @@ LogicalResult generateSimpleReductionLoopNest(
       return mlir::failure();
     }
 
-    auto loadVal =
-        rewriter.create<memref::LoadOp>(location, sourceMemref, loopIVs);
+    if (vectorWidth > 1) {
+      auto vectorType = VectorType::get(vectorWidth, memrefElemType);
+      auto loadVal = rewriter.create<vector::LoadOp>(location, vectorType,
+                                                     sourceMemref, loopIVs);
 
-    auto accumulator = reductionLoop.getLoopBody().getArgument(1);
-    auto addVal = rewriter.create<arith::AddFOp>(location, loadVal.getResult(),
-                                                 accumulator);
-    rewriter.create<scf::YieldOp>(location, addVal.getResult());
-    rewriter.setInsertionPointAfter(reductionLoop);
-    rewriter.create<memref::StoreOp>(location, reductionLoop.getResult(0),
-                                     targetMemref, resultIndex);
+      auto accumulator = reductionLoop.getLoopBody().getArgument(1);
+      auto addVal = rewriter.create<arith::AddFOp>(
+          location, loadVal.getResult(), accumulator);
+      rewriter.create<scf::YieldOp>(location, addVal.getResult());
+      rewriter.setInsertionPointAfter(reductionLoop);
+      rewriter.create<vector::StoreOp>(location, reductionLoop.getResult(0),
+                                       targetMemref, resultIndex);
+    } else {
+      auto loadVal =
+          rewriter.create<memref::LoadOp>(location, sourceMemref, loopIVs);
+
+      auto accumulator = reductionLoop.getLoopBody().getArgument(1);
+      auto addVal = rewriter.create<arith::AddFOp>(
+          location, loadVal.getResult(), accumulator);
+      rewriter.create<scf::YieldOp>(location, addVal.getResult());
+      rewriter.setInsertionPointAfter(reductionLoop);
+      rewriter.create<memref::StoreOp>(location, reductionLoop.getResult(0),
+                                       targetMemref, resultIndex);
+    }
   } else {
 
     if ((size_t)reductionDim != (loopIVs.size() - 1)) {
@@ -387,6 +415,11 @@ struct ReduceDimensionOpLowering : public ConversionPattern {
     auto sourceMemref = reduceOp.getSourceMemref();
     auto targetMemref = reduceOp.getTargetMemref();
 
+    int32_t vectorWidth = -1;
+    auto vectorWidthAttr = reduceOp->getAttr("vectorReduce");
+    if (vectorWidthAttr) {
+      vectorWidth = vectorWidthAttr.cast<IntegerAttr>().getInt();
+    }
     auto reductionType = reduceOp.getReductionTypeAttr().getReductionType();
     auto initialValue = decisionforest::createFloatConst(
         location, rewriter,
@@ -397,7 +430,7 @@ struct ReduceDimensionOpLowering : public ConversionPattern {
         location, rewriter, targetMemref, sourceMemref, std::move(mappedDimSet),
         std::move(preReducedDimStart), std::move(preReducedDimEnd),
         reductionDimVal, std::move(postReducedDimStart),
-        std::move(postReducedDimEnd), reductionType, initialValue);
+        std::move(postReducedDimEnd), reductionType, vectorWidth, initialValue);
 
     if (failed(result)) {
       return result;
@@ -484,6 +517,12 @@ struct ReduceInplaceOpLowering : public ConversionPattern {
     auto sourceMemref = reduceOp.getTargetMemref();
     auto reductionType = reduceOp.getReductionTypeAttr().getReductionType();
 
+    int32_t vectorWidth = -1;
+    auto vectorWidthAttr = reduceOp->getAttr("vectorReduce");
+    if (vectorWidthAttr) {
+      vectorWidth = vectorWidthAttr.cast<IntegerAttr>().getInt();
+    }
+
     std::set<int32_t> mappedDimSet;
     auto sourceType = sourceMemref.getType().cast<MemRefType>();
     for (auto i = 0; i < sourceType.getRank(); ++i) {
@@ -496,7 +535,7 @@ struct ReduceInplaceOpLowering : public ConversionPattern {
         location, rewriter, sourceMemref, sourceMemref, std::move(mappedDimSet),
         std::move(preReducedDimStart), std::move(preReducedDimEnd),
         reductionDimVal, std::move(postReducedDimStart),
-        std::move(postReducedDimEnd), reductionType);
+        std::move(postReducedDimEnd), reductionType, vectorWidth);
 
     if (failed(result)) {
       return result;
@@ -646,7 +685,8 @@ struct LowerReductionOps
     target.addLegalDialect<memref::MemRefDialect, scf::SCFDialect,
                            decisionforest::DecisionForestDialect,
                            math::MathDialect, arith::ArithDialect,
-                           func::FuncDialect, gpu::GPUDialect>();
+                           func::FuncDialect, gpu::GPUDialect,
+                           vector::VectorDialect>();
 
     target.addIllegalOp<decisionforest::ReduceOp,
                         decisionforest::ReduceDimensionInplaceOp,

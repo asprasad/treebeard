@@ -60,6 +60,9 @@ inline void LowerHIRModuleToLLVM(mlir::ModuleOp module,
   // module->dump();
   mlir::decisionforest::legalizeReductionsAndCanonicalize(context, module);
   mlir::decisionforest::lowerReductionsAndCanonicalize(context, module);
+  // module->dump();
+  // return;
+
   mlir::decisionforest::LowerEnsembleToMemrefs(
       context, module, tbContext.serializer, tbContext.representation);
   mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);

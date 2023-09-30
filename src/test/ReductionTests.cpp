@@ -89,6 +89,23 @@ void tileAndParallelizeTrees_AtomicReduce(decisionforest::Schedule &schedule,
   schedule.Reorder({&t0, &t1, &batchIndex});
 }
 
+void tileAndParallelizeTrees_VectorReduce(decisionforest::Schedule &schedule,
+                                          int32_t numSubBatches,
+                                          int32_t vectorWidth) {
+  auto numTrees = schedule.GetForestSize();
+  auto tileSize = numTrees / numSubBatches;
+
+  auto &treeIndex = schedule.GetTreeIndex();
+  auto &batchIndex = schedule.GetBatchIndex();
+  auto &t0 = schedule.NewIndexVariable("t0");
+  auto &t1 = schedule.NewIndexVariable("t1");
+  schedule.Tile(treeIndex, t0, t1, tileSize);
+
+  schedule.Parallel(t0);
+  schedule.VectorReduce(t0, vectorWidth);
+  schedule.Reorder({&t0, &t1, &batchIndex});
+}
+
 struct NoOpDeleter {
   void operator()(ForestCreator *ptr) const {
     // Do nothing
@@ -218,6 +235,24 @@ bool Test_AtomicReduction_TwiceLeftRightAndBalanced_DblI32(TestArgs_t &args) {
   std::string repName = "array";
   auto scheduleManipulator =
       std::bind(tileAndParallelizeTrees_AtomicReduce, std::placeholders::_1, 2);
+  return Test_FixedConstructor_AnyRep<double, int32_t>(
+      args, batchSize, AddRightLeftAndBalancedTreesTwice<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          repName, modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(repName),
+      1 /*tileSize*/, 32 /*tileShapeBitWidth*/, 1 /*childIndexBitWidth*/,
+      scheduleManipulator);
+}
+
+bool Test_VectorReduction_TwiceLeftRightAndBalanced_DblI32(TestArgs_t &args) {
+  int32_t batchSize = 4;
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  std::string repName = "array";
+  auto scheduleManipulator =
+      std::bind(tileAndParallelizeTrees_VectorReduce, std::placeholders::_1,
+                2 /*numSubBatches*/, 2 /*vectorWidth*/);
   return Test_FixedConstructor_AnyRep<double, int32_t>(
       args, batchSize, AddRightLeftAndBalancedTreesTwice<DoubleInt32Tile>,
       decisionforest::ModelSerializerFactory::Get().GetModelSerializer(

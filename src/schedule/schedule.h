@@ -126,7 +126,7 @@ protected:
 
   // Reduction optimizations
   bool m_atomicReduce = false;
-  bool m_vectorReduce = false;
+  int32_t m_vectorReduceWidth = 1;
 
   int32_t m_treeWalkUnrollFactor = -1;
 
@@ -162,7 +162,8 @@ public:
   }
 
   bool AtomicReduce() const { return m_atomicReduce; }
-  bool VectorReduce() const { return m_vectorReduce; }
+  bool VectorReduce() const { return m_vectorReduceWidth != 1; }
+  int32_t VectorReduceWidth() const { return m_vectorReduceWidth; }
 
   bool PeelWalk() const { return m_peelWalk; }
   int32_t IterationsToPeel() const { return m_iterationsToPeel; }
@@ -232,7 +233,7 @@ public:
 
   // Reductions
   Schedule &AtomicReduce(IndexVariable &index);
-  Schedule &VectorReduce(IndexVariable &index);
+  Schedule &VectorReduce(IndexVariable &index, int32_t width);
 
   const IndexVariable *GetRootIndex() const { return &m_rootIndex; }
   IndexVariable &GetBatchIndex() { return m_batchIndex; }

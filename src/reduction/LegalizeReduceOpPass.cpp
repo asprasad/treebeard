@@ -289,6 +289,14 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
         rewriter.create<arith::ConstantIndexOp>(location, argMaxLength));
   }
 
+  void setAttributesOnReduceDimensionOp(Operation *reduceDimOp,
+                                        scf::ParallelOp conflictingLoop) const {
+    auto vectorAttr = conflictingLoop->getAttr("vectorReduce");
+    if (vectorAttr) {
+      reduceDimOp->setAttr("vectorReduce", vectorAttr);
+    }
+  }
+
   void
   addReduceDimensionOpForArgMax(decisionforest::ReduceOp reduceOp,
                                 Value privatizedBuffer,
@@ -470,11 +478,14 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
               reduceOp.getInitialValueAttr());
           break;
         } else {
-          rewriter.create<decisionforest::ReduceDimensionOp>(
-              location, newReductionTypeAttr, reduceOp.getTargetMemref(),
-              privatizedBuffer, mappedDimensions, ValueRange{}, ValueRange{},
-              reductionDimConst, ValueRange{postReductionStart},
-              ValueRange{postReductionEnd}, reduceOp.getInitialValueAttr());
+          auto reduceDimensionOp =
+              rewriter.create<decisionforest::ReduceDimensionOp>(
+                  location, newReductionTypeAttr, reduceOp.getTargetMemref(),
+                  privatizedBuffer, mappedDimensions, ValueRange{},
+                  ValueRange{}, reductionDimConst,
+                  ValueRange{postReductionStart}, ValueRange{postReductionEnd},
+                  reduceOp.getInitialValueAttr());
+          setAttributesOnReduceDimensionOp(reduceDimensionOp, loop);
         }
       } else {
         std::vector<scf::ParallelOp> surroundingConflictingLoops(
@@ -496,11 +507,13 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
                                                postReductionEnd, argMaxLength);
         }
 
-        rewriter.create<decisionforest::ReduceDimensionInplaceOp>(
-            location, newReductionTypeAttr, privatizedBuffer,
-            ValueRange{preReductionStart}, ValueRange{preReductionEnd},
-            reductionDimConst, ValueRange{postReductionStart},
-            ValueRange{postReductionEnd});
+        auto reduceDimensionOp =
+            rewriter.create<decisionforest::ReduceDimensionInplaceOp>(
+                location, newReductionTypeAttr, privatizedBuffer,
+                ValueRange{preReductionStart}, ValueRange{preReductionEnd},
+                reductionDimConst, ValueRange{postReductionStart},
+                ValueRange{postReductionEnd});
+        setAttributesOnReduceDimensionOp(reduceDimensionOp, loop);
       }
     }
 
