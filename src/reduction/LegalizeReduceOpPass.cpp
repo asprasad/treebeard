@@ -311,7 +311,7 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
         privatizedBuffer.getType().cast<MemRefType>();
 
     auto outermostTreeLoopOp = getOutermostTreeLoopOp(reduceOp);
-    rewriter.setInsertionPointAfter(outermostTreeLoopOp);
+    // rewriter.setInsertionPointAfter(outermostTreeLoopOp);
 
     // At this point we should have reduced all the tree walks for the
     // surrounding batch loops (all tree walks for all batches if no surrounding
@@ -427,7 +427,8 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
       assert(rangeStart && rangeEnd && "Range start and end cannot be null");
       std::vector<Value> preReductionStart, preReductionEnd;
       std::vector<Value> postReductionStart, postReductionEnd;
-      if (lastLoop || shouldAtomicallyReduce(loop)) {
+      if (reductionType != mlir::decisionforest::Reduction::kArgMax &&
+          (lastLoop || shouldAtomicallyReduce(loop))) {
         // These dimensions have already been reduced, so we pass (0, 1) for
         // each of them
         std::for_each(

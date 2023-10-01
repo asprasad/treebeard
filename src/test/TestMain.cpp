@@ -698,6 +698,22 @@ bool Test_NestedTreePar_LeftRightAndBalanced_DblI32(TestArgs_t &args);
 bool Test_AtomicReduction_TwiceLeftRightAndBalanced_DblI32(TestArgs_t &args);
 bool Test_VectorReduction_TwiceLeftRightAndBalanced_DblI32(TestArgs_t &args);
 
+// Benchmark Model Tree Parallelization Tests
+bool Test_SparseTileSize8_Abalone_TestInputs_4ParallelTreeSets(
+    TestArgs_t &args);
+bool Test_SparseTileSize8_Airline_TestInputs_4ParallelTreeSets(
+    TestArgs_t &args);
+bool Test_SparseTileSize8_AirlineOHE_TestInputs_4ParallelTreeSets(
+    TestArgs_t &args);
+bool Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets(
+    TestArgs_t &args);
+bool Test_SparseTileSize8_Letters_TestInputs_4ParallelTreeSets(
+    TestArgs_t &args);
+bool Test_SparseTileSize8_Epsilon_TestInputs_4ParallelTreeSets(
+    TestArgs_t &args);
+bool Test_SparseTileSize8_Higgs_TestInputs_4ParallelTreeSets(TestArgs_t &args);
+bool Test_SparseTileSize8_Year_TestInputs_4ParallelTreeSets(TestArgs_t &args);
+
 // GPU Tree parallelization tests
 bool Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInp_FltI16_B32(
     TestArgs_t &args);
@@ -2178,11 +2194,22 @@ TestDescriptor testList[] = {
     TEST_LIST_ENTRY(
         Test_GPU_CachePartialForest2Trees_4TreeXGB_Array_Scalar_f32i16),
 #endif // TREEBEARD_GPU_SUPPORT
+
     // Parallelize across trees
     TEST_LIST_ENTRY(Test_TreePar_LeftRightAndBalanced_DblI32),
     TEST_LIST_ENTRY(Test_NestedTreePar_LeftRightAndBalanced_DblI32),
     TEST_LIST_ENTRY(Test_AtomicReduction_TwiceLeftRightAndBalanced_DblI32),
     TEST_LIST_ENTRY(Test_VectorReduction_TwiceLeftRightAndBalanced_DblI32),
+    TEST_LIST_ENTRY(Test_SparseTileSize8_Abalone_TestInputs_4ParallelTreeSets),
+    TEST_LIST_ENTRY(Test_SparseTileSize8_Airline_TestInputs_4ParallelTreeSets),
+    TEST_LIST_ENTRY(
+        Test_SparseTileSize8_AirlineOHE_TestInputs_4ParallelTreeSets),
+    TEST_LIST_ENTRY(Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets),
+    TEST_LIST_ENTRY(Test_SparseTileSize8_Letters_TestInputs_4ParallelTreeSets),
+    TEST_LIST_ENTRY(Test_SparseTileSize8_Epsilon_TestInputs_4ParallelTreeSets),
+    TEST_LIST_ENTRY(Test_SparseTileSize8_Higgs_TestInputs_4ParallelTreeSets),
+    TEST_LIST_ENTRY(Test_SparseTileSize8_Year_TestInputs_4ParallelTreeSets),
+
 #ifdef TREEBEARD_GPU_SUPPORT
     // GPU Parallelize across trees
     TEST_LIST_ENTRY(
@@ -2238,8 +2265,16 @@ TestDescriptor testList[] = {
     // GPU Parallelize across trees
     // TEST_LIST_ENTRY(
     //     Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Array_Scalar),
-
-    TEST_LIST_ENTRY(Test_VectorReduction_TwiceLeftRightAndBalanced_DblI32),
+    TEST_LIST_ENTRY(Test_SparseTileSize8_Abalone_TestInputs_4ParallelTreeSets),
+    TEST_LIST_ENTRY(Test_SparseTileSize8_Airline_TestInputs_4ParallelTreeSets),
+    TEST_LIST_ENTRY(
+        Test_SparseTileSize8_AirlineOHE_TestInputs_4ParallelTreeSets),
+    TEST_LIST_ENTRY(Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets),
+    TEST_LIST_ENTRY(Test_SparseTileSize8_Letters_TestInputs_4ParallelTreeSets),
+    TEST_LIST_ENTRY(Test_SparseTileSize8_Epsilon_TestInputs_4ParallelTreeSets),
+    TEST_LIST_ENTRY(Test_SparseTileSize8_Higgs_TestInputs_4ParallelTreeSets),
+    TEST_LIST_ENTRY(Test_SparseTileSize8_Year_TestInputs_4ParallelTreeSets),
+    // TEST_LIST_ENTRY(Test_VectorReduction_TwiceLeftRightAndBalanced_DblI32),
     // TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_DblI32_B32_TSz2),
     // TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_DblI32_B32_TSz2),
     // TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2),

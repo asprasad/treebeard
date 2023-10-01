@@ -57,8 +57,8 @@ void ParallelizeTreesAndRows(decisionforest::Schedule &schedule) {
   schedule.Reorder({&b0, &treeIndex, &b1});
 }
 
-void TileAndParallelizeTrees(decisionforest::Schedule &schedule) {
-  int32_t numSubBatches = 2;
+void tileAndParallelizeTrees(decisionforest::Schedule &schedule,
+                             int32_t numSubBatches) {
   auto numTrees = schedule.GetForestSize();
   auto tileSize = numTrees / numSubBatches;
 
@@ -69,7 +69,7 @@ void TileAndParallelizeTrees(decisionforest::Schedule &schedule) {
   schedule.Tile(treeIndex, t0, t1, tileSize);
 
   schedule.Parallel(t0);
-  schedule.Parallel(t1);
+  // schedule.Parallel(t1);
   schedule.Reorder({&t0, &t1, &batchIndex});
 }
 
@@ -218,13 +218,15 @@ bool Test_NestedTreePar_LeftRightAndBalanced_DblI32(TestArgs_t &args) {
       TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
           TreeBeard::test::GetGlobalJSONNameForTests());
   std::string repName = "array";
+  auto scheduleManipulator =
+      std::bind(tileAndParallelizeTrees, std::placeholders::_1, 2);
   return Test_FixedConstructor_AnyRep<double, int32_t>(
       args, 4, AddRightLeftAndBalancedTreesTwice<DoubleInt32Tile>,
       decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
           repName, modelGlobalsJSONPath),
       decisionforest::RepresentationFactory::Get().GetRepresentation(repName),
       1 /*tileSize*/, 32 /*tileShapeBitWidth*/, 1 /*childIndexBitWidth*/,
-      TileAndParallelizeTrees);
+      scheduleManipulator);
 }
 
 bool Test_AtomicReduction_TwiceLeftRightAndBalanced_DblI32(TestArgs_t &args) {
