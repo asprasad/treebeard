@@ -3472,5 +3472,276 @@ bool Test_SparseTileSize8_Year_TestInputs_4ParallelTreeSets(TestArgs_t &args) {
   return true;
 }
 
+// ===-----------------------------------------------------------------=== //
+// XGBoost Test Inputs Parallel Tree + Atomic Reduce Schedule (4 sets of
+// trees)
+// ===-----------------------------------------------------------------=== //
+
+// Defined in Reduction.cpp
+void tileAndParallelizeTrees_AtomicReduce(decisionforest::Schedule &schedule,
+                                          int32_t numSubBatches);
+
+void tileAndParallelizeTrees_AtomicReduceWrapper(
+    decisionforest::Schedule *schedule) {
+  tileAndParallelizeTrees_AtomicReduce(*schedule, 4);
+}
+
+bool Test_SparseTileSize8_Abalone_TestInputs_4ParallelTreeSets_AtomicReduce(
+    TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8, tileShapeBitWidth = 16, childIndexBitWidth = 16;
+  Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int8_t>(
+      args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth,
+      childIndexBitWidth, false, false,
+      tileAndParallelizeTrees_AtomicReduceWrapper)));
+  return true;
+}
+
+bool Test_SparseTileSize8_Airline_TestInputs_4ParallelTreeSets_AtomicReduce(
+    TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8, tileShapeBitWidth = 16, childIndexBitWidth = 16;
+  Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int16_t>(
+      args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth,
+      childIndexBitWidth, false, false,
+      tileAndParallelizeTrees_AtomicReduceWrapper)));
+  return true;
+}
+
+bool Test_SparseTileSize8_AirlineOHE_TestInputs_4ParallelTreeSets_AtomicReduce(
+    TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8, tileShapeBitWidth = 16, childIndexBitWidth = 16;
+  Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int16_t>(
+      args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth,
+      childIndexBitWidth, false, false,
+      tileAndParallelizeTrees_AtomicReduceWrapper)));
+  return true;
+}
+
+bool Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets_AtomicReduce(
+    TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/covtype_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8, tileShapeBitWidth = 16, childIndexBitWidth = 16;
+  Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int16_t, int8_t>(
+      args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth,
+      childIndexBitWidth, false, false,
+      tileAndParallelizeTrees_AtomicReduceWrapper)));
+  return true;
+}
+
+bool Test_SparseTileSize8_Letters_TestInputs_4ParallelTreeSets_AtomicReduce(
+    TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/letters_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8, tileShapeBitWidth = 16, childIndexBitWidth = 16;
+  Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int16_t, int8_t>(
+      args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth,
+      childIndexBitWidth, false, false,
+      tileAndParallelizeTrees_AtomicReduceWrapper)));
+  return true;
+}
+
+bool Test_SparseTileSize8_Epsilon_TestInputs_4ParallelTreeSets_AtomicReduce(
+    TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8, tileShapeBitWidth = 16, childIndexBitWidth = 16;
+  Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int16_t>(
+      args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth,
+      childIndexBitWidth, false, false,
+      tileAndParallelizeTrees_AtomicReduceWrapper)));
+  return true;
+}
+
+bool Test_SparseTileSize8_Higgs_TestInputs_4ParallelTreeSets_AtomicReduce(
+    TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8, tileShapeBitWidth = 16, childIndexBitWidth = 16;
+  Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int16_t>(
+      args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth,
+      childIndexBitWidth, false, false,
+      tileAndParallelizeTrees_AtomicReduceWrapper)));
+  return true;
+}
+
+bool Test_SparseTileSize8_Year_TestInputs_4ParallelTreeSets_AtomicReduce(
+    TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath =
+      testModelsDir + "/year_prediction_msd_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8, tileShapeBitWidth = 16, childIndexBitWidth = 16;
+  Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int16_t>(
+      args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth,
+      childIndexBitWidth, false, false,
+      tileAndParallelizeTrees_AtomicReduceWrapper)));
+  return true;
+}
+
+// ===-----------------------------------------------------------------=== //
+// XGBoost Test Inputs Parallel Tree + Vector Reduce Schedule (4 sets of
+// trees)
+// ===-----------------------------------------------------------------=== //
+
+// Defined in Reduction.cpp
+void tileAndParallelizeTrees_VectorReduce(decisionforest::Schedule &schedule,
+                                          int32_t numSubBatches,
+                                          int32_t vectorWidth);
+
+void tileAndParallelizeTrees_VectorReduceWrapper(
+    decisionforest::Schedule *schedule) {
+  tileAndParallelizeTrees_VectorReduce(*schedule, 4, 4);
+}
+
+bool Test_SparseTileSize8_Abalone_TestInputs_4ParallelTreeSets_VectorReduce(
+    TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8, tileShapeBitWidth = 16, childIndexBitWidth = 16;
+  Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int8_t>(
+      args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth,
+      childIndexBitWidth, false, false,
+      tileAndParallelizeTrees_VectorReduceWrapper)));
+  return true;
+}
+
+bool Test_SparseTileSize8_Airline_TestInputs_4ParallelTreeSets_VectorReduce(
+    TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8, tileShapeBitWidth = 16, childIndexBitWidth = 16;
+  Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int16_t>(
+      args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth,
+      childIndexBitWidth, false, false,
+      tileAndParallelizeTrees_VectorReduceWrapper)));
+  return true;
+}
+
+bool Test_SparseTileSize8_AirlineOHE_TestInputs_4ParallelTreeSets_VectorReduce(
+    TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8, tileShapeBitWidth = 16, childIndexBitWidth = 16;
+  Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int16_t>(
+      args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth,
+      childIndexBitWidth, false, false,
+      tileAndParallelizeTrees_VectorReduceWrapper)));
+  return true;
+}
+
+bool Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets_VectorReduce(
+    TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/covtype_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8, tileShapeBitWidth = 16, childIndexBitWidth = 16;
+  Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int16_t, int8_t>(
+      args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth,
+      childIndexBitWidth, false, false,
+      tileAndParallelizeTrees_VectorReduceWrapper)));
+  return true;
+}
+
+bool Test_SparseTileSize8_Letters_TestInputs_4ParallelTreeSets_VectorReduce(
+    TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/letters_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8, tileShapeBitWidth = 16, childIndexBitWidth = 16;
+  Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int16_t, int8_t>(
+      args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth,
+      childIndexBitWidth, false, false,
+      tileAndParallelizeTrees_VectorReduceWrapper)));
+  return true;
+}
+
+bool Test_SparseTileSize8_Epsilon_TestInputs_4ParallelTreeSets_VectorReduce(
+    TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8, tileShapeBitWidth = 16, childIndexBitWidth = 16;
+  Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int16_t>(
+      args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth,
+      childIndexBitWidth, false, false,
+      tileAndParallelizeTrees_VectorReduceWrapper)));
+  return true;
+}
+
+bool Test_SparseTileSize8_Higgs_TestInputs_4ParallelTreeSets_VectorReduce(
+    TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8, tileShapeBitWidth = 16, childIndexBitWidth = 16;
+  Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int16_t>(
+      args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth,
+      childIndexBitWidth, false, false,
+      tileAndParallelizeTrees_VectorReduceWrapper)));
+  return true;
+}
+
+bool Test_SparseTileSize8_Year_TestInputs_4ParallelTreeSets_VectorReduce(
+    TestArgs_t &args) {
+  decisionforest::UseSparseTreeRepresentation = true;
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath =
+      testModelsDir + "/year_prediction_msd_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8, tileShapeBitWidth = 16, childIndexBitWidth = 16;
+  Test_ASSERT((Test_CodeGenForJSON_VariableBatchSize<float, int16_t>(
+      args, 200, modelJSONPath, csvPath, tileSize, tileShapeBitWidth,
+      childIndexBitWidth, false, false,
+      tileAndParallelizeTrees_VectorReduceWrapper)));
+  return true;
+}
+
 } // namespace test
 } // namespace TreeBeard

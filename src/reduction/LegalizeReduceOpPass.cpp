@@ -427,8 +427,10 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
       assert(rangeStart && rangeEnd && "Range start and end cannot be null");
       std::vector<Value> preReductionStart, preReductionEnd;
       std::vector<Value> postReductionStart, postReductionEnd;
-      if (reductionType != mlir::decisionforest::Reduction::kArgMax &&
-          (lastLoop || shouldAtomicallyReduce(loop))) {
+      // if atomic or if last loop && !ArgMax
+      if (shouldAtomicallyReduce(loop) ||
+          (lastLoop &&
+           reductionType != mlir::decisionforest::Reduction::kArgMax)) {
         // These dimensions have already been reduced, so we pass (0, 1) for
         // each of them
         std::for_each(
@@ -469,14 +471,25 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
               });
           auto range = constructPrivatizedIndicesForConflictingLoop(
               rewriter, location, loop);
+
+          // We need to accumulate into the privatized buffer if
+          // the reduction type is argmax
+          Value targetMemref = reduceOp.getTargetMemref();
+          if (reductionType == mlir::decisionforest::Reduction::kArgMax) {
+            targetMemref = privatizedBuffer;
+          }
+
           // Create an atomic reduce op within the loop
           rewriter.create<decisionforest::AtomicReduceDimensionOp>(
-              location, newReductionTypeAttr, reduceOp.getTargetMemref(),
-              privatizedBuffer, ValueRange{mappedDimensions},
-              ValueRange{preReductionStart}, ValueRange{preReductionEnd},
-              reductionDimConst, std::get<0>(range),
-              ValueRange{postReductionStart}, ValueRange{postReductionEnd},
-              reduceOp.getInitialValueAttr());
+              location, newReductionTypeAttr, targetMemref, privatizedBuffer,
+              ValueRange{mappedDimensions}, ValueRange{preReductionStart},
+              ValueRange{preReductionEnd}, reductionDimConst,
+              std::get<0>(range), ValueRange{postReductionStart},
+              ValueRange{postReductionEnd}, reduceOp.getInitialValueAttr());
+
+          // Set the insertion point to after the outermost conflicting loop.
+          // Argmax computation may insert more ops here.
+          rewriter.setInsertionPointAfter(conflictingLoops.back());
           break;
         } else {
           auto reduceDimensionOp =
