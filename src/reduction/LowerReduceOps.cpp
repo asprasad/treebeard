@@ -167,7 +167,6 @@ LogicalResult generateAtomiceductionLoopNest(
 
   // Iterate [rangeStart, rangeEnd)
   auto oneIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 1);
-  assert(sourceMemref != targetMemref);
 
   Operation *outermostLoop = nullptr;
   std::vector<Value> loopIVs;
@@ -184,12 +183,38 @@ LogicalResult generateAtomiceductionLoopNest(
   // All the dimensions prior to the reduction dimension should be specified.
   assert(preReductionDimStart.size() == (size_t)reductionDim);
 
+  // Insert at the point where reduction dim is supposed to appear.
+  loopIVs.push_back(reductionDimIndex);
+
+  // If we're doing an inplace atomic reduction, we need to check if the
+  // all preReduction IVs are 0 and the reductionDimIndex==0. If they are,
+  // we need to skip accumulating this value (the value at this index is a
+  // destination value and we would be accumulating twice)
+  if (sourceMemref == targetMemref) {
+    auto trueConst = rewriter.create<arith::ConstantIntOp>(
+        location, 1, rewriter.getIntegerType(1));
+    auto currCondVal = trueConst.getResult();
+    for (auto iv : loopIVs) {
+      auto isZeroIndexCond = rewriter.create<arith::CmpIOp>(
+          location, arith::CmpIPredicate::eq, iv,
+          rewriter.create<arith::ConstantIndexOp>(location, 0));
+      auto andCond = rewriter.create<arith::AndIOp>(location, currCondVal,
+                                                    isZeroIndexCond);
+      currCondVal = andCond.getResult();
+    }
+    // Negate currCondVal
+    auto notAllZeros = rewriter.create<arith::XOrIOp>(location, currCondVal,
+                                                      trueConst.getResult());
+    auto ifOp = rewriter.create<scf::IfOp>(location, TypeRange({}),
+                                           notAllZeros.getResult(), false);
+    auto thenBodyBuilder = ifOp.getThenBodyBuilder();
+    // auto yieldOp = thenBodyBuilder.create<scf::YieldOp>(location);
+    rewriter.setInsertionPointToStart(thenBodyBuilder.getInsertionBlock());
+  }
+
   // for each value, sum over the reduction dimension
   auto sourceMemrefType = sourceMemref.getType().cast<MemRefType>();
   auto targetMemrefType = targetMemref.getType().cast<MemRefType>();
-
-  // Push-back empty value for the reduction dimension. Will be filled later.
-  loopIVs.push_back(Value());
 
   for (auto startEndPair :
        llvm::zip(postReductionDimStart, postReductionDimEnd)) {
@@ -205,22 +230,38 @@ LogicalResult generateAtomiceductionLoopNest(
   // All dimensions have to be specified.
   assert(static_cast<int64_t>(loopIVs.size()) == sourceMemrefType.getRank());
 
-  // Insert at the point where reduction dim is supposed to appear.
-  loopIVs[reductionDim] = reductionDimIndex;
-
   assert(reduction == decisionforest::Reduction::kAdd);
-
-  if ((size_t)targetMemrefType.getRank() != resultIndex.size()) {
-    llvm::errs() << "Target memref index and result index do not match\n";
-    return mlir::failure();
-  }
 
   auto loadVal =
       rewriter.create<memref::LoadOp>(location, sourceMemref, loopIVs);
 
-  rewriter.create<memref::AtomicRMWOp>(
-      location, mlir::arith::AtomicRMWKind::addf, loadVal.getResult(),
-      targetMemref, resultIndex);
+  if (sourceMemref == targetMemref) {
+    // resultIndex' = [(0's as required), resultIndex]
+    // size of resultIndex' = targetMemrefType.getRank()
+    std::vector<Value> resultIndexPrime;
+    auto zeroIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
+    for (size_t i = 0; i < targetMemrefType.getRank() - resultIndex.size(); ++i)
+      resultIndexPrime.push_back(zeroIndexConst);
+    resultIndexPrime.insert(resultIndexPrime.end(), resultIndex.begin(),
+                            resultIndex.end());
+
+    if ((size_t)targetMemrefType.getRank() != resultIndexPrime.size()) {
+      llvm::errs() << "Target memref index and result index do not match\n";
+      return mlir::failure();
+    }
+
+    rewriter.create<memref::AtomicRMWOp>(
+        location, mlir::arith::AtomicRMWKind::addf, loadVal.getResult(),
+        targetMemref, resultIndexPrime);
+  } else {
+    if ((size_t)targetMemrefType.getRank() != resultIndex.size()) {
+      llvm::errs() << "Target memref index and result index do not match\n";
+      return mlir::failure();
+    }
+    rewriter.create<memref::AtomicRMWOp>(
+        location, mlir::arith::AtomicRMWKind::addf, loadVal.getResult(),
+        targetMemref, resultIndex);
+  }
 
   return mlir::success();
 }

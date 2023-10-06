@@ -456,17 +456,26 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
               rewriter.create<arith::ConstantIndexOp>(location, j));
         }
         if (shouldAtomicallyReduce(loop)) {
-          std::vector<Value> preReductionStart, preReductionEnd;
+          if (reductionType == mlir::decisionforest::Reduction::kArgMax) {
+            // We need to accumulate into the privatized buffer if
+            // the reduction type is argmax
+            postReductionStart.push_back(
+                rewriter.create<arith::ConstantIndexOp>(location, 0));
+            postReductionEnd.push_back(rewriter.create<arith::ConstantIndexOp>(
+                location, privatizedBufferType.getShape().back()));
+          }
+
+          // std::vector<Value> preReductionStart, preReductionEnd;
           // These should be (j, j+1) where j is the loop index
           // of each of the surrounding conflicting loops
           std::for_each(
               conflictingLoops.begin() + i + 1, conflictingLoops.end(),
               [&](scf::ParallelOp loop) {
                 auto indexVar = loop.getInductionVars()[0];
-                postReductionStart.push_back(indexVar);
+                preReductionStart.push_back(indexVar);
                 auto oneIndexConst =
                     rewriter.create<arith::ConstantIndexOp>(location, 1);
-                postReductionEnd.push_back(rewriter.create<arith::AddIOp>(
+                preReductionEnd.push_back(rewriter.create<arith::AddIOp>(
                     location, indexVar, oneIndexConst));
               });
           auto range = constructPrivatizedIndicesForConflictingLoop(

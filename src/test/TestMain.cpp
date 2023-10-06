@@ -2267,10 +2267,10 @@ TestDescriptor testList[] = {
         Test_SparseTileSize8_Airline_TestInputs_4ParallelTreeSets_AtomicReduce),
     TEST_LIST_ENTRY(
         Test_SparseTileSize8_AirlineOHE_TestInputs_4ParallelTreeSets_AtomicReduce),
-    // TEST_LIST_ENTRY(
-    //     Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets_AtomicReduce),
-    // TEST_LIST_ENTRY(
-    //     Test_SparseTileSize8_Letters_TestInputs_4ParallelTreeSets_AtomicReduce),
+    TEST_LIST_ENTRY(
+        Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets_AtomicReduce),
+    TEST_LIST_ENTRY(
+        Test_SparseTileSize8_Letters_TestInputs_4ParallelTreeSets_AtomicReduce),
     TEST_LIST_ENTRY(
         Test_SparseTileSize8_Epsilon_TestInputs_4ParallelTreeSets_AtomicReduce),
     TEST_LIST_ENTRY(
@@ -2333,49 +2333,11 @@ TestDescriptor testList[] = {
     // GPU Parallelize across trees
     // TEST_LIST_ENTRY(
     //     Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Array_Scalar),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Abalone_TestInputs_4ParallelTreeSets_VectorReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Airline_TestInputs_4ParallelTreeSets_VectorReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_AirlineOHE_TestInputs_4ParallelTreeSets_VectorReduce),
-    // TEST_LIST_ENTRY(
-    //     Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets_VectorReduce),
-    // TEST_LIST_ENTRY(
-    //     Test_SparseTileSize8_Letters_TestInputs_4ParallelTreeSets_VectorReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Epsilon_TestInputs_4ParallelTreeSets_VectorReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Higgs_TestInputs_4ParallelTreeSets_VectorReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Year_TestInputs_4ParallelTreeSets_VectorReduce),
 
     TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Abalone_TestInputs_4ParallelTreeSets_AtomicReduce),
+        Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets_AtomicReduce),
     TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Airline_TestInputs_4ParallelTreeSets_AtomicReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_AirlineOHE_TestInputs_4ParallelTreeSets_AtomicReduce),
-    // TEST_LIST_ENTRY(
-    //     Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets_AtomicReduce),
-    // TEST_LIST_ENTRY(
-    //     Test_SparseTileSize8_Letters_TestInputs_4ParallelTreeSets_AtomicReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Epsilon_TestInputs_4ParallelTreeSets_AtomicReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Higgs_TestInputs_4ParallelTreeSets_AtomicReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Year_TestInputs_4ParallelTreeSets_AtomicReduce),
-
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Abalone_TestInputs_4ParallelTreeSets),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Airline_TestInputs_4ParallelTreeSets),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_AirlineOHE_TestInputs_4ParallelTreeSets),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Letters_TestInputs_4ParallelTreeSets),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Epsilon_TestInputs_4ParallelTreeSets),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Higgs_TestInputs_4ParallelTreeSets),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Year_TestInputs_4ParallelTreeSets),
+        Test_SparseTileSize8_Letters_TestInputs_4ParallelTreeSets_AtomicReduce),
     // TEST_LIST_ENTRY(Test_VectorReduction_TwiceLeftRightAndBalanced_DblI32),
     // TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_DblI32_B32_TSz2),
     // TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_DblI32_B32_TSz2),
