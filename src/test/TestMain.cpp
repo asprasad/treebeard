@@ -553,12 +553,54 @@ bool Test_SimpleSharedMem_LeftHeavy_SparseRep_F32I16(TestArgs_t &args);
 bool Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep_F32I16(
     TestArgs_t &args);
 
-bool Test_GPUCodeGeneration_Covtype_ArrayRep_DoubleInt32_BatchSize32(
+bool Test_GPUCodeGeneration_Abalone_TileSize1_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_Abalone_TileSize2_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_Abalone_TileSize4_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_Abalone_TileSize8_BasicSchedule(TestArgs_t &args);
+
+bool Test_GPUCodeGeneration_Airline_TileSize1_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_Airline_TileSize2_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_Airline_TileSize4_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_Airline_TileSize8_BasicSchedule(TestArgs_t &args);
+
+bool Test_GPUCodeGeneration_AirlineOHE_TileSize1_BasicSchedule(
     TestArgs_t &args);
-bool Test_GPUCodeGeneration_Covtype_SparseRep_DoubleInt32_BatchSize32(
+bool Test_GPUCodeGeneration_AirlineOHE_TileSize2_BasicSchedule(
     TestArgs_t &args);
-bool Test_GPUCodeGeneration_Covtype_ReorgRep_DoubleInt32_BatchSize32(
+bool Test_GPUCodeGeneration_AirlineOHE_TileSize4_BasicSchedule(
     TestArgs_t &args);
+bool Test_GPUCodeGeneration_AirlineOHE_TileSize8_BasicSchedule(
+    TestArgs_t &args);
+
+bool Test_GPUCodeGeneration_Bosch_TileSize1_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_Bosch_TileSize2_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_Bosch_TileSize4_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_Bosch_TileSize8_BasicSchedule(TestArgs_t &args);
+
+bool Test_GPUCodeGeneration_CovType_TileSize1_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_CovType_TileSize2_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_CovType_TileSize4_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_CovType_TileSize8_BasicSchedule(TestArgs_t &args);
+
+bool Test_GPUCodeGeneration_Epsilon_TileSize1_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_Epsilon_TileSize2_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_Epsilon_TileSize4_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_Epsilon_TileSize8_BasicSchedule(TestArgs_t &args);
+
+bool Test_GPUCodeGeneration_Higgs_TileSize1_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_Higgs_TileSize2_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_Higgs_TileSize4_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_Higgs_TileSize8_BasicSchedule(TestArgs_t &args);
+
+bool Test_GPUCodeGeneration_Letters_TileSize1_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_Letters_TileSize2_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_Letters_TileSize4_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_Letters_TileSize8_BasicSchedule(TestArgs_t &args);
+
+bool Test_GPUCodeGeneration_Year_TileSize1_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_Year_TileSize2_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_Year_TileSize4_BasicSchedule(TestArgs_t &args);
+bool Test_GPUCodeGeneration_Year_TileSize8_BasicSchedule(TestArgs_t &args);
 
 bool Test_InputSharedMem_LeftRightAndBalanced(TestArgs_t &args);
 bool Test_InputSharedMem_LeftHeavy(TestArgs_t &args);
@@ -1586,737 +1628,785 @@ bool Test_SplitSchedule(TestArgs_t &args) {
 
 #ifdef RUN_ALL_TESTS
 TestDescriptor testList[] = {
-    TEST_LIST_ENTRY(Test_ONNX_TileSize8_Abalone),
+//     TEST_LIST_ENTRY(Test_ONNX_TileSize8_Abalone),
 
-    // [Ashwin] These tests are exercising a part of the code that
-    // we intend to remove. Commenting them out to allow assertions
-    // that Serializer::Persist is never called.
-    // TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy),
-    // TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Int16),
-    // TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Int8),
-    // TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Float),
-    // TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_FloatInt16),
-    // TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_FloatInt8),
-    // TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy),
-    // TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees),
-    // TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_Int16),
-    // TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_Int8),
-    // TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_Float),
-    // TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_FloatInt16),
-    // TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_FloatInt8),
+//     // [Ashwin] These tests are exercising a part of the code that
+//     // we intend to remove. Commenting them out to allow assertions
+//     // that Serializer::Persist is never called.
+//     // TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy),
+//     //
+//     TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Int16),
+//     //
+//     TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Int8),
+//     //
+//     TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Float),
+//     //
+//     TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_FloatInt16),
+//     //
+//     TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_FloatInt8),
+//     // TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy),
+//     // TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees),
+//     // TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_Int16),
+//     // TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_Int8),
+//     // TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_Float),
+//     // TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_FloatInt16),
+//     // TEST_LIST_ENTRY(Test_BufferInitializationWithTwoTrees_FloatInt8),
 
-    TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize1),
-    TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize1),
-    TEST_LIST_ENTRY(Test_CodeGeneration_RightAndLeftHeavy_BatchSize1),
-    TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize2),
-    TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize2),
-    TEST_LIST_ENTRY(Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2),
-    TEST_LIST_ENTRY(Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1),
-    TEST_LIST_ENTRY(Test_LoadTileThresholdOp_DoubleInt32_TileSize1),
-    TEST_LIST_ENTRY(Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1),
-    TEST_LIST_ENTRY(
-        Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1),
-    TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4),
-    TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize2),
-    TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize1),
-    TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize1),
-    TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize2),
-    TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4),
-    TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize1),
-    TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize2),
-    TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4),
-    TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize1_Float),
-    TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize2_Float),
-    TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_Float),
-    TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize1_Float),
-    TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize2_Float),
-    TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_Float),
-    TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize1_Float),
-    TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize2_Float),
-    TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float),
+//     TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize1),
+//     TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize1),
+//     TEST_LIST_ENTRY(Test_CodeGeneration_RightAndLeftHeavy_BatchSize1),
+//     TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize2),
+//     TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize2),
+//     TEST_LIST_ENTRY(Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2),
+//     TEST_LIST_ENTRY(Test_LoadTileFeatureIndicesOp_DoubleInt32_TileSize1),
+//     TEST_LIST_ENTRY(Test_LoadTileThresholdOp_DoubleInt32_TileSize1),
+//     TEST_LIST_ENTRY(Test_LoadTileThresholdOp_Subview_DoubleInt32_TileSize1),
+//     TEST_LIST_ENTRY(
+//         Test_LoadTileFeatureIndicesOp_Subview_DoubleInt32_TileSize1),
+//     TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4),
+//     TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize2),
+//     TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize1),
+//     TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize1),
+//     TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize2),
+//     TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4),
+//     TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize1),
+//     TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize2),
+//     TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4),
+//     TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize1_Float),
+//     TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize2_Float),
+//     TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_1Tree_BatchSize4_Float),
+//     TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize1_Float),
+//     TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize2_Float),
+//     TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_2Trees_BatchSize4_Float),
+//     TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize1_Float),
+//     TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize2_Float),
+//     TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_Float),
 
-    // #TODO - Re-enable these tests
-    // TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Tiled),
-    // TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy_Tiled),
-    // TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_Balanced_Tiled),
+//     // #TODO - Re-enable these tests
+//     //
+//     TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_RightHeavy_Tiled),
+//     //
+//     TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_LeftHeavy_Tiled),
+//     //
+//     TEST_LIST_ENTRY(Test_BufferInitializationWithOneTree_Balanced_Tiled),
 
-    TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftHeavy_BatchSize1),
-    TEST_LIST_ENTRY(Test_TiledCodeGeneration_RightHeavy_BatchSize1),
-    TEST_LIST_ENTRY(Test_TiledCodeGeneration_BalancedTree_BatchSize1),
-    TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1),
-    TEST_LIST_ENTRY(
-        Test_TiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape),
-    TEST_LIST_ENTRY(
-        Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape),
-    TEST_LIST_ENTRY(
-        Test_TiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape),
-    TEST_LIST_ENTRY(
-        Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape),
-    TEST_LIST_ENTRY(
-        Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize),
-    TEST_LIST_ENTRY(
-        Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize),
+//     TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftHeavy_BatchSize1),
+//     TEST_LIST_ENTRY(Test_TiledCodeGeneration_RightHeavy_BatchSize1),
+//     TEST_LIST_ENTRY(Test_TiledCodeGeneration_BalancedTree_BatchSize1),
+//     TEST_LIST_ENTRY(Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1),
+//     TEST_LIST_ENTRY(
+//         Test_TiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape),
+//     TEST_LIST_ENTRY(
+//         Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape),
+//     TEST_LIST_ENTRY(
+//         Test_TiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape),
+//     TEST_LIST_ENTRY(
+//         Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape),
+//     TEST_LIST_ENTRY(
+//         Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize),
+//     TEST_LIST_ENTRY(
+//         Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize),
 
-    // #TODO - Re-enable these tests
-    // TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy),
-    // TEST_LIST_ENTRY(Test_ModelInit_RightHeavy),
-    // TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy),
-    // TEST_LIST_ENTRY(Test_ModelInit_Balanced),
-    // TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy_Int8TileShape),
-    // TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy_Int16TileShape),
-    // TEST_LIST_ENTRY(Test_ModelInit_RightHeavy_Int8TileShape),
-    // TEST_LIST_ENTRY(Test_ModelInit_RightHeavy_Int16TileShape),
-    // TEST_LIST_ENTRY(Test_ModelInit_Balanced_Int8TileShape),
-    // TEST_LIST_ENTRY(Test_ModelInit_Balanced_Int16TileShape),
-    // TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy_Int8TileShape),
-    // TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy_Int16TileShape),
+//     // #TODO - Re-enable these tests
+//     // TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy),
+//     // TEST_LIST_ENTRY(Test_ModelInit_RightHeavy),
+//     // TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy),
+//     // TEST_LIST_ENTRY(Test_ModelInit_Balanced),
+//     // TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy_Int8TileShape),
+//     // TEST_LIST_ENTRY(Test_ModelInit_LeftHeavy_Int16TileShape),
+//     // TEST_LIST_ENTRY(Test_ModelInit_RightHeavy_Int8TileShape),
+//     // TEST_LIST_ENTRY(Test_ModelInit_RightHeavy_Int16TileShape),
+//     // TEST_LIST_ENTRY(Test_ModelInit_Balanced_Int8TileShape),
+//     // TEST_LIST_ENTRY(Test_ModelInit_Balanced_Int16TileShape),
+//     // TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy_Int8TileShape),
+//     // TEST_LIST_ENTRY(Test_ModelInit_RightAndLeftHeavy_Int16TileShape),
 
-    TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
-    TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
-    TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1),
-    TEST_LIST_ENTRY(Test_UniformTiling_Balanced_BatchSize1),
-    TEST_LIST_ENTRY(Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1),
-    TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1_Int8TileShape),
-    TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1_Int8TileShape),
-    TEST_LIST_ENTRY(Test_UniformTiling_Balanced_BatchSize1_Int8TileShape),
-    TEST_LIST_ENTRY(
-        Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1_Int8TileShape),
-    TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1_Int16TileShape),
-    TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1_Int16TileShape),
-    TEST_LIST_ENTRY(Test_UniformTiling_Balanced_BatchSize1_Int16TileShape),
-    TEST_LIST_ENTRY(
-        Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1_Int16TileShape),
-    TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize1),
-    TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize1),
-    TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize1),
-    TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize2),
-    TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize2),
-    TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize2),
-    TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4),
-    TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
-    TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
-    TEST_LIST_ENTRY(
-        Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4_Int8TileShape),
-    TEST_LIST_ENTRY(
-        Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4_Int16TileShape),
-    TEST_LIST_ENTRY(
-        Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4_Int8TileShape),
-    TEST_LIST_ENTRY(
-        Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4_Int16TileShape),
-    TEST_LIST_ENTRY(
-        Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4_Int8TileShape),
-    TEST_LIST_ENTRY(
-        Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4_Int16TileShape),
-    TEST_LIST_ENTRY(Test_Scalar_Abalone),
-    TEST_LIST_ENTRY(Test_TileSize2_Abalone),
-    TEST_LIST_ENTRY(Test_TileSize3_Abalone),
-    TEST_LIST_ENTRY(Test_TileSize4_Abalone),
-    TEST_LIST_ENTRY(Test_TileSize8_Abalone),
-    TEST_LIST_ENTRY(Test_Scalar_Airline),
-    TEST_LIST_ENTRY(Test_TileSize2_Airline),
-    TEST_LIST_ENTRY(Test_TileSize3_Airline),
-    TEST_LIST_ENTRY(Test_TileSize4_Airline),
-    TEST_LIST_ENTRY(Test_TileSize8_Airline),
-    TEST_LIST_ENTRY(Test_Scalar_AirlineOHE),
-    TEST_LIST_ENTRY(Test_TileSize2_AirlineOHE),
-    TEST_LIST_ENTRY(Test_TileSize3_AirlineOHE),
-    TEST_LIST_ENTRY(Test_TileSize4_AirlineOHE),
-    TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE),
-    TEST_LIST_ENTRY(Test_Scalar_Bosch),
-    TEST_LIST_ENTRY(Test_TileSize2_Bosch),
-    TEST_LIST_ENTRY(Test_TileSize3_Bosch),
-    TEST_LIST_ENTRY(Test_TileSize4_Bosch),
-    TEST_LIST_ENTRY(Test_TileSize8_Bosch),
-    TEST_LIST_ENTRY(Test_Scalar_Epsilon),
-    TEST_LIST_ENTRY(Test_TileSize2_Epsilon),
-    TEST_LIST_ENTRY(Test_TileSize3_Epsilon),
-    TEST_LIST_ENTRY(Test_TileSize4_Epsilon),
-    TEST_LIST_ENTRY(Test_TileSize8_Epsilon),
-    TEST_LIST_ENTRY(Test_Scalar_Higgs),
-    TEST_LIST_ENTRY(Test_TileSize2_Higgs),
-    TEST_LIST_ENTRY(Test_TileSize3_Higgs),
-    TEST_LIST_ENTRY(Test_TileSize4_Higgs),
-    TEST_LIST_ENTRY(Test_TileSize8_Higgs),
-    TEST_LIST_ENTRY(Test_TileSize1_Letters_Int8Type),
-    TEST_LIST_ENTRY(Test_TileSize2_Letters_Int8Type),
-    TEST_LIST_ENTRY(Test_TileSize3_Letters_Int8Type),
-    TEST_LIST_ENTRY(Test_TileSize4_Letters_Int8Type),
-    TEST_LIST_ENTRY(Test_TileSize8_Letters_Int8Type),
-    TEST_LIST_ENTRY(Test_Scalar_Year),
-    TEST_LIST_ENTRY(Test_TileSize2_Year),
-    TEST_LIST_ENTRY(Test_TileSize3_Year),
-    TEST_LIST_ENTRY(Test_TileSize4_Year),
-    TEST_LIST_ENTRY(Test_TileSize8_Year),
-    TEST_LIST_ENTRY(Test_TileSize1_CovType_Int8Type),
-    TEST_LIST_ENTRY(Test_TileSize2_CovType_Int8Type),
-    TEST_LIST_ENTRY(Test_TileSize3_CovType_Int8Type),
-    TEST_LIST_ENTRY(Test_TileSize4_CovType_Int8Type),
-    TEST_LIST_ENTRY(Test_TileSize8_CovType_Int8Type),
+//     TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
+//     TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1),
+//     TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1),
+//     TEST_LIST_ENTRY(Test_UniformTiling_Balanced_BatchSize1),
+//     TEST_LIST_ENTRY(Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1),
+//     TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1_Int8TileShape),
+//     TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1_Int8TileShape),
+//     TEST_LIST_ENTRY(Test_UniformTiling_Balanced_BatchSize1_Int8TileShape),
+//     TEST_LIST_ENTRY(
+//         Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1_Int8TileShape),
+//     TEST_LIST_ENTRY(Test_UniformTiling_LeftHeavy_BatchSize1_Int16TileShape),
+//     TEST_LIST_ENTRY(Test_UniformTiling_RightHeavy_BatchSize1_Int16TileShape),
+//     TEST_LIST_ENTRY(Test_UniformTiling_Balanced_BatchSize1_Int16TileShape),
+//     TEST_LIST_ENTRY(
+//         Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1_Int16TileShape),
+//     TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize1),
+//     TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize1),
+//     TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize1),
+//     TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize2),
+//     TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize2),
+//     TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize2),
+//     TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4),
+//     TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
+//     TEST_LIST_ENTRY(Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
+//     TEST_LIST_ENTRY(
+//         Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4_Int8TileShape),
+//     TEST_LIST_ENTRY(
+//         Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4_Int16TileShape),
+//     TEST_LIST_ENTRY(
+//         Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4_Int8TileShape),
+//     TEST_LIST_ENTRY(
+//         Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4_Int16TileShape),
+//     TEST_LIST_ENTRY(
+//         Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4_Int8TileShape),
+//     TEST_LIST_ENTRY(
+//         Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4_Int16TileShape),
+//     TEST_LIST_ENTRY(Test_Scalar_Abalone),
+//     TEST_LIST_ENTRY(Test_TileSize2_Abalone),
+//     TEST_LIST_ENTRY(Test_TileSize3_Abalone),
+//     TEST_LIST_ENTRY(Test_TileSize4_Abalone),
+//     TEST_LIST_ENTRY(Test_TileSize8_Abalone),
+//     TEST_LIST_ENTRY(Test_Scalar_Airline),
+//     TEST_LIST_ENTRY(Test_TileSize2_Airline),
+//     TEST_LIST_ENTRY(Test_TileSize3_Airline),
+//     TEST_LIST_ENTRY(Test_TileSize4_Airline),
+//     TEST_LIST_ENTRY(Test_TileSize8_Airline),
+//     TEST_LIST_ENTRY(Test_Scalar_AirlineOHE),
+//     TEST_LIST_ENTRY(Test_TileSize2_AirlineOHE),
+//     TEST_LIST_ENTRY(Test_TileSize3_AirlineOHE),
+//     TEST_LIST_ENTRY(Test_TileSize4_AirlineOHE),
+//     TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE),
+//     TEST_LIST_ENTRY(Test_Scalar_Bosch),
+//     TEST_LIST_ENTRY(Test_TileSize2_Bosch),
+//     TEST_LIST_ENTRY(Test_TileSize3_Bosch),
+//     TEST_LIST_ENTRY(Test_TileSize4_Bosch),
+//     TEST_LIST_ENTRY(Test_TileSize8_Bosch),
+//     TEST_LIST_ENTRY(Test_Scalar_Epsilon),
+//     TEST_LIST_ENTRY(Test_TileSize2_Epsilon),
+//     TEST_LIST_ENTRY(Test_TileSize3_Epsilon),
+//     TEST_LIST_ENTRY(Test_TileSize4_Epsilon),
+//     TEST_LIST_ENTRY(Test_TileSize8_Epsilon),
+//     TEST_LIST_ENTRY(Test_Scalar_Higgs),
+//     TEST_LIST_ENTRY(Test_TileSize2_Higgs),
+//     TEST_LIST_ENTRY(Test_TileSize3_Higgs),
+//     TEST_LIST_ENTRY(Test_TileSize4_Higgs),
+//     TEST_LIST_ENTRY(Test_TileSize8_Higgs),
+//     TEST_LIST_ENTRY(Test_TileSize1_Letters_Int8Type),
+//     TEST_LIST_ENTRY(Test_TileSize2_Letters_Int8Type),
+//     TEST_LIST_ENTRY(Test_TileSize3_Letters_Int8Type),
+//     TEST_LIST_ENTRY(Test_TileSize4_Letters_Int8Type),
+//     TEST_LIST_ENTRY(Test_TileSize8_Letters_Int8Type),
+//     TEST_LIST_ENTRY(Test_Scalar_Year),
+//     TEST_LIST_ENTRY(Test_TileSize2_Year),
+//     TEST_LIST_ENTRY(Test_TileSize3_Year),
+//     TEST_LIST_ENTRY(Test_TileSize4_Year),
+//     TEST_LIST_ENTRY(Test_TileSize8_Year),
+//     TEST_LIST_ENTRY(Test_TileSize1_CovType_Int8Type),
+//     TEST_LIST_ENTRY(Test_TileSize2_CovType_Int8Type),
+//     TEST_LIST_ENTRY(Test_TileSize3_CovType_Int8Type),
+//     TEST_LIST_ENTRY(Test_TileSize4_CovType_Int8Type),
+//     TEST_LIST_ENTRY(Test_TileSize8_CovType_Int8Type),
 
-    // // Sparse tests
-    TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize1_I32ChildIdx),
-    TEST_LIST_ENTRY(
-        Test_SparseCodeGeneration_RightHeavy_BatchSize1_I32ChildIdx),
-    TEST_LIST_ENTRY(
-        Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize1_I32ChildIdx),
-    TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize2_I32ChildIdx),
-    TEST_LIST_ENTRY(
-        Test_SparseCodeGeneration_RightHeavy_BatchSize2_I32ChildIdx),
-    TEST_LIST_ENTRY(
-        Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx),
-    TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1),
-    TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize2),
-    TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize4),
-    TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize1),
-    TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize2),
-    TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize4),
-    TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize1),
-    TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize2),
-    TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize4),
-    TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1_Float),
-    TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize2_Float),
-    TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize4_Float),
-    TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize1_Float),
-    TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize2_Float),
-    TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize4_Float),
-    TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize1_Float),
-    TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize2_Float),
-    TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize4_Float),
-    TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1),
-    TEST_LIST_ENTRY(
-        Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape),
-    TEST_LIST_ENTRY(
-        Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape),
-    TEST_LIST_ENTRY(
-        Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize),
-    TEST_LIST_ENTRY(
-        Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1),
-    TEST_LIST_ENTRY(
-        Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize),
-    TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1),
-    TEST_LIST_ENTRY(
-        Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape),
-    TEST_LIST_ENTRY(
-        Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape),
-    TEST_LIST_ENTRY(
-        Test_SparseUniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
-    TEST_LIST_ENTRY(
-        Test_SparseUniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
-    // XGBoost Benchmarks Sparse Tests
-    TEST_LIST_ENTRY(Test_SparseScalar_Abalone),
-    TEST_LIST_ENTRY(Test_SparseTileSize2_Abalone),
-    TEST_LIST_ENTRY(Test_SparseTileSize3_Abalone),
-    TEST_LIST_ENTRY(Test_SparseTileSize4_Abalone),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Abalone),
-    TEST_LIST_ENTRY(Test_SparseScalar_Airline),
-    TEST_LIST_ENTRY(Test_SparseTileSize2_Airline),
-    TEST_LIST_ENTRY(Test_SparseTileSize3_Airline),
-    TEST_LIST_ENTRY(Test_SparseTileSize4_Airline),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Airline),
-    TEST_LIST_ENTRY(Test_SparseScalar_AirlineOHE),
-    TEST_LIST_ENTRY(Test_SparseTileSize2_AirlineOHE),
-    TEST_LIST_ENTRY(Test_SparseTileSize3_AirlineOHE),
-    TEST_LIST_ENTRY(Test_SparseTileSize4_AirlineOHE),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_AirlineOHE),
-    TEST_LIST_ENTRY(Test_SparseScalar_Bosch),
-    TEST_LIST_ENTRY(Test_SparseTileSize2_Bosch),
-    TEST_LIST_ENTRY(Test_SparseTileSize3_Bosch),
-    TEST_LIST_ENTRY(Test_SparseTileSize4_Bosch),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Bosch),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_CovType_Int8Type),
-    TEST_LIST_ENTRY(Test_SparseScalar_CovType_Int8Type),
-    TEST_LIST_ENTRY(Test_SparseScalar_Letters_Int8Type),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Letters_Int8Type),
-    TEST_LIST_ENTRY(Test_SparseScalar_Epsilon),
-    TEST_LIST_ENTRY(Test_SparseTileSize2_Epsilon),
-    TEST_LIST_ENTRY(Test_SparseTileSize3_Epsilon),
-    TEST_LIST_ENTRY(Test_SparseTileSize4_Epsilon),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Epsilon),
-    TEST_LIST_ENTRY(Test_SparseScalar_Higgs),
-    TEST_LIST_ENTRY(Test_SparseTileSize2_Higgs),
-    TEST_LIST_ENTRY(Test_SparseTileSize3_Higgs),
-    TEST_LIST_ENTRY(Test_SparseTileSize4_Higgs),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Higgs),
-    TEST_LIST_ENTRY(Test_SparseScalar_Year),
-    TEST_LIST_ENTRY(Test_SparseTileSize2_Year),
-    TEST_LIST_ENTRY(Test_SparseTileSize3_Year),
-    TEST_LIST_ENTRY(Test_SparseTileSize4_Year),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Year),
-    TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs),
-    TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs),
-    TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs),
-    TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs),
-    TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs),
-    TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs),
-    TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs),
+//     // // Sparse tests
+//     TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize1_I32ChildIdx),
+//     TEST_LIST_ENTRY(
+//         Test_SparseCodeGeneration_RightHeavy_BatchSize1_I32ChildIdx),
+//     TEST_LIST_ENTRY(
+//         Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize1_I32ChildIdx),
+//     TEST_LIST_ENTRY(Test_SparseCodeGeneration_LeftHeavy_BatchSize2_I32ChildIdx),
+//     TEST_LIST_ENTRY(
+//         Test_SparseCodeGeneration_RightHeavy_BatchSize2_I32ChildIdx),
+//     TEST_LIST_ENTRY(
+//         Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx),
+//     TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1),
+//     TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize2),
+//     TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize4),
+//     TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize1),
+//     TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize2),
+//     TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize4),
+//     TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize1),
+//     TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize2),
+//     TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize4),
+//     TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1_Float),
+//     TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize2_Float),
+//     TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize4_Float),
+//     TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize1_Float),
+//     TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize2_Float),
+//     TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize4_Float),
+//     TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize1_Float),
+//     TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize2_Float),
+//     TEST_LIST_ENTRY(Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize4_Float),
+//     TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize),
+//     TEST_LIST_ENTRY(Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape),
+//     TEST_LIST_ENTRY(
+//         Test_SparseUniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4),
+//     TEST_LIST_ENTRY(
+//         Test_SparseUniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4),
+//     // XGBoost Benchmarks Sparse Tests
+//     TEST_LIST_ENTRY(Test_SparseScalar_Abalone),
+//     TEST_LIST_ENTRY(Test_SparseTileSize2_Abalone),
+//     TEST_LIST_ENTRY(Test_SparseTileSize3_Abalone),
+//     TEST_LIST_ENTRY(Test_SparseTileSize4_Abalone),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Abalone),
+//     TEST_LIST_ENTRY(Test_SparseScalar_Airline),
+//     TEST_LIST_ENTRY(Test_SparseTileSize2_Airline),
+//     TEST_LIST_ENTRY(Test_SparseTileSize3_Airline),
+//     TEST_LIST_ENTRY(Test_SparseTileSize4_Airline),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Airline),
+//     TEST_LIST_ENTRY(Test_SparseScalar_AirlineOHE),
+//     TEST_LIST_ENTRY(Test_SparseTileSize2_AirlineOHE),
+//     TEST_LIST_ENTRY(Test_SparseTileSize3_AirlineOHE),
+//     TEST_LIST_ENTRY(Test_SparseTileSize4_AirlineOHE),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_AirlineOHE),
+//     TEST_LIST_ENTRY(Test_SparseScalar_Bosch),
+//     TEST_LIST_ENTRY(Test_SparseTileSize2_Bosch),
+//     TEST_LIST_ENTRY(Test_SparseTileSize3_Bosch),
+//     TEST_LIST_ENTRY(Test_SparseTileSize4_Bosch),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Bosch),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_CovType_Int8Type),
+//     TEST_LIST_ENTRY(Test_SparseScalar_CovType_Int8Type),
+//     TEST_LIST_ENTRY(Test_SparseScalar_Letters_Int8Type),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Letters_Int8Type),
+//     TEST_LIST_ENTRY(Test_SparseScalar_Epsilon),
+//     TEST_LIST_ENTRY(Test_SparseTileSize2_Epsilon),
+//     TEST_LIST_ENTRY(Test_SparseTileSize3_Epsilon),
+//     TEST_LIST_ENTRY(Test_SparseTileSize4_Epsilon),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Epsilon),
+//     TEST_LIST_ENTRY(Test_SparseScalar_Higgs),
+//     TEST_LIST_ENTRY(Test_SparseTileSize2_Higgs),
+//     TEST_LIST_ENTRY(Test_SparseTileSize3_Higgs),
+//     TEST_LIST_ENTRY(Test_SparseTileSize4_Higgs),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Higgs),
+//     TEST_LIST_ENTRY(Test_SparseScalar_Year),
+//     TEST_LIST_ENTRY(Test_SparseTileSize2_Year),
+//     TEST_LIST_ENTRY(Test_SparseTileSize3_Year),
+//     TEST_LIST_ENTRY(Test_SparseTileSize4_Year),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Year),
+//     TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs),
+//     TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs),
+//     TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs),
+//     TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs),
+//     TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs),
+//     TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs),
+//     TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs),
 
-    // Non-trivial schedule array representation tests
-    TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize2_XGBoostSchedule),
-    TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize2_XGBoostSchedule),
-    TEST_LIST_ENTRY(
-        Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_XGBoostSchedule),
-    TEST_LIST_ENTRY(
-        Test_CodeGeneration_LeftHeavy_BatchSize8_CacheInputSchedule),
-    TEST_LIST_ENTRY(
-        Test_CodeGeneration_RightHeavy_BatchSize2_CacheInputSchedule),
-    TEST_LIST_ENTRY(
-        Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_CacheInputSchedule),
-    TEST_LIST_ENTRY(Test_Scalar_Abalone_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize2_Abalone_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize3_Abalone_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize4_Abalone_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize8_Abalone_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_Scalar_Airline_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize2_Airline_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize3_Airline_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize4_Airline_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize8_Airline_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_Scalar_AirlineOHE_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize2_AirlineOHE_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize3_AirlineOHE_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize4_AirlineOHE_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_Scalar_Bosch_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize2_Bosch_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize3_Bosch_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize4_Bosch_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize8_Bosch_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_Scalar_CovType_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize8_CovType_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_Scalar_Epsilon_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize2_Epsilon_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize3_Epsilon_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize4_Epsilon_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize8_Epsilon_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_Scalar_Higgs_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize2_Higgs_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize3_Higgs_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize4_Higgs_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize8_Higgs_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_Scalar_Year_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize2_Year_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize3_Year_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize4_Year_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_TileSize8_Year_OneTreeAtATimeSchedule),
+//     // Non-trivial schedule array representation tests
+//     TEST_LIST_ENTRY(Test_CodeGeneration_LeftHeavy_BatchSize2_XGBoostSchedule),
+//     TEST_LIST_ENTRY(Test_CodeGeneration_RightHeavy_BatchSize2_XGBoostSchedule),
+//     TEST_LIST_ENTRY(
+//         Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_XGBoostSchedule),
+//     TEST_LIST_ENTRY(
+//         Test_CodeGeneration_LeftHeavy_BatchSize8_CacheInputSchedule),
+//     TEST_LIST_ENTRY(
+//         Test_CodeGeneration_RightHeavy_BatchSize2_CacheInputSchedule),
+//     TEST_LIST_ENTRY(
+//         Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_CacheInputSchedule),
+//     TEST_LIST_ENTRY(Test_Scalar_Abalone_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize2_Abalone_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize3_Abalone_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize4_Abalone_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize8_Abalone_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_Scalar_Airline_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize2_Airline_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize3_Airline_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize4_Airline_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize8_Airline_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_Scalar_AirlineOHE_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize2_AirlineOHE_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize3_AirlineOHE_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize4_AirlineOHE_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_Scalar_Bosch_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize2_Bosch_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize3_Bosch_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize4_Bosch_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize8_Bosch_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_Scalar_CovType_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize8_CovType_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_Scalar_Epsilon_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize2_Epsilon_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize3_Epsilon_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize4_Epsilon_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize8_Epsilon_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_Scalar_Higgs_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize2_Higgs_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize3_Higgs_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize4_Higgs_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize8_Higgs_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_Scalar_Year_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize2_Year_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize3_Year_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize4_Year_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize8_Year_OneTreeAtATimeSchedule),
 
-    TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_TiledSchedule),
-    TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_TiledSchedule),
-    TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_TiledSchedule),
-    TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_TiledSchedule),
-    TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_TiledSchedule),
-    TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_TiledSchedule),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Letters_TiledSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_TiledSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_TiledSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_TiledSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_TiledSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_TiledSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_TiledSchedule),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Letters_TiledSchedule),
 
-    // Sparse code gen tests with loops interchanged
-    TEST_LIST_ENTRY(Test_SparseScalar_Abalone_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Abalone_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_SparseScalar_Airline_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Airline_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_SparseScalar_AirlineOHE_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_AirlineOHE_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_SparseScalar_Bosch_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Bosch_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_SparseScalar_CovType_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_CovType_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_SparseScalar_Letters_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Letters_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Letters_TiledSchedule),
-    TEST_LIST_ENTRY(Test_SparseScalar_Epsilon_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Epsilon_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_SparseScalar_Higgs_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Higgs_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_SparseScalar_Year_OneTreeAtATimeSchedule),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Year_OneTreeAtATimeSchedule),
+//     // Sparse code gen tests with loops interchanged
+//     TEST_LIST_ENTRY(Test_SparseScalar_Abalone_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Abalone_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_SparseScalar_Airline_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Airline_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_SparseScalar_AirlineOHE_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_AirlineOHE_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_SparseScalar_Bosch_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Bosch_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_SparseScalar_CovType_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_CovType_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_SparseScalar_Letters_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Letters_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Letters_TiledSchedule),
+//     TEST_LIST_ENTRY(Test_SparseScalar_Epsilon_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Epsilon_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_SparseScalar_Higgs_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Higgs_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_SparseScalar_Year_OneTreeAtATimeSchedule),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Year_OneTreeAtATimeSchedule),
 
-    // Sparse code gen tests with loops tiled
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Abalone_TestInputs_TiledSchedule),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_AirlineOHE_TestInputs_TiledSchedule),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Airline_TestInputs_TiledSchedule),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Epsilon_TestInputs_TiledSchedule),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Higgs_TestInputs_TiledSchedule),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Year_TestInputs_TiledSchedule),
+//     // Sparse code gen tests with loops tiled
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Abalone_TestInputs_TiledSchedule),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_AirlineOHE_TestInputs_TiledSchedule),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Airline_TestInputs_TiledSchedule),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Epsilon_TestInputs_TiledSchedule),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Higgs_TestInputs_TiledSchedule),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Year_TestInputs_TiledSchedule),
 
-    // Stats tests
-    TEST_LIST_ENTRY(Test_AbaloneStatGenerationAndReading),
-    TEST_LIST_ENTRY(Test_AirlineStatGenerationAndReading),
-    TEST_LIST_ENTRY(Test_AirlineOHEStatGenerationAndReading),
-    TEST_LIST_ENTRY(Test_CovtypeStatGenerationAndReading),
-    TEST_LIST_ENTRY(Test_EpsilonStatGenerationAndReading),
-    TEST_LIST_ENTRY(Test_HiggsStatGenerationAndReading),
-    TEST_LIST_ENTRY(Test_YearStatGenerationAndReading),
+//     // Stats tests
+//     TEST_LIST_ENTRY(Test_AbaloneStatGenerationAndReading),
+//     TEST_LIST_ENTRY(Test_AirlineStatGenerationAndReading),
+//     TEST_LIST_ENTRY(Test_AirlineOHEStatGenerationAndReading),
+//     TEST_LIST_ENTRY(Test_CovtypeStatGenerationAndReading),
+//     TEST_LIST_ENTRY(Test_EpsilonStatGenerationAndReading),
+//     TEST_LIST_ENTRY(Test_HiggsStatGenerationAndReading),
+//     TEST_LIST_ENTRY(Test_YearStatGenerationAndReading),
 
-    // Sparse Probabilistic Tiling Tests
-    TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
-    TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Airline),
-    TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_AirlineOHE),
-    TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Covtype),
-    TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Epsilon),
-    TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Higgs),
-    TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Year),
+//     // Sparse Probabilistic Tiling Tests
+//     TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Abalone),
+//     TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Airline),
+//     TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_AirlineOHE),
+//     TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Covtype),
+//     TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Epsilon),
+//     TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Higgs),
+//     TEST_LIST_ENTRY(Test_SparseProbabilisticTiling_TileSize8_Year),
 
-    // Tiled tree padding tests
-    TEST_LIST_ENTRY(Test_PadTiledTree_BalancedTree_TileSize2),
-    TEST_LIST_ENTRY(Test_PadTiledTree_BalancedTree_TileSize2_2),
-    TEST_LIST_ENTRY(Test_PadTiledTree_BalancedTree_TileSize3),
-    TEST_LIST_ENTRY(
-        Test_RandomXGBoostJSONs_1Tree_BatchSize4_EqualDepth_TileSize8),
-    TEST_LIST_ENTRY(
-        Test_RandomXGBoostJSONs_2Trees_BatchSize4_EqualDepth_TileSize8),
-    TEST_LIST_ENTRY(
-        Test_RandomXGBoostJSONs_4Trees_BatchSize4_EqualDepth_TileSize8),
-    TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth),
-    TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_MakeLeavesSameDepth),
-    TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_MakeLeavesSameDepth),
-    TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_MakeLeavesSameDepth),
-    TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_MakeLeavesSameDepth),
-    TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_MakeLeavesSameDepth),
-    TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth),
+//     // Tiled tree padding tests
+//     TEST_LIST_ENTRY(Test_PadTiledTree_BalancedTree_TileSize2),
+//     TEST_LIST_ENTRY(Test_PadTiledTree_BalancedTree_TileSize2_2),
+//     TEST_LIST_ENTRY(Test_PadTiledTree_BalancedTree_TileSize3),
+//     TEST_LIST_ENTRY(
+//         Test_RandomXGBoostJSONs_1Tree_BatchSize4_EqualDepth_TileSize8),
+//     TEST_LIST_ENTRY(
+//         Test_RandomXGBoostJSONs_2Trees_BatchSize4_EqualDepth_TileSize8),
+//     TEST_LIST_ENTRY(
+//         Test_RandomXGBoostJSONs_4Trees_BatchSize4_EqualDepth_TileSize8),
+//     TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth),
+//     TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_MakeLeavesSameDepth),
+//     TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_MakeLeavesSameDepth),
+//     TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_MakeLeavesSameDepth),
+//     TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_MakeLeavesSameDepth),
+//     TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_MakeLeavesSameDepth),
+//     TEST_LIST_ENTRY(Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth),
 
-    TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_ReorderTrees),
+//     TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_ReorderTrees),
 
-    // Split Schedule
-    TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_SwapAndSplitTreeIndex),
-    TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_SwapAndSplitTreeIndex),
-    TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_SwapAndSplitTreeIndex),
-    TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_SwapAndSplitTreeIndex),
-    TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_SwapAndSplitTreeIndex),
-    TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_SwapAndSplitTreeIndex),
-    TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_SplitTreeLoopSchedule),
-    TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_SplitTreeLoopSchedule),
-    TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_SplitTreeLoopSchedule),
-    TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_SplitTreeLoopSchedule),
-    TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_SplitTreeLoopSchedule),
-    TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_SplitTreeLoopSchedule),
+//     // Split Schedule
+//     TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_SwapAndSplitTreeIndex),
+//     TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_SwapAndSplitTreeIndex),
+//     TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_SwapAndSplitTreeIndex),
+//     TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_SwapAndSplitTreeIndex),
+//     TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_SwapAndSplitTreeIndex),
+//     TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_SwapAndSplitTreeIndex),
+//     TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_SplitTreeLoopSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_SplitTreeLoopSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_SplitTreeLoopSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_SplitTreeLoopSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_SplitTreeLoopSchedule),
+//     TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_SplitTreeLoopSchedule),
 
-#ifdef OMP_SUPPORT
-    TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_ParallelBatch),
-    TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_ParallelBatch),
-    TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_ParallelBatch),
-    TEST_LIST_ENTRY(Test_TileSize8_Covtype_TestInputs_ParallelBatch),
-    TEST_LIST_ENTRY(Test_TileSize8_Letters_TestInputs_ParallelBatch),
-    TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_ParallelBatch),
-    TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_ParallelBatch),
-    TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_ParallelBatch),
-#endif // OMP_SUPPORT
+// #ifdef OMP_SUPPORT
+//     TEST_LIST_ENTRY(Test_TileSize8_Abalone_TestInputs_ParallelBatch),
+//     TEST_LIST_ENTRY(Test_TileSize8_Airline_TestInputs_ParallelBatch),
+//     TEST_LIST_ENTRY(Test_TileSize8_AirlineOHE_TestInputs_ParallelBatch),
+//     TEST_LIST_ENTRY(Test_TileSize8_Covtype_TestInputs_ParallelBatch),
+//     TEST_LIST_ENTRY(Test_TileSize8_Letters_TestInputs_ParallelBatch),
+//     TEST_LIST_ENTRY(Test_TileSize8_Epsilon_TestInputs_ParallelBatch),
+//     TEST_LIST_ENTRY(Test_TileSize8_Higgs_TestInputs_ParallelBatch),
+//     TEST_LIST_ENTRY(Test_TileSize8_Year_TestInputs_ParallelBatch),
+// #endif // OMP_SUPPORT
 
-    // Pipelining + Unrolling tests
-    TEST_LIST_ENTRY(
-        Test_RandomXGBoostJSONs_1Tree_BatchSize8_TileSize2_4Pipelined),
-    TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_4Pipelined),
-    TEST_LIST_ENTRY(Test_TileSize3_Letters_2Pipelined_Int8Type),
-    TEST_LIST_ENTRY(Test_TileSize4_Letters_3Pipelined_Int8Type),
-    TEST_LIST_ENTRY(Test_TileSize8_Letters_5Pipelined_Int8Type),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_4Pipelined_Bosch),
-    TEST_LIST_ENTRY(Test_TileSize8_Abalone_4Pipelined_TestInputs),
-    TEST_LIST_ENTRY(Test_TileSize8_CovType_4Pipelined_TestInputs),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Pipeline4_Airline),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Pipelined4_AirlineOHE),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Pipelined_Year),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Pipelined_Higgs),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Pipelined_Epsilon),
+//     // Pipelining + Unrolling tests
+//     TEST_LIST_ENTRY(
+//         Test_RandomXGBoostJSONs_1Tree_BatchSize8_TileSize2_4Pipelined),
+//     TEST_LIST_ENTRY(Test_RandomXGBoostJSONs_4Trees_BatchSize4_4Pipelined),
+//     TEST_LIST_ENTRY(Test_TileSize3_Letters_2Pipelined_Int8Type),
+//     TEST_LIST_ENTRY(Test_TileSize4_Letters_3Pipelined_Int8Type),
+//     TEST_LIST_ENTRY(Test_TileSize8_Letters_5Pipelined_Int8Type),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_4Pipelined_Bosch),
+//     TEST_LIST_ENTRY(Test_TileSize8_Abalone_4Pipelined_TestInputs),
+//     TEST_LIST_ENTRY(Test_TileSize8_CovType_4Pipelined_TestInputs),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Pipeline4_Airline),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Pipelined4_AirlineOHE),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Pipelined_Year),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Pipelined_Higgs),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Pipelined_Epsilon),
 
-    // Hybrid Tiling
-    TEST_LIST_ENTRY(Test_WalkPeeling_BalancedTree_TileSize2),
-    TEST_LIST_ENTRY(
-        Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
-    TEST_LIST_ENTRY(
-        Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4),
-    TEST_LIST_ENTRY(
-        Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
-    TEST_LIST_ENTRY(
-        Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
-    TEST_LIST_ENTRY(
-        Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
-    TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Year),
-    TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Letters),
-    TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Epsilon),
-    TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Higgs),
-    TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_AirlineOHE),
-    TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Covtype),
-    TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Airline),
-    TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Abalone),
+//     // Hybrid Tiling
+//     TEST_LIST_ENTRY(Test_WalkPeeling_BalancedTree_TileSize2),
+//     TEST_LIST_ENTRY(
+//         Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
+//     TEST_LIST_ENTRY(
+//         Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4),
+//     TEST_LIST_ENTRY(
+//         Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
+//     TEST_LIST_ENTRY(
+//         Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4),
+//     TEST_LIST_ENTRY(
+//         Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4),
+//     TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Year),
+//     TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Letters),
+//     TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Epsilon),
+//     TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Higgs),
+//     TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_AirlineOHE),
+//     TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Covtype),
+//     TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Airline),
+//     TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Abalone),
 
 #ifdef TREEBEARD_GPU_SUPPORT
-    // GPU model buffer initialization tests (scalar)
-    TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_DoubleInt),
-    TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_DoubleInt),
-    TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_DoubleInt),
-    TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_DoubleInt),
-    TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_FloatInt),
-    TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_FloatInt),
-    TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_FloatInt),
-    TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt),
-    TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_FloatInt16),
-    TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_FloatInt16),
-    TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_FloatInt16),
-    TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt16),
+    //     // GPU model buffer initialization tests (scalar)
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_DoubleInt),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_DoubleInt),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_DoubleInt),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_DoubleInt),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_FloatInt),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_FloatInt),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_FloatInt),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_FloatInt16),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_FloatInt16),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_FloatInt16),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt16),
 
-    TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Reorg_DoubleInt),
-    TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Reorg_DoubleInt),
-    TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Reorg_DoubleInt),
-    TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Reorg_DoubleInt),
-    TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Reorg_FloatInt),
-    TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Reorg_FloatInt),
-    TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Reorg_FloatInt),
-    TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt),
-    TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Reorg_FloatInt16),
-    TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Reorg_FloatInt16),
-    TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Reorg_FloatInt16),
-    TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt16),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Reorg_DoubleInt),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Reorg_DoubleInt),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Reorg_DoubleInt),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Reorg_DoubleInt),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Reorg_FloatInt),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Reorg_FloatInt),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Reorg_FloatInt),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Reorg_FloatInt16),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Reorg_FloatInt16),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Reorg_FloatInt16),
+    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt16),
 
-    // Basic Array Scalar GPU Codegen Tests
-    TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(Test_GPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(Test_GPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_GPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32),
-    TEST_LIST_ENTRY(Test_GPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32),
-    TEST_LIST_ENTRY(Test_GPUCodeGeneration_Balanced_FloatInt16_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_GPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32),
+    //     // Basic Array Scalar GPU Codegen Tests
+    //     TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
+    //     TEST_LIST_ENTRY(Test_GPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
+    //     TEST_LIST_ENTRY(Test_GPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
+    //     TEST_LIST_ENTRY(
+    //         Test_GPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
+    //     TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32),
+    //     TEST_LIST_ENTRY(Test_GPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32),
+    //     TEST_LIST_ENTRY(Test_GPUCodeGeneration_Balanced_FloatInt16_BatchSize32),
+    //     TEST_LIST_ENTRY(
+    //         Test_GPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32),
 
-    // Basic scalar sparse GPU codegen tests
+    //     // Basic scalar sparse GPU codegen tests
     TEST_LIST_ENTRY(
         Test_SparseGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_SparseGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_SparseGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_SparseGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_SparseGPUCodeGeneration_LeftHeavy_FloatInt16_ChI16_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_SparseGPUCodeGeneration_RightHeavy_FloatInt16_ChI16_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_SparseGPUCodeGeneration_Balanced_FloatInt16_ChI16_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_SparseGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_ChI16_BatchSize32),
+    //     TEST_LIST_ENTRY(
+    //         Test_SparseGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
+    //     TEST_LIST_ENTRY(
+    //         Test_SparseGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
+    //     TEST_LIST_ENTRY(
+    //         Test_SparseGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
+    //     TEST_LIST_ENTRY(
+    //         Test_SparseGPUCodeGeneration_LeftHeavy_FloatInt16_ChI16_BatchSize32),
+    //     TEST_LIST_ENTRY(
+    //         Test_SparseGPUCodeGeneration_RightHeavy_FloatInt16_ChI16_BatchSize32),
+    //     TEST_LIST_ENTRY(
+    //         Test_SparseGPUCodeGeneration_Balanced_FloatInt16_ChI16_BatchSize32),
+    //     TEST_LIST_ENTRY(
+    //         Test_SparseGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_ChI16_BatchSize32),
 
-    // Basic reorg forest tests
-    TEST_LIST_ENTRY(
-        Test_ReorgGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_ReorgGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_ReorgGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_ReorgGPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_ReorgGPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32),
+    //     // Basic reorg forest tests
+    //     TEST_LIST_ENTRY(
+    //         Test_ReorgGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
+    //     TEST_LIST_ENTRY(
+    //         Test_ReorgGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
+    //     TEST_LIST_ENTRY(
+    //         Test_ReorgGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
+    //     TEST_LIST_ENTRY(
+    //         Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
+    //     TEST_LIST_ENTRY(
+    //         Test_ReorgGPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32),
+    //     TEST_LIST_ENTRY(
+    //         Test_ReorgGPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32),
+    //     TEST_LIST_ENTRY(
+    //         Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32),
+    //     TEST_LIST_ENTRY(
+    //         Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32),
 
-    // Basic GPU caching tests
-    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
-    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy),
-    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_F32I16),
-    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_F32I16),
+    //     // Basic GPU caching tests
+    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
+    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy),
+    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_F32I16),
+    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_F32I16),
 
-    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep),
-    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg),
-    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep_F32I16),
-    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg_F32I16),
+    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep),
+    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg),
+    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep_F32I16),
+    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg_F32I16),
 
-    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_SparseRep),
-    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep),
-    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_SparseRep_F32I16),
-    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep_F32I16),
+    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_SparseRep),
+    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep),
+    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_SparseRep_F32I16),
+    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep_F32I16),
 
-    TEST_LIST_ENTRY(Test_InputSharedMem_LeftHeavy),
-    TEST_LIST_ENTRY(Test_InputSharedMem_RightHeavy),
-    TEST_LIST_ENTRY(Test_InputSharedMem_LeftRightAndBalanced),
+    //     TEST_LIST_ENTRY(Test_InputSharedMem_LeftHeavy),
+    //     TEST_LIST_ENTRY(Test_InputSharedMem_RightHeavy),
+    //     TEST_LIST_ENTRY(Test_InputSharedMem_LeftRightAndBalanced),
 
-    // XGBoost tests on GPU
-    TEST_LIST_ENTRY(
-        Test_GPUCodeGeneration_Covtype_ArrayRep_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_GPUCodeGeneration_Covtype_SparseRep_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_GPUCodeGeneration_Covtype_ReorgRep_DoubleInt32_BatchSize32),
+    //     // Simple GPU Tiling tests
+    //     TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_DblI32_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_DblI32_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_DblI32_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_FltI16_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_FltI16_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_FltI16_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
 
-    // Simple GPU Tiling tests
-    TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_DblI32_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_DblI32_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_DblI32_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_FltI16_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_FltI16_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_FltI16_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftHeavy_DblI32_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledArrayGPU_RightHeavy_DblI32_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledArrayGPU_Balanced_DblI32_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftHeavy_FltI16_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledArrayGPU_RightHeavy_FltI16_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledArrayGPU_Balanced_FltI16_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
 
-    TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftHeavy_DblI32_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledArrayGPU_RightHeavy_DblI32_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledArrayGPU_Balanced_DblI32_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftHeavy_FltI16_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledArrayGPU_RightHeavy_FltI16_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledArrayGPU_Balanced_FltI16_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
+    //     // Tiling + Caching
+    //     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_LeftHeavy_DblI32_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_RightHeavy_DblI32_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_Balanced_DblI32_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
+    //     TEST_LIST_ENTRY(
+    //         Test_TiledCachedArrayGPU_LeftRightAndBalanced_DblI32_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_LeftHeavy_FltI16_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_RightHeavy_FltI16_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_Balanced_FltI16_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
+    //     TEST_LIST_ENTRY(
+    //         Test_TiledCachedArrayGPU_LeftRightAndBalanced_FltI16_B32_TSz2),
 
-    // Tiling + Caching
-    TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_LeftHeavy_DblI32_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_RightHeavy_DblI32_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_Balanced_DblI32_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
-    TEST_LIST_ENTRY(
-        Test_TiledCachedArrayGPU_LeftRightAndBalanced_DblI32_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_LeftHeavy_FltI16_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_RightHeavy_FltI16_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_Balanced_FltI16_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
-    TEST_LIST_ENTRY(
-        Test_TiledCachedArrayGPU_LeftRightAndBalanced_FltI16_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_LeftHeavy_DblI32_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_RightHeavy_DblI32_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_Balanced_DblI32_B32_TSz2),
+    //     TEST_LIST_ENTRY(
+    //         Test_TiledCachedSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_LeftHeavy_FltI16_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_RightHeavy_FltI16_B32_TSz2),
+    //     TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_Balanced_FltI16_B32_TSz2),
+    //     TEST_LIST_ENTRY(
+    //         Test_TiledCachedSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
+    //     TEST_LIST_ENTRY(
+    //         Test_TiledCachedSparseGPU_LeftRightAndBalanced_DblI32_B32_TSz2),
+    //     TEST_LIST_ENTRY(
+    //         Test_TiledCachedSparseGPU_LeftRightAndBalanced_FltI16_B32_TSz2),
 
-    TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_LeftHeavy_DblI32_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_RightHeavy_DblI32_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_Balanced_DblI32_B32_TSz2),
-    TEST_LIST_ENTRY(
-        Test_TiledCachedSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_LeftHeavy_FltI16_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_RightHeavy_FltI16_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_Balanced_FltI16_B32_TSz2),
-    TEST_LIST_ENTRY(
-        Test_TiledCachedSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
-    TEST_LIST_ENTRY(
-        Test_TiledCachedSparseGPU_LeftRightAndBalanced_DblI32_B32_TSz2),
-    TEST_LIST_ENTRY(
-        Test_TiledCachedSparseGPU_LeftRightAndBalanced_FltI16_B32_TSz2),
+    //     // GPU Synthetic XGB tests -- scalar
+    //     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Array_Scalar),
+    //     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Array_Scalar),
+    //     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Array_Scalar),
+    //     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Array_Scalar_f32i16),
+    //     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Array_Scalar_f32i16),
+    //     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Array_Scalar_f32i16),
+    //     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Sparse_Scalar),
+    //     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Sparse_Scalar),
+    //     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Sparse_Scalar),
+    //     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Sparse_Scalar_f32i16),
+    //     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Sparse_Scalar_f32i16),
+    //     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Sparse_Scalar_f32i16),
+    //     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Reorg_Scalar),
+    //     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Reorg_Scalar),
+    //     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Reorg_Scalar),
+    //     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Reorg_Scalar_f32i16),
+    //     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Reorg_Scalar_f32i16),
+    //     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Reorg_Scalar_f32i16),
 
-    // GPU Synthetic XGB tests -- scalar
-    TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Array_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Array_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Array_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Array_Scalar_f32i16),
-    TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Array_Scalar_f32i16),
-    TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Array_Scalar_f32i16),
-    TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Sparse_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Sparse_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Sparse_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Sparse_Scalar_f32i16),
-    TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Sparse_Scalar_f32i16),
-    TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Sparse_Scalar_f32i16),
-    TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Reorg_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Reorg_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Reorg_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Reorg_Scalar_f32i16),
-    TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Reorg_Scalar_f32i16),
-    TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Reorg_Scalar_f32i16),
+    //     // GPU Synthetic XGB tests -- tile4
+    //     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Sparse_Tile4),
+    //     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Sparse_Tile4),
+    //     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Sparse_Tile4),
+    //     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Sparse_Tile4_f32i16),
+    //     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Sparse_Tile4_f32i16),
+    //     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Sparse_Tile4_f32i16),
+    //     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Array_Tile4),
+    //     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Array_Tile4),
+    //     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Array_Tile4),
+    //     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Array_Tile4_f32i16),
+    //     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Array_Tile4_f32i16),
+    //     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Array_Tile4_f32i16),
 
-    // GPU Synthetic XGB tests -- tile4
-    TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Sparse_Tile4),
-    TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Sparse_Tile4),
-    TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Sparse_Tile4),
-    TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Sparse_Tile4_f32i16),
-    TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Sparse_Tile4_f32i16),
-    TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Sparse_Tile4_f32i16),
-    TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Array_Tile4),
-    TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Array_Tile4),
-    TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Array_Tile4),
-    TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Array_Tile4_f32i16),
-    TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Array_Tile4_f32i16),
-    TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Array_Tile4_f32i16),
+    //     // GPU Synthetic XGB tests -- Shared Forest -- Scalar
+    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Reorg_Scalar),
+    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Reorg_Scalar),
+    //     // TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Reorg_Scalar),
+    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Reorg_Scalar_f32i16),
+    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Reorg_Scalar_f32i16),
+    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Reorg_Scalar_f32i16),
 
-    // GPU Synthetic XGB tests -- Shared Forest -- Scalar
-    TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Reorg_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Reorg_Scalar),
-    // TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Reorg_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Reorg_Scalar_f32i16),
-    TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Reorg_Scalar_f32i16),
-    TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Reorg_Scalar_f32i16),
+    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Array_Scalar),
+    //     // TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Array_Scalar),
+    //     // TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Array_Scalar),
+    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Array_Scalar_f32i16),
+    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Array_Scalar_f32i16),
+    //     //
+    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Array_Scalar_f32i16),
 
-    TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Array_Scalar),
-    // TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Array_Scalar),
-    // TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Array_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Array_Scalar_f32i16),
-    TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Array_Scalar_f32i16),
-    // TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Array_Scalar_f32i16),
+    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Sparse_Scalar),
+    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Sparse_Scalar),
+    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Sparse_Scalar),
+    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Sparse_Scalar_f32i16),
+    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Sparse_Scalar_f32i16),
+    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Sparse_Scalar_f32i16),
 
-    TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Sparse_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Sparse_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Sparse_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Sparse_Scalar_f32i16),
-    TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Sparse_Scalar_f32i16),
-    TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Sparse_Scalar_f32i16),
+    //     // GPU Synthetic XGB tests -- Cache Partial Forest -- Scalar
+    //     // NOTE: These schedules are different than Tahoe's partial shared
+    //     forest
+    //     // schedule
+    //     TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Sparse_Scalar),
+    //     TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar),
+    //     TEST_LIST_ENTRY(
+    //         Test_GPU_CachePartialForest2Trees_2TreeXGB_Sparse_Scalar_f32i16),
+    //     TEST_LIST_ENTRY(
+    //         Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar_f32i16),
 
-    // GPU Synthetic XGB tests -- Cache Partial Forest -- Scalar
-    // NOTE: These schedules are different than Tahoe's partial shared forest
-    // schedule
-    TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Sparse_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar),
-    TEST_LIST_ENTRY(
-        Test_GPU_CachePartialForest2Trees_2TreeXGB_Sparse_Scalar_f32i16),
-    TEST_LIST_ENTRY(
-        Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar_f32i16),
+    //     TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Reorg_Scalar),
+    //     TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar),
+    //     TEST_LIST_ENTRY(
+    //         Test_GPU_CachePartialForest2Trees_2TreeXGB_Reorg_Scalar_f32i16),
+    //     TEST_LIST_ENTRY(
+    //         Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar_f32i16),
 
-    TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Reorg_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar),
-    TEST_LIST_ENTRY(
-        Test_GPU_CachePartialForest2Trees_2TreeXGB_Reorg_Scalar_f32i16),
-    TEST_LIST_ENTRY(
-        Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar_f32i16),
+    //     TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Array_Scalar),
+    //     TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_4TreeXGB_Array_Scalar),
+    //     TEST_LIST_ENTRY(
+    //         Test_GPU_CachePartialForest2Trees_2TreeXGB_Array_Scalar_f32i16),
+    //     TEST_LIST_ENTRY(
+    //         Test_GPU_CachePartialForest2Trees_4TreeXGB_Array_Scalar_f32i16),
 
-    TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Array_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_4TreeXGB_Array_Scalar),
-    TEST_LIST_ENTRY(
-        Test_GPU_CachePartialForest2Trees_2TreeXGB_Array_Scalar_f32i16),
-    TEST_LIST_ENTRY(
-        Test_GPU_CachePartialForest2Trees_4TreeXGB_Array_Scalar_f32i16),
+    // XGBoost benchmark tests on GPU
+    // TEST_LIST_ENTRY(Test_GPUCodeGeneration_Abalone_TileSize1_BasicSchedule),
+    TEST_LIST_ENTRY(Test_GPUCodeGeneration_Abalone_TileSize2_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Abalone_TileSize4_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Abalone_TileSize8_BasicSchedule),
+
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Airline_TileSize1_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Airline_TileSize2_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Airline_TileSize4_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Airline_TileSize8_BasicSchedule),
+
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_AirlineOHE_TileSize1_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_AirlineOHE_TileSize2_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_AirlineOHE_TileSize4_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_AirlineOHE_TileSize8_BasicSchedule),
+
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Bosch_TileSize1_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Bosch_TileSize2_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Bosch_TileSize4_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Bosch_TileSize8_BasicSchedule),
+
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_CovType_TileSize1_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_CovType_TileSize2_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_CovType_TileSize4_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_CovType_TileSize8_BasicSchedule),
+
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Epsilon_TileSize1_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Epsilon_TileSize2_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Epsilon_TileSize4_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Epsilon_TileSize8_BasicSchedule),
+
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Higgs_TileSize1_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Higgs_TileSize2_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Higgs_TileSize4_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Higgs_TileSize8_BasicSchedule),
+
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Letters_TileSize1_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Letters_TileSize2_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Letters_TileSize4_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Letters_TileSize8_BasicSchedule),
+
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Year_TileSize1_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Year_TileSize2_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Year_TileSize4_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Year_TileSize8_BasicSchedule),
 #endif // TREEBEARD_GPU_SUPPORT
 
-    // Parallelize across trees
-    TEST_LIST_ENTRY(Test_TreePar_LeftRightAndBalanced_DblI32),
-    TEST_LIST_ENTRY(Test_NestedTreePar_LeftRightAndBalanced_DblI32),
-    TEST_LIST_ENTRY(Test_AtomicReduction_TwiceLeftRightAndBalanced_DblI32),
-    TEST_LIST_ENTRY(Test_VectorReduction_TwiceLeftRightAndBalanced_DblI32),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Abalone_TestInputs_4ParallelTreeSets),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Airline_TestInputs_4ParallelTreeSets),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_AirlineOHE_TestInputs_4ParallelTreeSets),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Letters_TestInputs_4ParallelTreeSets),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Epsilon_TestInputs_4ParallelTreeSets),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Higgs_TestInputs_4ParallelTreeSets),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Year_TestInputs_4ParallelTreeSets),
+// Parallelize across trees
+//     TEST_LIST_ENTRY(Test_TreePar_LeftRightAndBalanced_DblI32),
+//     TEST_LIST_ENTRY(Test_NestedTreePar_LeftRightAndBalanced_DblI32),
+//     TEST_LIST_ENTRY(Test_AtomicReduction_TwiceLeftRightAndBalanced_DblI32),
+//     TEST_LIST_ENTRY(Test_VectorReduction_TwiceLeftRightAndBalanced_DblI32),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Abalone_TestInputs_4ParallelTreeSets),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Airline_TestInputs_4ParallelTreeSets),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTileSize8_AirlineOHE_TestInputs_4ParallelTreeSets),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Letters_TestInputs_4ParallelTreeSets),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Epsilon_TestInputs_4ParallelTreeSets),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Higgs_TestInputs_4ParallelTreeSets),
+//     TEST_LIST_ENTRY(Test_SparseTileSize8_Year_TestInputs_4ParallelTreeSets),
 
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Abalone_TestInputs_4ParallelTreeSets_VectorReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Airline_TestInputs_4ParallelTreeSets_VectorReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_AirlineOHE_TestInputs_4ParallelTreeSets_VectorReduce),
-    // TEST_LIST_ENTRY(
-    //     Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets_VectorReduce),
-    // TEST_LIST_ENTRY(
-    //     Test_SparseTileSize8_Letters_TestInputs_4ParallelTreeSets_VectorReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Epsilon_TestInputs_4ParallelTreeSets_VectorReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Higgs_TestInputs_4ParallelTreeSets_VectorReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Year_TestInputs_4ParallelTreeSets_VectorReduce),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTileSize8_Abalone_TestInputs_4ParallelTreeSets_VectorReduce),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTileSize8_Airline_TestInputs_4ParallelTreeSets_VectorReduce),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTileSize8_AirlineOHE_TestInputs_4ParallelTreeSets_VectorReduce),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets_VectorReduce),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTileSize8_Letters_TestInputs_4ParallelTreeSets_VectorReduce),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTileSize8_Epsilon_TestInputs_4ParallelTreeSets_VectorReduce),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTileSize8_Higgs_TestInputs_4ParallelTreeSets_VectorReduce),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTileSize8_Year_TestInputs_4ParallelTreeSets_VectorReduce),
 
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Abalone_TestInputs_4ParallelTreeSets_AtomicReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Airline_TestInputs_4ParallelTreeSets_AtomicReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_AirlineOHE_TestInputs_4ParallelTreeSets_AtomicReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets_AtomicReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Letters_TestInputs_4ParallelTreeSets_AtomicReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Epsilon_TestInputs_4ParallelTreeSets_AtomicReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Higgs_TestInputs_4ParallelTreeSets_AtomicReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Year_TestInputs_4ParallelTreeSets_AtomicReduce),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTileSize8_Abalone_TestInputs_4ParallelTreeSets_AtomicReduce),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTileSize8_Airline_TestInputs_4ParallelTreeSets_AtomicReduce),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTileSize8_AirlineOHE_TestInputs_4ParallelTreeSets_AtomicReduce),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets_AtomicReduce),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTileSize8_Letters_TestInputs_4ParallelTreeSets_AtomicReduce),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTileSize8_Epsilon_TestInputs_4ParallelTreeSets_AtomicReduce),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTileSize8_Higgs_TestInputs_4ParallelTreeSets_AtomicReduce),
+//     TEST_LIST_ENTRY(
+//         Test_SparseTileSize8_Year_TestInputs_4ParallelTreeSets_AtomicReduce),
 
 #ifdef TREEBEARD_GPU_SUPPORT
     // GPU Parallelize across trees

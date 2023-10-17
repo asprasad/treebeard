@@ -397,6 +397,7 @@ void GpuToLLVMConversionPass::runOnOperation() {
   populateVectorToLLVMConversionPatterns(converter, patterns);
   populateMemRefToLLVMConversionPatterns(converter, patterns);
   populateFuncToLLVMConversionPatterns(converter, patterns);
+  populateMathToLLVMConversionPatterns(converter, patterns);
   populateAsyncStructuralTypeConversionsAndLegality(converter, patterns,
                                                     target);
   populateGpuToLLVMConversionPatterns(converter, patterns, gpuBinaryAnnotation);
