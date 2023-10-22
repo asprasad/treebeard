@@ -796,6 +796,10 @@ bool Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Tile4(
 bool Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Tile4_f32i16(
     TestArgs_t &args);
 
+// GPU Tree parallelization - Shared reduce
+bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SharedReduce_FltI16_B64(
+    TestArgs_t &args);
+
 void InitializeVectorWithRandValues(std::vector<double> &vec) {
   for (size_t i = 0; i < vec.size(); ++i)
     vec[i] = (double)rand() / RAND_MAX;
@@ -2327,6 +2331,8 @@ TestDescriptor testList[] = {
 #else  // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
+    TEST_LIST_ENTRY(
+        Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SharedReduce_FltI16_B64),
     // Parallelize across trees
     // TEST_LIST_ENTRY(Test_TreePar_LeftRightAndBalanced_DblI32),
     // TEST_LIST_ENTRY(Test_NestedTreePar_LeftRightAndBalanced_DblI32),
@@ -2334,10 +2340,10 @@ TestDescriptor testList[] = {
     // TEST_LIST_ENTRY(
     //     Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Array_Scalar),
 
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets_AtomicReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Letters_TestInputs_4ParallelTreeSets_AtomicReduce),
+    // TEST_LIST_ENTRY(
+    //     Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets_AtomicReduce),
+    // TEST_LIST_ENTRY(
+    //     Test_SparseTileSize8_Letters_TestInputs_4ParallelTreeSets_AtomicReduce),
     // TEST_LIST_ENTRY(Test_VectorReduction_TwiceLeftRightAndBalanced_DblI32),
     // TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_DblI32_B32_TSz2),
     // TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_DblI32_B32_TSz2),

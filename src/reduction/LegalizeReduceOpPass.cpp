@@ -36,6 +36,8 @@ namespace decisionforest {
 Value SumOfValues(ConversionPatternRewriter &rewriter, Location location,
                   std::list<Value> &values);
 
+bool isThreadLoop(scf::ParallelOp parallelOp);
+
 std::vector<scf::ParallelOp>
 getConflictingLoops(decisionforest::ReduceOp reduceOp) {
   std::vector<scf::ParallelOp> conflictingLoops;
@@ -60,6 +62,17 @@ Operation *getOutermostTreeLoopOp(decisionforest::ReduceOp reduceOp) {
   }
   assert(outermostTreeLoopOp && "Outermost tree loop not found");
   return outermostTreeLoopOp;
+}
+
+scf::ParallelOp getOutermostSurroundingParallelLoopOp(Operation *op) {
+  auto owningOp = op->getParentOfType<scf::ParallelOp>();
+  auto outermostParallelLoopOp = owningOp;
+  while (owningOp) {
+    outermostParallelLoopOp = owningOp;
+    owningOp = owningOp->getParentOfType<scf::ParallelOp>();
+  }
+  assert(outermostParallelLoopOp && "Outermost tree loop not found");
+  return outermostParallelLoopOp;
 }
 
 std::list<Value> getSurroundingBatchLoopIndices(Operation *op) {
@@ -125,6 +138,11 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
     return static_cast<bool>(attr);
   }
 
+  bool isSharedReduce(scf::ParallelOp loop) const {
+    auto attr = loop->getAttr("sharedReduce");
+    return static_cast<bool>(attr);
+  }
+
   MemRefType constructPrivatizedBufferType(
       Type origBufferType, Type inputValueType,
       decisionforest::ReduceOp reduceOp,
@@ -148,9 +166,16 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
               .getInt());
     }
 
+    uint32_t memorySpace = 0;
+    if (conflictingLoops.size() != 0 &&
+        isSharedReduce(conflictingLoops.front())) {
+      assert(conflictingLoops.size() == 1);
+      assert(isThreadLoop(conflictingLoops.front()));
+      memorySpace = 3;
+    }
     assert(inputValueType.isF32() || inputValueType.isF64());
     auto privatizedBufferType =
-        MemRefType::get(privatizedShape, inputValueType);
+        MemRefType::get(privatizedShape, inputValueType, {}, memorySpace);
 
     return privatizedBufferType;
   }
@@ -173,6 +198,49 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
     rewriter.create<linalg::FillOp>(location, zero, allocatedMemref);
   }
 
+  Value addPrivatizedSharedMemoryBuffer(
+      ConversionPatternRewriter &rewriter, Location location,
+      MemRefType privatizedBufferType,
+      const std::vector<scf::ParallelOp> &conflictingLoops) const {
+    std::string privatizedBufferName =
+        "privatizedBuffer_" +
+        std::to_string((intptr_t)privatizedBufferType.getAsOpaquePointer());
+    {
+      decisionforest::helpers::SaveAndRestoreInsertionPoint saveIP(rewriter);
+      // Set insertion point to start of module
+      auto module =
+          rewriter.getInsertionBlock()->front().getParentOfType<ModuleOp>();
+      rewriter.setInsertionPointToStart(module.getBody());
+
+      // Create a global with the privatized buffer type
+      auto sharedMemBuffer = rewriter.create<memref::GlobalOp>(
+          location, privatizedBufferName, rewriter.getStringAttr("private"),
+          privatizedBufferType, rewriter.getUnitAttr(), false /*const*/,
+          IntegerAttr() /*alignment*/);
+    }
+    {
+      decisionforest::helpers::SaveAndRestoreInsertionPoint saveIP(rewriter);
+      // Set insertion point to start of outermost conflicting loop
+      auto outermostLoop =
+          getOutermostSurroundingParallelLoopOp(conflictingLoops.back());
+      rewriter.setInsertionPointToStart(outermostLoop.getBody());
+      // Get the global
+      auto privatizedBuffer = rewriter.create<memref::GetGlobalOp>(
+          location, privatizedBufferType, privatizedBufferName);
+      {
+        // TODO_Ashwin this needs to be inserted into the innermost GPU loop
+        // Somehow, the parfor to GPU pass is not able to handle it otherwise.
+        auto innermostConflictingLoop = conflictingLoops.front();
+        rewriter.setInsertionPointToStart(innermostConflictingLoop.getBody());
+        // Initialize the privatized buffer
+        auto initBuffer = rewriter.create<decisionforest::InitializeMemrefOp>(
+            location, privatizedBuffer.getResult(),
+            rewriter.getF64FloatAttr(0.0));
+      }
+      return privatizedBuffer;
+    }
+  }
+
   Value createOrGetPrivatizedBuffer(Value originalBuffer, Value inputValue,
                                     decisionforest::ReduceOp reduceOp,
                                     const std::vector<scf::ParallelOp> &loops,
@@ -189,10 +257,16 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
 
     auto privatizedBufferType = constructPrivatizedBufferType(
         originalBuffer.getType(), inputValue.getType(), reduceOp, loops);
-    auto privatizedBuffer = rewriter.create<memref::AllocaOp>(
-        originalBuffer.getLoc(), privatizedBufferType);
-    initializePrivatizedBuffer(privatizedBuffer, privatizedBufferType, rewriter,
-                               originalBuffer.getLoc());
+    Value privatizedBuffer;
+    if (privatizedBufferType.getMemorySpaceAsInt() != 3) {
+      privatizedBuffer = rewriter.create<memref::AllocaOp>(
+          originalBuffer.getLoc(), privatizedBufferType);
+      initializePrivatizedBuffer(privatizedBuffer, privatizedBufferType,
+                                 rewriter, originalBuffer.getLoc());
+    } else {
+      privatizedBuffer = addPrivatizedSharedMemoryBuffer(
+          rewriter, originalBuffer.getLoc(), privatizedBufferType, loops);
+    }
     addPrivatization(originalBuffer, privatizedBuffer);
     return privatizedBuffer;
   }
@@ -294,6 +368,11 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
     auto vectorAttr = conflictingLoop->getAttr("vectorReduce");
     if (vectorAttr) {
       reduceDimOp->setAttr("vectorReduce", vectorAttr);
+    }
+
+    auto sharedReduceAttr = conflictingLoop->getAttr("sharedReduce");
+    if (sharedReduceAttr) {
+      reduceDimOp->setAttr("sharedReduce", sharedReduceAttr);
     }
   }
 

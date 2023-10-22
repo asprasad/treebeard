@@ -59,6 +59,7 @@ mlir::ModuleOp LowerHIRModuleToGPU(mlir::ModuleOp module,
 
   mlir::decisionforest::lowerReductionsAndCanonicalize(context, module);
   // module->dump();
+  // return module;
 
   // Commenting since previous pass runs canonicalizer
   // decisionforest::RunCanonicalizerPass(context, module);

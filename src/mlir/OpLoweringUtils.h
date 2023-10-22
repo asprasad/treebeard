@@ -13,14 +13,23 @@ template <typename T> T AssertOpIsOfType(mlir::Operation *operation) {
   return typedOp;
 }
 
-inline int64_t GetConstantIntValueFromMLIRValue(mlir::Value val) {
+inline bool isContantInt(mlir::Value val, int64_t &value) {
   auto definingOp = val.getDefiningOp();
   llvm::APInt constIntVal;
   mlir::detail::constant_int_op_binder binder(&constIntVal);
   bool match = binder.match(definingOp);
-  assert(match);
-  return constIntVal.getLimitedValue();
+  value = constIntVal.getLimitedValue();
+  return match;
 }
+
+inline int64_t GetConstantIntValueFromMLIRValue(mlir::Value val) {
+  int64_t value;
+  auto match = isContantInt(val, value);
+  assert(match);
+  return value;
+}
+
+int64_t getConstantStepBetweenValues(mlir::Value start, mlir::Value end);
 
 inline bool isLoopRangeOne(mlir::Value start, mlir::Value end) {
   if (start.getDefiningOp() && end.getDefiningOp() &&

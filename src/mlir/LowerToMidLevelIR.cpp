@@ -207,6 +207,12 @@ template <typename LoopType> struct LoopConstructor {
       loop->setAttr("vectorReduce",
                     m_rewriter.getI32IntegerAttr(indexVar.VectorReduceWidth()));
     }
+    if (indexVar.SharedReduce()) {
+      // Shared reduce is only supported for thread block loops.
+      assert(indexVar.GetGPUDimension().construct ==
+             decisionforest::IndexVariable::GPUConstruct::ThreadBlock);
+      loop->setAttr("sharedReduce", m_rewriter.getUnitAttr());
+    }
   }
 
   LoopConstructor(

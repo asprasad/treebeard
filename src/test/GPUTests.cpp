@@ -1898,6 +1898,45 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_IterShdPartialForest_FltI16_B32
       scheduleManipulator);
 }
 
+// ===------------------------------------------------------------=== //
+// GPU Sparse Representation -
+// iterativeCachedPartialForestStrategy_NoCache_SharedReduce strategy
+// ===------------------------------------------------------------=== //
+bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SharedReduce_FltI16_B64(
+    TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  using ThresholdType = float;
+  using IndexType = int16_t;
+
+  int32_t batchSize = 64;
+  int32_t numRowsPerBlock = 4, numTreesPerIter = 3;
+  ForestConstructor_t forestConstructor =
+      AddRightLeftAndBalancedTreesTwice<DoubleInt32Tile>;
+  auto serializer =
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath);
+  auto representation =
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse");
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+  FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType,
+                         ThresholdType>
+      irConstructor(context, serializer, batchSize, forestConstructor);
+  std::function<void(decisionforest::Schedule &)> scheduleManipulator =
+      std::bind(decisionforest::
+                    iterativeCachedPartialForestStrategy_NoCache_SharedReduce,
+                std::placeholders::_1, numTreesPerIter, numRowsPerBlock);
+  return VerifyGPUCodeGeneration<ThresholdType, IndexType>(
+      args, batchSize, irConstructor, serializer, representation,
+      1,  // Tile size
+      16, // Tile shape width
+      16, // child index width
+      scheduleManipulator);
+}
+
 } // namespace test
 } // namespace TreeBeard
 

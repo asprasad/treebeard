@@ -7,22 +7,34 @@ namespace mlir {
 namespace decisionforest {
 
 void GPUBasicSchedule(decisionforest::Schedule &schedule, int32_t gridXSize);
+
 void TahoeSharedForestStrategy(decisionforest::Schedule &schedule,
                                int32_t rowsPerThreadBlock);
+
 void TahoeSharedDataStrategy_Modified(decisionforest::Schedule &schedule,
                                       int32_t rowsPerThreadBlock);
+
 void TahoeSharedDataStrategy(decisionforest::Schedule &schedule);
+
 void tahoeSharedDataStrategy_MultipleRowsPerBlock(
     decisionforest::Schedule &schedule, int32_t numRowsPerBlock);
+
 void iterativeCachedPartialForestStrategy(decisionforest::Schedule &schedule,
                                           int32_t treesPerIteration,
                                           int32_t rowsPerThreadBlock);
+
 void iterativeCachedPartialForestStrategy_NoCache(
     decisionforest::Schedule &schedule, int32_t treesPerIteration,
     int32_t rowsPerThreadBlock);
+
+void iterativeCachedPartialForestStrategy_NoCache_SharedReduce(
+    decisionforest::Schedule &schedule, int32_t treesPerIteration,
+    int32_t rowsPerThreadBlock);
+
 void TahoeSharedPartialForestStrategy(decisionforest::Schedule &schedule,
                                       int32_t treesPerThreadBlock,
                                       int32_t rowsPerThreadBlock);
+
 void CachePartialForestStrategy(decisionforest::Schedule &schedule,
                                 int32_t treesToCache,
                                 int32_t rowsPerThreadBlock);

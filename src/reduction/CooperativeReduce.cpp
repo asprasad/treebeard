@@ -40,6 +40,34 @@ struct ReduceToCooperativeReduceOp : public ConversionPattern {
             mlir::decisionforest::ReduceDimensionOp::getOperationName(),
             1 /*benefit*/, ctx) {}
 
+  std::vector<scf::ParallelOp>
+  getNestedBlockLoops(scf::ParallelOp reductionLoop) const {
+    std::vector<scf::ParallelOp> blockLoops;
+    // iterate over the ops in reductionLoop and push any block loops into
+    // blockLoops
+    reductionLoop->walk([&](scf::ParallelOp parFor) {
+      if (parFor != reductionLoop && decisionforest::isThreadLoop(parFor)) {
+        blockLoops.push_back(parFor);
+      }
+    });
+    return blockLoops;
+  }
+
+  void orderBlockLoops(std::vector<scf::ParallelOp> &blockLoops) const {
+    // Sort the block loops in the order of their mapping attribute (x, y, z)
+    std::sort(blockLoops.begin(), blockLoops.end(),
+              [](scf::ParallelOp a, scf::ParallelOp b) {
+                auto firstMappingAttr = getMappingAttr(a);
+                auto secondMappingAttr = getMappingAttr(b);
+                assert(isThreadLoop(a) && isThreadLoop(b) &&
+                       "Expected thread loops");
+                assert(firstMappingAttr && secondMappingAttr &&
+                       "Expected mapping attrs");
+                return static_cast<int>(firstMappingAttr.getProcessor()) <
+                       static_cast<int>(secondMappingAttr.getProcessor());
+              });
+  }
+
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
@@ -62,12 +90,17 @@ struct ReduceToCooperativeReduceOp : public ConversionPattern {
     } while (opIt != op->getBlock()->rend());
     assert(reductionTreeLoop && "No parallel loop found for reduction op");
     // Find the parent parallel loops for this op which correspond to block dims
-    std::vector<scf::ParallelOp> blockLoops;
+    std::vector<scf::ParallelOp> blockLoops =
+        getNestedBlockLoops(reductionTreeLoop);
+    blockLoops.push_back(reductionTreeLoop);
     auto parentOp = reductionTreeLoop->getParentOfType<scf::ParallelOp>();
     while (parentOp && decisionforest::isThreadLoop(parentOp)) {
       blockLoops.insert(blockLoops.begin(), parentOp);
       parentOp = parentOp->getParentOfType<scf::ParallelOp>();
     }
+
+    orderBlockLoops(blockLoops);
+
     // Say this loops bounds are s_t and e_t
     // Find the parent parallel loops for this op which correspond to block dims
     // Say this loops indices and steps are i0, i1... and s0, s1 ...
@@ -76,15 +109,17 @@ struct ReduceToCooperativeReduceOp : public ConversionPattern {
     auto location = op->getLoc();
     std::vector<Value> startIndices, endIndices;
     for (auto blockLoop : blockLoops) {
-      startIndices.push_back(blockLoop.getInductionVars()[0]);
-      auto endIndex = rewriter.create<arith::AddIOp>(
-          location, blockLoop.getInductionVars()[0], blockLoop.getStep()[0]);
-      endIndices.push_back(endIndex);
+      if (blockLoop == reductionTreeLoop) {
+        // Add the start and end indices for the reduction tree loop
+        startIndices.push_back(reductionTreeLoop.getLowerBound()[0]);
+        endIndices.push_back(reductionTreeLoop.getUpperBound()[0]);
+      } else {
+        startIndices.push_back(blockLoop.getInductionVars()[0]);
+        auto endIndex = rewriter.create<arith::AddIOp>(
+            location, blockLoop.getInductionVars()[0], blockLoop.getStep()[0]);
+        endIndices.push_back(endIndex);
+      }
     }
-    // Add the start and end indices for the reduction tree loop
-    startIndices.push_back(reductionTreeLoop.getLowerBound()[0]);
-    endIndices.push_back(reductionTreeLoop.getUpperBound()[0]);
-
     // Add 0, 1 pairs as required
     while (startIndices.size() < 3) {
       // Push consts 0 and 1 into start and end respectively

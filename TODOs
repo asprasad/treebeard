@@ -15,6 +15,21 @@
 * Reduction
     - Final implementation of reductions is not optimized (even on CPU)
         - Doesn't use shuffle, atomics, shared memory etc
+            - Shared memory
+                - [Assume] No splitting of trees across TBs -- so write back results at the end of kernel
+                - [Assume] Each thread processes single row
+                    - If the #rows per thread != 1, then we need to add a dim #rows per thread = (#rows per thread block/#threads in row direction)
+                    - Also, each threads needs to iterate over #rows reductions (which should not be very different than single row)
+                - Write partial results from each thread to shared memory (one shared memory element for each thread)
+                - After every thread is done computing, TB wide reduction 
+                    - Do tree reduction in shared mem among threads that process same row.
+                - Implementation
+                    - Add to schedule
+                    - Add attributes to loops
+                    - Ops to reduction dialect (Shared memory reduce .. do we need an inplace variant?)
+                    - Lowering of non-inplace version
+                    - Lowering of inplace version
+                        - How does arg max work with shared memory?
         - May not be making the best use of threads (one thread is computing one full reduction)
     - No schedule support to control reduction code generation
     - [GPU] We need some way to decide whether reductions will be cooperative or whether one thread will do one full reduction
@@ -33,10 +48,11 @@
 -----------------------
 **ISSUES**
 -------------------
+- **BUG** [Reduce] While computing row ranges for reduce ops on GPU, we're not considering all block loops as equivalent (loops are being traversed as nested)
+- **BUG** [Tiling] Not checking bounds while expanding the number of accessed rows
+- **BUG** [Tiling] Assuming that all threads always access different rows and same tree. Need to analyze if one or more thread block dimensions traverse rows. Only generate SIMT traverse for the appropriate dimensions
+- **BUG** [Tiling] Need to check if walk divergence is possible before rewriting to SIMT
 - [Fixed] **BUG** Not waiting for traverses to finish before overwriting cache (need to insert a barrier before writing into the cache)
-- **BUG** Not checking bounds while expanding the number of accessed rows
-- **BUG** Assuming that all threads always access different rows and same tree. Need to analyze if one or more thread block dimensions traverse rows. Only generate SIMT traverse for the appropriate dimensions
-- **BUG** Need to check if walk divergence is possible before rewriting to SIMT
 
 -----------------------
 **NOTES**

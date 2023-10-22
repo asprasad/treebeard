@@ -321,6 +321,15 @@ def AtomicReduceDimensionOp : DecisionForest_Op<"atomic_reduce_dimension", [Attr
                        F64Attr:$initialValue);
 }
 
+def InitializeMemrefOp : DecisionForest_Op<"initialize_memref"> {
+  let summary = "Initialize all elements of a memref with the specified initial value";
+  let description = "Initialize all elements of a memref with the specified initial value";
+
+  let arguments = (ins TargetMemrefType:$targetMemref,
+                       F64Attr:$initialValue);
+
+}
+
 // ----- Mid-level IR Ops ------
 
 def ThresholdValueType : AnyTypeOf<[F16, F32, F64]>;

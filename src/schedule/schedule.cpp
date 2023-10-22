@@ -326,6 +326,12 @@ Schedule &Schedule::VectorReduce(IndexVariable &index, int32_t width) {
   return *this;
 }
 
+Schedule &Schedule::SharedReduce(IndexVariable &index) {
+  assert(index.m_type == IndexVariable::IndexVariableType::kTree);
+  index.m_sharedReduce = true;
+  return *this;
+}
+
 void IndexVariable::Visit(IndexDerivationTreeVisitor &visitor) {
   visitor.VisitIndexVariable(*this);
 }
