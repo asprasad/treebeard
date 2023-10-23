@@ -462,6 +462,11 @@ struct ReduceDimensionOpLowering : public ConversionPattern {
     auto reduceOp = AssertOpIsOfType<decisionforest::ReduceDimensionOp>(op);
     auto location = reduceOp.getLoc();
 
+    // TODO_Ashwin offsets not yet supported here. Probably not needed for CPU?
+    auto targetOffsets = reduceOp.getTargetMemrefOffsets();
+    assert(targetOffsets.size() == 0 &&
+           "Offsets not yet supported for ReduceDimensionOp");
+
     // The values for the outer indices. These are fixed
     auto preReducedDimStart = reduceOp.getPreReductionDimensionStart();
     auto preReducedDimEnd = reduceOp.getPreReductionDimensionEnd();
@@ -614,7 +619,7 @@ struct CooperativeReduceDimensionOpLowering : public ConversionPattern {
                               getOperationName(),
                           1 /*benefit*/, ctx) {}
 
-  std::tuple<Value, Value> generateLocalThreadId(
+  std::tuple<Value, Value, int64_t> generateLocalThreadId(
       Location location, ConversionPatternRewriter &rewriter,
       decisionforest::CooperativeReduceDimensionOp reduceOp) const {
 
@@ -631,15 +636,11 @@ struct CooperativeReduceDimensionOpLowering : public ConversionPattern {
     assert(startZ == 0 && endZ == 1 &&
            "Only 2D thread blocks supported for now");
 
-    // std::cout << "X Size = "
-    //           << getConstantStepBetweenValues(reduceOp.getBlockXStart(),
-    //                                           reduceOp.getBlockXEnd())
-    //           << "\n";
+    auto xSize = getConstantStepBetweenValues(reduceOp.getBlockXStart(),
+                                              reduceOp.getBlockXEnd());
 
-    // std::cout << "Y Size = "
-    //           << getConstantStepBetweenValues(reduceOp.getBlockYStart(),
-    //                                           reduceOp.getBlockYEnd())
-    //           << "\n";
+    auto ySize = getConstantStepBetweenValues(reduceOp.getBlockYStart(),
+                                              reduceOp.getBlockYEnd());
 
     auto numThreadsX = rewriter.create<arith::SubIOp>(
         location, reduceOp.getBlockXEnd(), reduceOp.getBlockXStart());
@@ -654,7 +655,115 @@ struct CooperativeReduceDimensionOpLowering : public ConversionPattern {
     auto numThreads = rewriter.create<arith::MulIOp>(
         location, numThreadsX, static_cast<Value>(numThreadsY));
 
-    return std::make_tuple(localThreadId, numThreads);
+    return std::make_tuple(localThreadId, numThreads, xSize * ySize);
+  }
+
+  void generateCooperativeThreadReductionStrategy(
+      Location location, ConversionPatternRewriter &rewriter,
+      Value sourceMemref, Value targetMemref, Value localThreadId,
+      Value numThreads, const std::vector<Value> &rangeStartVec,
+      const std::vector<Value> &rangeEndVec, int64_t reductionDimVal,
+      decisionforest::CooperativeReduceDimensionOp reduceOp,
+      int64_t numThreadsVal, int64_t numRowsToProcess) const {
+    assert(numRowsToProcess < numThreadsVal);
+    assert(numThreadsVal % numRowsToProcess ==
+           0); // Each reduction must have a fixed number of threads
+    auto threadsPerReductionVal = numThreadsVal / numRowsToProcess;
+    auto threadsPerReduction = rewriter.create<arith::ConstantIndexOp>(
+        location, threadsPerReductionVal);
+
+    auto reductionDimSize =
+        sourceMemref.getType().cast<MemRefType>().getDimSize(reductionDimVal);
+
+    auto rowOffsetForThread = rewriter.create<arith::FloorDivSIOp>(
+        location, localThreadId, threadsPerReduction);
+    auto rowIndexForThread = rewriter.create<arith::AddIOp>(
+        location, rowOffsetForThread, rangeStartVec[0]);
+
+    auto threadIndexInReductionGroup = rewriter.create<arith::RemSIOp>(
+        location, localThreadId, threadsPerReduction);
+
+    if (reductionDimSize > threadsPerReductionVal) {
+      // Generate a loop to reduce reductionDimSize/threadsPerReduction elems
+      // Generate a tree based reduce for the threadsPerReduction elems
+      llvm::errs() << "Not implemented!\n";
+    } else {
+      // Generate a tree based reduce for the reductionDimSize elems
+      auto numStages = std::ceil(std::log2(reductionDimSize));
+      auto reductionDimSizeConst =
+          rewriter.create<arith::ConstantIndexOp>(location, reductionDimSize);
+      auto stageSize = 1;
+      for (auto stage = 0; stage < numStages; ++stage) {
+        auto stageSizeConst =
+            rewriter.create<arith::ConstantIndexOp>(location, stageSize);
+        auto reductionDimIndex = rewriter.create<arith::AddIOp>(
+            location, threadIndexInReductionGroup, stageSizeConst);
+        auto cmpOp = rewriter.create<arith::CmpIOp>(
+            location, arith::CmpIPredicate::slt, reductionDimIndex,
+            reductionDimSizeConst);
+        auto ifOp = rewriter.create<scf::IfOp>(location, cmpOp, false);
+        {
+          auto ifBodyBuilder = ifOp.getThenBodyBuilder();
+          std::vector<Value> memrefIndex{threadIndexInReductionGroup,
+                                         rowIndexForThread},
+              otherValIndex{reductionDimIndex, rowIndexForThread};
+          auto loadVal = ifBodyBuilder.create<memref::LoadOp>(
+              location, sourceMemref, memrefIndex);
+          auto otherVal = ifBodyBuilder.create<memref::LoadOp>(
+              location, sourceMemref, otherValIndex);
+          auto sum =
+              ifBodyBuilder.create<arith::AddFOp>(location, loadVal, otherVal);
+          ifBodyBuilder.create<memref::StoreOp>(location, sum, sourceMemref,
+                                                memrefIndex);
+        }
+        rewriter.create<gpu::BarrierOp>(location);
+        stageSize *= 2;
+      }
+      // if thread's reduction group offset is 0, write the result
+      auto zeroIndexConst =
+          rewriter.create<arith::ConstantIndexOp>(location, 0);
+      auto cmpOp = rewriter.create<arith::CmpIOp>(
+          location, arith::CmpIPredicate::eq, threadIndexInReductionGroup,
+          zeroIndexConst);
+      auto ifOp = rewriter.create<scf::IfOp>(location, cmpOp, false);
+      {
+        auto ifBodyBuilder = ifOp.getThenBodyBuilder();
+        std::vector<Value> memrefIndex{threadIndexInReductionGroup,
+                                       rowIndexForThread};
+        auto loadVal = ifBodyBuilder.create<memref::LoadOp>(
+            location, sourceMemref, memrefIndex);
+        // TODO_Ashwin need to add the initial value here
+        // Get the value of the initial value attr
+        auto initialValAttr = reduceOp.getInitialValue().convertToDouble();
+        auto initialValConst = decisionforest::createFloatConst(
+            location, ifBodyBuilder,
+            sourceMemref.getType().cast<MemRefType>().getElementType(),
+            initialValAttr);
+        auto sum = ifBodyBuilder.create<arith::AddFOp>(location, loadVal,
+                                                       initialValConst);
+        // ifBodyBuilder.create<memref::StoreOp>(location, sum.getResult(),
+        //                                       targetMemref,
+        //                                       ValueRange{rowIndexForThread});
+        auto targetMemrefOffset = reduceOp.getTargetMemrefOffsets();
+        if (targetMemrefOffset.size() == 0) {
+          // Write value to target memref
+          std::vector<Value> resultIndex{rowIndexForThread};
+          ifBodyBuilder.create<memref::StoreOp>(location, sum.getResult(),
+                                                targetMemref, resultIndex);
+        } else {
+          // TODO_Ashwin need to handle case where there is more than one offset
+          // here Is it needed though? We'll have to write all class values
+          // anyway
+          assert(targetMemrefOffset.size() == 1);
+          // actual index = threadIndex + targetMemrefOffset[0]
+          auto actualIndex = ifBodyBuilder.create<arith::AddIOp>(
+              location, rowIndexForThread, targetMemrefOffset[0]);
+          std::vector<Value> resultIndex{actualIndex};
+          ifBodyBuilder.create<memref::StoreOp>(location, sum.getResult(),
+                                                targetMemref, resultIndex);
+        }
+      }
+    }
   }
 
   void generateSingleThreadReductionStrategy(
@@ -669,11 +778,22 @@ struct CooperativeReduceDimensionOpLowering : public ConversionPattern {
                                             rangeEndVec[0], numThreads);
     rewriter.setInsertionPointToStart(loop.getBody());
     auto loopIV = loop.getInductionVar();
-    auto threadIndex =
+    auto threadIndexAddOp =
         rewriter.create<arith::AddIOp>(location, loopIV, localThreadId);
+    Value threadIndex = threadIndexAddOp.getResult();
+    auto targetMemrefOffset = reduceOp.getTargetMemrefOffsets();
+    if (targetMemrefOffset.size() != 0) {
+      // TODO_Ashwin need to handle case where there is more than one offset
+      // here Is it needed though? We'll have to write all class values anyway
+      assert(targetMemrefOffset.size() == 1);
+      auto privatizedBufferIndex = rewriter.create<arith::SubIOp>(
+          location, threadIndex, targetMemrefOffset[0]);
+      threadIndex = privatizedBufferIndex.getResult();
+    }
     // // if (threadIndex < end[0])
     auto cmpOp = rewriter.create<arith::CmpIOp>(
-        location, arith::CmpIPredicate::slt, threadIndex, rangeEndVec[0]);
+        location, arith::CmpIPredicate::slt, threadIndexAddOp.getResult(),
+        rangeEndVec[0]);
     auto ifOp = rewriter.create<scf::IfOp>(location, cmpOp,
                                            /*hasElseRegion=*/false);
     {
@@ -703,11 +823,26 @@ struct CooperativeReduceDimensionOpLowering : public ConversionPattern {
           location, loadVal.getResult(), accumulator);
       ifBodyBuilder.create<scf::YieldOp>(location, addVal.getResult());
       ifBodyBuilder.setInsertionPointAfter(reductionLoop);
+      // if (targetMemrefOffset.size() == 0) {
       // Write value to target memref
-      std::vector<Value> resultIndex{threadIndex};
+      std::vector<Value> resultIndex{threadIndexAddOp.getResult()};
       ifBodyBuilder.create<memref::StoreOp>(location,
                                             reductionLoop.getResults().front(),
                                             targetMemref, resultIndex);
+      // ifBodyBuilder.create<gpu::PrintfOp>(
+      //     location, "Result index = %ld\n",
+      //     ValueRange{threadIndexAddOp.getResult()});
+
+      // } else {
+      //   // actual index = threadIndex + targetMemrefOffset[0]
+      //   std::vector<Value> resultIndex{actualIndex};
+      //   // Print the result index
+      //   ifBodyBuilder.create<gpu::PrintfOp>(location, "Result index = %ld\n",
+      //                                       ValueRange{actualIndex});
+      //   ifBodyBuilder.create<memref::StoreOp>(
+      //       location, reductionLoop.getResults().front(), targetMemref,
+      //       resultIndex);
+      // }
     }
   }
 
@@ -717,6 +852,8 @@ struct CooperativeReduceDimensionOpLowering : public ConversionPattern {
     auto reduceOp =
         AssertOpIsOfType<decisionforest::CooperativeReduceDimensionOp>(op);
     auto location = reduceOp.getLoc();
+
+    auto targetMemrefOffsets = reduceOp.getTargetMemrefOffsets();
 
     // The values for the outer indices. These are fixed
     auto reducedDims = reduceOp.getReducedDimensions();
@@ -746,11 +883,27 @@ struct CooperativeReduceDimensionOpLowering : public ConversionPattern {
         generateLocalThreadId(location, rewriter, reduceOp);
     auto localThreadId = std::get<0>(localThreadIdAndNumThreads);
     auto numThreads = std::get<1>(localThreadIdAndNumThreads);
+    auto numThreadsVal = std::get<2>(localThreadIdAndNumThreads);
 
     rewriter.create<gpu::BarrierOp>(location);
-    generateSingleThreadReductionStrategy(
-        location, rewriter, sourceMemref, targetMemref, localThreadId,
-        numThreads, rangeStartVec, rangeEndVec, reductionDimVal, reduceOp);
+
+    // if the number of reductions to perform is greater than
+    // the number of threads, then use the single thread reduction strategy
+    // (Each thread fully performs a single reduction)
+    auto numRowsToProcess =
+        getConstantStepBetweenValues(rangeStartVec[0], rangeEndVec[0]);
+
+    if (true) // (numRowsToProcess >= numThreadsVal)
+      generateSingleThreadReductionStrategy(
+          location, rewriter, sourceMemref, targetMemref, localThreadId,
+          numThreads, rangeStartVec, rangeEndVec, reductionDimVal, reduceOp);
+    else
+      // TODO_Ashwin this needs to change to a more cooperative strategy
+      generateCooperativeThreadReductionStrategy(
+          location, rewriter, sourceMemref, targetMemref, localThreadId,
+          numThreads, rangeStartVec, rangeEndVec, reductionDimVal, reduceOp,
+          numThreadsVal, numRowsToProcess);
+
     // rewriter.setInsertionPointAfter(loop);
     rewriter.eraseOp(op);
     return mlir::success();

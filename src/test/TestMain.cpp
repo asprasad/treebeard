@@ -2325,6 +2325,8 @@ TestDescriptor testList[] = {
         Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Tile4),
     TEST_LIST_ENTRY(
         Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Tile4_f32i16),
+    TEST_LIST_ENTRY(
+        Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SharedReduce_FltI16_B64),
 #endif // TREEBEARD_GPU_SUPPORT
 };
 

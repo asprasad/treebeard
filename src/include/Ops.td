@@ -258,6 +258,7 @@ def ReduceDimensionOp : DecisionForest_Op<"reduce_dimension", [AttrSizedOperandS
   let arguments = (ins ReductionTypeAttr:$reductionType,
                        TargetMemrefType:$targetMemref,
                        TargetMemrefType:$sourceMemref,
+                       Variadic<Index>:$targetMemrefOffsets,
                        Variadic<Index>:$mappedDimensions,
                        Variadic<Index>:$preReductionDimensionStart,
                        Variadic<Index>:$preReductionDimensionEnd,
@@ -291,6 +292,7 @@ def CooperativeReduceDimensionOp : DecisionForest_Op<"cooperative_reduce_dimensi
 
   let arguments = (ins TargetMemrefType:$targetMemref,
                        TargetMemrefType:$sourceMemref,
+                       Variadic<Index>:$targetMemrefOffsets,
                        Index:$reductionDimension,
                        Variadic<Index>:$reducedDimensions,
                        Variadic<Index>:$rangeStart,

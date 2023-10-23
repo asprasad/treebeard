@@ -37,6 +37,7 @@ Value SumOfValues(ConversionPatternRewriter &rewriter, Location location,
                   std::list<Value> &values);
 
 bool isThreadLoop(scf::ParallelOp parallelOp);
+bool isThreadBlockLoop(scf::ParallelOp parallelOp);
 
 std::vector<scf::ParallelOp>
 getConflictingLoops(decisionforest::ReduceOp reduceOp) {
@@ -99,6 +100,19 @@ std::list<Value> getSurroundingBatchLoopIndices(Operation *op) {
   return surroundingBatchLoopIndices;
 }
 
+std::list<scf::ParallelOp> getSurroundingParallelBatchLoops(Operation *op) {
+  // Find all the indices of batch loops
+  std::list<scf::ParallelOp> surroundingBatchLoops;
+  auto parentOp = op->getParentOfType<scf::ParallelOp>();
+  while (parentOp) {
+    if (parentOp->getAttr("batchLoop")) {
+      surroundingBatchLoops.push_back(parentOp);
+    }
+    parentOp = parentOp->getParentOfType<scf::ParallelOp>();
+  }
+  return surroundingBatchLoops;
+}
+
 Value getImmediateParentBatchLoopStep(Operation *op) {
   auto parentOp = op->getParentOp();
   while (parentOp) {
@@ -143,19 +157,54 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
     return static_cast<bool>(attr);
   }
 
+  bool anySharedReduce(std::vector<scf::ParallelOp> &loops) const {
+    for (auto loop : loops) {
+      if (isSharedReduce(loop)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  std::vector<int64_t>
+  computeSharedMemoryBufferSize(decisionforest::ReduceOp reduceOp,
+                                mlir::MemRefType memrefType) const {
+    auto surroundingParBatchLoops = getSurroundingParallelBatchLoops(reduceOp);
+    // find the grid loop. Its step is the number of rows per TB
+    std::list<scf::ParallelOp> gridBatchLoops;
+    for (auto loop : surroundingParBatchLoops) {
+      if (isThreadBlockLoop(loop)) {
+        gridBatchLoops.push_back(loop);
+      }
+    }
+    assert(gridBatchLoops.size() == 1);
+    auto gridBatchLoop = gridBatchLoops.front();
+    auto step = GetConstantIntValueFromMLIRValue(gridBatchLoop.getStep()[0]);
+    std::vector<int64_t> bufferSize{step};
+    for (size_t i = 1; i < memrefType.getShape().size(); ++i) {
+      bufferSize.push_back(memrefType.getShape()[i]);
+    }
+    return bufferSize;
+  }
+
   MemRefType constructPrivatizedBufferType(
       Type origBufferType, Type inputValueType,
       decisionforest::ReduceOp reduceOp,
       const std::vector<scf::ParallelOp> &conflictingLoops) const {
     std::vector<int64_t> privatizedShape;
     auto memrefType = origBufferType.cast<MemRefType>();
-
+    bool isSharedBuffer = false;
     for (auto loop : conflictingLoops) {
       int64_t step, iterationCount;
       getLoopStepAndIterationCount(loop, step, iterationCount);
-      privatizedShape.insert(privatizedShape.begin(), iterationCount);
+      auto dimSize = iterationCount;
+      privatizedShape.insert(privatizedShape.begin(), dimSize);
+      isSharedBuffer = isSharedBuffer || isSharedReduce(loop);
     }
-    for (auto dim : memrefType.getShape()) {
+    std::vector<int64_t> bufferShape = memrefType.getShape();
+    if (isSharedBuffer)
+      bufferShape = computeSharedMemoryBufferSize(reduceOp, memrefType);
+    for (auto dim : bufferShape) {
       privatizedShape.push_back(dim);
     }
     if (reduceOp.getReductionTypeAttr().getReductionType() ==
@@ -318,9 +367,41 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
         rewriter, location, conflictingLoops, privatizedReductionIndex,
         privatizedReductionIndexEnd);
 
-    privatizedReductionIndex.insert(privatizedReductionIndex.end(),
-                                    reduceOp.getIndices().begin(),
-                                    reduceOp.getIndices().end());
+    if (anySharedReduce(conflictingLoops)) {
+      // TODO_Ashwin assumes that 1. trees are only split across threads in TB
+      // 2. we're only handling result memrefs that Treebeard needs
+      // 3. There is only one grid loop that is a batch index
+      // 4. The first index of the original reduce op was the row index
+
+      // TODO_Ashwin maybe assert the size of the privatized memref?
+
+      // Find the batch parallel loop that is a grid loop
+      scf::ParallelOp gridBatchLoop;
+      auto surroundingParBatchLoops =
+          getSurroundingParallelBatchLoops(reduceOp);
+      for (auto loop : surroundingParBatchLoops) {
+        if (isThreadBlockLoop(loop)) {
+          gridBatchLoop = loop;
+          break;
+        }
+      }
+      assert(gridBatchLoop && "Grid batch loop not found");
+      // privatized index is [orginal reduceOp index[0] - gridBatchLoop
+      // index[0], original reduce op indices]
+      auto privatizedIndex0 =
+          rewriter.create<arith::SubIOp>(location, reduceOp.getIndices()[0],
+                                         gridBatchLoop.getInductionVars()[0]);
+      privatizedReductionIndex.push_back(privatizedIndex0);
+      // Insert the rest of the indices unchanged
+      privatizedReductionIndex.insert(privatizedReductionIndex.end(),
+                                      reduceOp.getIndices().begin() + 1,
+                                      reduceOp.getIndices().end());
+
+    } else {
+      privatizedReductionIndex.insert(privatizedReductionIndex.end(),
+                                      reduceOp.getIndices().begin(),
+                                      reduceOp.getIndices().end());
+    }
 
     return privatizedReductionIndex;
   }
@@ -421,12 +502,48 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
     auto mappedDimension = rewriter.create<arith::ConstantIndexOp>(
         reduceOp->getLoc(), privateBufferMemrefType.getShape().size() - 2);
 
+    // TODO_Ashwin the target offsets here need to be fixed!
+    // Just setting them to empty since they're not currently used for argmax
     auto reduceDimOp = rewriter.create<decisionforest::ReduceDimensionOp>(
         reduceOp->getLoc(), argMaxReductionTypeAttr, reduceOp.getTargetMemref(),
-        privatizedBuffer, ValueRange{mappedDimension}, preReductionStart,
-        preReductionEnd, reductionDimConst, ValueRange{}, ValueRange{},
-        reduceOp.getInitialValueAttr());
+        privatizedBuffer, ValueRange{}, ValueRange{mappedDimension},
+        preReductionStart, preReductionEnd, reductionDimConst, ValueRange{},
+        ValueRange{}, reduceOp.getInitialValueAttr());
     reduceDimOp->setAttr(argMaxLengthAttrName, argMaxLengthAttr);
+  }
+
+  std::vector<Value>
+  getTargetBufferOffsets(ConversionPatternRewriter &rewriter,
+                         decisionforest::ReduceOp reduceOp,
+                         std::vector<scf::ParallelOp> &conflictingLoops) const {
+    // The number of offset elements is the rank of the target memref
+    auto targetMemrefType =
+        reduceOp.getTargetMemref().getType().cast<MemRefType>();
+    auto numOffsets = targetMemrefType.getRank();
+    std::vector<Value> offsets;
+    if (!anySharedReduce(conflictingLoops)) {
+      // Return empty array of offsets (ignored by codegen) if not
+      // shared reduce
+      return offsets;
+    } else {
+      auto zeroIndexConst =
+          rewriter.create<arith::ConstantIndexOp>(reduceOp->getLoc(), 0);
+      // Find all surrounding batch loops and add their indices to compute the
+      // start.
+      auto surroundingBatchLoopIndices =
+          getSurroundingParallelBatchLoops(reduceOp);
+      // Find the grid loop going over the batch indices
+      scf::ParallelOp gridBatchLoop;
+      for (auto loop : surroundingBatchLoopIndices) {
+        if (isThreadBlockLoop(loop)) {
+          gridBatchLoop = loop;
+          break;
+        }
+      }
+      offsets.push_back(gridBatchLoop.getInductionVars()[0]);
+      offsets.insert(offsets.end(), numOffsets - 1, zeroIndexConst.getResult());
+      return offsets;
+    }
   }
 
   ReduceOpLegalizationPattern(MLIRContext *ctx,
@@ -580,11 +697,13 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
           rewriter.setInsertionPointAfter(conflictingLoops.back());
           break;
         } else {
+          auto targetOffsets =
+              getTargetBufferOffsets(rewriter, reduceOp, conflictingLoops);
           auto reduceDimensionOp =
               rewriter.create<decisionforest::ReduceDimensionOp>(
                   location, newReductionTypeAttr, reduceOp.getTargetMemref(),
-                  privatizedBuffer, mappedDimensions, ValueRange{},
-                  ValueRange{}, reductionDimConst,
+                  privatizedBuffer, targetOffsets, mappedDimensions,
+                  ValueRange{}, ValueRange{}, reductionDimConst,
                   ValueRange{postReductionStart}, ValueRange{postReductionEnd},
                   reduceOp.getInitialValueAttr());
           setAttributesOnReduceDimensionOp(reduceDimensionOp, loop);

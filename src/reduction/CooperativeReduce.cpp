@@ -148,10 +148,10 @@ struct ReduceToCooperativeReduceOp : public ConversionPattern {
     // Create the cooperative reduce op
     rewriter.create<decisionforest::CooperativeReduceDimensionOp>(
         location, reduceOp.getTargetMemref(), reduceOp.getSourceMemref(),
-        reduceOp.getReductionDimension(), ValueRange{}, rangeStart, rangeEnd,
-        startIndices.at(0), startIndices.at(1), startIndices.at(2),
-        endIndices.at(0), endIndices.at(1), endIndices.at(2),
-        reduceOp.getInitialValueAttr());
+        reduceOp.getTargetMemrefOffsets(), reduceOp.getReductionDimension(),
+        ValueRange{}, rangeStart, rangeEnd, startIndices.at(0),
+        startIndices.at(1), startIndices.at(2), endIndices.at(0),
+        endIndices.at(1), endIndices.at(2), reduceOp.getInitialValueAttr());
     rewriter.eraseOp(op);
     return mlir::success();
   }

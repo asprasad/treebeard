@@ -446,6 +446,7 @@ bool VerifyGPUCodeGeneration(
                                         forestCreatorPtr);
 
   auto module = ConstructGPUModuleFromTreebeardContext(tbContext);
+  // return true;
 
   GPUInferenceRunnerForTest inferenceRunner(serializer, module, tileSize,
                                             sizeof(ThresholdType) * 8,
