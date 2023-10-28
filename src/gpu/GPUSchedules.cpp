@@ -255,6 +255,42 @@ void iterativeCachedPartialForestStrategy_NoCache_SharedReduce(
   schedule.SharedReduce(t1);
 }
 
+void iterativeCachedPartialForestStrategy_NoCache_SpecializeTreeLoop(
+    decisionforest::Schedule &schedule, int32_t treesPerIteration,
+    int32_t rowsPerThreadBlock) {
+  /*
+    for b0 = 1:N_rows step rowsPerTB <Grid.x>
+      for t1 = 1:treesPerIteration step 1 <Block.y>
+        for b1 = 1:rowsPerTB step 1 <Block.x>
+          for t0 = 1:N_trees step treesPerIteration
+            start = t0
+            WalkDecisionTree
+  */
+  auto &batchIndex = schedule.GetBatchIndex();
+  auto &treeIndex = schedule.GetTreeIndex();
+
+  auto &b0 = schedule.NewIndexVariable("b0");
+  auto &b1 = schedule.NewIndexVariable("b1");
+
+  auto &t0 = schedule.NewIndexVariable("t0");
+  auto &t1 = schedule.NewIndexVariable("t1");
+
+  schedule.Tile(batchIndex, b0, b1, rowsPerThreadBlock);
+  schedule.Tile(treeIndex, t0, t1, treesPerIteration);
+
+  schedule.Reorder(
+      std::vector<decisionforest::IndexVariable *>{&b0, &b1, &t1, &t0});
+
+  b0.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::Grid,
+                     decisionforest::IndexVariable::Dimension::X);
+  b1.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::ThreadBlock,
+                     decisionforest::IndexVariable::Dimension::X);
+  t1.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::ThreadBlock,
+                     decisionforest::IndexVariable::Dimension::Y);
+  decisionforest::Schedule::IterationSpecializationInfo info;
+  schedule.SpecializeIterations(t1, info);
+}
+
 void CachePartialForestStrategy(decisionforest::Schedule &schedule,
                                 int32_t treesToCache,
                                 int32_t rowsPerThreadBlock) {

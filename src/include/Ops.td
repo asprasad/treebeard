@@ -348,7 +348,7 @@ def TreeConstantOp : DecisionForest_Op<"tree", [Pure]> {
   let results = (outs TreeType);
 }
 
-def EnsembleConstantOp : DecisionForest_Op<"ensemble", [Pure]> {
+def EnsembleConstantOp : DecisionForest_Op<"ensemble"> {
   let summary = "Ensemble constant operation";
   let description = "Represents a constant whose value is the full forest. Takes no arguments and gives an ensemble value out.";
   let arguments = (ins DecisionForestAttr:$forest);

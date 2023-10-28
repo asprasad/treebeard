@@ -216,6 +216,76 @@ Schedule &Schedule::Split(
   return *this;
 }
 
+void Schedule::DuplicateIndexVariables(
+    IndexVariable &index, int32_t numCopies,
+    Schedule::IterationSpecializationInfo &info) {
+
+  assert(index.m_modifier == nullptr);
+  auto *specializeNode = new SpecializeIndexModifier(index);
+  index.m_modifier = specializeNode;
+
+  for (auto iteration = 0; iteration < numCopies; ++iteration) {
+    auto &indexCopy =
+        NewIndexVariable(index); // TODO does this need to be unique?
+
+    indexCopy.m_name = index.m_name + "_" + std::to_string(iteration);
+    indexCopy.m_modifier = nullptr;
+
+    indexCopy.m_parentModifier = specializeNode;
+    specializeNode->AddSpecializedIndex(indexCopy);
+
+    indexCopy.m_containingLoop = nullptr;
+    indexCopy.m_containedLoops.clear();
+
+    auto &indexMap = info.m_iterationMaps[iteration];
+    auto iter = indexMap.find(index.m_containingLoop);
+    // For the top level index being duplicated, we won't find
+    // an entry in the map for the containing loop.
+    if (iter != indexMap.end()) {
+      // Here we are sure the containing loop was created by the Duplicate
+      // So we can just add the new index vars to the containedLoops list.
+      // TODO Does this maintain the order?
+      indexCopy.m_containingLoop = iter->second;
+      indexCopy.m_containingLoop->m_containedLoops.push_back(&indexCopy);
+    }
+    indexMap[&index] = &indexCopy;
+  }
+  // Now recursively duplicate all the contained index variables
+  for (auto containedIndex : index.m_containedLoops) {
+    DuplicateIndexVariables(*containedIndex, numCopies, info);
+  }
+}
+
+Schedule &Schedule::SpecializeIterations(IndexVariable &index,
+                                         IterationSpecializationInfo &info) {
+  // Doesn't really change the existing index variable
+  // Duplicate the children index variables into one new index var per iteration
+  auto numIterations = (index.GetRange().m_stop - index.GetRange().m_start) /
+                       index.GetRange().m_step;
+  info.m_iterationMaps.resize(numIterations);
+  for (auto containedLoop : index.m_containedLoops) {
+    DuplicateIndexVariables(*containedLoop, numIterations, info);
+  }
+  std::vector<IndexVariable *> newContainedLoops;
+  // Add one new index variable for each iteration
+  // The original index variable contains the iteration index vars as children
+  for (auto iteration = 0; iteration < numIterations; ++iteration) {
+    auto &iterationIndexCopy = NewIndexVariable(index);
+    newContainedLoops.push_back(&iterationIndexCopy);
+    iterationIndexCopy.m_parentModifier = nullptr;
+    iterationIndexCopy.m_containingLoop = &index;
+    iterationIndexCopy.m_containedLoops.clear();
+    for (auto containedLoop : index.m_containedLoops) {
+      auto &containedLoopCopy = *info.m_iterationMaps[iteration][containedLoop];
+      iterationIndexCopy.m_containedLoops.push_back(&containedLoopCopy);
+      containedLoopCopy.m_containingLoop = &iterationIndexCopy;
+    }
+  }
+  index.m_containedLoops = newContainedLoops;
+  index.m_specializeIterations = true;
+  return *this;
+}
+
 Schedule &Schedule::Reorder(const std::vector<IndexVariable *> &indices) {
   assert(!indices.empty());
   // First, make sure that the specified indices are "contiguous"
@@ -374,6 +444,15 @@ void DuplicateIndexModifier::Validate() {
 
 void DuplicateIndexModifier::Visit(IndexDerivationTreeVisitor &visitor) {
   visitor.VisitDuplicateIndexModifier(*this);
+}
+
+void SpecializeIndexModifier::Validate() {
+  for (auto &index : m_specializedIndices)
+    index->Validate();
+}
+
+void SpecializeIndexModifier::Visit(IndexDerivationTreeVisitor &visitor) {
+  visitor.VisitSpecializeIndexModifier(*this);
 }
 
 void OneTreeAtATimeSchedule(decisionforest::Schedule *schedule) {

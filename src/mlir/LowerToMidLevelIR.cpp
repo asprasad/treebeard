@@ -213,6 +213,7 @@ template <typename LoopType> struct LoopConstructor {
              decisionforest::IndexVariable::GPUConstruct::ThreadBlock);
       loop->setAttr("sharedReduce", m_rewriter.getUnitAttr());
     }
+    loop->setAttr(indexVar.GetName(), m_rewriter.getUnitAttr());
   }
 
   LoopConstructor(
@@ -632,9 +633,13 @@ struct PredictForestOpLowering : public ConversionPattern {
                                                // type of tree we'll get here?
     auto treeType =
         forestType.getTreeType(0).cast<mlir::decisionforest::TreeType>();
+
+    // rewriter.create<gpu::PrintfOp>(location,
+    //                                "WalkTree(row = %ld, tree = %ld)\n",
+    //                                ValueRange{rowIndex, treeIndex});
+
     auto tree = rewriter.create<decisionforest::GetTreeFromEnsembleOp>(
         location, treeType, state.forestConst, treeIndex);
-
     // Walk the tree
     Value walkOp;
     if (indexVar.PeelWalk()) {
@@ -651,6 +656,9 @@ struct PredictForestOpLowering : public ConversionPattern {
       walkOp = rewriter.create<decisionforest::WalkDecisionTreeOp>(
           location, treeType.getThresholdType(), state.cmpPredicate,
           walkUnrollAttr, tree, row);
+      // walkOp = rewriter.create<arith::ConstantFloatOp>(
+      //     location, APFloat((float)0.0),
+      //     treeType.getThresholdType().cast<FloatType>());
       // auto printResult = rewriter.create<gpu::PrintfOp>(location, "Result
       // [%d]: %lf\t", ValueRange{rowIndex, static_cast<Value>(walkOp)});
     }
@@ -1075,6 +1083,8 @@ struct PredictForestOpLowering : public ConversionPattern {
                         std::list<Value> batchIndices,
                         std::list<Value> treeIndices,
                         PredictOpLoweringState &state) const {
+    assert(!indexVar.SpecializeIterations() &&
+           "Specialized iterations not supported yet for leaf loops.");
     if (indexVar.GetType() ==
         decisionforest::IndexVariable::IndexVariableType::kTree) {
       GenerateLeafLoopForTreeIndex(rewriter, location, indexVar, batchIndices,
@@ -1166,6 +1176,59 @@ struct PredictForestOpLowering : public ConversionPattern {
         ArrayAttr::get(parallelLoop.getContext(), attributes));
   }
 
+  void GenerateSingleLoopBody(ConversionPatternRewriter &rewriter,
+                              Location location,
+                              const decisionforest::IndexVariable &indexVar,
+                              std::list<Value> batchIndices,
+                              std::list<Value> treeIndices,
+                              PredictOpLoweringState &state,
+                              Value surroundingLoopIV) const {
+    if (indexVar.SpecializeIterations()) {
+      std::vector<int64_t> indexValues;
+      for (auto iterationNumber = indexVar.GetRange().m_start;
+           iterationNumber != indexVar.GetRange().m_stop;
+           iterationNumber += indexVar.GetRange().m_step) {
+        indexValues.push_back(iterationNumber);
+      }
+      // Region count is indexValues.size() + 1 to include default region
+      // auto switchOp = rewriter.create<scf::IndexSwitchOp>(
+      //     location, TypeRange{}, surroundingLoopIV, indexValues,
+      //     indexValues.size() + 1);
+      assert(indexVar.GetContainedLoops().size() == indexValues.size() &&
+             "Number of contained loops must match number of specialized "
+             "iterations");
+      int32_t iterationNum = 0;
+      for (auto iterationIndexVar : indexVar.GetContainedLoops()) {
+
+        auto isIter0 = rewriter.create<arith::CmpIOp>(
+            location, arith::CmpIPredicate::eq, surroundingLoopIV,
+            rewriter.create<arith::ConstantIndexOp>(
+                location, indexValues.at(iterationNum)));
+        bool elseRegion =
+            iterationNum != (static_cast<int32_t>(indexValues.size()) - 1);
+        auto ifOp = rewriter.create<scf::IfOp>(location, isIter0,
+                                               /*else*/ elseRegion);
+        auto &block = ifOp.getThenRegion().getBlocks().front();
+        // auto &block = switchOp.getCaseBlock(iterationNum);
+        rewriter.setInsertionPointToStart(&block);
+        for (auto containedLoop : iterationIndexVar->GetContainedLoops()) {
+          GenerateLoop(rewriter, location, *containedLoop, batchIndices,
+                       treeIndices, state);
+        }
+        if (elseRegion) {
+          auto &elseBlock = ifOp.getElseRegion().getBlocks().front();
+          rewriter.setInsertionPointToStart(&elseBlock);
+        }
+        ++iterationNum;
+      }
+    } else {
+      for (auto nestedIndexVar : indexVar.GetContainedLoops()) {
+        GenerateLoop(rewriter, location, *nestedIndexVar, batchIndices,
+                     treeIndices, state);
+      }
+    }
+  }
+
   void GenerateSingleLoop(ConversionPatternRewriter &rewriter,
                           Location location,
                           const decisionforest::IndexVariable &indexVar,
@@ -1192,10 +1255,9 @@ struct PredictForestOpLowering : public ConversionPattern {
                                                     treeIndices, indexVarList);
       addGPUMappingAttributeToParallelLoop(rewriter, location, parallelLoop,
                                            indexVar);
-      for (auto nestedIndexVar : indexVar.GetContainedLoops()) {
-        GenerateLoop(rewriter, location, *nestedIndexVar, batchIndices,
-                     treeIndices, state);
-      }
+      GenerateSingleLoopBody(rewriter, location, indexVar, batchIndices,
+                             treeIndices, state,
+                             parallelLoop.getInductionVars()[0]);
     } else {
       LoopConstructor<scf::ForOp> loopConstructor(
           indexVar, state, location, rewriter, startConst, stopConst, stepConst,
@@ -1210,10 +1272,8 @@ struct PredictForestOpLowering : public ConversionPattern {
         treeIndices.push_back(i);
       else
         assert(false && "Unknown index variable type!");
-      for (auto nestedIndexVar : indexVar.GetContainedLoops()) {
-        GenerateLoop(rewriter, location, *nestedIndexVar, batchIndices,
-                     treeIndices, state);
-      }
+      GenerateSingleLoopBody(rewriter, location, indexVar, batchIndices,
+                             treeIndices, state, i);
     }
   }
 
@@ -1243,9 +1303,7 @@ struct PredictForestOpLowering : public ConversionPattern {
                     const decisionforest::IndexVariable &indexVar,
                     std::list<Value> batchIndices, std::list<Value> treeIndices,
                     PredictOpLoweringState &state) const {
-    // This assert should be removed once we start supporting code generation
-    // for tiled loops assert (indexVar.GetParentModifier() == nullptr); Any
-    // index in the actual loop nest should not have indices derived from it
+    // Any index in the actual loop nest should not have indices derived from it
     assert(indexVar.GetIndexModifier() == nullptr);
 
     // Generate all the nested loops

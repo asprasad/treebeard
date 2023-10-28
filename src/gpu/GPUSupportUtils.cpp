@@ -56,6 +56,10 @@ void ReplaceCPUReferencesWithGPUMemref(
         gpuLaunchOp.walk([&](decisionforest::ReduceOp reduceOp) {
           reduceOp->replaceUsesOfWith(cpuMemref, gpuMemref);
         });
+
+        gpuLaunchOp.walk([&](memref::SubViewOp subviewOp) {
+          subviewOp->replaceUsesOfWith(cpuMemref, gpuMemref);
+        });
       }
     }
   }

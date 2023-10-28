@@ -1,6 +1,7 @@
 #ifndef _SCHEDULE_H_
 #define _SCHEDULE_H_
 
+#include <cassert>
 #include <fstream>
 #include <functional>
 #include <list>
@@ -86,6 +87,29 @@ public:
   void Visit(IndexDerivationTreeVisitor &visitor) override;
 };
 
+class SpecializeIndexModifier : public IndexModifier {
+  IndexVariable *m_sourceIndex;
+  std::vector<IndexVariable *> m_specializedIndices;
+
+public:
+  SpecializeIndexModifier(IndexVariable &source,
+                          std::vector<IndexVariable *> &specializedIndices)
+      : m_sourceIndex(&source), m_specializedIndices(specializedIndices) {}
+
+  SpecializeIndexModifier(IndexVariable &source) : m_sourceIndex(&source) {}
+  IndexVariable &SourceIndex() { return *m_sourceIndex; }
+  std::vector<IndexVariable *> &SpecializedIndices() {
+    return m_specializedIndices;
+  }
+
+  void AddSpecializedIndex(IndexVariable &index) {
+    m_specializedIndices.push_back(&index);
+  }
+
+  void Validate() override;
+  void Visit(IndexDerivationTreeVisitor &visitor) override;
+};
+
 class IndexVariable : public IndexDerivationTreeNode {
   friend class Schedule;
 
@@ -128,6 +152,7 @@ protected:
   bool m_atomicReduce = false;
   int32_t m_vectorReduceWidth = 1;
   bool m_sharedReduce = false;
+  bool m_specializeIterations = false;
 
   int32_t m_treeWalkUnrollFactor = -1;
 
@@ -151,6 +176,7 @@ public:
   }
   IndexRange GetRange() const { return m_range; }
   void SetRange(IndexRange range) { m_range = range; }
+  std::string GetName() const { return m_name; }
 
   bool Pipelined() const { return m_pipelined; }
   bool Simdized() const { return m_simdized; }
@@ -166,6 +192,7 @@ public:
   bool VectorReduce() const { return m_vectorReduceWidth != 1; }
   int32_t VectorReduceWidth() const { return m_vectorReduceWidth; }
   bool SharedReduce() const { return m_sharedReduce; }
+  bool SpecializeIterations() const { return m_specializeIterations; }
 
   bool PeelWalk() const { return m_peelWalk; }
   int32_t IterationsToPeel() const { return m_iterationsToPeel; }
@@ -190,6 +217,10 @@ public:
 };
 
 class Schedule {
+public:
+  class IterationSpecializationInfo;
+
+private:
   std::list<IndexVariable *> m_indexVars;
   std::list<IndexModifier *> m_indexModifiers;
 
@@ -205,9 +236,25 @@ class Schedule {
       IndexVariable &index,
       std::map<IndexVariable *, std::pair<IndexVariable *, IndexVariable *>>
           &indexMap);
+  void DuplicateIndexVariables(IndexVariable &index, int32_t numCopies,
+                               Schedule::IterationSpecializationInfo &info);
   void WriteIndexToDOTFile(IndexVariable *index, std::ofstream &fout);
 
 public:
+  class IterationSpecializationInfo {
+    friend class Schedule;
+    using SingleIterationMap = std::map<IndexVariable *, IndexVariable *>;
+    std::vector<SingleIterationMap> m_iterationMaps;
+
+  public:
+    IndexVariable *GetCorrespodingIndex(IndexVariable *index,
+                                        int32_t iteration) {
+      auto iter = m_iterationMaps[iteration].find(index);
+      assert(iter != m_iterationMaps[iteration].end());
+      return iter->second;
+    }
+  };
+
   typedef std::map<IndexVariable *, std::pair<IndexVariable *, IndexVariable *>>
       IndexVariableMapType;
   Schedule(int32_t batchSize, int32_t forestSize);
@@ -224,6 +271,9 @@ public:
         int32_t splitIteration,
         std::map<IndexVariable *, std::pair<IndexVariable *, IndexVariable *>>
             &indexMap);
+
+  Schedule &SpecializeIterations(IndexVariable &index,
+                                 IterationSpecializationInfo &info);
 
   // Optimizations
   Schedule &Pipeline(IndexVariable &index, int32_t stepSize);
@@ -258,6 +308,8 @@ public:
   virtual void VisitSplitIndexModifier(SplitIndexModifier &indexModifier) = 0;
   virtual void
   VisitDuplicateIndexModifier(DuplicateIndexModifier &indexModifier) = 0;
+  virtual void
+  VisitSpecializeIndexModifier(SpecializeIndexModifier &indexModifier) = 0;
 };
 
 class ScheduleManipulator {

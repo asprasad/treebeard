@@ -31,6 +31,10 @@ void iterativeCachedPartialForestStrategy_NoCache_SharedReduce(
     decisionforest::Schedule &schedule, int32_t treesPerIteration,
     int32_t rowsPerThreadBlock);
 
+void iterativeCachedPartialForestStrategy_NoCache_SpecializeTreeLoop(
+    decisionforest::Schedule &schedule, int32_t treesPerIteration,
+    int32_t rowsPerThreadBlock);
+
 void TahoeSharedPartialForestStrategy(decisionforest::Schedule &schedule,
                                       int32_t treesPerThreadBlock,
                                       int32_t rowsPerThreadBlock);

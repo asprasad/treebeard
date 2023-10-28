@@ -5,6 +5,7 @@
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -62,6 +63,8 @@ Operation *getOutermostTreeLoopOp(decisionforest::ReduceOp reduceOp) {
     owningOp = owningOp->getParentOp();
   }
   assert(outermostTreeLoopOp && "Outermost tree loop not found");
+  assert(dyn_cast<scf::ForOp>(outermostTreeLoopOp) ||
+         dyn_cast<scf::ParallelOp>(outermostTreeLoopOp));
   return outermostTreeLoopOp;
 }
 
@@ -262,7 +265,7 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
       rewriter.setInsertionPointToStart(module.getBody());
 
       // Create a global with the privatized buffer type
-      auto sharedMemBuffer = rewriter.create<memref::GlobalOp>(
+      /*auto sharedMemBuffer =*/rewriter.create<memref::GlobalOp>(
           location, privatizedBufferName, rewriter.getStringAttr("private"),
           privatizedBufferType, rewriter.getUnitAttr(), false /*const*/,
           IntegerAttr() /*alignment*/);
@@ -282,9 +285,10 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
         auto innermostConflictingLoop = conflictingLoops.front();
         rewriter.setInsertionPointToStart(innermostConflictingLoop.getBody());
         // Initialize the privatized buffer
-        auto initBuffer = rewriter.create<decisionforest::InitializeMemrefOp>(
-            location, privatizedBuffer.getResult(),
-            rewriter.getF64FloatAttr(0.0));
+        /*auto initBuffer =*/rewriter
+            .create<decisionforest::InitializeMemrefOp>(
+                location, privatizedBuffer.getResult(),
+                rewriter.getF64FloatAttr(0.0));
       }
       return privatizedBuffer;
     }
@@ -293,11 +297,14 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
   Value createOrGetPrivatizedBuffer(Value originalBuffer, Value inputValue,
                                     decisionforest::ReduceOp reduceOp,
                                     const std::vector<scf::ParallelOp> &loops,
-                                    ConversionPatternRewriter &rewriter) const {
+                                    ConversionPatternRewriter &rewriter,
+                                    bool &createdBuffer) const {
     auto iter = m_privatizationMap.find(originalBuffer.getAsOpaquePointer());
     if (iter != m_privatizationMap.end()) {
+      createdBuffer = false;
       return iter->second;
     }
+    createdBuffer = true;
     decisionforest::helpers::SaveAndRestoreInsertionPoint saveIP(rewriter);
 
     // Set insertion point to start of owning function
@@ -457,6 +464,23 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
     }
   }
 
+  bool isReductionOp(Operation &op) const {
+    return op.getName().getStringRef() == "decisionforest.reduce" ||
+           op.getName().getStringRef() == "decisionforest.reduce_dimension" ||
+           op.getName().getStringRef() ==
+               "decisionforest.reduce_dimension_inplace";
+  }
+
+  void setInsertionPointForArgMax(ConversionPatternRewriter &rewriter,
+                                  Operation *outermostTreeLoop) const {
+    rewriter.setInsertionPointAfter(outermostTreeLoop);
+
+    auto block = rewriter.getInsertionBlock();
+    // Set the insertion point to the end of the block in which the outermost
+    // tree loop exists
+    rewriter.setInsertionPoint(block->getTerminator());
+  }
+
   void
   addReduceDimensionOpForArgMax(decisionforest::ReduceOp reduceOp,
                                 Value privatizedBuffer,
@@ -471,7 +495,9 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
         privatizedBuffer.getType().cast<MemRefType>();
 
     auto outermostTreeLoopOp = getOutermostTreeLoopOp(reduceOp);
+    assert(outermostTreeLoopOp);
     // rewriter.setInsertionPointAfter(outermostTreeLoopOp);
+    setInsertionPointForArgMax(rewriter, outermostTreeLoopOp);
 
     // At this point we should have reduced all the tree walks for the
     // surrounding batch loops (all tree walks for all batches if no surrounding
@@ -574,9 +600,10 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
            reductionType == decisionforest::Reduction::kArgMax);
     auto targetMemrefType =
         reduceOp.getTargetMemref().getType().cast<MemRefType>();
+    bool createdBuffer;
     auto privatizedBuffer = createOrGetPrivatizedBuffer(
         reduceOp.getTargetMemref(), reduceOp.getValue(), reduceOp,
-        conflictingLoops, rewriter);
+        conflictingLoops, rewriter, createdBuffer);
     auto privatizedReductionIndex =
         constructPrivatizedReductionIndex(rewriter, conflictingLoops, reduceOp);
 
@@ -595,6 +622,12 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
         reduceOp.getInitialValueAttr());
     legalizedReduce->setAttr("legalizedReduce", rewriter.getUnitAttr());
 
+    // TODO_Ashwin using creation of privatized buffer as a proxy for
+    // several reduces into the same buffer.
+    if (!createdBuffer) {
+      rewriter.eraseOp(op);
+      return mlir::success();
+    }
     // Add partial reductions at the exit of each of the conflicting loops
     for (size_t i = 0; i < conflictingLoops.size(); ++i) {
       // TODO_Ashwin Still need to figure out if there are any outer batch
