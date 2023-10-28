@@ -853,7 +853,7 @@ struct CooperativeReduceDimensionOpLowering : public ConversionPattern {
         AssertOpIsOfType<decisionforest::CooperativeReduceDimensionOp>(op);
     auto location = reduceOp.getLoc();
 
-    auto targetMemrefOffsets = reduceOp.getTargetMemrefOffsets();
+    // auto targetMemrefOffsets = reduceOp.getTargetMemrefOffsets();
 
     // The values for the outer indices. These are fixed
     auto reducedDims = reduceOp.getReducedDimensions();

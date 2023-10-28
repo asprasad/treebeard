@@ -2339,10 +2339,11 @@ TestDescriptor testList[] = {
 #else  // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
+    // TEST_LIST_ENTRY(Test_TreePar_LeftRightAndBalanced_DblI32),
     TEST_LIST_ENTRY(
         Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SpecializedTreeLoop_FltI16_B64),
     // TEST_LIST_ENTRY(Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets),
-    TEST_LIST_ENTRY(Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets),
+    // TEST_LIST_ENTRY(Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets),
     // Parallelize across trees
     // TEST_LIST_ENTRY(Test_TreePar_LeftRightAndBalanced_DblI32),
     // TEST_LIST_ENTRY(Test_NestedTreePar_LeftRightAndBalanced_DblI32),

@@ -1,6 +1,13 @@
 -----------------------
 **GPU Implementation Holes**
 -----------------------
+* Python API
+    - Expose new schedule primitives
+        - Cache
+        - Specialize
+* Specialization of iterations
+    - [Done] Make all leaves same depth for non-tiled trees
+    - 
 * Caching
     - Some of the caching lowering doesn't handle cases like when there are fewer threads than trees to cache (especially reorg)
         - [Reorg] When the num trees being cached is larger than the num of threads available, this is not handled
@@ -13,6 +20,7 @@
     - Doesn't support strided sets of trees (assumes contiguous)
     - Doesn't do anything clever when multiple dynamic instances of the cacheop refer to overlapping sets of trees
 * Reduction
+    - Multiclass reductions on GPU
     - Final implementation of reductions is not optimized (even on CPU)
         - Doesn't use shuffle, atomics, shared memory etc
             - Shared memory
@@ -44,6 +52,8 @@
         - Should the SIMT pass identify which thread dimension is accessing successive rows?
 * Testing
     - No tests for actual benchmark models
+* GPU benchmarks
+
 
 -----------------------
 **ISSUES**

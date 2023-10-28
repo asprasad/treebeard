@@ -23,6 +23,11 @@ inline void DoTilingTransformation(mlir::ModuleOp module,
                                    TreebeardContext &tbContext) {
   const CompilerOptions &options = tbContext.options;
   auto &context = tbContext.context;
+  if (options.tileSize == 1) {
+    if (options.makeAllLeavesSameDepth)
+      mlir::decisionforest::padTreesToMakeAllLeavesSameDepth(context, module);
+    return;
+  }
 
   // TODO maybe all the manipulation before the lowering to mid-level IR can be
   // a single custom function?

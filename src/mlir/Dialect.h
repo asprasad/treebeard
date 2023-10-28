@@ -69,6 +69,8 @@ void DoHybridTiling(mlir::MLIRContext &context, mlir::ModuleOp module,
                     int32_t tileSize, int32_t tileShapeBitWidth);
 void DoReorderTreesByDepth(mlir::MLIRContext &context, mlir::ModuleOp module,
                            int32_t pipelineSize = -1, int32_t numCores = -1);
+void padTreesToMakeAllLeavesSameDepth(mlir::MLIRContext &context,
+                                      mlir::ModuleOp module);                           
 
 #ifdef TREEBEARD_GPU_SUPPORT
 
