@@ -5,6 +5,7 @@
     - Expose new schedule primitives
         - Cache
         - Specialize
+    - Expose GPU compilation
 * Specialization of iterations
     - [Done] Make all leaves same depth for non-tiled trees
     - 
@@ -20,8 +21,8 @@
     - Doesn't support strided sets of trees (assumes contiguous)
     - Doesn't do anything clever when multiple dynamic instances of the cacheop refer to overlapping sets of trees
 * Reduction
-    - Multiclass reductions on GPU
-    - Final implementation of reductions is not optimized (even on CPU)
+    - [Done] Multiclass reductions on GPU
+    - Final implementation of reductions is not optimized (even on CPU) -- Do we really need this?
         - Doesn't use shuffle, atomics, shared memory etc
             - Shared memory
                 - [Assume] No splitting of trees across TBs -- so write back results at the end of kernel

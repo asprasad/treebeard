@@ -804,6 +804,10 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache
 bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SpecializedTreeLoop_FltI16_B64(
     TestArgs_t &args);
 
+// Multi-class with trees split across multiple threads
+bool Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache(
+    TestArgs_t &args);
+
 void InitializeVectorWithRandValues(std::vector<double> &vec) {
   for (size_t i = 0; i < vec.size(); ++i)
     vec[i] = (double)rand() / RAND_MAX;
@@ -2333,15 +2337,24 @@ TestDescriptor testList[] = {
         Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SharedReduce_FltI16_B64),
     TEST_LIST_ENTRY(
         Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SpecializedTreeLoop_FltI16_B64),
+    // Tree Parallelization Multi-class tests
+    TEST_LIST_ENTRY(
+        Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache),
+
 #endif // TREEBEARD_GPU_SUPPORT
 };
 
 #else  // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-    // TEST_LIST_ENTRY(Test_TreePar_LeftRightAndBalanced_DblI32),
+    // TEST_LIST_ENTRY(
+    //     Test_GPUCodeGeneration_Covtype_ArrayRep_DoubleInt32_BatchSize32),
+    // TEST_LIST_ENTRY(Test_TileSize1_Letters_Int8Type),
     TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SpecializedTreeLoop_FltI16_B64),
+        Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache),
+    // TEST_LIST_ENTRY(Test_TreePar_LeftRightAndBalanced_DblI32),
+    // TEST_LIST_ENTRY(
+    //     Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SpecializedTreeLoop_FltI16_B64),
     // TEST_LIST_ENTRY(Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets),
     // TEST_LIST_ENTRY(Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets),
     // Parallelize across trees

@@ -80,6 +80,12 @@ scf::ParallelOp getOutermostSurroundingParallelLoopOp(Operation *op) {
 }
 
 std::list<Value> getSurroundingBatchLoopIndices(Operation *op) {
+  auto parFor = llvm::dyn_cast<scf::ParallelOp>(
+      op); // AssertOpIsOfType<scf::ParallelOp>(op);
+  // If the current loop is thread loop (i.e it goes over threads in a TB),
+  // then other thread loops are interchangeable with it and can't really
+  // be considered to surround it.
+  bool ignoreThreadLoops = parFor ? isThreadLoop(parFor) : false;
   // Find all the indices of batch loops
   std::list<Value> surroundingBatchLoopIndices;
   auto parentOp = op->getParentOp();
@@ -92,6 +98,10 @@ std::list<Value> getSurroundingBatchLoopIndices(Operation *op) {
     }
     if (auto parForOp = dyn_cast<scf::ParallelOp>(parentOp)) {
       if (parForOp->getAttr("batchLoop")) {
+        if (ignoreThreadLoops && isThreadLoop(parForOp)) {
+          parentOp = parentOp->getParentOp();
+          continue;
+        }
         assert(parForOp.getInductionVars().size() == 1);
         for (auto index : parForOp.getInductionVars()) {
           surroundingBatchLoopIndices.push_back(index);
@@ -117,6 +127,13 @@ std::list<scf::ParallelOp> getSurroundingParallelBatchLoops(Operation *op) {
 }
 
 Value getImmediateParentBatchLoopStep(Operation *op) {
+  auto parFor = llvm::dyn_cast<scf::ParallelOp>(
+      op); // AssertOpIsOfType<scf::ParallelOp>(op);
+  // If the current loop is thread loop (i.e it goes over threads in a TB),
+  // then other thread loops are interchangeable with it and can't really
+  // be considered to surround it.
+  bool ignoreThreadLoops = parFor ? isThreadLoop(parFor) : false;
+
   auto parentOp = op->getParentOp();
   while (parentOp) {
     if (auto forOp = dyn_cast<scf::ForOp>(parentOp)) {
@@ -125,6 +142,10 @@ Value getImmediateParentBatchLoopStep(Operation *op) {
       }
     }
     if (auto parForOp = dyn_cast<scf::ParallelOp>(parentOp)) {
+      if (ignoreThreadLoops && isThreadLoop(parForOp)) {
+        parentOp = parentOp->getParentOp();
+        continue;
+      }
       if (parForOp->getAttr("batchLoop")) {
         assert(parForOp.getStep().size() == 1);
         return parForOp.getStep()[0];

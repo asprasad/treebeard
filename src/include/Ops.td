@@ -275,10 +275,11 @@ def CooperativeReduceInplaceOp : DecisionForest_Op<"cooperative_reduce_dimension
                     "Use the threads specified in the arguments to cooperatively reduce.";
 
   let arguments = (ins TargetMemrefType:$targetMemref,
-                       Index:$dimension,
-                       Variadic<Index>:$indices,
-                       Variadic<Index>:$rangeStart,
-                       Variadic<Index>:$rangeEnd,
+                       Variadic<Index>:$preReductionDimensionStart,
+                       Variadic<Index>:$preReductionDimensionEnd,
+                       Index:$reductionDimension,
+                       Variadic<Index>:$postReductionDimensionStart,
+                       Variadic<Index>:$postReductionDimensionEnd,
                        Index:$blockXStart, Index:$blockYStart, Index:$blockZStart,
                        Index:$blockXEnd, Index:$blockYEnd, Index:$blockZEnd);
 }
@@ -290,7 +291,8 @@ def CooperativeReduceDimensionOp : DecisionForest_Op<"cooperative_reduce_dimensi
                     "of dimensions that have been previously reduced (i.e. the set of dimensions where"
                     "we should index with a 0).";
 
-  let arguments = (ins TargetMemrefType:$targetMemref,
+  let arguments = (ins ReductionTypeAttr:$reductionType,
+                       TargetMemrefType:$targetMemref,
                        TargetMemrefType:$sourceMemref,
                        Variadic<Index>:$targetMemrefOffsets,
                        Index:$reductionDimension,
@@ -300,6 +302,28 @@ def CooperativeReduceDimensionOp : DecisionForest_Op<"cooperative_reduce_dimensi
                        Index:$blockXStart, Index:$blockYStart, Index:$blockZStart,
                        Index:$blockXEnd, Index:$blockYEnd, Index:$blockZEnd,
                        F64Attr:$initialValue);
+}
+
+def CooperativeReduceArgMaxOp : DecisionForest_Op<"coopertivate_argmax", [AttrSizedOperandSegments]> {
+  let summary = "Reduce the specified dimension of a memref and store result in target.";
+  let description = "Reduce the specified dimension of a memref and store result in the target memref."
+                    "The op copies reduced values to the target memref. Reduced dimesions is the list" 
+                    "The (pre, post)ReductionDimension* indices are used to determine which subset of the memref to reduce."
+                    "The mappedDimensions are used to the indices of the target memref."
+                    "For eached mapped dimension, the corresponding source memref is mapped 1:1.";
+
+  let arguments = (ins ReductionTypeAttr:$reductionType,
+                       TargetMemrefType:$targetMemref,
+                       TargetMemrefType:$sourceMemref,
+                       Variadic<Index>:$targetMemrefOffsets,
+                       Variadic<Index>:$mappedDimensions,
+                       Variadic<Index>:$preReductionDimensionStart,
+                       Variadic<Index>:$preReductionDimensionEnd,
+                       Index:$reductionDimension,
+                       Variadic<Index>:$postReductionDimensionStart,
+                       Variadic<Index>:$postReductionDimensionEnd,
+                       Index:$blockXStart, Index:$blockYStart, Index:$blockZStart,
+                       Index:$blockXEnd, Index:$blockYEnd, Index:$blockZEnd);
 }
 
 def AtomicReduceDimensionOp : DecisionForest_Op<"atomic_reduce_dimension", [AttrSizedOperandSegments]> {
