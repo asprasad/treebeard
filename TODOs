@@ -14,11 +14,16 @@
             - Array
             - Sparse
             - Reorg
-        - Multiple rows per thread (one row at a time)
-        - Multiple rows per thread (one tree at a time)
+        - [Done] Multiple rows per thread (one row at a time)
+        - [Done] Multiple rows per thread (one tree at a time)
 * Specialization of iterations
     - [Done] Make all leaves same depth for non-tiled trees
-    - 
+* Automatic schedule generation for GPU
+    - tree reordering
+    - caching
+    - specializing iterations
+* CPU automatic schedule for tree parallelization
+    - Iteration specialization
 * Caching
     - Some of the caching lowering doesn't handle cases like when there are fewer threads than trees to cache (especially reorg)
         - [Reorg] When the num trees being cached is larger than the num of threads available, this is not handled

@@ -23,6 +23,19 @@ def OneRowAtATimeGPUSchedule(schedule: treebeard.Schedule, rows_per_threadblock:
   threadBlockIndex.set_gpu_dimension(treebeard.GPUConstruct.Grid, treebeard.Dimension.X)
   threadIndex.set_gpu_dimension(treebeard.GPUConstruct.ThreadBlock, treebeard.Dimension.X)
 
+def OneTreeAtATimeGPUSchedule(schedule: treebeard.Schedule, rows_per_threadblock: int, rows_per_thread: int):
+  batchIndex = schedule.GetBatchIndex()
+  treeIndex = schedule.GetTreeIndex()
+  threadBlockIndex = schedule.NewIndexVariable("b0")
+  threadIndexTemp = schedule.NewIndexVariable("b1_temp")
+  threadIndex = schedule.NewIndexVariable("b1_outer")
+  perThreadIndex = schedule.NewIndexVariable("b1_inner")
+  schedule.Tile(batchIndex, threadBlockIndex, threadIndexTemp, tileSize=rows_per_threadblock)
+  schedule.Tile(threadIndexTemp, threadIndex, perThreadIndex, tileSize=rows_per_thread)
+  schedule.Reorder([threadBlockIndex, threadIndex, treeIndex, perThreadIndex])
+  threadBlockIndex.set_gpu_dimension(treebeard.GPUConstruct.Grid, treebeard.Dimension.X)
+  threadIndex.set_gpu_dimension(treebeard.GPUConstruct.ThreadBlock, treebeard.Dimension.X)
+
 
 def run_custom_schedule(test_name, rep, schedule_manipulator, tile_size=1, batch_size=200):
   defaultTileSize8Options = treebeard.CompilerOptions(batch_size, tile_size)
@@ -49,9 +62,16 @@ def RunOneRowAtATimeGPUScheduleTests():
   run_custom_schedule("row-at-a-time_schedule-sparse", "gpu_sparse", gpu_schedule)
   run_custom_schedule("row-at-a-time_schedule-reorg", "gpu_reorg", gpu_schedule)  
 
+def RunOneTreeAtATimeGPUScheduleTests():
+  gpu_schedule = partial(OneTreeAtATimeGPUSchedule, rows_per_threadblock=40, rows_per_thread=2)
+  run_custom_schedule("tree-at-a-time_gpu_schedule-array", "gpu_array", gpu_schedule)
+  run_custom_schedule("tree-at-a-time_schedule-sparse", "gpu_sparse", gpu_schedule)
+  run_custom_schedule("tree-at-a-time_schedule-reorg", "gpu_reorg", gpu_schedule)  
+
 def run_all_tests():
   RunSimpleGPUScheduleTests()
   RunOneRowAtATimeGPUScheduleTests()
+  RunOneTreeAtATimeGPUScheduleTests()
 
 if __name__ == "__main__":
   run_all_tests()
