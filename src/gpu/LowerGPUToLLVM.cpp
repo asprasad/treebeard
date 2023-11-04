@@ -330,6 +330,7 @@ void GpuToLLVMConversionPass::runOnOperation() {
   populateGpuToLLVMConversionPatterns(converter, patterns, gpuBinaryAnnotation);
   populateAffineToStdConversionPatterns(patterns);
   populateMathToLLVMConversionPatterns(converter, patterns);
+  decisionforest::populateDebugOpLoweringPatterns(patterns, converter);
 
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
