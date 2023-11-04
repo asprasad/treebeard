@@ -3,9 +3,19 @@
 -----------------------
 * Python API
     - Expose new schedule primitives
-        - Cache
+        - [Done] Cache
         - Specialize
-    - Expose GPU compilation
+            - [Done] API
+            - Tests
+        - Split
+    - [Done] Expose GPU compilation
+    - GPU tests for benchmarks
+        - [Done] Simple GPU schedule   
+            - Array
+            - Sparse
+            - Reorg
+        - Multiple rows per thread (one row at a time)
+        - Multiple rows per thread (one tree at a time)
 * Specialization of iterations
     - [Done] Make all leaves same depth for non-tiled trees
     - 
@@ -59,6 +69,7 @@
 -----------------------
 **ISSUES**
 -------------------
+- **BUG** [CodeGen] Final transformations (sigmoid) are still being generated on CPU by GPU pipeline
 - **BUG** [Reduce] While computing row ranges for reduce ops on GPU, we're not considering all block loops as equivalent (loops are being traversed as nested)
 - **BUG** [Tiling] Not checking bounds while expanding the number of accessed rows
 - **BUG** [Tiling] Assuming that all threads always access different rows and same tree. Need to analyze if one or more thread block dimensions traverse rows. Only generate SIMT traverse for the appropriate dimensions

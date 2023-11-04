@@ -28,6 +28,8 @@ def run_custom_schedule(test_name, rep, schedule_manipulator, tile_size=1):
 def RunSimpleGPUScheduleTests():
   gpu_schedule_20rows = partial(SimpleGPUSchedule, rows_per_threadblock=20)
   run_custom_schedule("simple_gpu_schedule-array", "gpu_array", gpu_schedule_20rows)
+  run_custom_schedule("simple_gpu_schedule-sparse", "gpu_sparse", gpu_schedule_20rows)
+  run_custom_schedule("simple_gpu_schedule-reorg", "gpu_reorg", gpu_schedule_20rows)  
 
 def run_all_tests():
   RunSimpleGPUScheduleTests()

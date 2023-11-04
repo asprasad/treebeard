@@ -348,8 +348,7 @@ void ReorgForestSerializer::CallPredictionMethod(void *predictFuncPtr,
 bool ReorgForestSerializer::HasCustomPredictionMethod() { return true; }
 
 void ReorgForestSerializer::CleanupBuffers() {
-  if (mlir::decisionforest::ForestJSONReader::GetInstance()
-          .GetNumberOfClasses() > 0) {
+  if (m_numberOfClasses > 0) {
     using CleanupFunc_t =
         int32_t (*)(double *, double *, int64_t, int64_t, int64_t, int32_t *,
                     int32_t *, int64_t, int64_t, int64_t, int8_t *, int8_t *,
