@@ -242,11 +242,12 @@ private:
 
 public:
   class IterationSpecializationInfo {
+  public:
     friend class Schedule;
+
     using SingleIterationMap = std::map<IndexVariable *, IndexVariable *>;
     std::vector<SingleIterationMap> m_iterationMaps;
 
-  public:
     IndexVariable *GetCorrespodingIndex(IndexVariable *index,
                                         int32_t iteration) {
       auto iter = m_iterationMaps[iteration].find(index);

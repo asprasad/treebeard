@@ -122,6 +122,22 @@ class TreebeardAPI:
       self.runtime_lib.Schedule_Split.argtypes = [ctypes.c_int64, ctypes.c_int64, ctypes.c_int64, ctypes.c_int64, ctypes.c_int32, ctypes.c_int64]
       self.runtime_lib.Schedule_Split.restype = None
 
+      # intptr_t Schedule_Specialize(intptr_t schedPtr, intptr_t indexPtr) {
+      self.runtime_lib.Schedule_Specialize.argtypes = [ctypes.c_int64, ctypes.c_int64]
+      self.runtime_lib.Schedule_Specialize.restype = ctypes.c_int64
+
+      # int64_t GetSpecializationInfoNumIterations(intptr_t infoPtr) {
+      self.runtime_lib.GetSpecializationInfoNumIterations.argtypes = [ctypes.c_int64]
+      self.runtime_lib.GetSpecializationInfoNumIterations.restype = ctypes.c_int64
+
+      # int64_t GetSpecializationInfoNumEntries(intptr_t infoPtr) {
+      self.runtime_lib.GetSpecializationInfoNumEntries.argtypes = [ctypes.c_int64]
+      self.runtime_lib.GetSpecializationInfoNumEntries.restype = ctypes.c_int64
+
+      # void GetSpecializationInfoEntries(intptr_t infoPtr, intptr_t lengths, intptr_t indices)
+      self.runtime_lib.GetSpecializationInfoEntries.argtypes = [ctypes.c_int64, ctypes.c_int64, ctypes.c_int64]
+      self.runtime_lib.GetSpecializationInfoEntries.restype = None
+
       self.runtime_lib.Schedule_Pipeline.argtypes = [ctypes.c_int64, ctypes.c_int64, ctypes.c_int32]
       self.runtime_lib.Schedule_Pipeline.restype = None
 
@@ -134,6 +150,15 @@ class TreebeardAPI:
       self.runtime_lib.Schedule_PeelWalk.argtypes = [ctypes.c_int64, ctypes.c_int64, ctypes.c_int32]
 
       self.runtime_lib.Schedule_Cache.argtypes = [ctypes.c_int64, ctypes.c_int64]
+      
+      # void Schedule_AtomicReduce(intptr_t schedPtr, intptr_t indexVarPtr)
+      self.runtime_lib.Schedule_AtomicReduce.argtypes = [ctypes.c_int64, ctypes.c_int64]
+
+      # void Schedule_VectorReduce(intptr_t schedPtr, intptr_t indexVarPtr
+      self.runtime_lib.Schedule_VectorReduce.argtypes = [ctypes.c_int64, ctypes.c_int64, ctypes.c_int32]
+
+      # void Schedule_SharedReduce(intptr_t schedPtr, intptr_t indexVarPtr)
+      self.runtime_lib.Schedule_SharedReduce.argtypes = [ctypes.c_int64, ctypes.c_int64]
 
       self.runtime_lib.Schedule_GetRootIndex.restype = ctypes.c_int64
       self.runtime_lib.Schedule_GetRootIndex.argtypes = [ctypes.c_int64]
@@ -183,6 +208,14 @@ class TreebeardAPI:
 
       self.runtime_lib.ConstructInferenceRunnerFromHIR.restype = ctypes.c_int64
       self.runtime_lib.ConstructInferenceRunnerFromHIR.argtypes = [ctypes.c_int64]
+
+      # extern "C" void *ConstructGPUInferenceRunnerFromHIR(void *tbContext)
+      self.runtime_lib.ConstructGPUInferenceRunnerFromHIR.restype = ctypes.c_int64
+      self.runtime_lib.ConstructGPUInferenceRunnerFromHIR.argtypes = [ctypes.c_int64]
+
+      # void IndexVariable_SetGPUThreadDim(intptr_t indexVarPtr, int32_t construct, int32_t dim)
+      self.runtime_lib.IndexVariable_SetGPUThreadDim.restype = None
+      self.runtime_lib.IndexVariable_SetGPUThreadDim.argtypes = [ctypes.c_int64, ctypes.c_int32, ctypes.c_int32]
 
     except Exception as e:
       print("Loading the TreeBeard runtime failed with exception :", e)
@@ -239,6 +272,15 @@ class TreebeardAPI:
 
   def Schedule_Cache(self, schedPtr, indexVarPtr):
       self.runtime_lib.Schedule_Cache(ctypes.c_int64(schedPtr), ctypes.c_int64(indexVarPtr))
+  
+  def Schedule_AtomicReduce(self, schedPtr, indexVarPtr):
+      self.runtime_lib.Schedule_AtomicReduce(ctypes.c_int64(schedPtr), ctypes.c_int64(indexVarPtr))
+  
+  def Schedule_VectorReduce(self, schedPtr, indexVarPtr, vectorWidth):
+      self.runtime_lib.Schedule_VectorReduce(ctypes.c_int64(schedPtr), ctypes.c_int64(indexVarPtr), ctypes.c_int32(vectorWidth))
+  
+  def Schedule_SharedReduce(self, schedPtr, indexVarPtr):
+      self.runtime_lib.Schedule_SharedReduce(ctypes.c_int64(schedPtr), ctypes.c_int64(indexVarPtr))
 
   def Schedule_GetRootIndex(self, schedPtr):
       return self.runtime_lib.Schedule_GetRootIndex(schedPtr)

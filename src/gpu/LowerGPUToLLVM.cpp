@@ -216,6 +216,7 @@ struct LowerGpuOpsToNVVMOpsPass
     populateFuncToLLVMConversionPatterns(converter, llvmPatterns);
     populateVectorToLLVMConversionPatterns(converter, llvmPatterns);
     populateMemRefToLLVMConversionPatterns(converter, llvmPatterns);
+    populateMathToLLVMConversionPatterns(converter, llvmPatterns);
     populateGpuToNVVMConversionPatterns(converter, llvmPatterns);
     populateGpuWMMAToNVVMConversionPatterns(converter, llvmPatterns);
     m_representation->AddTypeConversions(*m.getContext(), converter);
@@ -224,7 +225,8 @@ struct LowerGpuOpsToNVVMOpsPass
 
     LLVMConversionTarget target(getContext());
     configureGpuToNVVMConversionLegality(target);
-    target.addIllegalDialect<decisionforest::DecisionForestDialect>();
+    target.addIllegalDialect<decisionforest::DecisionForestDialect,
+                             math::MathDialect>();
 
     if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
       signalPassFailure();
@@ -313,7 +315,8 @@ void GpuToLLVMConversionPass::runOnOperation() {
   LLVMConversionTarget target(getContext());
 
   target.addIllegalDialect<gpu::GPUDialect>();
-  target.addIllegalDialect<decisionforest::DecisionForestDialect>();
+  target.addIllegalDialect<decisionforest::DecisionForestDialect,
+                           math::MathDialect>();
 
   m_representation->AddTypeConversions(getContext(), converter);
 
@@ -326,6 +329,7 @@ void GpuToLLVMConversionPass::runOnOperation() {
                                                     target);
   populateGpuToLLVMConversionPatterns(converter, patterns, gpuBinaryAnnotation);
   populateAffineToStdConversionPatterns(patterns);
+  populateMathToLLVMConversionPatterns(converter, patterns);
 
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))

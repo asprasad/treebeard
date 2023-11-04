@@ -2,6 +2,7 @@ import ctypes
 from treebeard_runtime_api import TreebeardAPI
 import numpy
 from typing import List
+from enum import Enum
 
 treebeardAPI = TreebeardAPI()
 
@@ -67,10 +68,23 @@ class CompilerOptions:
 #### ---------------------------------------------------------------- ####
 #### Index Variable
 #### ---------------------------------------------------------------- ####
+class GPUConstruct(Enum):
+  Grid = 0
+  ThreadBlock = 1
+  Undef = 2
+
+class Dimension(Enum):
+  X = 0
+  Y = 1
+  Z = 2
+
 class IndexVariable:
   def __init__(self, name, indexVarPtr) -> None:
      self.name = name
      self.indexVarPtr = indexVarPtr
+  
+  def set_gpu_dimension(self, gpuConstruct: GPUConstruct, dimension: Dimension):
+    treebeardAPI.runtime_lib.IndexVariable_SetGPUThreadDim(ctypes.c_int64(self.indexVarPtr), ctypes.c_int32(gpuConstruct.value), ctypes.c_int32(dimension.value))
 
 #### ---------------------------------------------------------------- ####
 #### Schedule
@@ -94,6 +108,27 @@ class Schedule:
 
   # def Split(self, indexPtr, firstPtr, secondPtr, splitIteration, indexMapPtr):
   #     self.runtime_lib.Schedule_Split(self.schedulePtr, indexPtr, firstPtr, secondPtr, splitIteration, indexMapPtr)
+
+  def Specialize(self, index):
+    infoPtr = treebeardAPI.Schedule_Specialize(self.schedulePtr, index.indexVarPtr)
+    num_iters = treebeardAPI.GetSpecializationInfoNumIterations(infoPtr)
+    num_entries = treebeardAPI.GetSpecializationInfoNumEntries(infoPtr)
+    lengths = numpy.zeros((num_iters), numpy.int64)
+    entries = numpy.zeros((num_entries), numpy.int64)
+    treebeardAPI.GetSpecializationInfo(infoPtr, lengths.ctypes.data_as(ctypes.c_void_p), entries.ctypes.data_as(ctypes.c_void_p))
+    iter_maps = []
+    index  = 0
+    first_length = lengths[0]
+    for l in lengths:
+      assert l == first_length
+      iter_map = dict()
+      for i in range(index, index+l, 2):
+        index1 = IndexVariable("", entries[i])
+        index2 = IndexVariable("", entries[i+1])
+        iter_map[index1] = index2
+      iter_maps.append(iter_map)
+      index += l
+    return iter_maps
 
   def Pipeline(self, index, stepSize):
       treebeardAPI.Schedule_Pipeline(self.schedulePtr, index.indexVarPtr, stepSize)
@@ -168,6 +203,13 @@ class TreebeardContext:
   def ConstructInferenceRunnerFromHIR(self):
     inferenceRunner = TreebeardInferenceRunner()
     inferenceRunner.inferenceRunner = int(treebeardAPI.runtime_lib.ConstructInferenceRunnerFromHIR(self.tbcontextPtr))
+    inferenceRunner.rowSize = treebeardAPI.GetRowSize(inferenceRunner.inferenceRunner)
+    inferenceRunner.batchSize = treebeardAPI.GetBatchSize(inferenceRunner.inferenceRunner)
+    return inferenceRunner
+  
+  def ConstructGPUInferenceRunnerFromHIR(self):
+    inferenceRunner = TreebeardInferenceRunner()
+    inferenceRunner.inferenceRunner = int(treebeardAPI.runtime_lib.ConstructGPUInferenceRunnerFromHIR(self.tbcontextPtr))
     inferenceRunner.rowSize = treebeardAPI.GetRowSize(inferenceRunner.inferenceRunner)
     inferenceRunner.batchSize = treebeardAPI.GetBatchSize(inferenceRunner.inferenceRunner)
     return inferenceRunner
