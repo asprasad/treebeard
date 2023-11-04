@@ -142,6 +142,22 @@ def RunTestOnSingleModelTestInputsJIT(modelName : str, options, testName : str, 
   csvPath = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), modelName + "_xgb_model_save.json.test.sampled.csv")
   return testFunc(modelJSONPath, csvPath, options, returnType)
 
+def RunTestOnSingleModelTestInputsJITIfSelected(modelName : str, options, testName : str, returnType=numpy.float32, testFunc=RunSingleTestJIT, selectedTests=[]) -> bool:
+  if modelName in selectedTests:
+    return RunTestOnSingleModelTestInputsJIT(modelName, options, testName, returnType, testFunc)
+  else:
+    return True
+  
+def RunSelectedTests(testName, options, multiclassOptions, singleTestRunner, selectedTests):
+  assert RunTestOnSingleModelTestInputsJITIfSelected("abalone", options, testName, numpy.float32, singleTestRunner, selectedTests)
+  assert RunTestOnSingleModelTestInputsJITIfSelected("airline", options, testName, numpy.float32, singleTestRunner, selectedTests)
+  assert RunTestOnSingleModelTestInputsJITIfSelected("airline-ohe", options, testName, numpy.float32, singleTestRunner, selectedTests)
+  assert RunTestOnSingleModelTestInputsJITIfSelected("covtype", multiclassOptions, testName, numpy.int8, singleTestRunner, selectedTests)
+  assert RunTestOnSingleModelTestInputsJITIfSelected("epsilon", options, testName, numpy.float32, singleTestRunner, selectedTests)
+  assert RunTestOnSingleModelTestInputsJITIfSelected("higgs", options, testName, numpy.float32, singleTestRunner, selectedTests)
+  assert RunTestOnSingleModelTestInputsJITIfSelected("letters", multiclassOptions, testName, numpy.int8, singleTestRunner, selectedTests)
+  assert RunTestOnSingleModelTestInputsJITIfSelected("year_prediction_msd", options, testName, numpy.float32, singleTestRunner, selectedTests)
+
 def RunAllTests(testName, options, multiclassOptions, singleTestRunner):
   assert RunTestOnSingleModelTestInputsJIT("abalone", options, testName, numpy.float32, singleTestRunner)
   assert RunTestOnSingleModelTestInputsJIT("airline", options, testName, numpy.float32, singleTestRunner)

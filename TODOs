@@ -16,6 +16,9 @@
             - Reorg
         - [Done] Multiple rows per thread (one row at a time)
         - [Done] Multiple rows per thread (one tree at a time)
+        - [Done] Cache rows
+        - Cache trees
+
 * Specialization of iterations
     - [Done] Make all leaves same depth for non-tiled trees
 * Automatic schedule generation for GPU

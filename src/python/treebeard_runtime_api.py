@@ -271,7 +271,7 @@ class TreebeardAPI:
       self.runtime_lib.Schedule_PeelWalk(ctypes.c_int64(schedPtr), ctypes.c_int64(indexVarPtr), ctypes.c_int32(numberOfIterations))
 
   def Schedule_Cache(self, schedPtr, indexVarPtr):
-      self.runtime_lib.Schedule_Cache(ctypes.c_int64(schedPtr), ctypes.c_int64(indexVarPtr))
+      self.runtime_lib.Schedule_Cache(schedPtr, ctypes.c_int64(indexVarPtr))
   
   def Schedule_AtomicReduce(self, schedPtr, indexVarPtr):
       self.runtime_lib.Schedule_AtomicReduce(ctypes.c_int64(schedPtr), ctypes.c_int64(indexVarPtr))
