@@ -135,7 +135,7 @@ class TreebeardAPI:
       self.runtime_lib.GetSpecializationInfoNumEntries.restype = ctypes.c_int64
 
       # void GetSpecializationInfoEntries(intptr_t infoPtr, intptr_t lengths, intptr_t indices)
-      self.runtime_lib.GetSpecializationInfoEntries.argtypes = [ctypes.c_int64, ctypes.c_int64, ctypes.c_int64]
+      self.runtime_lib.GetSpecializationInfoEntries.argtypes = [ctypes.c_int64, ctypes.c_void_p, ctypes.c_void_p]
       self.runtime_lib.GetSpecializationInfoEntries.restype = None
 
       self.runtime_lib.Schedule_Pipeline.argtypes = [ctypes.c_int64, ctypes.c_int64, ctypes.c_int32]

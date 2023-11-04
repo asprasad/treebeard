@@ -65,6 +65,21 @@ def SplitTreesAcrossThreadBlocksGPUSchedule(schedule: treebeard.Schedule, rows_p
 
   schedule.Reorder([threadBlockIndex, parallelTreeIndex, perThreadTreeIndex, perThreadRowIndex])
 
+def SplitTreesAcrossThreadsAndSpecializeGPUSchedule(schedule: treebeard.Schedule, rows_per_threadblock: int, trees_per_thread: int):
+  batchIndex = schedule.GetBatchIndex()
+  treeIndex = schedule.GetTreeIndex()
+  threadBlockIndex = schedule.NewIndexVariable("b0")
+  perThreadRowIndex = schedule.NewIndexVariable("b1")
+  schedule.Tile(batchIndex, threadBlockIndex, perThreadRowIndex, tileSize=rows_per_threadblock)
+  threadBlockIndex.set_gpu_dimension(treebeard.GPUConstruct.Grid, treebeard.Dimension.X)
+
+  parallelTreeIndex = schedule.NewIndexVariable("t0")
+  perThreadTreeIndex = schedule.NewIndexVariable("t1")
+  schedule.Tile(treeIndex, parallelTreeIndex, perThreadTreeIndex, tileSize=trees_per_thread)
+  parallelTreeIndex.set_gpu_dimension(treebeard.GPUConstruct.ThreadBlock, treebeard.Dimension.X)
+  schedule.Reorder([threadBlockIndex, parallelTreeIndex, perThreadTreeIndex, perThreadRowIndex])
+
+  schedule.Specialize(parallelTreeIndex)
 
 def run_custom_schedule(test_name, rep, schedule_manipulator, tile_size=1, batch_size=200):
   defaultTileSize8Options = treebeard.CompilerOptions(batch_size, tile_size)
@@ -131,12 +146,26 @@ def RunParallelizeOnTreeGPUScheduleTests():
   run_custom_schedule_selected("par-tree-tree-at-a-time_schedule-sparse", "gpu_sparse", gpu_schedule, selected_tests=selected_tests)
   run_custom_schedule_selected("par-tree-tree-at-a-time_schedule-reorg", "gpu_reorg", gpu_schedule, selected_tests=selected_tests)
 
+def RunParallelizeOnTreeAndSpecializeGPUScheduleTests():
+  selected_tests = ["abalone", "airline", "airline-ohe", "covtype", "epsilon", "higgs", "year_prediction_msd",]
+  gpu_schedule = partial(SplitTreesAcrossThreadsAndSpecializeGPUSchedule, rows_per_threadblock=20, trees_per_thread=10)
+  run_custom_schedule_selected("par-tree-tree-at-a-time_gpu_schedule-array", "gpu_array", gpu_schedule, selected_tests=selected_tests)
+  run_custom_schedule_selected("par-tree-tree-at-a-time_schedule-sparse", "gpu_sparse", gpu_schedule, selected_tests=selected_tests)
+  run_custom_schedule_selected("par-tree-tree-at-a-time_schedule-reorg", "gpu_reorg", gpu_schedule, selected_tests=selected_tests)
+
+  selected_tests = ["letters"]
+  gpu_schedule = partial(SplitTreesAcrossThreadsAndSpecializeGPUSchedule, rows_per_threadblock=20, trees_per_thread=500)
+  run_custom_schedule_selected("par-tree-tree-at-a-time_gpu_schedule-array", "gpu_array", gpu_schedule, selected_tests=selected_tests)
+  run_custom_schedule_selected("par-tree-tree-at-a-time_schedule-sparse", "gpu_sparse", gpu_schedule, selected_tests=selected_tests)
+  run_custom_schedule_selected("par-tree-tree-at-a-time_schedule-reorg", "gpu_reorg", gpu_schedule, selected_tests=selected_tests)
+
 def run_all_tests():
   RunSimpleGPUScheduleTests()
   RunOneRowAtATimeGPUScheduleTests()
   RunOneTreeAtATimeGPUScheduleTests()
   RunOneTreeAtATimeCachedRowGPUScheduleTests()
   RunParallelizeOnTreeGPUScheduleTests()
+  RunParallelizeOnTreeAndSpecializeGPUScheduleTests()
 
 if __name__ == "__main__":
   run_all_tests()

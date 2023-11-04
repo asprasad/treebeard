@@ -110,12 +110,12 @@ class Schedule:
   #     self.runtime_lib.Schedule_Split(self.schedulePtr, indexPtr, firstPtr, secondPtr, splitIteration, indexMapPtr)
 
   def Specialize(self, index):
-    infoPtr = treebeardAPI.Schedule_Specialize(self.schedulePtr, index.indexVarPtr)
-    num_iters = treebeardAPI.GetSpecializationInfoNumIterations(infoPtr)
-    num_entries = treebeardAPI.GetSpecializationInfoNumEntries(infoPtr)
+    infoPtr = treebeardAPI.runtime_lib.Schedule_Specialize(self.schedulePtr, index.indexVarPtr)
+    num_iters = treebeardAPI.runtime_lib.GetSpecializationInfoNumIterations(infoPtr)
+    num_entries = treebeardAPI.runtime_lib.GetSpecializationInfoNumEntries(infoPtr)
     lengths = numpy.zeros((num_iters), numpy.int64)
     entries = numpy.zeros((num_entries), numpy.int64)
-    treebeardAPI.GetSpecializationInfo(infoPtr, lengths.ctypes.data_as(ctypes.c_void_p), entries.ctypes.data_as(ctypes.c_void_p))
+    treebeardAPI.runtime_lib.GetSpecializationInfoEntries(infoPtr, lengths.ctypes.data_as(ctypes.c_void_p), entries.ctypes.data_as(ctypes.c_void_p))
     iter_maps = []
     index  = 0
     first_length = lengths[0]
