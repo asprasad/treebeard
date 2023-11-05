@@ -64,6 +64,40 @@ def OneTreeAtATimeGPUSchedule_CachedTree(schedule: treebeard.Schedule, rows_per_
   threadBlockIndex.set_gpu_dimension(treebeard.GPUConstruct.Grid, treebeard.Dimension.X)
   threadIndex.set_gpu_dimension(treebeard.GPUConstruct.ThreadBlock, treebeard.Dimension.X)
 
+def OneTreeAtATimeGPUSchedule_CachedTreeAndRow(schedule: treebeard.Schedule, rows_per_threadblock: int, rows_per_thread: int):
+  batchIndex = schedule.GetBatchIndex()
+  treeIndex = schedule.GetTreeIndex()
+  threadBlockIndex = schedule.NewIndexVariable("b0")
+  threadIndexTemp = schedule.NewIndexVariable("b1_temp")
+  threadIndex = schedule.NewIndexVariable("b1_outer")
+  perThreadIndex = schedule.NewIndexVariable("b1_inner")
+  schedule.Tile(batchIndex, threadBlockIndex, threadIndexTemp, tileSize=rows_per_threadblock)
+  schedule.Tile(threadIndexTemp, threadIndex, perThreadIndex, tileSize=rows_per_thread)
+  schedule.Reorder([threadBlockIndex, threadIndex, treeIndex, perThreadIndex])
+  schedule.Cache(treeIndex)
+  schedule.Cache(threadBlockIndex)
+  threadBlockIndex.set_gpu_dimension(treebeard.GPUConstruct.Grid, treebeard.Dimension.X)
+  threadIndex.set_gpu_dimension(treebeard.GPUConstruct.ThreadBlock, treebeard.Dimension.X)
+
+def OneTreeAtATimeGPUSchedule_CacheMultipleTrees(schedule: treebeard.Schedule, rows_per_threadblock: int, rows_per_thread: int, trees_to_cache: int):
+  batchIndex = schedule.GetBatchIndex()
+  treeIndex = schedule.GetTreeIndex()
+  threadBlockIndex = schedule.NewIndexVariable("b0")
+  threadIndexTemp = schedule.NewIndexVariable("b1_temp")
+  threadIndex = schedule.NewIndexVariable("b1_outer")
+  perThreadIndex = schedule.NewIndexVariable("b1_inner")
+  schedule.Tile(batchIndex, threadBlockIndex, threadIndexTemp, tileSize=rows_per_threadblock)
+  schedule.Tile(threadIndexTemp, threadIndex, perThreadIndex, tileSize=rows_per_thread)
+
+  tree_inner = schedule.NewIndexVariable("t1_inner")
+  tree_outer = schedule.NewIndexVariable("t1_outer")
+  schedule.Tile(treeIndex, tree_outer, tree_inner, tileSize=trees_to_cache)
+
+  schedule.Reorder([threadBlockIndex, threadIndex, tree_outer, tree_inner, perThreadIndex])
+  schedule.Cache(tree_inner)
+  threadBlockIndex.set_gpu_dimension(treebeard.GPUConstruct.Grid, treebeard.Dimension.X)
+  threadIndex.set_gpu_dimension(treebeard.GPUConstruct.ThreadBlock, treebeard.Dimension.X)
+
 def SplitTreesAcrossThreadBlocksGPUSchedule(schedule: treebeard.Schedule, rows_per_threadblock: int, trees_per_thread: int):
   batchIndex = schedule.GetBatchIndex()
   treeIndex = schedule.GetTreeIndex()
@@ -143,16 +177,31 @@ def RunOneTreeAtATimeCachedRowGPUScheduleTests():
   # "airline-ohe", "epsilon" omitted due to shared memory size constraints
   selected_tests = ["abalone", "airline", "covtype", "higgs", "letters", "year_prediction_msd",]
   gpu_schedule = partial(OneTreeAtATimeGPUSchedule_CachedRow, rows_per_threadblock=40, rows_per_thread=2)
-  run_custom_schedule_selected("tree-at-a-time-cache-row_gpu_schedule-array", "gpu_array", gpu_schedule, selected_tests=selected_tests)
+  run_custom_schedule_selected("tree-at-a-time-cache-row_schedule-array", "gpu_array", gpu_schedule, selected_tests=selected_tests)
   run_custom_schedule_selected("tree-at-a-time-cache-row_schedule-sparse", "gpu_sparse", gpu_schedule, selected_tests=selected_tests)
   run_custom_schedule_selected("tree-at-a-time-cache-row_schedule-reorg", "gpu_reorg", gpu_schedule, selected_tests=selected_tests)
 
 def RunOneTreeAtATimeCachedTreeGPUScheduleTests():
   selected_tests = ["abalone", "airline", "airline-ohe", "covtype", "epsilon", "higgs",  "letters", "year_prediction_msd",]
   gpu_schedule = partial(OneTreeAtATimeGPUSchedule_CachedTree, rows_per_threadblock=40, rows_per_thread=2)
-  run_custom_schedule_selected("tree-at-a-time-cache-tree_gpu_schedule-array", "gpu_array", gpu_schedule, selected_tests=selected_tests)
+  run_custom_schedule_selected("tree-at-a-time-cache-tree_schedule-array", "gpu_array", gpu_schedule, selected_tests=selected_tests)
   run_custom_schedule_selected("tree-at-a-time-cache-tree_schedule-sparse", "gpu_sparse", gpu_schedule, selected_tests=selected_tests)
   run_custom_schedule_selected("tree-at-a-time-cache-tree_schedule-reorg", "gpu_reorg", gpu_schedule, selected_tests=selected_tests)
+
+def RunOneTreeAtATimeCacheRowAndTreeGPUScheduleTests():
+  # "airline-ohe", "epsilon" omitted due to shared memory size constraints
+  selected_tests = ["abalone", "airline", "covtype", "higgs", "letters", "year_prediction_msd",]
+  gpu_schedule = partial(OneTreeAtATimeGPUSchedule_CachedTreeAndRow, rows_per_threadblock=40, rows_per_thread=2)
+  run_custom_schedule_selected("tree-at-a-time-cache-row-and-tree_schedule-array", "gpu_array", gpu_schedule, selected_tests=selected_tests)
+  run_custom_schedule_selected("tree-at-a-time-cache-row-and-tree_schedule-sparse", "gpu_sparse", gpu_schedule, selected_tests=selected_tests)
+  run_custom_schedule_selected("tree-at-a-time-cache-row-and-tree_schedule-reorg", "gpu_reorg", gpu_schedule, selected_tests=selected_tests)
+
+def RunOneTreeAtATimeCache4TreesGPUScheduleTests():
+  selected_tests = ["abalone", "airline", "airline-ohe", "covtype", "epsilon", "higgs",  "letters", "year_prediction_msd",]
+  gpu_schedule = partial(OneTreeAtATimeGPUSchedule_CacheMultipleTrees, rows_per_threadblock=40, rows_per_thread=2, trees_to_cache=4)
+  run_custom_schedule_selected("tree-at-a-time-cache-4-tree_schedule-array", "gpu_array", gpu_schedule, selected_tests=selected_tests)
+  run_custom_schedule_selected("tree-at-a-time-cache-4-tree_schedule-sparse", "gpu_sparse", gpu_schedule, selected_tests=selected_tests)
+  run_custom_schedule_selected("tree-at-a-time-cache-4-tree_schedule-reorg", "gpu_reorg", gpu_schedule, selected_tests=selected_tests)
 
 def RunParallelizeOnTreeGPUScheduleTests():
   selected_tests = ["abalone", "airline", "airline-ohe", "covtype", "epsilon", "higgs", "year_prediction_msd",]
@@ -188,6 +237,8 @@ def run_all_tests():
   RunParallelizeOnTreeGPUScheduleTests()
   RunParallelizeOnTreeAndSpecializeGPUScheduleTests()
   RunOneTreeAtATimeCachedTreeGPUScheduleTests()
+  RunOneTreeAtATimeCacheRowAndTreeGPUScheduleTests()
+  RunOneTreeAtATimeCache4TreesGPUScheduleTests()
 
 if __name__ == "__main__":
   run_all_tests()
