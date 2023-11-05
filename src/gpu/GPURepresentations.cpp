@@ -832,6 +832,38 @@ void GPUArrayBasedRepresentation::GenerateTreeMemref(
   getTreeOperationMap[op] = static_cast<Value>(treeMemref);
 }
 
+mlir::Value GPUArrayBasedRepresentation::GenerateGetTreeClassId(
+    mlir::ConversionPatternRewriter &rewriter, mlir::Operation *op,
+    Value ensemble, Value treeIndex) {
+  Operation *ensembleDefiningOp = ensemble.getDefiningOp();
+  auto ensembleConstantOp =
+      llvm::dyn_cast<mlir::decisionforest::EnsembleConstantOp>(
+          ensembleDefiningOp);
+  if (ensembleConstantOp) {
+    auto retVal = ArrayBasedRepresentation::GenerateGetTreeClassId(
+        rewriter, op, ensemble, treeIndex);
+    return retVal;
+  }
+
+  auto cacheTreesOp =
+      AssertOpIsOfType<decisionforest::CacheTreesFromEnsembleOp>(
+          ensembleDefiningOp);
+  ensembleConstantOp = AssertOpIsOfType<decisionforest::EnsembleConstantOp>(
+      cacheTreesOp.getForest().getDefiningOp());
+
+  auto mapIter = ensembleConstantToMemrefsMap.find(ensembleConstantOp);
+  assert(mapIter != ensembleConstantToMemrefsMap.end());
+  auto &ensembleInfo = mapIter->second;
+
+  auto treeClassMemref = ensembleInfo.classInfoGlobal;
+  auto treeClassMemrefType = treeClassMemref.getType().cast<mlir::MemRefType>();
+
+  auto classId = rewriter.create<memref::LoadOp>(
+      op->getLoc(), treeClassMemrefType.getElementType(), treeClassMemref,
+      treeIndex);
+  return classId;
+}
+
 void GPUArrayBasedRepresentation::LowerCacheRowsOp(
     ConversionPatternRewriter &rewriter, mlir::Operation *op,
     ArrayRef<Value> operands) {
@@ -1398,6 +1430,37 @@ void GPUSparseRepresentation::GenerateTreeMemref(
   // }
   sparseGetTreeOperationMap[op] = {static_cast<Value>(treeMemref),
                                    static_cast<Value>(leavesTreeMemref)};
+}
+
+mlir::Value GPUSparseRepresentation::GenerateGetTreeClassId(
+    mlir::ConversionPatternRewriter &rewriter, mlir::Operation *op,
+    Value ensemble, Value treeIndex) {
+  Operation *ensembleDefiningOp = ensemble.getDefiningOp();
+  auto ensembleConstantOp =
+      llvm::dyn_cast<mlir::decisionforest::EnsembleConstantOp>(
+          ensembleDefiningOp);
+  if (ensembleConstantOp) {
+    auto retVal = SparseRepresentation::GenerateGetTreeClassId(
+        rewriter, op, ensemble, treeIndex);
+    return retVal;
+  }
+  auto cacheTreesOp =
+      AssertOpIsOfType<decisionforest::CacheTreesFromEnsembleOp>(
+          ensembleDefiningOp);
+  ensembleConstantOp = AssertOpIsOfType<decisionforest::EnsembleConstantOp>(
+      cacheTreesOp.getForest().getDefiningOp());
+
+  auto mapIter = sparseEnsembleConstantToMemrefsMap.find(ensembleConstantOp);
+  assert(mapIter != sparseEnsembleConstantToMemrefsMap.end());
+  auto &ensembleInfo = mapIter->second;
+
+  auto treeClassMemref = ensembleInfo.classInfoGlobal;
+  auto treeClassMemrefType = treeClassMemref.getType().cast<mlir::MemRefType>();
+
+  auto classId = rewriter.create<memref::LoadOp>(
+      op->getLoc(), treeClassMemrefType.getElementType(), treeClassMemref,
+      treeIndex);
+  return classId;
 }
 
 void GPUSparseRepresentation::LowerCacheRowsOp(
