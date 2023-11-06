@@ -274,10 +274,10 @@ class TreebeardAPI:
       self.runtime_lib.Schedule_Cache(schedPtr, ctypes.c_int64(indexVarPtr))
   
   def Schedule_AtomicReduce(self, schedPtr, indexVarPtr):
-      self.runtime_lib.Schedule_AtomicReduce(ctypes.c_int64(schedPtr), ctypes.c_int64(indexVarPtr))
+      self.runtime_lib.Schedule_AtomicReduce(schedPtr, ctypes.c_int64(indexVarPtr))
   
   def Schedule_VectorReduce(self, schedPtr, indexVarPtr, vectorWidth):
-      self.runtime_lib.Schedule_VectorReduce(ctypes.c_int64(schedPtr), ctypes.c_int64(indexVarPtr), ctypes.c_int32(vectorWidth))
+      self.runtime_lib.Schedule_VectorReduce(schedPtr, ctypes.c_int64(indexVarPtr), ctypes.c_int32(vectorWidth))
   
   def Schedule_SharedReduce(self, schedPtr, indexVarPtr):
       self.runtime_lib.Schedule_SharedReduce(ctypes.c_int64(schedPtr), ctypes.c_int64(indexVarPtr))

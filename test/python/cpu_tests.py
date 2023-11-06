@@ -134,6 +134,42 @@ def OneTreeAtATimeSchedule(schedule: treebeard.Schedule):
   index_order = [tree_index, batch_index]
   schedule.Reorder(index_order)
 
+def ParallelizeTreesSchedule(schedule: treebeard.Schedule, num_parallel_batches: int):
+  tree_index = schedule.GetTreeIndex()
+  tree_par = schedule.NewIndexVariable("t0")
+  tree_inner = schedule.NewIndexVariable("t1")
+  schedule.Tile(tree_index, tree_inner, tree_par, tileSize=num_parallel_batches)
+  schedule.Parallel(tree_par)
+  batch_index = schedule.GetBatchIndex()
+  index_order = [tree_par, tree_inner, batch_index]
+  schedule.Reorder(index_order)
+
+def ParallelizeTreesSchedule_AtomicReduce(schedule: treebeard.Schedule, num_parallel_batches: int):
+  tree_index = schedule.GetTreeIndex()
+  tree_par = schedule.NewIndexVariable("t0")
+  tree_inner = schedule.NewIndexVariable("t1")
+  schedule.Tile(tree_index, tree_inner, tree_par, tileSize=num_parallel_batches)
+  schedule.Parallel(tree_par)
+  schedule.AtomicReduce(tree_par)
+
+  batch_index = schedule.GetBatchIndex()
+
+  index_order = [tree_par, tree_inner, batch_index]
+  schedule.Reorder(index_order)
+
+def ParallelizeTreesSchedule_VectorReduce(schedule: treebeard.Schedule, num_parallel_batches: int, vector_width: int):
+  tree_index = schedule.GetTreeIndex()
+  tree_par = schedule.NewIndexVariable("t0")
+  tree_inner = schedule.NewIndexVariable("t1")
+  schedule.Tile(tree_index, tree_inner, tree_par, tileSize=num_parallel_batches)
+  schedule.Parallel(tree_par)
+  schedule.VectorReduce(tree_par, vector_width)
+
+  batch_index = schedule.GetBatchIndex()
+
+  index_order = [tree_par, tree_inner, batch_index]
+  schedule.Reorder(index_order)
+
 def run_custom_schedule(test_name, rep, schedule_manipulator):
   defaultTileSize8Options = treebeard.CompilerOptions(200, 8)
   defaultTileSize8MulticlassOptions = treebeard.CompilerOptions(200, 8)
@@ -156,10 +192,28 @@ def RunTileTreeLoopTests():
 def RuneOneTreeAtATimeTests():
   run_custom_schedule("one_tree_schedule-array-tbcontext", "array", OneTreeAtATimeSchedule)
 
+def RunParallelizeTreesScheduleTests():
+  schedule_manipulator = partial(ParallelizeTreesSchedule, num_parallel_batches=4)
+  run_custom_schedule("par_tree_schedule-array-tbcontext", "array", schedule_manipulator)
+  run_custom_schedule("par_tree_schedule-sparse-tbcontext", "sparse", schedule_manipulator)
+
+def RunParallelizeTreesAtomicReduceScheduleTests():
+  schedule_manipulator = partial(ParallelizeTreesSchedule_AtomicReduce, num_parallel_batches=4)
+  run_custom_schedule("par_tree_schedule_atomic-array-tbcontext", "array", schedule_manipulator)
+  run_custom_schedule("par_tree_schedule_atomic-sparse-tbcontext", "sparse", schedule_manipulator)
+
+def RunParallelizeTreesVectorReduceScheduleTests():
+  schedule_manipulator = partial(ParallelizeTreesSchedule_VectorReduce, num_parallel_batches=4, vector_width=2)
+  run_custom_schedule("par_tree_schedule_vector-array-tbcontext", "array", schedule_manipulator)
+  run_custom_schedule("par_tree_schedule_vector-sparse-tbcontext", "sparse", schedule_manipulator)
+
 def ScheduleTest():
   RuneOneTreeAtATimeTests()
   RunTileBatchLoopTests()
   RunTileTreeLoopTests()
+  RunParallelizeTreesScheduleTests()
+  RunParallelizeTreesAtomicReduceScheduleTests()
+  RunParallelizeTreesVectorReduceScheduleTests()
 
 def run_all_tests():
   ScheduleTest()
@@ -167,10 +221,8 @@ def run_all_tests():
   RunBasicTests()
 
   treebeard.SetEnableSparseRepresentation(1)
-
   RunPipeliningTests()
   RunParallelTests()
-
   treebeard.SetEnableSparseRepresentation(0)
 
 if __name__ == "__main__":

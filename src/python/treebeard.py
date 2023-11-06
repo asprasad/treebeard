@@ -147,6 +147,12 @@ class Schedule:
 
   def Cache(self, index):
       treebeardAPI.Schedule_Cache(self.schedulePtr, index.indexVarPtr)
+  
+  def AtomicReduce(self, index):
+      treebeardAPI.Schedule_AtomicReduce(self.schedulePtr, index.indexVarPtr)
+
+  def VectorReduce(self, index, width):
+      treebeardAPI.Schedule_VectorReduce(self.schedulePtr, index.indexVarPtr, width)
 
   def GetRootIndex(self):
       return IndexVariable("root", treebeardAPI.Schedule_GetRootIndex(self.schedulePtr))
