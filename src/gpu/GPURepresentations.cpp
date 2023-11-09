@@ -247,8 +247,10 @@ mlir::gpu::KernelDim3 GetBlockID(mlir::Operation *op) {
   return blockNum;
 }
 
-void LowerCacheRowsOpToGPU(ConversionPatternRewriter &rewriter,
-                           mlir::Operation *op, ArrayRef<Value> operands) {
+void LowerCacheRowsOpToGPU(
+    ConversionPatternRewriter &rewriter, mlir::Operation *op,
+    ArrayRef<Value> operands,
+    std::map<int64_t, std::string> &cacheBufferNamesMap) {
   auto location = op->getLoc();
   auto cacheRowsOp = AssertOpIsOfType<decisionforest::CacheInputRowsOp>(op);
   // Add the required globals to the owning module
@@ -258,12 +260,12 @@ void LowerCacheRowsOpToGPU(ConversionPatternRewriter &rewriter,
   // All threads need to be synchronized before we can start caching
   rewriter.create<gpu::BarrierOp>(location);
 
+  int64_t cacheId = cacheRowsOp.getCacheID();
   std::string globalCacheBufferName =
-      std::string("inputRowCache_") +
-      std::to_string(reinterpret_cast<long long>(op));
+      std::string("inputRowCache_") + std::to_string(cacheId);
   // TODO_Ashwin Use the right memory space ID
   auto cacheBufferType = cacheRowsOp.getType().cast<MemRefType>();
-  {
+  if (cacheBufferNamesMap.find(cacheId) == cacheBufferNamesMap.end()) {
     SaveAndRestoreInsertionPoint saveAndRestoreInsertPoint(rewriter);
     rewriter.setInsertionPoint(&owningModule.front());
     rewriter.create<memref::GlobalOp>(
@@ -273,6 +275,7 @@ void LowerCacheRowsOpToGPU(ConversionPatternRewriter &rewriter,
         /*initial_value=*/rewriter.getUnitAttr(),
         /*constant=*/false,
         /*alignment*/ IntegerAttr());
+    cacheBufferNamesMap[cacheId] = globalCacheBufferName;
   }
 
   auto getGlobal = rewriter.create<memref::GetGlobalOp>(
@@ -653,16 +656,15 @@ void GPUArrayBasedRepresentation::LowerCacheTreeOp(
   auto owningModule = cacheTreesOp->getParentOfType<mlir::ModuleOp>();
   assert(owningModule);
 
-  int64_t cacheId = cacheTreesOp.getCacheID();  
+  int64_t cacheId = cacheTreesOp.getCacheID();
   std::string globalCacheBufferName =
-      std::string("treeCache_") +
-      std::to_string(cacheId);
+      std::string("treeCache_") + std::to_string(cacheId);
   auto treeMemrefType = ensembleInfo.modelGlobal.getType().cast<MemRefType>();
   // TODO_Ashwin Use the right memory space ID
   auto cacheBufferType = MemRefType::get(
       {bufferLen}, treeMemrefType.getElementType(), {}, // Affine map
       3); // Address space ID -- shared memory
-  
+
   if (m_cacheBufferNamesMap.find(cacheId) == m_cacheBufferNamesMap.end()) {
     SaveAndRestoreInsertionPoint saveAndRestoreInsertPoint(rewriter);
     rewriter.setInsertionPoint(&owningModule.front());
@@ -871,7 +873,7 @@ mlir::Value GPUArrayBasedRepresentation::GenerateGetTreeClassId(
 void GPUArrayBasedRepresentation::LowerCacheRowsOp(
     ConversionPatternRewriter &rewriter, mlir::Operation *op,
     ArrayRef<Value> operands) {
-  LowerCacheRowsOpToGPU(rewriter, op, operands);
+  LowerCacheRowsOpToGPU(rewriter, op, operands, m_cacheBufferNamesMap);
 }
 
 std::shared_ptr<IRepresentation> ConstructGPUArrayBasedRepresentation() {
@@ -1479,7 +1481,7 @@ mlir::Value GPUSparseRepresentation::GenerateGetTreeClassId(
 void GPUSparseRepresentation::LowerCacheRowsOp(
     ConversionPatternRewriter &rewriter, mlir::Operation *op,
     ArrayRef<Value> operands) {
-  LowerCacheRowsOpToGPU(rewriter, op, operands);
+  LowerCacheRowsOpToGPU(rewriter, op, operands, m_cacheBufferNamesMap);
 }
 
 std::shared_ptr<IRepresentation> ConstructGPUSparseRepresentation() {

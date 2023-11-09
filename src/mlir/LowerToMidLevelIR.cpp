@@ -158,6 +158,7 @@ template <typename LoopType> struct LoopConstructor {
     if (!indexVar.Cache())
       return;
 
+    auto cacheOpID = getCacheOpID(indexVar);
     batchIndexVars.push_back(loopIndex);
 
     assert(loopIndex.getType().isa<IndexType>());
@@ -175,7 +176,7 @@ template <typename LoopType> struct LoopConstructor {
 
     auto cacheRows = rewriter.create<decisionforest::CacheInputRowsOp>(
         location, cachedType, loweringState.data, startIndex,
-        static_cast<Value>(endIndex));
+        static_cast<Value>(endIndex), rewriter.getI64IntegerAttr(cacheOpID));
 
     loweringState.inputIndexOffset = startIndex;
     loweringState.data = cacheRows;

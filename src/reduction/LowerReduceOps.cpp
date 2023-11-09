@@ -994,8 +994,6 @@ struct CooperativeArgMaxReduceOpLowering : public ConversionPattern {
         AssertOpIsOfType<decisionforest::CooperativeReduceArgMaxOp>(op);
     auto location = reduceOp.getLoc();
 
-    auto targetMemrefOffsets = reduceOp.getTargetMemrefOffsets();
-
     // The values for the outer indices. These are fixed
 
     auto reductionDim = reduceOp.getReductionDimension();
@@ -1022,15 +1020,14 @@ struct CooperativeArgMaxReduceOpLowering : public ConversionPattern {
         generateLocalThreadId(location, rewriter, reduceOp);
     auto localThreadId = std::get<0>(localThreadIdAndNumThreads);
     auto numThreads = std::get<1>(localThreadIdAndNumThreads);
-    auto numThreadsVal = std::get<2>(localThreadIdAndNumThreads);
 
     rewriter.create<gpu::BarrierOp>(location);
 
     // if the number of reductions to perform is greater than
     // the number of threads, then use the single thread reduction strategy
     // (Each thread fully performs a single reduction)
-    auto numRowsToProcess =
-        getConstantStepBetweenValues(rangeStartVec[0], rangeEndVec[0]);
+    // auto numRowsToProcess =
+    //     getConstantStepBetweenValues(rangeStartVec[0], rangeEndVec[0]);
 
     generateSingleThreadArgMaxReduction(
         location, rewriter, sourceMemref, targetMemref, localThreadId,
@@ -1231,15 +1228,15 @@ struct CooperativeInplaceReduceDimensionOpLowering : public ConversionPattern {
         generateLocalThreadId(location, rewriter, reduceOp);
     auto localThreadId = std::get<0>(localThreadIdAndNumThreads);
     auto numThreads = std::get<1>(localThreadIdAndNumThreads);
-    auto numThreadsVal = std::get<2>(localThreadIdAndNumThreads);
+    // auto numThreadsVal = std::get<2>(localThreadIdAndNumThreads);
 
     rewriter.create<gpu::BarrierOp>(location);
 
     // if the number of reductions to perform is greater than
     // the number of threads, then use the single thread reduction strategy
     // (Each thread fully performs a single reduction)
-    auto numRowsToProcess =
-        getConstantStepBetweenValues(rangeStartVec[0], rangeEndVec[0]);
+    // auto numRowsToProcess =
+    //     getConstantStepBetweenValues(rangeStartVec[0], rangeEndVec[0]);
 
     generateSingleThreadReductionStrategy(
         location, rewriter, targetMemref, localThreadId, numThreads,

@@ -827,12 +827,13 @@ void ReorgForestRepresentation::LowerCacheTreeOp(
 
 // Definition in GPURepresentations.cpp
 void LowerCacheRowsOpToGPU(ConversionPatternRewriter &rewriter,
-                           mlir::Operation *op, ArrayRef<Value> operands);
+                           mlir::Operation *op, ArrayRef<Value> operands,
+                           std::map<int64_t, std::string> &cacheBufferNamesMap);
 
 void ReorgForestRepresentation::LowerCacheRowsOp(
     ConversionPatternRewriter &rewriter, mlir::Operation *op,
     ArrayRef<Value> operands) {
-  LowerCacheRowsOpToGPU(rewriter, op, operands);
+  LowerCacheRowsOpToGPU(rewriter, op, operands, m_cacheBufferNamesMap);
 }
 
 std::shared_ptr<IRepresentation> ConstructGPUReorgForestRepresentation() {

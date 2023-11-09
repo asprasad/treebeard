@@ -399,7 +399,7 @@ def CacheTreesFromEnsembleOp : DecisionForest_Op<"cacheTrees", [Pure]> {
 def CacheInputRowsOp : DecisionForest_Op<"cacheRows", [Pure]> {
   let summary = "Cache rows from the input.";
   let description = "Cache a subset of rows from the input. Takes three arguments -- input memref, and two integers to represent the range of rows to cache. Returns a memref value.";
-  let arguments = (ins InputDataType:$data, Index:$startIndex, Index:$endIndex);
+  let arguments = (ins InputDataType:$data, Index:$startIndex, Index:$endIndex, I64Attr:$cacheID);
 
   let results = (outs InputDataType);
 }

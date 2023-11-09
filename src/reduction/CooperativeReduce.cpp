@@ -159,8 +159,8 @@ struct ReduceInplaceToCooperativeReduceOp : public ConversionPattern {
     //   return mlir::failure();
     // }
 
-    Value rangeStart = reduceOp.getPostReductionDimensionStart().front();
-    Value rangeEnd = reduceOp.getPostReductionDimensionEnd().front();
+    // Value rangeStart = reduceOp.getPostReductionDimensionStart().front();
+    // Value rangeEnd = reduceOp.getPostReductionDimensionEnd().front();
     /*let arguments = (ins TargetMemrefType:$targetMemref,
                            Variadic<Index>:$preReductionDimensionStart,
                            Variadic<Index>:$preReductionDimensionEnd,
