@@ -653,15 +653,17 @@ void GPUArrayBasedRepresentation::LowerCacheTreeOp(
   auto owningModule = cacheTreesOp->getParentOfType<mlir::ModuleOp>();
   assert(owningModule);
 
+  int64_t cacheId = cacheTreesOp.getCacheID();  
   std::string globalCacheBufferName =
       std::string("treeCache_") +
-      std::to_string(reinterpret_cast<long long>(op));
+      std::to_string(cacheId);
   auto treeMemrefType = ensembleInfo.modelGlobal.getType().cast<MemRefType>();
   // TODO_Ashwin Use the right memory space ID
   auto cacheBufferType = MemRefType::get(
       {bufferLen}, treeMemrefType.getElementType(), {}, // Affine map
       3); // Address space ID -- shared memory
-  {
+  
+  if (m_cacheBufferNamesMap.find(cacheId) == m_cacheBufferNamesMap.end()) {
     SaveAndRestoreInsertionPoint saveAndRestoreInsertPoint(rewriter);
     rewriter.setInsertionPoint(&owningModule.front());
     rewriter.create<memref::GlobalOp>(
@@ -671,6 +673,7 @@ void GPUArrayBasedRepresentation::LowerCacheTreeOp(
         /*initial_value=*/rewriter.getUnitAttr(),
         /*constant=*/false,
         /*alignment*/ IntegerAttr());
+    m_cacheBufferNamesMap[cacheId] = globalCacheBufferName;
   }
 
   auto offsetsMemref = ensembleInfo.offsetGlobal;

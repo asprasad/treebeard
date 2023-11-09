@@ -119,6 +119,7 @@ protected:
     Value featureIndexBuffer;
   };
   std::map<Operation *, GetTreeInfo> m_getTreeFromEnsembleMap;
+  std::map<int64_t, std::string> m_cacheBufferNamesMap;
 
 public:
   ~ReorgForestRepresentation() {}

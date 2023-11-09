@@ -654,14 +654,15 @@ ReorgForestRepresentation::AddTreeCacheGlobals(
     ConversionPatternRewriter &rewriter, Operation *op, int32_t bufferLen,
     int64_t numTreesToCache) {
   auto location = op->getLoc();
+  auto cacheTreesOp =
+      AssertOpIsOfType<decisionforest::CacheTreesFromEnsembleOp>(op);
+  int64_t cacheId = cacheTreesOp.getCacheID();
   auto owningModule = op->getParentOfType<mlir::ModuleOp>();
   assert(owningModule);
   std::string thresholdCacheBufferName =
-      std::string("treeCache_thresholds_") +
-      std::to_string(reinterpret_cast<long long>(op));
+      std::string("treeCache_thresholds_") + std::to_string(cacheId);
   std::string featureIndexCacheBufferName =
-      std::string("treeCache_featureIndices_") +
-      std::to_string(reinterpret_cast<long long>(op));
+      std::string("treeCache_featureIndices_") + std::to_string(cacheId);
 
   auto thresholdCacheElemType = decisionforest::ReorgMemrefElementType::get(
       m_thresholdType, numTreesToCache);
@@ -674,7 +675,7 @@ ReorgForestRepresentation::AddTreeCacheGlobals(
       MemRefType::get({bufferLen}, featureIndexCacheElemType, {}, // Affine map
                       3); // Address space ID -- shared memory
 
-  {
+  if (m_cacheBufferNamesMap.find(cacheId) == m_cacheBufferNamesMap.end()) {
     SaveAndRestoreInsertionPoint saveAndRestoreInsertPoint(rewriter);
     rewriter.setInsertionPoint(&owningModule.front());
     rewriter.create<memref::GlobalOp>(
@@ -691,6 +692,7 @@ ReorgForestRepresentation::AddTreeCacheGlobals(
         /*initial_value=*/rewriter.getUnitAttr(),
         /*constant=*/false,
         /*alignment*/ IntegerAttr());
+    m_cacheBufferNamesMap[cacheId] = thresholdCacheBufferName;
   }
   auto getThresholdCache = rewriter.create<memref::GetGlobalOp>(
       location, thresholdCacheBufferType, thresholdCacheBufferName);
