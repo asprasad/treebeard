@@ -391,7 +391,7 @@ def GetTreeFromEnsembleOp : DecisionForest_Op<"getTree", [Pure]> {
 def CacheTreesFromEnsembleOp : DecisionForest_Op<"cacheTrees", [Pure]> {
   let summary = "Cache trees from the forest.";
   let description = "Cache a subset of trees from the forest. Takes three arguments -- an ensemble, and two integers to represent the range of trees to cache. Returns an ensemble value.";
-  let arguments = (ins TreeEnsembleType:$forest, Index:$startTreeIndex, Index:$endTreeIndex);
+  let arguments = (ins TreeEnsembleType:$forest, Index:$startTreeIndex, Index:$endTreeIndex, I64Attr:$cacheID);
 
   let results = (outs TreeEnsembleType);
 }
@@ -548,6 +548,16 @@ def NodeToIndexOp : DecisionForest_Op<"nodeToIndex", [Pure]> {
   let arguments = (ins ThresholdMemrefType:$treeMemref, NodeType:$node);
 
   let results = (outs Index);
+}
+
+def CacheOpBeginOp : DecisionForest_Op<"cacheOpBegin"> {
+  let summary = "Sync at start of a cache op.";
+  let description = "Sync at start of a cache op.";
+}
+
+def CacheOpEndOp : DecisionForest_Op<"cacheOpEnd"> {
+  let summary = "Sync at end of a cache op.";
+  let description = "Sync at end of a cache op.";
 }
 
 // ----- Representation Specific Low-level IR Ops ------

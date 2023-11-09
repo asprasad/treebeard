@@ -808,6 +808,14 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache
 bool Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache(
     TestArgs_t &args);
 
+// GPU basic auto scheduling tests
+bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleBasic(
+    TestArgs_t &args);
+bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedRows(
+    TestArgs_t &args);
+bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedTrees(
+    TestArgs_t &args);
+
 void InitializeVectorWithRandValues(std::vector<double> &vec) {
   for (size_t i = 0; i < vec.size(); ++i)
     vec[i] = (double)rand() / RAND_MAX;
@@ -2340,7 +2348,12 @@ TestDescriptor testList[] = {
     // Tree Parallelization Multi-class tests
     TEST_LIST_ENTRY(
         Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache),
-
+    TEST_LIST_ENTRY(
+        Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedTrees),
+    TEST_LIST_ENTRY(
+        Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedRows),
+    TEST_LIST_ENTRY(
+        Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleBasic),
 #endif // TREEBEARD_GPU_SUPPORT
 };
 
@@ -2350,8 +2363,13 @@ TestDescriptor testList[] = {
     // TEST_LIST_ENTRY(
     //     Test_GPUCodeGeneration_Covtype_ArrayRep_DoubleInt32_BatchSize32),
     // TEST_LIST_ENTRY(Test_TileSize1_Letters_Int8Type),
+    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
     TEST_LIST_ENTRY(
-        Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache),
+        Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedTrees),
+    // TEST_LIST_ENTRY(
+    //     Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedRows),
+    // TEST_LIST_ENTRY(
+    //     Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleBasic),
     // TEST_LIST_ENTRY(Test_TreePar_LeftRightAndBalanced_DblI32),
     // TEST_LIST_ENTRY(
     //     Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SpecializedTreeLoop_FltI16_B64),

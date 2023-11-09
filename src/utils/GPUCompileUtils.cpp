@@ -23,6 +23,7 @@
 
 #include "CompileUtils.h"
 #include "ForestTestUtils.h"
+#include "GPUCompileUtils.h"
 #include "GPUExecutionHelper.h"
 #include "GPUModelSerializers.h"
 #include "GPUSupportUtils.h"
@@ -97,15 +98,18 @@ ConstructGPUModuleFromTreebeardContext(TreebeardContext &tbContext) {
   assert(tbContext.options.tileSize == 1 ||
          (tbContext.options.tilingType == TreeBeard::TilingType::kUniform &&
           tbContext.options.makeAllLeavesSameDepth));
-  if (tbContext.options.tileSize > 1)
-    DoTilingTransformation(module, tbContext);
 
+  DoTilingTransformation(module, tbContext);
+
+  assert(
+      !(options.scheduleManipulator && tbContext.shouldUseGPUAutoSchedule()) &&
+      "Cannot have a custom schedule manipulator and the inbuilt one together");
   if (options.scheduleManipulator) {
     auto schedule = forestCreator.GetSchedule();
     options.scheduleManipulator->Run(schedule);
-    assert(!options.reorderTreesByDepth &&
-           "Cannot have a custom schedule manipulator and the inbuilt one "
-           "together");
+  }
+  if (tbContext.shouldUseGPUAutoSchedule()) {
+    DoGPUAutoSchedule(tbContext.context, module, tbContext.gpuScheduleOptions);
   }
   module = LowerHIRModuleToGPU(module, tbContext);
   return module;

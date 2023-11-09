@@ -78,6 +78,26 @@ typedef struct {
   mlir::decisionforest::DecisionForestAttribute forestAttribute;
 } PredictOpLoweringState;
 
+class IsSpecializeIndexModifierVisitor
+    : public decisionforest::IndexDerivationTreeVisitor {
+  bool m_result = false;
+
+public:
+  virtual void VisitTileIndexModifier(
+      decisionforest::TileIndexModifier &tileIndexModifier) override {}
+  virtual void
+  VisitIndexVariable(decisionforest::IndexVariable &indexVar) override {}
+  virtual void VisitSplitIndexModifier(
+      decisionforest::SplitIndexModifier &indexModifier) override {}
+  virtual void VisitDuplicateIndexModifier(
+      decisionforest::DuplicateIndexModifier &indexModifier) override {}
+  virtual void VisitSpecializeIndexModifier(
+      decisionforest::SpecializeIndexModifier &indexModifier) override {
+    m_result = true;
+  }
+  bool getResult() { return m_result; }
+};
+
 template <typename LoopType> struct LoopConstructor {
   LoopType m_loop;
   LoopType m_innerLoop;
@@ -110,6 +130,18 @@ template <typename LoopType> struct LoopConstructor {
     return result;
   }
 
+  int64_t getCacheOpID(const decisionforest::IndexVariable &indexVar) {
+    auto *parentModifier = indexVar.GetParentModifier();
+    while (parentModifier) {
+      IsSpecializeIndexModifierVisitor visitor;
+      parentModifier->Visit(visitor);
+      if (visitor.getResult())
+        return reinterpret_cast<int64_t>(parentModifier);
+      parentModifier = parentModifier->GetParent()->GetParentModifier();
+    }
+    return reinterpret_cast<int64_t>(&indexVar);
+  }
+
   void InsertCacheRowsOpIfNeeded(const decisionforest::IndexVariable &indexVar,
                                  PredictOpLoweringState &loweringState,
                                  Location location,
@@ -118,6 +150,8 @@ template <typename LoopType> struct LoopConstructor {
                                  std::list<Value> &batchIndexVars) {
     m_oldDataValue = loweringState.data;
     m_oldDataMemrefType = loweringState.dataMemrefType;
+    m_oldInputIndexOffset = loweringState.inputIndexOffset;
+
     if (indexVar.GetType() !=
         decisionforest::IndexVariable::IndexVariableType::kBatch)
       return;
@@ -142,7 +176,6 @@ template <typename LoopType> struct LoopConstructor {
     auto cacheRows = rewriter.create<decisionforest::CacheInputRowsOp>(
         location, cachedType, loweringState.data, startIndex,
         static_cast<Value>(endIndex));
-    m_oldInputIndexOffset = loweringState.inputIndexOffset;
 
     loweringState.inputIndexOffset = startIndex;
     loweringState.data = cacheRows;
@@ -162,6 +195,7 @@ template <typename LoopType> struct LoopConstructor {
     if (!indexVar.Cache())
       return;
 
+    auto cacheOpID = getCacheOpID(indexVar);
     auto treeLoopIVs = removeGPUThreadIndexVars(treeIndexVars, indexVar);
     treeLoopIVs.push_back(loopIndex);
 
@@ -184,7 +218,8 @@ template <typename LoopType> struct LoopConstructor {
         true);
     auto cacheTrees = rewriter.create<decisionforest::CacheTreesFromEnsembleOp>(
         location, cachedEnsembleType, loweringState.forestConst, startIndex,
-        static_cast<Value>(endIndex));
+        static_cast<Value>(endIndex),
+        rewriter.getIntegerAttr(rewriter.getIntegerType(64), cacheOpID));
     loweringState.forestConst = cacheTrees;
   }
 
@@ -953,8 +988,12 @@ struct PredictForestOpLowering : public ConversionPattern {
           location, treeType.getThresholdType(), state.cmpPredicate, tree, row,
           peelItersAttrib);
     } else {
-      auto walkUnrollAttr =
-          rewriter.getI64IntegerAttr(indexVar.GetTreeWalkUnrollFactor());
+      auto unrollFactor = indexVar.GetTreeWalkUnrollFactor();
+      unrollFactor =
+          unrollFactor == -1
+              ? indexVar.GetContainingLoop()->GetTreeWalkUnrollFactor()
+              : unrollFactor;
+      auto walkUnrollAttr = rewriter.getI64IntegerAttr(unrollFactor);
       walkOp = rewriter.create<decisionforest::WalkDecisionTreeOp>(
           location, treeType.getThresholdType(), state.cmpPredicate,
           walkUnrollAttr, tree, row);

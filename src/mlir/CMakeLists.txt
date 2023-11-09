@@ -13,7 +13,8 @@ ProbabilityBasedTilingTransform.cpp
 CodeGenStateMachine.cpp
 ReorderTiledTreesByDepth.cpp
 ModelSerializers.cpp
-Representations.cpp)
+Representations.cpp
+GPUAutoSchedule.cpp)
 
 target_sources(treebeard-runtime 
 PRIVATE
@@ -30,4 +31,5 @@ ProbabilityBasedTilingTransform.cpp
 CodeGenStateMachine.cpp
 ReorderTiledTreesByDepth.cpp
 ModelSerializers.cpp
-Representations.cpp)
+Representations.cpp
+GPUAutoSchedule.cpp)

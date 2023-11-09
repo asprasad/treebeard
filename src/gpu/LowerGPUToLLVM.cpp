@@ -70,6 +70,76 @@ using namespace mlir;
 
 namespace {
 
+FlatSymbolRefAttr getOrInsertCacheOpSyncFunc(std::string &functionName,
+                                             PatternRewriter &rewriter,
+                                             gpu::GPUModuleOp module) {
+  auto *context = module.getContext();
+  if (module.lookupSymbol<LLVM::LLVMFuncOp>(functionName))
+    return SymbolRefAttr::get(context, functionName);
+
+  LLVM::LLVMFunctionType functionType =
+      LLVM::LLVMFunctionType::get(LLVM::LLVMVoidType::get(context), {}, false);
+
+  PatternRewriter::InsertionGuard insertGuard(rewriter);
+  rewriter.setInsertionPointToStart(module.getBody());
+  auto func = rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), functionName,
+                                                functionType);
+  auto entryBlock = func.addEntryBlock();
+  rewriter.setInsertionPointToStart(entryBlock);
+
+  rewriter.create<NVVM::Barrier0Op>(module.getLoc());
+  rewriter.create<LLVM::ReturnOp>(module.getLoc(), ValueRange{});
+  return SymbolRefAttr::get(context, functionName);
+}
+
+struct CacheOpBeginOpLowering : public ConversionPattern {
+  CacheOpBeginOpLowering(LLVMTypeConverter &typeConverter)
+      : ConversionPattern(
+            typeConverter,
+            mlir::decisionforest::CacheOpBeginOp::getOperationName(),
+            1 /*benefit*/, &typeConverter.getContext()) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    // assert (operands.size() == 3);
+    auto parentModule = op->getParentOfType<gpu::GPUModuleOp>();
+    std::string functionName = "CacheOpBeginBarrierFunc";
+    auto syncFunctionRef =
+        getOrInsertCacheOpSyncFunc(functionName, rewriter, parentModule);
+
+    // auto returnType = LLVM::LLVMVoidType::get(rewriter.getContext());
+    rewriter.create<LLVM::CallOp>(op->getLoc(), TypeRange{}, syncFunctionRef,
+                                  ValueRange{});
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
+
+struct CacheOpEndOpLowering : public ConversionPattern {
+  CacheOpEndOpLowering(LLVMTypeConverter &typeConverter)
+      : ConversionPattern(
+            typeConverter,
+            mlir::decisionforest::CacheOpEndOp::getOperationName(),
+            1 /*benefit*/, &typeConverter.getContext()) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    // assert (operands.size() == 3);
+    auto parentModule = op->getParentOfType<gpu::GPUModuleOp>();
+    std::string functionName = "CacheOpEndBarrierFunc";
+    auto syncFunctionRef =
+        getOrInsertCacheOpSyncFunc(functionName, rewriter, parentModule);
+
+    // auto returnType = LLVM::LLVMVoidType::get(rewriter.getContext());
+    rewriter.create<LLVM::CallOp>(op->getLoc(), TypeRange{}, syncFunctionRef,
+                                  ValueRange{});
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
+
 template <typename DerivedT>
 class ConvertGpuOpsToNVVMOpsBase
     : public ::mlir::OperationPass<gpu::GPUModuleOp> {
@@ -222,6 +292,8 @@ struct LowerGpuOpsToNVVMOpsPass
     m_representation->AddTypeConversions(*m.getContext(), converter);
     m_representation->AddLLVMConversionPatterns(converter, llvmPatterns);
     decisionforest::populateDebugOpLoweringPatterns(llvmPatterns, converter);
+    llvmPatterns.add<CacheOpBeginOpLowering>(converter);
+    llvmPatterns.add<CacheOpEndOpLowering>(converter);
 
     LLVMConversionTarget target(getContext());
     configureGpuToNVVMConversionLegality(target);

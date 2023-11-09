@@ -482,6 +482,66 @@ bool VerifyGPUCodeGeneration(
   return true;
 }
 
+template <typename ThresholdType, typename IndexType>
+bool VerifyGPUAutoScheduleCodeGeneration(
+    TestArgs_t &args, const int32_t batchSize, ForestCreator &forestCreator,
+    std::shared_ptr<decisionforest::IModelSerializer> serializer,
+    std::shared_ptr<decisionforest::IRepresentation> representation,
+    int32_t tileSize, int32_t tileShapeBitwidth, int32_t childIndexBitWidth,
+    TreeBeard::GPUAutoScheduleOptions gpuAutoScheduleOptions,
+    const std::string &csvPath = "") {
+
+  TreeBeard::CompilerOptions options(
+      sizeof(FloatType) * 8, sizeof(FloatType) * 8, true, sizeof(IndexType) * 8,
+      sizeof(IndexType) * 8, sizeof(FloatType) * 8, batchSize, tileSize,
+      tileShapeBitwidth, childIndexBitWidth, TreeBeard::TilingType::kUniform,
+      true, false, nullptr);
+
+  // [HACK!] Create a shared pointer that points to forestCreator
+  std::shared_ptr<ForestCreator> forestCreatorPtr(&forestCreator,
+                                                  NoOpDeleter());
+
+  TreeBeard::TreebeardContext tbContext(
+      forestCreator.GetContext(), "", "", options, representation, serializer,
+      forestCreatorPtr, &gpuAutoScheduleOptions);
+
+  auto module = ConstructGPUModuleFromTreebeardContext(tbContext);
+  // return true;
+
+  GPUInferenceRunnerForTest inferenceRunner(serializer, module, tileSize,
+                                            sizeof(ThresholdType) * 8,
+                                            sizeof(IndexType) * 8);
+
+  if (!csvPath.empty()) {
+    return ValidateModuleOutputAgainstCSVdata<ThresholdType, int8_t>(
+        inferenceRunner, csvPath, batchSize);
+  }
+
+  assert(batchSize % 2 == 0);
+  std::vector<std::vector<ThresholdType>> inputData;
+  inputData.emplace_back(std::vector<ThresholdType>());
+  auto &firstVec = inputData.front();
+  for (int32_t i = 0; i < batchSize / 2; ++i) {
+    auto data = GetBatchSize2Data();
+    firstVec.insert(firstVec.end(), data.front().begin(), data.front().end());
+  }
+  for (auto &batch : inputData) {
+    assert(batch.size() % batchSize == 0);
+    size_t rowSize = batch.size() / batchSize;
+    std::vector<ThresholdType> result(batchSize, -1);
+    inferenceRunner.RunInference<ThresholdType, ThresholdType>(batch.data(),
+                                                               result.data());
+    for (int64_t rowIdx = 0; rowIdx < batchSize; ++rowIdx) {
+      std::vector<double> row(batch.begin() + rowIdx * rowSize,
+                              batch.begin() + (rowIdx + 1) * rowSize);
+      ThresholdType expectedResult =
+          static_cast<ThresholdType>(forestCreator.GetForest()->Predict(row));
+      Test_ASSERT(FPEqual(result[rowIdx], expectedResult));
+    }
+  }
+  return true;
+}
+
 // ===---------------------------------------------------=== //
 // GPU Basic Scalar Code Generation Tests
 // ===---------------------------------------------------=== //
@@ -2022,6 +2082,169 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache
       16, // Tile shape width
       16, // child index width
       scheduleManipulator);
+}
+
+// ===------------------------------------------------------------=== //
+// GPU Sparse Representation -
+// GPU Auto schedule
+// ===------------------------------------------------------------=== //
+bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleBasic(
+    TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  using ThresholdType = float;
+  using IndexType = int16_t;
+
+  int32_t batchSize = 64;
+
+  // Maps to TB.x
+  int32_t numRowsPerTB = 16;
+  int32_t numRowsPerThread = 2;
+  // Hpw many rows do we process together?
+  // Pick one tree and process this many rows before moving to the next row
+  int32_t rowTileSize = -1;
+
+  // How many threads do we divide the trees across?
+  // Maps to TB.y
+  int32_t numTreeThreads = 2;
+
+  // How many trees do we process at a time? Only useful if single threaded
+  // TODO Do we really need this? Can't we always do one tree at a time
+  int32_t numTreesAtATime = 1;
+  bool cacheRows = false;
+  bool cacheTrees = false;
+  bool unrollTreeWalks = true;
+
+  TreeBeard::GPUAutoScheduleOptions gpuAutoScheduleOptions{
+      numRowsPerTB,    numRowsPerThread, rowTileSize, numTreeThreads,
+      numTreesAtATime, cacheRows,        cacheTrees,  unrollTreeWalks};
+
+  ForestConstructor_t forestConstructor =
+      AddRightLeftAndBalancedTreesTwice<DoubleInt32Tile>;
+  auto serializer =
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath);
+  auto representation =
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse");
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+  FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType,
+                         ThresholdType>
+      irConstructor(context, serializer, batchSize, forestConstructor);
+  return VerifyGPUAutoScheduleCodeGeneration<ThresholdType, IndexType>(
+      args, batchSize, irConstructor, serializer, representation,
+      1,  // Tile size
+      16, // Tile shape width
+      16, // child index width
+      gpuAutoScheduleOptions);
+}
+
+bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedRows(
+    TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  using ThresholdType = float;
+  using IndexType = int16_t;
+
+  int32_t batchSize = 64;
+
+  // Maps to TB.x
+  int32_t numRowsPerTB = 16;
+  int32_t numRowsPerThread = 2;
+  // Hpw many rows do we process together?
+  // Pick one tree and process this many rows before moving to the next row
+  int32_t rowTileSize = -1;
+
+  // How many threads do we divide the trees across?
+  // Maps to TB.y
+  int32_t numTreeThreads = 2;
+
+  // How many trees do we process at a time? Only useful if single threaded
+  // TODO Do we really need this? Can't we always do one tree at a time
+  int32_t numTreesAtATime = 1;
+  bool cacheRows = true;
+  bool cacheTrees = false;
+  bool unrollTreeWalks = true;
+
+  TreeBeard::GPUAutoScheduleOptions gpuAutoScheduleOptions{
+      numRowsPerTB,    numRowsPerThread, rowTileSize, numTreeThreads,
+      numTreesAtATime, cacheRows,        cacheTrees,  unrollTreeWalks};
+
+  ForestConstructor_t forestConstructor =
+      AddRightLeftAndBalancedTreesTwice<DoubleInt32Tile>;
+  auto serializer =
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath);
+  auto representation =
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse");
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+  FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType,
+                         ThresholdType>
+      irConstructor(context, serializer, batchSize, forestConstructor);
+  return VerifyGPUAutoScheduleCodeGeneration<ThresholdType, IndexType>(
+      args, batchSize, irConstructor, serializer, representation,
+      1,  // Tile size
+      16, // Tile shape width
+      16, // child index width
+      gpuAutoScheduleOptions);
+}
+
+bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedTrees(
+    TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  using ThresholdType = float;
+  using IndexType = int16_t;
+
+  int32_t batchSize = 4;
+
+  // Maps to TB.x
+  int32_t numRowsPerTB = 4;
+  int32_t numRowsPerThread = 1;
+  // Hpw many rows do we process together?
+  // Pick one tree and process this many rows before moving to the next row
+  int32_t rowTileSize = -1;
+
+  // How many threads do we divide the trees across?
+  // Maps to TB.y
+  int32_t numTreeThreads = 2;
+
+  // How many trees do we process at a time? Only useful if single threaded
+  // TODO Do we really need this? Can't we always do one tree at a time
+  int32_t numTreesAtATime = 1;
+  bool cacheRows = false;
+  bool cacheTrees = true;
+  bool unrollTreeWalks = true;
+
+  TreeBeard::GPUAutoScheduleOptions gpuAutoScheduleOptions{
+      numRowsPerTB,    numRowsPerThread, rowTileSize, numTreeThreads,
+      numTreesAtATime, cacheRows,        cacheTrees,  unrollTreeWalks};
+
+  ForestConstructor_t forestConstructor =
+      AddRightLeftAndBalancedTreesTwice<DoubleInt32Tile>;
+  auto serializer =
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath);
+  auto representation =
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse");
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+  FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType,
+                         ThresholdType>
+      irConstructor(context, serializer, batchSize, forestConstructor);
+  return VerifyGPUAutoScheduleCodeGeneration<ThresholdType, IndexType>(
+      args, batchSize, irConstructor, serializer, representation,
+      1,  // Tile size
+      16, // Tile shape width
+      16, // child index width
+      gpuAutoScheduleOptions);
 }
 
 } // namespace test

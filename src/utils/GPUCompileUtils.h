@@ -15,6 +15,9 @@ mlir::ModuleOp LowerHIRModuleToGPU(mlir::ModuleOp module,
 mlir::ModuleOp
 ConstructGPUModuleFromTreebeardContext(TreebeardContext &tbContext);
 
+void DoGPUAutoSchedule(mlir::MLIRContext &context, mlir::ModuleOp module,
+                       const TreeBeard::GPUAutoScheduleOptions &options);
+
 } // namespace TreeBeard
 
 #endif // _GPUCOMPILEUTILS_H_

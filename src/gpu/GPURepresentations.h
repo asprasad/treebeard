@@ -90,6 +90,7 @@ protected:
   };
 
   std::map<mlir::Operation *, CacheTreesInfo> m_cacheTreesOpsMap;
+  std::map<int64_t, std::string> m_cacheBufferNamesMap;
 
 public:
   virtual ~GPUSparseRepresentation() {}

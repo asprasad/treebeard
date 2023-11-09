@@ -59,8 +59,8 @@ bool Test_GPUCodeGenForXGBJSON(
       sizeof(FeatureIndexType) * 8, sizeof(NodeIndexType) * 8,
       floatTypeBitWidth, batchSize, tileSize, tileShapeBitWidth,
       childIndexBitWidth, TreeBeard::TilingType::kUniform,
-      true,  // makeAllLeavesSameDepth
-      false, // reorderTrees
+      tileSize == 1 ? false : true, // makeAllLeavesSameDepth
+      false,                        // reorderTrees
       &scheduleManipulator);
 
   auto modelGlobalsJSONFilePath = serializer->GetFilePath();

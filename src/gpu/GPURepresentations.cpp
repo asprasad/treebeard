@@ -277,6 +277,7 @@ void LowerCacheRowsOpToGPU(ConversionPatternRewriter &rewriter,
 
   auto getGlobal = rewriter.create<memref::GetGlobalOp>(
       location, cacheBufferType, globalCacheBufferName);
+
   // Load required rows from input memref into the shared memory
 
   /*
@@ -1187,7 +1188,8 @@ void GPUSparseRepresentation::LowerCacheTreeOp(
   auto treeType = forestType.getTreeType(0).cast<decisionforest::TreeType>();
 
   // All threads need to be synchronized before we can start caching
-  rewriter.create<gpu::BarrierOp>(location);
+  // rewriter.create<gpu::BarrierOp>(location);
+  rewriter.create<decisionforest::CacheOpBeginOp>(location);
 
   assert(
       sparseEnsembleConstantToMemrefsMap.find(ensembleConst.getOperation()) !=
@@ -1215,15 +1217,19 @@ void GPUSparseRepresentation::LowerCacheTreeOp(
   auto owningModule = cacheTreesOp->getParentOfType<mlir::ModuleOp>();
   assert(owningModule);
 
+  int64_t cacheOpId = static_cast<int64_t>(cacheTreesOp.getCacheID());
   std::string globalCacheBufferName =
-      std::string("treeCache_") +
-      std::to_string(reinterpret_cast<long long>(op));
+      std::string("treeCache_") + std::to_string(cacheOpId);
+
+  bool globalCreated =
+      m_cacheBufferNamesMap.find(cacheOpId) != m_cacheBufferNamesMap.end();
   auto treeMemrefType = ensembleInfo.modelGlobal.getType().cast<MemRefType>();
   // TODO_Ashwin Use the right memory space ID
   auto cacheBufferType = MemRefType::get(
       {bufferLen}, treeMemrefType.getElementType(), {}, // Affine map
       3); // Address space ID -- shared memory
-  {
+
+  if (!globalCreated) {
     SaveAndRestoreInsertionPoint saveAndRestoreInsertPoint(rewriter);
     rewriter.setInsertionPoint(&owningModule.front());
     rewriter.create<memref::GlobalOp>(
@@ -1233,6 +1239,8 @@ void GPUSparseRepresentation::LowerCacheTreeOp(
         /*initial_value=*/rewriter.getUnitAttr(),
         /*constant=*/false,
         /*alignment*/ IntegerAttr());
+    globalCreated = true;
+    m_cacheBufferNamesMap[cacheOpId] = globalCacheBufferName;
   }
 
   auto offsetsMemref = ensembleInfo.offsetGlobal;
@@ -1360,7 +1368,9 @@ void GPUSparseRepresentation::LowerCacheTreeOp(
         rewriter, op, operands, m_serializer, ensembleInfo, owningModule,
         endIndexInRange, numThreads, threadIndex);
   }
-  rewriter.create<gpu::BarrierOp>(location);
+  // rewriter.create<gpu::BarrierOp>(location);
+  rewriter.create<decisionforest::CacheOpEndOp>(location);
+
   m_cacheTreesOpsMap[op] = {sharedMemoryBuffer, leavesSharedMemoryBuffer};
 }
 

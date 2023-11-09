@@ -23,14 +23,17 @@ public:
 };
 
 class IndexModifier : public IndexDerivationTreeNode {
+protected:
   // TODO Should this just be an IndexDerivationTreeNode? Maybe a parent could
   // directly be an Index modifier
   IndexVariable *m_parent;
 
 public:
+  IndexModifier(IndexVariable *parent) : m_parent(parent) {}
   virtual ~IndexModifier() {}
   void Visit(IndexDerivationTreeVisitor &visitor) override = 0;
   void Validate() override = 0;
+  IndexVariable *GetParent() const { return m_parent; }
 };
 
 class TileIndexModifier : public IndexModifier {
@@ -42,8 +45,8 @@ class TileIndexModifier : public IndexModifier {
 public:
   TileIndexModifier(IndexVariable &source, IndexVariable &outer,
                     IndexVariable &inner, int32_t tileSize)
-      : m_sourceIndex(&source), m_outerIndex(&outer), m_innerIndex(&inner),
-        m_tileSize(tileSize) {}
+      : IndexModifier(&source), m_sourceIndex(&source), m_outerIndex(&outer),
+        m_innerIndex(&inner), m_tileSize(tileSize) {}
   IndexVariable &OuterIndex() { return *m_outerIndex; }
   IndexVariable &InnerIndex() { return *m_innerIndex; }
   int32_t TileSize() { return m_tileSize; }
@@ -61,8 +64,8 @@ class SplitIndexModifier : public IndexModifier {
 public:
   SplitIndexModifier(IndexVariable &source, IndexVariable &first,
                      IndexVariable &second, int32_t splitIteration)
-      : m_sourceIndex(&source), m_firstIndex(&first), m_secondIndex(&second),
-        m_splitIteration(splitIteration) {}
+      : IndexModifier(&source), m_sourceIndex(&source), m_firstIndex(&first),
+        m_secondIndex(&second), m_splitIteration(splitIteration) {}
   IndexVariable &SourceIndex() { return *m_sourceIndex; }
   IndexVariable &FirstIndex() { return *m_firstIndex; }
   IndexVariable &SecondIndex() { return *m_secondIndex; }
@@ -79,7 +82,8 @@ class DuplicateIndexModifier : public IndexModifier {
 public:
   DuplicateIndexModifier(IndexVariable &source, IndexVariable &first,
                          IndexVariable &second)
-      : m_sourceIndex(&source), m_firstIndex(&first), m_secondIndex(&second) {}
+      : IndexModifier(&source), m_sourceIndex(&source), m_firstIndex(&first),
+        m_secondIndex(&second) {}
   IndexVariable &SourceIndex() { return *m_sourceIndex; }
   IndexVariable &FirstIndex() { return *m_firstIndex; }
   IndexVariable &SecondIndex() { return *m_secondIndex; }
@@ -94,9 +98,11 @@ class SpecializeIndexModifier : public IndexModifier {
 public:
   SpecializeIndexModifier(IndexVariable &source,
                           std::vector<IndexVariable *> &specializedIndices)
-      : m_sourceIndex(&source), m_specializedIndices(specializedIndices) {}
+      : IndexModifier(&source), m_sourceIndex(&source),
+        m_specializedIndices(specializedIndices) {}
 
-  SpecializeIndexModifier(IndexVariable &source) : m_sourceIndex(&source) {}
+  SpecializeIndexModifier(IndexVariable &source)
+      : IndexModifier(&source), m_sourceIndex(&source) {}
   IndexVariable &SourceIndex() { return *m_sourceIndex; }
   std::vector<IndexVariable *> &SpecializedIndices() {
     return m_specializedIndices;
