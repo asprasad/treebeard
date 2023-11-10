@@ -242,6 +242,7 @@ def ReduceDimensionInplaceOp : DecisionForest_Op<"reduce_dimension_inplace", [At
                        TargetMemrefType:$targetMemref,
                        Variadic<Index>:$preReductionDimensionStart,
                        Variadic<Index>:$preReductionDimensionEnd,
+                       Variadic<Index>:$targetMemrefOffsets,
                        Index:$reductionDimension,
                        Variadic<Index>:$postReductionDimensionStart,
                        Variadic<Index>:$postReductionDimensionEnd);
@@ -277,6 +278,7 @@ def CooperativeReduceInplaceOp : DecisionForest_Op<"cooperative_reduce_dimension
   let arguments = (ins TargetMemrefType:$targetMemref,
                        Variadic<Index>:$preReductionDimensionStart,
                        Variadic<Index>:$preReductionDimensionEnd,
+                       Variadic<Index>:$targetMemrefOffsets,
                        Index:$reductionDimension,
                        Variadic<Index>:$postReductionDimensionStart,
                        Variadic<Index>:$postReductionDimensionEnd,

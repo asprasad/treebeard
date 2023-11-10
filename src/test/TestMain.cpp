@@ -807,6 +807,8 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache
 // Multi-class with trees split across multiple threads
 bool Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache(
     TestArgs_t &args);
+bool Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache_SharedReduce(
+    TestArgs_t &args);
 
 // GPU basic auto scheduling tests
 bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleBasic(
@@ -2354,6 +2356,8 @@ TestDescriptor testList[] = {
         Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedRows),
     TEST_LIST_ENTRY(
         Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleBasic),
+    TEST_LIST_ENTRY(
+        Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache_SharedReduce),
 #endif // TREEBEARD_GPU_SUPPORT
 };
 
@@ -2363,6 +2367,8 @@ TestDescriptor testList[] = {
     // TEST_LIST_ENTRY(
     //     Test_GPUCodeGeneration_Covtype_ArrayRep_DoubleInt32_BatchSize32),
     // TEST_LIST_ENTRY(Test_TileSize1_Letters_Int8Type),
+    TEST_LIST_ENTRY(
+        Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache_SharedReduce),
     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
     TEST_LIST_ENTRY(
         Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedTrees),

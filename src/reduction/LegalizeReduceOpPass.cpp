@@ -502,10 +502,10 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
     rewriter.setInsertionPoint(block->getTerminator());
   }
 
-  void
-  addReduceDimensionOpForArgMax(decisionforest::ReduceOp reduceOp,
-                                Value privatizedBuffer,
-                                ConversionPatternRewriter &rewriter) const {
+  void addReduceDimensionOpForArgMax(
+      decisionforest::ReduceOp reduceOp, Value privatizedBuffer,
+      ConversionPatternRewriter &rewriter,
+      std::vector<scf::ParallelOp> &conflictingLoops) const {
     auto targetMemrefType =
         reduceOp.getTargetMemref().getType().cast<MemRefType>();
     auto argMaxReductionTypeAttr = decisionforest::createReductionTypeAttribute(
@@ -549,11 +549,13 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
     auto mappedDimension = rewriter.create<arith::ConstantIndexOp>(
         reduceOp->getLoc(), privateBufferMemrefType.getShape().size() - 2);
 
+    auto targetMemrefOffsets = getTargetBufferOffsets(
+        rewriter, reduceOp, conflictingLoops, true /*argmax*/);
     // TODO_Ashwin the target offsets here need to be fixed!
     // Just setting them to empty since they're not currently used for argmax
     auto reduceDimOp = rewriter.create<decisionforest::ReduceDimensionOp>(
         reduceOp->getLoc(), argMaxReductionTypeAttr, reduceOp.getTargetMemref(),
-        privatizedBuffer, ValueRange{}, ValueRange{mappedDimension},
+        privatizedBuffer, targetMemrefOffsets, ValueRange{mappedDimension},
         preReductionStart, preReductionEnd, reductionDimConst, ValueRange{},
         ValueRange{}, reduceOp.getInitialValueAttr());
     reduceDimOp->setAttr(argMaxLengthAttrName, argMaxLengthAttr);
@@ -562,11 +564,17 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
   std::vector<Value>
   getTargetBufferOffsets(ConversionPatternRewriter &rewriter,
                          decisionforest::ReduceOp reduceOp,
-                         std::vector<scf::ParallelOp> &conflictingLoops) const {
+                         std::vector<scf::ParallelOp> &conflictingLoops,
+                         bool argMax = false) const {
     // The number of offset elements is the rank of the target memref
     auto targetMemrefType =
         reduceOp.getTargetMemref().getType().cast<MemRefType>();
     auto numOffsets = targetMemrefType.getRank();
+    if (!argMax && reduceOp.getReductionType().getReductionType() ==
+                       decisionforest::Reduction::kArgMax) {
+      // If argmax, we need to add an extra offset for the argmax index
+      numOffsets += 1;
+    }
     std::vector<Value> offsets;
     if (!anySharedReduce(conflictingLoops)) {
       // Return empty array of offsets (ignored by codegen) if not
@@ -781,19 +789,21 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
                                                postReductionStart,
                                                postReductionEnd, argMaxLength);
         }
-
+        auto targetOffsets =
+            getTargetBufferOffsets(rewriter, reduceOp, conflictingLoops);
         auto reduceDimensionOp =
             rewriter.create<decisionforest::ReduceDimensionInplaceOp>(
                 location, newReductionTypeAttr, privatizedBuffer,
                 ValueRange{preReductionStart}, ValueRange{preReductionEnd},
-                reductionDimConst, ValueRange{postReductionStart},
-                ValueRange{postReductionEnd});
+                targetOffsets, reductionDimConst,
+                ValueRange{postReductionStart}, ValueRange{postReductionEnd});
         setAttributesOnReduceDimensionOp(reduceDimensionOp, loop);
       }
     }
 
     if (reductionType == mlir::decisionforest::Reduction::kArgMax) {
-      addReduceDimensionOpForArgMax(reduceOp, privatizedBuffer, rewriter);
+      addReduceDimensionOpForArgMax(reduceOp, privatizedBuffer, rewriter,
+                                    conflictingLoops);
     }
 
     rewriter.eraseOp(op);

@@ -1104,15 +1104,18 @@ struct CooperativeInplaceReduceDimensionOpLowering : public ConversionPattern {
     auto threadIndexAddOp =
         rewriter.create<arith::AddIOp>(location, loopIV, localThreadId);
     Value threadIndex = threadIndexAddOp.getResult();
-    // auto targetMemrefOffset = reduceOp.getTargetMemrefOffsets();
-    // if (targetMemrefOffset.size() != 0) {
-    //   // TODO_Ashwin need to handle case where there is more than one offset
-    //   // here Is it needed though? We'll have to write all class values
-    //   anyway assert(targetMemrefOffset.size() == 1); auto
-    //   privatizedBufferIndex = rewriter.create<arith::SubIOp>(
-    //       location, threadIndex, targetMemrefOffset[0]);
-    //   threadIndex = privatizedBufferIndex.getResult();
-    // }
+
+    auto targetMemrefOffset = reduceOp.getTargetMemrefOffsets();
+    if (targetMemrefOffset.size() != 0) {
+      // TODO_Ashwin need to handle case where there is more than one offset
+      // here Is it needed though? We'll have to write all class values anyway
+      assert(targetMemrefOffset.size() == 1 || targetMemrefOffset.size() == 2);
+      auto privatizedBufferIndex = rewriter.create<arith::SubIOp>(
+          location, threadIndex, targetMemrefOffset[0]);
+      threadIndex = privatizedBufferIndex.getResult();
+      if (targetMemrefOffset.size() == 2)
+        assert(GetConstantIntValueFromMLIRValue(targetMemrefOffset[1]) == 0);
+    }
     // // if (threadIndex < end[0])
     auto cmpOp = rewriter.create<arith::CmpIOp>(
         location, arith::CmpIPredicate::slt, threadIndexAddOp.getResult(),
@@ -1141,6 +1144,8 @@ struct CooperativeInplaceReduceDimensionOpLowering : public ConversionPattern {
         memrefLoadIndex.push_back(innerLoopIV);
         memrefStoreIndex.push_back(innerLoopIV);
       }
+      // ifBodyBuilder.create<gpu::PrintfOp>(location, "Load Index: %ld, %ld\n",
+      //                                     memrefLoadIndex);
       auto initialValConst = decisionforest::createFloatConst(
           location, ifBodyBuilder, elemType, 0.0);
       auto reductionDimSize =
@@ -1230,6 +1235,9 @@ struct CooperativeInplaceReduceDimensionOpLowering : public ConversionPattern {
     auto numThreads = std::get<1>(localThreadIdAndNumThreads);
     // auto numThreadsVal = std::get<2>(localThreadIdAndNumThreads);
 
+    // rewriter.create<gpu::PrintfOp>(location, "Entering inplace reduce\n",
+    //                                ValueRange{});
+
     rewriter.create<gpu::BarrierOp>(location);
 
     // if the number of reductions to perform is greater than
@@ -1242,6 +1250,8 @@ struct CooperativeInplaceReduceDimensionOpLowering : public ConversionPattern {
         location, rewriter, targetMemref, localThreadId, numThreads,
         rangeStartVec, rangeEndVec, reductionDimVal, reduceOp);
 
+    // rewriter.create<gpu::PrintfOp>(location, "Done with inplace reduce\n",
+    //                                ValueRange{});
     // rewriter.setInsertionPointAfter(loop);
     rewriter.eraseOp(op);
     return mlir::success();
@@ -1307,7 +1317,8 @@ struct InitializeMemrefLowering : public ConversionPattern {
     }
 
     rewriter.create<gpu::BarrierOp>(location);
-
+    // rewriter.create<gpu::PrintfOp>(location, "Done initializing memref\n",
+    //                                ValueRange{});
     rewriter.eraseOp(op);
     return mlir::success();
   }

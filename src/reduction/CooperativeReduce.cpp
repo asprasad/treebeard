@@ -176,7 +176,7 @@ struct ReduceInplaceToCooperativeReduceOp : public ConversionPattern {
         location, reduceOp.getTargetMemref(),
         reduceOp.getPreReductionDimensionStart(),
         reduceOp.getPreReductionDimensionEnd(),
-        reduceOp.getReductionDimension(),
+        reduceOp.getTargetMemrefOffsets(), reduceOp.getReductionDimension(),
         reduceOp.getPostReductionDimensionStart(),
         reduceOp.getPostReductionDimensionEnd(), startIndices.at(0),
         startIndices.at(1), startIndices.at(2), endIndices.at(0),

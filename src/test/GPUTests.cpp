@@ -1170,6 +1170,53 @@ bool Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialF
   //       args, 32, "covtype_xgb_model_save.json", "gpu_sparse", 16);
 }
 
+bool Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache_SharedReduce(
+    TestArgs_t &args) {
+  using ThresholdType = float;
+  using IndexType = int16_t;
+  using ReturnType = int8_t;
+
+  int32_t batchSize = 64;
+  int32_t numRowsPerBlock = 4, numTreesPerIter = 10;
+  const std::string xgboostModelFile = "covtype_xgb_model_save.json";
+  auto representation =
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse");
+
+  auto xgboostModelPath = GetXGBoostModelPath(xgboostModelFile);
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          xgboostModelPath);
+  auto csvPath = xgboostModelPath + ".csv";
+
+  auto serializer =
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath);
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
+  TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, IndexType, IndexType,
+                               ThresholdType>
+      xgBoostParser(context, xgboostModelPath, serializer, batchSize);
+
+  std::function<void(decisionforest::Schedule &)> scheduleManipulator =
+      std::bind(decisionforest::
+                    iterativeCachedPartialForestStrategy_NoCache_SharedReduce,
+                std::placeholders::_1, numTreesPerIter, numRowsPerBlock);
+  return VerifyGPUCodeGeneration<ThresholdType, IndexType>(
+      args, batchSize, xgBoostParser, serializer, representation,
+      1,  // Tile size
+      16, // Tile shape width
+      16, // child index width
+      scheduleManipulator, csvPath);
+
+  //   return Test_GPUCodeGeneration_XGBoostModel_VariableBatchSize<float,
+  //   int8_t,
+  //                                                                int32_t>(
+  //       args, 32, "covtype_xgb_model_save.json", "gpu_sparse", 16);
+}
+
 // ===---------------------------------------------------=== //
 // GPU Reorg Rep Shared Memory Tests
 // ===---------------------------------------------------=== //
