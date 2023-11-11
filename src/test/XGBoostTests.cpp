@@ -41,7 +41,9 @@ bool Test_CodeGenForJSON_VariableBatchSize(
     const std::string &csvPath, int32_t tileSize, int32_t tileShapeBitWidth,
     int32_t childIndexBitWidth, bool makeAllLeavesSameDepth, bool reorderTrees,
     ScheduleManipulator_t scheduleManipulatorFunc = nullptr,
-    int32_t pipelineSize = -1) {
+    int32_t pipelineSize = -1, int32_t numCores = -1,
+    int32_t numParTreeBatches = -1) {
+
   using NodeIndexType = int32_t;
   int32_t floatTypeBitWidth = sizeof(FloatType) * 8;
   ScheduleManipulationFunctionWrapper scheduleManipulator(
@@ -51,7 +53,8 @@ bool Test_CodeGenForJSON_VariableBatchSize(
       sizeof(FeatureIndexType) * 8, sizeof(NodeIndexType) * 8,
       floatTypeBitWidth, batchSize, tileSize, tileShapeBitWidth,
       childIndexBitWidth, TreeBeard::TilingType::kUniform,
-      makeAllLeavesSameDepth, reorderTrees,
+      makeAllLeavesSameDepth, reorderTrees, pipelineSize, numCores,
+      numParTreeBatches,
       scheduleManipulatorFunc ? &scheduleManipulator : nullptr);
 
   options.SetPipelineSize(pipelineSize);
@@ -3065,6 +3068,127 @@ bool Test_TileSize8_Abalone_TestInputs_ReorderTrees(TestArgs_t &args) {
   return Test_SingleTileSize_SingleModel_FloatOnly(
       args, modelJSONPath, tileSize, false, 16, 16, csvPath, nullptr, true,
       true);
+}
+
+bool Test_TileSize8_Abalone_TestInputs_CPUAutoSchedule_TreeParallel_f32i16(
+    TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  // return Test_SingleTileSize_SingleModel_FloatOnly(
+  //     args, modelJSONPath, tileSize, false, 16, 16, csvPath, nullptr, true,
+  //     true);
+  return Test_CodeGenForJSON_VariableBatchSize<float, int16_t>(
+      args, 64, modelJSONPath, csvPath, tileSize, 16, 16, true, true, nullptr,
+      4 /*pipelineDepth*/, -1, 10);
+}
+
+bool Test_TileSize8_Airline_TestInputs_CPUAutoSchedule_TreeParallel_f32i16(
+    TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  // return Test_SingleTileSize_SingleModel_FloatOnly(
+  //     args, modelJSONPath, tileSize, false, 16, 16, csvPath, nullptr, true,
+  //     true);
+  return Test_CodeGenForJSON_VariableBatchSize<float, int16_t>(
+      args, 64, modelJSONPath, csvPath, tileSize, 16, 16, true, true, nullptr,
+      4 /*pipelineDepth*/, -1, 10);
+}
+
+bool Test_TileSize8_AirlineOHE_TestInputs_CPUAutoSchedule_TreeParallel_f32i16(
+    TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/airline-ohe_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  // return Test_SingleTileSize_SingleModel_FloatOnly(
+  //     args, modelJSONPath, tileSize, false, 16, 16, csvPath, nullptr, true,
+  //     true);
+  return Test_CodeGenForJSON_VariableBatchSize<float, int16_t>(
+      args, 64, modelJSONPath, csvPath, tileSize, 16, 16, true, true, nullptr,
+      4 /*pipelineDepth*/, -1, 10);
+}
+
+bool Test_TileSize8_Covtype_TestInputs_CPUAutoSchedule_TreeParallel_f32i16(
+    TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/covtype_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  // return Test_SingleTileSize_SingleModel_FloatOnly(
+  //     args, modelJSONPath, tileSize, false, 16, 16, csvPath, nullptr, true,
+  //     true);
+  return Test_CodeGenForJSON_VariableBatchSize<float, int16_t, int8_t>(
+      args, 64, modelJSONPath, csvPath, tileSize, 16, 16, true, true, nullptr,
+      4 /*pipelineDepth*/, -1, 10);
+}
+
+bool Test_TileSize8_Epsilon_TestInputs_CPUAutoSchedule_TreeParallel_f32i16(
+    TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/epsilon_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  // return Test_SingleTileSize_SingleModel_FloatOnly(
+  //     args, modelJSONPath, tileSize, false, 16, 16, csvPath, nullptr, true,
+  //     true);
+  return Test_CodeGenForJSON_VariableBatchSize<float, int16_t>(
+      args, 64, modelJSONPath, csvPath, tileSize, 16, 16, true, true, nullptr,
+      4 /*pipelineDepth*/, -1, 10);
+}
+
+bool Test_TileSize8_Higgs_TestInputs_CPUAutoSchedule_TreeParallel_f32i16(
+    TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/higgs_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  // return Test_SingleTileSize_SingleModel_FloatOnly(
+  //     args, modelJSONPath, tileSize, false, 16, 16, csvPath, nullptr, true,
+  //     true);
+  return Test_CodeGenForJSON_VariableBatchSize<float, int16_t>(
+      args, 64, modelJSONPath, csvPath, tileSize, 16, 16, true, true, nullptr,
+      4 /*pipelineDepth*/, -1, 10);
+}
+
+bool Test_TileSize8_Letters_TestInputs_CPUAutoSchedule_TreeParallel_f32i16(
+    TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/letters_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  // return Test_SingleTileSize_SingleModel_FloatOnly(
+  //     args, modelJSONPath, tileSize, false, 16, 16, csvPath, nullptr, true,
+  //     true);
+  return Test_CodeGenForJSON_VariableBatchSize<float, int16_t, int8_t>(
+      args, 64, modelJSONPath, csvPath, tileSize, 16, 16, true, true, nullptr,
+      4 /*pipelineDepth*/, -1, 10);
+}
+
+bool Test_TileSize8_Year_TestInputs_CPUAutoSchedule_TreeParallel_f32i16(
+    TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath =
+      testModelsDir + "/year_prediction_msd_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  // return Test_SingleTileSize_SingleModel_FloatOnly(
+  //     args, modelJSONPath, tileSize, false, 16, 16, csvPath, nullptr, true,
+  //     true);
+  return Test_CodeGenForJSON_VariableBatchSize<float, int16_t>(
+      args, 64, modelJSONPath, csvPath, tileSize, 16, 16, true, true, nullptr,
+      4 /*pipelineDepth*/, -1, 10);
 }
 
 // ===--------------------------------------------------------=== //

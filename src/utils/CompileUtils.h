@@ -56,7 +56,8 @@ inline void LowerHIRModuleToLLVM(mlir::ModuleOp module,
     assert(options.pipelineSize == -1 ||
            (options.pipelineSize <= options.batchSize));
     mlir::decisionforest::DoReorderTreesByDepth(
-        context, module, options.pipelineSize, options.numberOfCores);
+        context, module, options.pipelineSize, options.numberOfCores,
+        options.numParallelTreeBatches);
     assert(!options.scheduleManipulator &&
            "Cannot have a custom schedule manipulator and the inbuilt one "
            "together");

@@ -80,11 +80,34 @@ struct CompilerOptions {
   bool reorderTreesByDepth = false;
   int32_t pipelineSize = -1;
 
-  mlir::decisionforest::ScheduleManipulator *scheduleManipulator = nullptr;
   std::string statsProfileCSVPath = "";
   int32_t numberOfCores = -1;
+  int32_t numParallelTreeBatches = -1;
+
+  mlir::decisionforest::ScheduleManipulator *scheduleManipulator = nullptr;
 
   CompilerOptions() {}
+  CompilerOptions(int32_t thresholdWidth, int32_t returnWidth,
+                  bool isReturnTypeFloat, int32_t featureIndexWidth,
+                  int32_t nodeIndexWidth, int32_t inputElementWidth,
+                  int32_t batchSz, int32_t tileSz, int32_t tileShapeWidth,
+                  int32_t childIndexWidth, TilingType tileType,
+                  bool makeLeavesSameDepth, bool reorderTrees,
+                  int32_t pipelineSz, int32_t numCores,
+                  int32_t numParTreeBatches,
+                  mlir::decisionforest::ScheduleManipulator *scheduleManip)
+      : batchSize(batchSz), tileSize(tileSz),
+        thresholdTypeWidth(thresholdWidth), returnTypeWidth(returnWidth),
+        returnTypeFloatType(isReturnTypeFloat),
+        featureIndexTypeWidth(featureIndexWidth),
+        nodeIndexTypeWidth(nodeIndexWidth),
+        inputElementTypeWidth(inputElementWidth),
+        tileShapeBitWidth(tileShapeWidth), childIndexBitWidth(childIndexWidth),
+        tilingType(tileType), makeAllLeavesSameDepth(makeLeavesSameDepth),
+        reorderTreesByDepth(reorderTrees), pipelineSize(pipelineSz),
+        numberOfCores(numCores), numParallelTreeBatches(numParTreeBatches),
+        scheduleManipulator(scheduleManip) {}
+
   CompilerOptions(int32_t thresholdWidth, int32_t returnWidth,
                   bool isReturnTypeFloat, int32_t featureIndexWidth,
                   int32_t nodeIndexWidth, int32_t inputElementWidth,
@@ -101,6 +124,7 @@ struct CompilerOptions {
         tileShapeBitWidth(tileShapeWidth), childIndexBitWidth(childIndexWidth),
         tilingType(tileType), makeAllLeavesSameDepth(makeLeavesSameDepth),
         reorderTreesByDepth(reorderTrees), scheduleManipulator(scheduleManip) {}
+
   CompilerOptions(const std::string &configJSONFilePath);
 
   void SetPipelineSize(int32_t pipelineSize) {

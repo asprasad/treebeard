@@ -221,11 +221,12 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
     unifBatchIndex = mapIter->second.second;
   }
 
-  void SplitTreeLoopForUniformTiling(
-      decisionforest::Schedule *schedule,
-      decisionforest::DecisionForest &forest,
-      decisionforest::IndexVariable *batchIndexPtr,
-      decisionforest::IndexVariable *treeIndexPtr) const {
+  void
+  SplitTreeLoopForUniformTiling(decisionforest::Schedule *schedule,
+                                decisionforest::DecisionForest &forest,
+                                decisionforest::IndexVariable *batchIndexPtr,
+                                decisionforest::IndexVariable *treeIndexPtr,
+                                int32_t offset = 0, int32_t step = 1) const {
     if (batchIndexPtr == nullptr && treeIndexPtr == nullptr)
       return;
     if (m_pipelineSize == -1)
@@ -239,13 +240,14 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
     // This index may already have been split. So we need to start at the right
     // place
     int32_t currTreeIndex = treeIndex.GetRange().m_start;
+    assert(step == treeIndex.GetRange().m_step);
     auto indexToSplit = &treeIndex;
 
     assert(treeIndex.GetRange().m_stop == (int32_t)forest.NumTrees());
 
     while (currTreeIndex < treeIndex.GetRange().m_stop) {
       int32_t currDepth =
-          forest.GetTree(currTreeIndex).GetTiledTree()->GetTreeDepth();
+          forest.GetTree(currTreeIndex + offset).GetTiledTree()->GetTreeDepth();
       int32_t intervalEnd = currTreeIndex;
       int32_t intervalEndTreeDepth = currDepth;
       std::map<decisionforest::IndexVariable *,
@@ -253,9 +255,9 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
                          decisionforest::IndexVariable *>>
           indexMap;
       while (currDepth == intervalEndTreeDepth &&
-             ++intervalEnd < (int32_t)forest.NumTrees()) {
+             (intervalEnd += step) < (int32_t)forest.NumTrees()) {
         intervalEndTreeDepth =
-            forest.GetTree(intervalEnd).GetTiledTree()->GetTreeDepth();
+            forest.GetTree(intervalEnd + offset).GetTiledTree()->GetTreeDepth();
       }
 
       // No need to split if we're splitting the last index.
@@ -384,8 +386,34 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
     // schedule->Tile(batchIndex, b0, b1, m_pipelineSize);
     SplitTreeLoopForProbabilityBasedTiling(schedule, forest, probBatchIndex,
                                            probTreeIndex);
-    SplitTreeLoopForUniformTiling(schedule, forest, unifBatchIndex,
-                                  unifTreeIndex);
+    if (m_parallelTreeBatches != -1 && m_parallelTreeBatches != 1) {
+      assert(probBatchIndex == nullptr && probTreeIndex == nullptr);
+
+      auto &tree_parallel = schedule->NewIndexVariable("tree_parallel");
+      auto &tree_serial = schedule->NewIndexVariable("tree_serial");
+      schedule->Tile(treeIndex, tree_serial, tree_parallel,
+                     m_parallelTreeBatches);
+      schedule->Parallel(tree_parallel);
+      schedule->Reorder({&tree_parallel, &tree_serial, batchIndexPtr});
+      decisionforest::Schedule::IterationSpecializationInfo specializationInfo;
+      schedule->SpecializeIterations(tree_parallel, specializationInfo);
+      schedule->AtomicReduce(tree_parallel);
+
+      // Now specialize each of the iterations in turn
+      assert((int32_t)specializationInfo.m_iterationMaps.size() ==
+             m_parallelTreeBatches);
+      for (auto i = 0; i < m_parallelTreeBatches; ++i) {
+        unifTreeIndex =
+            specializationInfo.GetCorrespodingIndex(&tree_serial, i);
+        unifBatchIndex =
+            specializationInfo.GetCorrespodingIndex(batchIndexPtr, i);
+        SplitTreeLoopForUniformTiling(schedule, forest, unifBatchIndex,
+                                      unifTreeIndex, i, m_parallelTreeBatches);
+      }
+    } else {
+      SplitTreeLoopForUniformTiling(schedule, forest, unifBatchIndex,
+                                    unifTreeIndex);
+    }
     return mlir::success();
   }
 };

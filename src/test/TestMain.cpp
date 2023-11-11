@@ -818,6 +818,24 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedRows(
 bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedTrees(
     TestArgs_t &args);
 
+// CPU Autoschedule tests
+bool Test_TileSize8_Abalone_TestInputs_CPUAutoSchedule_TreeParallel_f32i16(
+    TestArgs_t &args);
+bool Test_TileSize8_Airline_TestInputs_CPUAutoSchedule_TreeParallel_f32i16(
+    TestArgs_t &args);
+bool Test_TileSize8_AirlineOHE_TestInputs_CPUAutoSchedule_TreeParallel_f32i16(
+    TestArgs_t &args);
+bool Test_TileSize8_Covtype_TestInputs_CPUAutoSchedule_TreeParallel_f32i16(
+    TestArgs_t &args);
+bool Test_TileSize8_Epsilon_TestInputs_CPUAutoSchedule_TreeParallel_f32i16(
+    TestArgs_t &args);
+bool Test_TileSize8_Higgs_TestInputs_CPUAutoSchedule_TreeParallel_f32i16(
+    TestArgs_t &args);
+bool Test_TileSize8_Letters_TestInputs_CPUAutoSchedule_TreeParallel_f32i16(
+    TestArgs_t &args);
+bool Test_TileSize8_Year_TestInputs_CPUAutoSchedule_TreeParallel_f32i16(
+    TestArgs_t &args);
+
 void InitializeVectorWithRandValues(std::vector<double> &vec) {
   for (size_t i = 0; i < vec.size(); ++i)
     vec[i] = (double)rand() / RAND_MAX;
@@ -2359,6 +2377,22 @@ TestDescriptor testList[] = {
     TEST_LIST_ENTRY(
         Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache_SharedReduce),
 #endif // TREEBEARD_GPU_SUPPORT
+    TEST_LIST_ENTRY(
+        Test_TileSize8_Abalone_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
+    TEST_LIST_ENTRY(
+        Test_TileSize8_Airline_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
+    TEST_LIST_ENTRY(
+        Test_TileSize8_AirlineOHE_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
+    TEST_LIST_ENTRY(
+        Test_TileSize8_Covtype_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
+    TEST_LIST_ENTRY(
+        Test_TileSize8_Epsilon_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
+    TEST_LIST_ENTRY(
+        Test_TileSize8_Higgs_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
+    TEST_LIST_ENTRY(
+        Test_TileSize8_Letters_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
+    TEST_LIST_ENTRY(
+        Test_TileSize8_Year_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
 };
 
 #else  // RUN_ALL_TESTS
@@ -2368,10 +2402,31 @@ TestDescriptor testList[] = {
     //     Test_GPUCodeGeneration_Covtype_ArrayRep_DoubleInt32_BatchSize32),
     // TEST_LIST_ENTRY(Test_TileSize1_Letters_Int8Type),
     TEST_LIST_ENTRY(
-        Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache_SharedReduce),
-    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
+        Test_TileSize8_Abalone_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
+    TEST_LIST_ENTRY(
+        Test_TileSize8_Airline_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
+    TEST_LIST_ENTRY(
+        Test_TileSize8_AirlineOHE_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
+    TEST_LIST_ENTRY(
+        Test_TileSize8_Covtype_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
+    TEST_LIST_ENTRY(
+        Test_TileSize8_Epsilon_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
+    TEST_LIST_ENTRY(
+        Test_TileSize8_Higgs_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
+    TEST_LIST_ENTRY(
+        Test_TileSize8_Letters_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
+    TEST_LIST_ENTRY(
+        Test_TileSize8_Year_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
+    TEST_LIST_ENTRY(
+        Test_TileSize8_Abalone_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
     TEST_LIST_ENTRY(
         Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedTrees),
+
+    // TEST_LIST_ENTRY(
+    //     Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache_SharedReduce),
+    // TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
+    // TEST_LIST_ENTRY(
+    //     Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedTrees),
     // TEST_LIST_ENTRY(
     //     Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedRows),
     // TEST_LIST_ENTRY(
