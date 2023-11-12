@@ -20,6 +20,8 @@
 #include <cassert>
 #include <queue>
 
+#include "Logger.h"
+
 using namespace mlir;
 
 namespace {
@@ -173,6 +175,26 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
             1 /*benefit*/, ctx),
         m_pipelineSize(pipelineSize), m_numberOfCores(numCores),
         m_parallelTreeBatches(parallelTreeBatches) {}
+
+  bool doesTreeLoopNeedSpecialization(decisionforest::DecisionForest &forest,
+                                      int32_t numParallelTreeBatches) const {
+    auto &trees = forest.GetTrees();
+
+    std::list<int32_t> depths[numParallelTreeBatches];
+    for (size_t i = 0; i < trees.size(); i += numParallelTreeBatches) {
+      for (auto j = 0; j < numParallelTreeBatches; ++j) {
+        int32_t depth = trees.at(i + j)->GetTiledTree()->GetTreeDepth();
+        depths[j].push_back(depth);
+      }
+    }
+    for (auto j = 1; j < numParallelTreeBatches; ++j)
+      if (depths[0] != depths[j]) {
+        TreeBeard::Logging::Log("Tree loop needs specialization");
+        return true;
+      }
+    TreeBeard::Logging::Log("Tree loop does not need specialization");
+    return false;
+  }
 
   void SplitTreeLoopForProbAndUniformTiling(
       decisionforest::Schedule *schedule,
@@ -386,7 +408,8 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
     // schedule->Tile(batchIndex, b0, b1, m_pipelineSize);
     SplitTreeLoopForProbabilityBasedTiling(schedule, forest, probBatchIndex,
                                            probTreeIndex);
-    if (m_parallelTreeBatches != -1 && m_parallelTreeBatches != 1) {
+    if ((m_parallelTreeBatches != -1 && m_parallelTreeBatches != 1)) {
+
       assert(probBatchIndex == nullptr && probTreeIndex == nullptr);
 
       auto &tree_parallel = schedule->NewIndexVariable("tree_parallel");
@@ -395,20 +418,28 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
                      m_parallelTreeBatches);
       schedule->Parallel(tree_parallel);
       schedule->Reorder({&tree_parallel, &tree_serial, batchIndexPtr});
-      decisionforest::Schedule::IterationSpecializationInfo specializationInfo;
-      schedule->SpecializeIterations(tree_parallel, specializationInfo);
       schedule->AtomicReduce(tree_parallel);
 
-      // Now specialize each of the iterations in turn
-      assert((int32_t)specializationInfo.m_iterationMaps.size() ==
-             m_parallelTreeBatches);
-      for (auto i = 0; i < m_parallelTreeBatches; ++i) {
-        unifTreeIndex =
-            specializationInfo.GetCorrespodingIndex(&tree_serial, i);
-        unifBatchIndex =
-            specializationInfo.GetCorrespodingIndex(batchIndexPtr, i);
-        SplitTreeLoopForUniformTiling(schedule, forest, unifBatchIndex,
-                                      unifTreeIndex, i, m_parallelTreeBatches);
+      if (doesTreeLoopNeedSpecialization(forest, m_parallelTreeBatches)) {
+        decisionforest::Schedule::IterationSpecializationInfo
+            specializationInfo;
+        schedule->SpecializeIterations(tree_parallel, specializationInfo);
+
+        // Now specialize each of the iterations in turn
+        assert((int32_t)specializationInfo.m_iterationMaps.size() ==
+               m_parallelTreeBatches);
+        for (auto i = 0; i < m_parallelTreeBatches; ++i) {
+          unifTreeIndex =
+              specializationInfo.GetCorrespodingIndex(&tree_serial, i);
+          unifBatchIndex =
+              specializationInfo.GetCorrespodingIndex(batchIndexPtr, i);
+          SplitTreeLoopForUniformTiling(schedule, forest, unifBatchIndex,
+                                        unifTreeIndex, i,
+                                        m_parallelTreeBatches);
+        }
+      } else {
+        SplitTreeLoopForUniformTiling(schedule, forest, batchIndexPtr,
+                                      &tree_serial, 0, m_parallelTreeBatches);
       }
     } else {
       SplitTreeLoopForUniformTiling(schedule, forest, unifBatchIndex,

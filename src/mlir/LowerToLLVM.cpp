@@ -191,10 +191,10 @@ void LowerToLLVM(mlir::MLIRContext &context, mlir::ModuleOp module,
   // Lower from low-level IR to LLVM IR
   mlir::PassManager pm(&context);
   pm.addPass(memref::createExpandStridedMetadataPass());
-  // pm.addPass(std::make_unique<PrintModulePass>());
   pm.addPass(
       std::make_unique<DecisionForestToLLVMLoweringPass>(representation));
   pm.addPass(createConvertSCFToOpenMPPass());
+  // pm.addPass(std::make_unique<PrintModulePass>());
   pm.addPass(createMemRefToLLVMConversionPass());
   pm.addPass(createConvertSCFToCFPass());
   pm.addPass(std::make_unique<LowerOMPToLLVMPass>(representation));

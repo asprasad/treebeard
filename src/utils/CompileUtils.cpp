@@ -39,10 +39,10 @@ namespace TreeBeard {
 namespace Logging {
 
 LoggingOptions::LoggingOptions()
-    : logGenCodeStats(false), logTreeStats(false) {}
+    : logGenCodeStats(false), logTreeStats(false), logGeneralMessages(false) {}
 
 bool LoggingOptions::ShouldEnableLogging() {
-  return logGenCodeStats || logTreeStats;
+  return logGenCodeStats || logTreeStats || logGeneralMessages;
 }
 
 LoggingOptions loggingOptions;
@@ -50,6 +50,7 @@ LoggingOptions loggingOptions;
 bool InitLoggingOptions() {
   loggingOptions.logGenCodeStats = false;
   loggingOptions.logTreeStats = false;
+  loggingOptions.logGeneralMessages = false;
   return loggingOptions.ShouldEnableLogging();
 }
 
