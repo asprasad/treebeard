@@ -2249,11 +2249,11 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedTrees(
   using ThresholdType = float;
   using IndexType = int16_t;
 
-  int32_t batchSize = 4;
+  int32_t batchSize = 64;
 
   // Maps to TB.x
-  int32_t numRowsPerTB = 4;
-  int32_t numRowsPerThread = 1;
+  int32_t numRowsPerTB = 16;
+  int32_t numRowsPerThread = 2;
   // Hpw many rows do we process together?
   // Pick one tree and process this many rows before moving to the next row
   int32_t rowTileSize = -1;

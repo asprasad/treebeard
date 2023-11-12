@@ -21,6 +21,7 @@
 #include <queue>
 
 #include "GPUCompileUtils.h"
+#include "Logger.h"
 
 using namespace mlir;
 
@@ -227,6 +228,28 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
             1 /*benefit*/, ctx),
         m_options(options) {}
 
+  bool doesTreeLoopNeedSpecialization(decisionforest::DecisionForest &forest,
+                                      int32_t numParallelTreeBatches) const {
+    auto &trees = forest.GetTrees();
+
+    std::list<int32_t> depths[numParallelTreeBatches];
+    for (size_t i = 0; i < trees.size(); i += numParallelTreeBatches) {
+      for (auto j = 0; j < numParallelTreeBatches; ++j) {
+        int32_t depth = trees.at(i + j)->GetTreeDepth();
+        depths[j].push_back(depth);
+      }
+    }
+    for (auto j = 1; j < numParallelTreeBatches; ++j)
+      if (depths[0] != depths[j]) {
+        TreeBeard::Logging::Log(
+            "GPU Autoschedule: Tree loop needs specialization");
+        return true;
+      }
+    TreeBeard::Logging::Log(
+        "GPU Autoschedule:Tree loop does not need specialization");
+    return false;
+  }
+
   void SplitTreeLoopForUnrolling(decisionforest::Schedule *schedule,
                                  decisionforest::DecisionForest &forest,
                                  decisionforest::IndexVariable *batchIndexPtr,
@@ -388,25 +411,32 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
         assert(treeLoopToSpecialize != nullptr);
         assert(batchLoopToSpecialize != nullptr);
         assert(treeLoopToSplitAndUnroll != nullptr);
-
-        decisionforest::Schedule::IterationSpecializationInfo
-            specializationInfo;
-        schedule->SpecializeIterations(*treeLoopToSpecialize,
-                                       specializationInfo);
-        auto numIterations = (int32_t)specializationInfo.m_iterationMaps.size();
-        auto start = 0;
-        auto stride = numIterations;
-        for (auto iter = 0; iter < numIterations; ++iter) {
-          auto *treeIndexPtr =
-              specializationInfo
-                  .m_iterationMaps[iter][treeLoopToSplitAndUnroll];
-          auto *batchIndexPtr =
-              specializationInfo.m_iterationMaps[iter][batchLoopToSpecialize];
-          // We're going to start at a tree with an offset equal to the
-          // iteration number
-          start = iter;
-          SplitTreeLoopForUnrolling(schedule, forest, batchIndexPtr,
-                                    treeIndexPtr, start, stride);
+        if (doesTreeLoopNeedSpecialization(forest, m_options.numTreeThreads)) {
+          decisionforest::Schedule::IterationSpecializationInfo
+              specializationInfo;
+          schedule->SpecializeIterations(*treeLoopToSpecialize,
+                                         specializationInfo);
+          auto numIterations =
+              (int32_t)specializationInfo.m_iterationMaps.size();
+          assert(numIterations == m_options.numTreeThreads);
+          auto start = 0;
+          auto stride = numIterations;
+          for (auto iter = 0; iter < numIterations; ++iter) {
+            auto *treeIndexPtr =
+                specializationInfo
+                    .m_iterationMaps[iter][treeLoopToSplitAndUnroll];
+            auto *batchIndexPtr =
+                specializationInfo.m_iterationMaps[iter][batchLoopToSpecialize];
+            // We're going to start at a tree with an offset equal to the
+            // iteration number
+            start = iter;
+            SplitTreeLoopForUnrolling(schedule, forest, batchIndexPtr,
+                                      treeIndexPtr, start, stride);
+          }
+        } else {
+          SplitTreeLoopForUnrolling(schedule, forest, batchLoopToSpecialize,
+                                    treeLoopToSplitAndUnroll, 0,
+                                    m_options.numTreeThreads);
         }
       } else {
         assert(treeLoopToSplitAndUnroll != nullptr);
