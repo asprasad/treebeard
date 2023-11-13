@@ -139,6 +139,53 @@ void generateStoreStructElement(Operation *op, ArrayRef<Value> operands,
   rewriter.create<LLVM::StoreOp>(location, elementVal, elementPtr);
 }
 
+Type generateGetElementPtrForI32Ops(Operation *op, ArrayRef<Value> operands,
+                                    ConversionPatternRewriter &rewriter,
+                                    TypeConverter *typeConverter,
+                                    Value &elementPtr, Value memrefVal,
+                                    Value indexVal) {
+  auto location = op->getLoc();
+
+  auto memrefType = memrefVal.getType();
+  auto memrefStructType = memrefType.cast<LLVM::LLVMStructType>();
+  assert(memrefStructType);
+  auto alignedPtrType =
+      memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct]
+          .cast<LLVM::LLVMPointerType>();
+
+  auto indexType = indexVal.getType();
+  assert(indexType.isa<IntegerType>());
+
+  auto i32Type = rewriter.getI32Type();
+  auto elementType = typeConverter->convertType(i32Type);
+
+  // Extract the memref's aligned pointer
+  auto extractMemrefBufferPointer = rewriter.create<LLVM::ExtractValueOp>(
+      location, alignedPtrType, memrefVal,
+      rewriter.getDenseI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
+
+  // auto extractMemrefOffset = rewriter.create<LLVM::ExtractValueOp>(
+  //     location, indexType, memrefVal,
+  //     rewriter.getDenseI64ArrayAttr(kOffsetIndexInMemrefStruct));
+
+  // auto actualIndex = rewriter.create<LLVM::AddOp>(
+  //     location, indexType, static_cast<Value>(extractMemrefOffset),
+  //     static_cast<Value>(indexVal));
+
+  auto actualIndex = indexVal;
+
+  auto elementPtrType =
+      LLVM::LLVMPointerType::get(elementType, alignedPtrType.getAddressSpace());
+
+  auto bufferPtrCastToI32Ptr = rewriter.create<LLVM::BitcastOp>(
+      location, elementPtrType, extractMemrefBufferPointer);
+
+  elementPtr = rewriter.create<LLVM::GEPOp>(location, elementPtrType,
+                                            bufferPtrCastToI32Ptr,
+                                            ValueRange({actualIndex}));
+  return elementType;
+}
+
 struct LoadTileThresholdOpLowering : public ConversionPattern {
   LoadTileThresholdOpLowering(LLVMTypeConverter &typeConverter)
       : ConversionPattern(
@@ -207,6 +254,55 @@ struct LoadChildIndexOpLowering : public ConversionPattern {
     generateLoadStructElement(op, operands, rewriter,
                               kChildIndexElementNumberInTile,
                               getTypeConverter());
+    return mlir::success();
+  }
+};
+
+struct ReinterpretToI32AndLoadElementLowering : public ConversionPattern {
+  ReinterpretToI32AndLoadElementLowering(LLVMTypeConverter &typeConverter)
+      : ConversionPattern(typeConverter,
+                          mlir::decisionforest::ReinterpretToI32AndLoadElement::
+                              getOperationName(),
+                          1 /*benefit*/, &typeConverter.getContext()) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    auto loadElemOp =
+        AssertOpIsOfType<decisionforest::ReinterpretToI32AndLoadElement>(op);
+    Value elementPtr;
+    auto elementType = generateGetElementPtrForI32Ops(
+        op, operands, rewriter, getTypeConverter(), elementPtr, operands[0],
+        operands[1]);
+    auto elementVal = rewriter.create<LLVM::LoadOp>(
+        op->getLoc(), elementType, static_cast<Value>(elementPtr));
+
+    rewriter.replaceOp(op, static_cast<Value>(elementVal));
+    return mlir::success();
+  }
+};
+
+struct ReinterpretToI32AndStoreElementLowering : public ConversionPattern {
+  ReinterpretToI32AndStoreElementLowering(LLVMTypeConverter &typeConverter)
+      : ConversionPattern(
+            typeConverter,
+            mlir::decisionforest::ReinterpretToI32AndStoreElement::
+                getOperationName(),
+            1 /*benefit*/, &typeConverter.getContext()) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    auto storeElemOp =
+        AssertOpIsOfType<decisionforest::ReinterpretToI32AndStoreElement>(op);
+    Value elementPtr;
+    /*auto elementType =*/generateGetElementPtrForI32Ops(
+        op, operands, rewriter, getTypeConverter(), elementPtr, operands[1],
+        operands[2]);
+    // Store the element
+    rewriter.create<LLVM::StoreOp>(op->getLoc(), operands[0], elementPtr);
+
+    rewriter.eraseOp(op);
     return mlir::success();
   }
 };
@@ -325,6 +421,52 @@ struct GetModelMemrefSizeOpLowering : public ConversionPattern {
     auto sizeInBytesI32 = rewriter.create<LLVM::TruncOp>(
         location, rewriter.getI32Type(), sizeInBytes);
     rewriter.replaceOp(op, static_cast<Value>(sizeInBytesI32));
+    return mlir::success();
+  }
+};
+
+struct GetModelMemrefElemSizeOpLowering : public ConversionPattern {
+  GetModelMemrefElemSizeOpLowering(LLVMTypeConverter &typeConverter)
+      : ConversionPattern(typeConverter,
+                          mlir::decisionforest::GetModelMemrefElementSizeOp::
+                              getOperationName(),
+                          1 /*benefit*/, &typeConverter.getContext()) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    const int32_t kTreeMemrefOperandNum = 0;
+    auto location = op->getLoc();
+
+    auto memrefType = operands[kTreeMemrefOperandNum].getType();
+    auto memrefStructType = memrefType.cast<LLVM::LLVMStructType>();
+    auto alignedPtrType =
+        memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct]
+            .cast<LLVM::LLVMPointerType>();
+
+    auto indexVal = rewriter.create<LLVM::ConstantOp>(
+        location, rewriter.getI64Type(),
+        rewriter.getIntegerAttr(rewriter.getI64Type(), 1));
+    auto indexType = indexVal.getType();
+    assert(indexType.isa<IntegerType>());
+
+    // Extract the memref's aligned pointer
+    auto extractMemrefBufferPointer = rewriter.create<LLVM::ExtractValueOp>(
+        location, alignedPtrType, operands[kTreeMemrefOperandNum],
+        rewriter.getDenseI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
+
+    auto endPtr = rewriter.create<LLVM::GEPOp>(
+        location, alignedPtrType,
+        static_cast<Value>(extractMemrefBufferPointer),
+        ValueRange({static_cast<Value>(indexVal)}));
+
+    auto buffPtrInt = rewriter.create<LLVM::PtrToIntOp>(
+        location, indexType, extractMemrefBufferPointer);
+    auto endPtrInt =
+        rewriter.create<LLVM::PtrToIntOp>(location, indexType, endPtr);
+    auto sizeInBytes = rewriter.create<LLVM::SubOp>(location, indexType,
+                                                    endPtrInt, buffPtrInt);
+    rewriter.replaceOp(op, static_cast<Value>(sizeInBytes));
     return mlir::success();
   }
 };
@@ -859,7 +1001,8 @@ void ArrayBasedRepresentation::AddLLVMConversionPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<LoadTileFeatureIndicesOpLowering, LoadTileThresholdOpLowering,
                LoadTileShapeOpLowering, InitTileOpLowering,
-               GetModelMemrefSizeOpLowering>(converter);
+               GetModelMemrefSizeOpLowering, GetModelMemrefElemSizeOpLowering>(
+      converter);
 }
 
 void ArrayBasedRepresentation::LowerCacheRowsOp(
@@ -1532,8 +1675,10 @@ void SparseRepresentation::AddLLVMConversionPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<LoadTileFeatureIndicesOpLowering, LoadTileThresholdOpLowering,
                LoadTileShapeOpLowering, LoadChildIndexOpLowering,
-               InitSparseTileOpLowering, GetModelMemrefSizeOpLowering>(
-      converter);
+               InitSparseTileOpLowering, GetModelMemrefSizeOpLowering,
+               GetModelMemrefElemSizeOpLowering,
+               ReinterpretToI32AndLoadElementLowering,
+               ReinterpretToI32AndStoreElementLowering>(converter);
 }
 
 mlir::Value SparseRepresentation::GetTreeIndex(Value tree) {

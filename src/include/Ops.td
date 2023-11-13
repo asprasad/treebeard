@@ -603,6 +603,28 @@ def GetModelMemrefSizeOp : DecisionForest_Op<"getModelMemrefSizeOp", [Pure]> {
   let results = (outs I32);
 }
 
+def GetModelMemrefElementSizeOp : DecisionForest_Op<"getModelMemrefElementSize", [Pure]> {
+  let summary = "Gets the size (in bytes) of the argument model memref's elements.";
+  let description = "Gets the size (in bytes) of the argument model memref's elements. Takes into account the actual size of the tile on the target to which we are compiling.";
+  let arguments = (ins TiledNumericalNodeMemRef:$modelMemref);
+
+  let results = (outs Index);
+}
+
+def ReinterpretToI32AndLoadElement : DecisionForest_Op<"reinterpretAndLoadI32", [Pure]> {
+  let summary = "Reinterpret memref to i32 and load the i32 specified by the index.";
+  let description = "Reinterpret memref to i32 and load the i32 specified by the index.";
+  let arguments = (ins TiledNumericalNodeMemRef:$modelMemref, Index:$index);
+
+  let results = (outs I32);
+}
+
+def ReinterpretToI32AndStoreElement : DecisionForest_Op<"reinterpretAndStoreI32"> {
+  let summary = "Reinterpret memref to i32 and load the i32 specified by the index.";
+  let description = "Reinterpret memref to i32 and load the i32 specified by the index.";
+  let arguments = (ins I32:$value, TiledNumericalNodeMemRef:$modelMemref, Index:$index);
+}
+
 // ----- Debugging IR Ops ------
 def PrintTreePredictionOp : DecisionForest_Op<"printTreePrediction", []> {
   let arguments = (ins F64:$treePrediction, Index:$treeIndex);
