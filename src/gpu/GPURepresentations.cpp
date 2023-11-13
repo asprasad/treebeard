@@ -11,6 +11,8 @@
 using namespace mlir;
 using namespace mlir::decisionforest::helpers;
 
+#define USE_MEMCPY_STYLE_CACHE_TREE
+
 namespace mlir {
 namespace decisionforest {
 // ===---------------------------------------------------=== //
@@ -474,6 +476,94 @@ GetNumberOfTreesToCache(decisionforest::CacheTreesFromEnsembleOp cacheTreesOp) {
   }
 }
 
+std::tuple<Value, Value>
+generateTreeCache(decisionforest::CacheTreesFromEnsembleOp cacheTreesOp,
+                  ConversionPatternRewriter &rewriter, Value endIndex,
+                  Value startIndexInMemrefElemType, Value modelMemref,
+                  Value sharedMemoryBuffer) {
+
+  auto location = cacheTreesOp->getLoc();
+
+  // TODO_Ashwin we know all these dimensions are compile time constants. Can we
+  // just const fold? Get the number of threads in the thread block
+  auto owningGPULaunchOp = cacheTreesOp->getParentOfType<gpu::LaunchOp>();
+  assert(owningGPULaunchOp);
+  auto numThreadsX = owningGPULaunchOp.getBlockSizeX();
+  auto numThreadsY = owningGPULaunchOp.getBlockSizeY();
+  auto threadNum = owningGPULaunchOp.getThreadIds();
+
+  // TODO_Ashwin everything below assumes that thread blocks are 2D!
+
+  auto numThreads =
+      rewriter.create<arith::MulIOp>(location, numThreadsX, numThreadsY);
+
+  // index = numThreadsX*threadNum.Y + threadNum.X
+  auto nxTimesTy =
+      rewriter.create<arith::MulIOp>(location, numThreadsX, threadNum.y);
+  auto threadIndex = rewriter.create<arith::AddIOp>(
+      location, static_cast<Value>(nxTimesTy), threadNum.x);
+
+  // Generate the stores into shared memory based on these loads
+  // Copy the required part of the model buffer into shared memory
+  //    numElementsToRead = endIndex - startIndex
+  //    if (index < numElementsToRead) {
+  //     globalIndex = index + startIndex
+  //     threshold = loadThreshold(modelMemref, globalIndex, 0) -- any tree
+  //     index is fine since we just ignore it here featureIndex =
+  //     loadFeatureIndex(...) InitTile(shMemBuf, index, threshold, ...)
+  //    }
+  //    syncthreads()
+  {
+    auto numModelElementsToRead = rewriter.create<arith::SubIOp>(
+        location, endIndex, startIndexInMemrefElemType);
+    auto elemSize =
+        rewriter.create<decisionforest::GetModelMemrefElementSizeOp>(
+            location, rewriter.getIndexType(), modelMemref);
+    // rewriter.create<gpu::PrintfOp>(location, "elemSize = %ld\n",
+    //                                ValueRange{elemSize});
+    auto numBytesToRead = rewriter.create<arith::MulIOp>(
+        location, elemSize, numModelElementsToRead);
+    auto numElementsToRead = rewriter.create<arith::CeilDivSIOp>(
+        location, numBytesToRead,
+        rewriter.create<arith::ConstantIndexOp>(location, 4));
+    auto startIndexInBytes = rewriter.create<arith::MulIOp>(
+        location, startIndexInMemrefElemType, elemSize);
+    auto startIndexForI32 = rewriter.create<arith::CeilDivSIOp>(
+        location, startIndexInBytes,
+        rewriter.create<arith::ConstantIndexOp>(location, 4));
+    // auto castedMemref = rewriter.create<memref::ReinterpretCastOp>(location);
+
+    // auto memref1DType =
+    //     MemRefType::get({memrefSize}, memrefType.getElementType(), {},
+    //                     memrefType.getMemorySpaceAsInt());
+    // auto memref1D = rewriter.create<memref::ReinterpretCastOp>(
+    //     location, memref1DType, memref, 0 /*offset*/,
+    //     ArrayRef<int64_t>{memrefSize} /*sizes*/,
+    //     ArrayRef<int64_t>{1} /*strides*/);
+
+    auto forLoop = rewriter.create<scf::ForOp>(
+        location, threadIndex.getResult(),
+        static_cast<Value>(numElementsToRead), static_cast<Value>(numThreads));
+
+    auto index = forLoop.getInductionVar();
+
+    rewriter.setInsertionPointToStart(forLoop.getBody());
+    {
+      auto globalIndex = rewriter.create<arith::AddIOp>(
+          location, index, startIndexForI32.getResult());
+      auto loadedI32 =
+          rewriter.create<decisionforest::ReinterpretToI32AndLoadElement>(
+              location, rewriter.getI32Type(), modelMemref,
+              globalIndex.getResult());
+
+      rewriter.create<decisionforest::ReinterpretToI32AndStoreElement>(
+          location, loadedI32.getResult(), sharedMemoryBuffer, index);
+    }
+    rewriter.setInsertionPointAfter(forLoop);
+  }
+  return std::make_tuple(numThreads, threadIndex);
+}
+
 // ===---------------------------------------------------=== //
 // GPU array based representation
 // ===---------------------------------------------------=== //
@@ -611,6 +701,120 @@ mlir::LogicalResult GPUArrayBasedRepresentation::GenerateModelGlobals(
 //   return mlir::Value();
 // }
 
+#ifdef USE_MEMCPY_STYLE_CACHE_TREE
+void GPUArrayBasedRepresentation::LowerCacheTreeOp(
+    ConversionPatternRewriter &rewriter, mlir::Operation *op,
+    ArrayRef<Value> operands,
+    std::shared_ptr<decisionforest::IModelSerializer> m_serializer) {
+  // Get the values for the buffers inserted for the ensemble we are caching
+  auto location = op->getLoc();
+  auto cacheTreesOp =
+      AssertOpIsOfType<decisionforest::CacheTreesFromEnsembleOp>(op);
+  auto ensembleValue = cacheTreesOp.getForest();
+  auto ensembleConst = AssertOpIsOfType<decisionforest::EnsembleConstantOp>(
+      ensembleValue.getDefiningOp());
+  auto forestType =
+      ensembleValue.getType().cast<decisionforest::TreeEnsembleType>();
+  assert(forestType.doAllTreesHaveSameType() &&
+         forestType.doAllTreesHaveSameTileSize());
+  auto treeType = forestType.getTreeType(0).cast<decisionforest::TreeType>();
+
+  // All threads need to be synchronized before we can start caching
+  // rewriter.create<gpu::BarrierOp>(location);
+  rewriter.create<decisionforest::CacheOpBeginOp>(location);
+
+  assert(ensembleConstantToMemrefsMap.find(ensembleConst.getOperation()) !=
+         ensembleConstantToMemrefsMap.end());
+  auto &ensembleInfo =
+      ensembleConstantToMemrefsMap[ensembleConst.getOperation()];
+
+  // Compute the size of the shared mem buffer (max tree size * step)
+  std::vector<int64_t> lengths(
+      decisionforest::ForestJSONReader::GetInstance().GetNumberOfTrees(), -1);
+  auto tileSize = ensembleConst.getForest()
+                      .GetDecisionForest()
+                      .GetTree(0)
+                      .TilingDescriptor()
+                      .MaxTileSize();
+
+  decisionforest::ForestJSONReader::GetInstance().InitializeLengthBuffer(
+      lengths.data(), tileSize,
+      treeType.getThresholdType().getIntOrFloatBitWidth(),
+      treeType.getFeatureIndexType().getIntOrFloatBitWidth());
+  auto maxLen = *std::max_element(lengths.begin(), lengths.end());
+  int64_t bufferLen = maxLen * GetNumberOfTreesToCache(cacheTreesOp);
+
+  // Add the required globals to the owning module
+  auto owningModule = cacheTreesOp->getParentOfType<mlir::ModuleOp>();
+  assert(owningModule);
+
+  int64_t cacheId = cacheTreesOp.getCacheID();
+  std::string globalCacheBufferName =
+      std::string("treeCache_") + std::to_string(cacheId);
+  auto treeMemrefType = ensembleInfo.modelGlobal.getType().cast<MemRefType>();
+  // TODO_Ashwin Use the right memory space ID
+  auto cacheBufferType = MemRefType::get(
+      {bufferLen}, treeMemrefType.getElementType(), {}, // Affine map
+      3); // Address space ID -- shared memory
+
+  if (m_cacheBufferNamesMap.find(cacheId) == m_cacheBufferNamesMap.end()) {
+    SaveAndRestoreInsertionPoint saveAndRestoreInsertPoint(rewriter);
+    rewriter.setInsertionPoint(&owningModule.front());
+    rewriter.create<memref::GlobalOp>(
+        location, globalCacheBufferName,
+        /*sym_visibility=*/rewriter.getStringAttr("private"),
+        /*type=*/cacheBufferType,
+        /*initial_value=*/rewriter.getUnitAttr(),
+        /*constant=*/false,
+        /*alignment*/ IntegerAttr());
+    m_cacheBufferNamesMap[cacheId] = globalCacheBufferName;
+  }
+
+  auto offsetsMemref = ensembleInfo.offsetGlobal;
+  auto offsetsLength = offsetsMemref.getType().cast<MemRefType>().getShape()[0];
+  auto offsetLenConst =
+      rewriter.create<arith::ConstantIndexOp>(location, offsetsLength);
+
+  auto modelMemref = ensembleInfo.modelGlobal;
+  auto modelMemrefLength =
+      modelMemref.getType().cast<MemRefType>().getShape()[0];
+  auto modelLenConst =
+      rewriter.create<arith::ConstantIndexOp>(location, modelMemrefLength);
+
+  auto sharedMemoryBuffer = rewriter.create<memref::GetGlobalOp>(
+      location, cacheBufferType, globalCacheBufferName);
+  // Compute the actual range of indices we need to read into the shared mem
+  // buffer
+  auto startIndex = rewriter.create<memref::LoadOp>(
+      location, offsetsMemref, ValueRange{cacheTreesOp.getStartTreeIndex()});
+
+  // Since the end index can be out of range, we need to generate an "if"
+  auto endIndexInRange = rewriter.create<arith::CmpIOp>(
+      location, arith::CmpIPredicate::slt, cacheTreesOp.getEndTreeIndex(),
+      static_cast<Value>(offsetLenConst));
+  auto endIndexIfElse = rewriter.create<scf::IfOp>(
+      location, TypeRange{rewriter.getIndexType()}, endIndexInRange, true);
+
+  {
+    auto thenBuilder = endIndexIfElse.getThenBodyBuilder();
+    auto loadEndIndex = thenBuilder.create<memref::LoadOp>(
+        location, offsetsMemref, ValueRange{cacheTreesOp.getEndTreeIndex()});
+    thenBuilder.create<scf::YieldOp>(location, loadEndIndex.getResult());
+
+    auto elseBuilder = endIndexIfElse.getElseBodyBuilder();
+    elseBuilder.create<scf::YieldOp>(location, modelLenConst.getResult());
+  }
+  auto endIndex = endIndexIfElse.getResult(0);
+
+  generateTreeCache(cacheTreesOp, rewriter, endIndex, startIndex, modelMemref,
+                    sharedMemoryBuffer);
+
+  // rewriter.create<gpu::BarrierOp>(location);
+  rewriter.create<decisionforest::CacheOpEndOp>(location);
+
+  m_cacheTreesOpsMap[op] = {sharedMemoryBuffer};
+}
+#else  // USE_MEMCPY_STYLE_CACHE_TREE
 void GPUArrayBasedRepresentation::LowerCacheTreeOp(
     ConversionPatternRewriter &rewriter, mlir::Operation *op,
     ArrayRef<Value> operands,
@@ -789,6 +993,7 @@ void GPUArrayBasedRepresentation::LowerCacheTreeOp(
 
   m_cacheTreesOpsMap[op] = {sharedMemoryBuffer};
 }
+#endif // USE_MEMCPY_STYLE_CACHE_TREE
 
 void GPUArrayBasedRepresentation::GenerateTreeMemref(
     mlir::ConversionPatternRewriter &rewriter, mlir::Operation *op,
@@ -1175,8 +1380,6 @@ Value GPUSparseRepresentation::GenerateLeavesBufferCaching(
   return leavesSharedMemoryBuffer;
 }
 
-#define USE_MEMCPY_STYLE_CACHE_TREE
-
 #ifdef USE_MEMCPY_STYLE_CACHE_TREE
 void GPUSparseRepresentation::LowerCacheTreeOp(
     ConversionPatternRewriter &rewriter, mlir::Operation *op,
@@ -1288,87 +1491,14 @@ void GPUSparseRepresentation::LowerCacheTreeOp(
     elseBuilder.create<scf::YieldOp>(location,
                                      ValueRange{modelLenConst.getResult()});
   }
-
   auto endIndex = endIndexIfElse.getResult(0);
 
-  // TODO_Ashwin we know all these dimensions are compile time constants. Can we
-  // just const fold? Get the number of threads in the thread block
-  auto owningGPULaunchOp = cacheTreesOp->getParentOfType<gpu::LaunchOp>();
-  assert(owningGPULaunchOp);
-  auto numThreadsX = owningGPULaunchOp.getBlockSizeX();
-  auto numThreadsY = owningGPULaunchOp.getBlockSizeY();
-  auto threadNum = owningGPULaunchOp.getThreadIds();
+  auto ret = generateTreeCache(cacheTreesOp, rewriter, endIndex,
+                               startIndexInMemrefElemType, modelMemref,
+                               sharedMemoryBuffer);
 
-  // TODO_Ashwin everything below assumes that thread blocks are 2D!
-
-  auto numThreads =
-      rewriter.create<arith::MulIOp>(location, numThreadsX, numThreadsY);
-
-  // index = numThreadsX*threadNum.Y + threadNum.X
-  auto nxTimesTy =
-      rewriter.create<arith::MulIOp>(location, numThreadsX, threadNum.y);
-  auto threadIndex = rewriter.create<arith::AddIOp>(
-      location, static_cast<Value>(nxTimesTy), threadNum.x);
-
-  // Generate the stores into shared memory based on these loads
-  // Copy the required part of the model buffer into shared memory
-  //    numElementsToRead = endIndex - startIndex
-  //    if (index < numElementsToRead) {
-  //     globalIndex = index + startIndex
-  //     threshold = loadThreshold(modelMemref, globalIndex, 0) -- any tree
-  //     index is fine since we just ignore it here featureIndex =
-  //     loadFeatureIndex(...) InitTile(shMemBuf, index, threshold, ...)
-  //    }
-  //    syncthreads()
-  {
-    auto numModelElementsToRead = rewriter.create<arith::SubIOp>(
-        location, endIndex, startIndexInMemrefElemType.getResult());
-    auto elemSize =
-        rewriter.create<decisionforest::GetModelMemrefElementSizeOp>(
-            location, rewriter.getIndexType(), modelMemref);
-    // rewriter.create<gpu::PrintfOp>(location, "elemSize = %ld\n",
-    //                                ValueRange{elemSize});
-    auto numBytesToRead = rewriter.create<arith::MulIOp>(
-        location, elemSize, numModelElementsToRead);
-    auto numElementsToRead = rewriter.create<arith::CeilDivSIOp>(
-        location, numBytesToRead,
-        rewriter.create<arith::ConstantIndexOp>(location, 4));
-    auto zeroIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
-    auto startIndexInBytes = rewriter.create<arith::MulIOp>(
-        location, startIndexInMemrefElemType, elemSize);
-    auto startIndexForI32 = rewriter.create<arith::CeilDivSIOp>(
-        location, startIndexInBytes,
-        rewriter.create<arith::ConstantIndexOp>(location, 4));
-    // auto castedMemref = rewriter.create<memref::ReinterpretCastOp>(location);
-
-    // auto memref1DType =
-    //     MemRefType::get({memrefSize}, memrefType.getElementType(), {},
-    //                     memrefType.getMemorySpaceAsInt());
-    // auto memref1D = rewriter.create<memref::ReinterpretCastOp>(
-    //     location, memref1DType, memref, 0 /*offset*/,
-    //     ArrayRef<int64_t>{memrefSize} /*sizes*/,
-    //     ArrayRef<int64_t>{1} /*strides*/);
-
-    auto forLoop = rewriter.create<scf::ForOp>(
-        location, threadIndex.getResult(),
-        static_cast<Value>(numElementsToRead), static_cast<Value>(numThreads));
-
-    auto index = forLoop.getInductionVar();
-
-    rewriter.setInsertionPointToStart(forLoop.getBody());
-    {
-      auto globalIndex = rewriter.create<arith::AddIOp>(
-          location, index, startIndexForI32.getResult());
-      auto loadedI32 =
-          rewriter.create<decisionforest::ReinterpretToI32AndLoadElement>(
-              location, rewriter.getI32Type(), modelMemref,
-              globalIndex.getResult());
-
-      rewriter.create<decisionforest::ReinterpretToI32AndStoreElement>(
-          location, loadedI32.getResult(), sharedMemoryBuffer, index);
-    }
-    rewriter.setInsertionPointAfter(forLoop);
-  }
+  auto numThreads = std::get<0>(ret);
+  auto threadIndex = std::get<1>(ret);
 
   Value leavesSharedMemoryBuffer;
   if (tileSize > 1) {

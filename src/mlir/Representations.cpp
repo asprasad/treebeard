@@ -1001,7 +1001,9 @@ void ArrayBasedRepresentation::AddLLVMConversionPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<LoadTileFeatureIndicesOpLowering, LoadTileThresholdOpLowering,
                LoadTileShapeOpLowering, InitTileOpLowering,
-               GetModelMemrefSizeOpLowering, GetModelMemrefElemSizeOpLowering>(
+               GetModelMemrefSizeOpLowering, GetModelMemrefElemSizeOpLowering,
+               ReinterpretToI32AndLoadElementLowering,
+               ReinterpretToI32AndStoreElementLowering>(
       converter);
 }
 
