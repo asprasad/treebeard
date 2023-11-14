@@ -719,7 +719,8 @@ void ReorgForestRepresentation::LowerCacheTreeOp(
          forestType.doAllTreesHaveSameTileSize());
 
   // All threads need to be synchronized before we can start caching
-  rewriter.create<gpu::BarrierOp>(location);
+  // rewriter.create<gpu::BarrierOp>(location);
+  rewriter.create<decisionforest::CacheOpBeginOp>(location);
 
   // TODO_Ashwin This is a BUG!! We may not always have a for loop surrounding a
   // cache operation The surrounding loops for grid and thread block have
@@ -818,7 +819,8 @@ void ReorgForestRepresentation::LowerCacheTreeOp(
         location, castedFeatureIndex.getResult(0),
         cacheGlobals.featureIndexCache, ValueRange{cacheIndex});
   }
-  rewriter.create<gpu::BarrierOp>(location);
+  // rewriter.create<gpu::BarrierOp>(location);
+  rewriter.create<decisionforest::CacheOpEndOp>(location);
 
   // Add the information about this cache to the map
   m_treeCacheMap[op] = {cacheGlobals.thresholdCache,
