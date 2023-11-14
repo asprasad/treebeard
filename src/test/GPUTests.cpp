@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <dlfcn.h>
 #include <filesystem>
 #include <sstream>
 #include <thread>
@@ -48,12 +49,38 @@ namespace test {
 class GPUInferenceRunnerForTest : public InferenceRunnerForTestTemplate<
                                       decisionforest::GPUInferenceRunner> {
 public:
-  using InferenceRunnerForTestTemplate<
-      decisionforest::GPUInferenceRunner>::InferenceRunnerForTestTemplate;
+  GPUInferenceRunnerForTest(
+      std::shared_ptr<decisionforest::IModelSerializer> serializer,
+      mlir::ModuleOp module, int32_t tileSize, int32_t thresholdSize,
+      int32_t featureIndexSize)
+      : InferenceRunnerForTestTemplate<decisionforest::GPUInferenceRunner>(
+            serializer, module, tileSize, thresholdSize, featureIndexSize) {
+    if (decisionforest::measureGpuKernelTime) {
+      typedef void (*ResetFunc_t)();
+      auto resetFunc =
+          reinterpret_cast<ResetFunc_t>(dlsym(NULL, "resetTotalKernelTime"));
+      assert(resetFunc);
+      resetFunc();
+    }
+  }
+
+  //   using InferenceRunnerForTestTemplate<
+  //       decisionforest::GPUInferenceRunner>::InferenceRunnerForTestTemplate;
+
   decisionforest::ModelMemrefType GetModelMemref() {
     return reinterpret_cast<decisionforest::GPUArraySparseSerializerBase *>(
                m_serializer.get())
         ->GetModelMemref();
+  }
+
+  int64_t GetKernelExecutionTime() {
+    if (!decisionforest::measureGpuKernelTime)
+      return 0;
+    typedef int64_t (*GetKernelTimeFunc_t)();
+    auto getKernelTimeFunc = reinterpret_cast<GetKernelTimeFunc_t>(
+        dlsym(NULL, "getTotalKernelTime"));
+    assert(getKernelTimeFunc);
+    return getKernelTimeFunc();
   }
 };
 
@@ -539,6 +566,8 @@ bool VerifyGPUAutoScheduleCodeGeneration(
       Test_ASSERT(FPEqual(result[rowIdx], expectedResult));
     }
   }
+  //   std::cout << "Kernel execution time: "
+  //             << inferenceRunner.GetKernelExecutionTime() << std::endl;
   return true;
 }
 
@@ -2143,11 +2172,11 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleBasic(
   using ThresholdType = float;
   using IndexType = int16_t;
 
-  int32_t batchSize = 64;
+  int32_t batchSize = 256;
 
   // Maps to TB.x
-  int32_t numRowsPerTB = 16;
-  int32_t numRowsPerThread = 2;
+  int32_t numRowsPerTB = 64;
+  int32_t numRowsPerThread = 8;
   // Hpw many rows do we process together?
   // Pick one tree and process this many rows before moving to the next row
   int32_t rowTileSize = -1;
@@ -2161,7 +2190,7 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleBasic(
   int32_t numTreesAtATime = 1;
   bool cacheRows = false;
   bool cacheTrees = false;
-  bool unrollTreeWalks = true;
+  bool unrollTreeWalks = false;
 
   TreeBeard::GPUAutoScheduleOptions gpuAutoScheduleOptions{
       numRowsPerTB,    numRowsPerThread, rowTileSize, numTreeThreads,
@@ -2196,11 +2225,11 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedRows(
   using ThresholdType = float;
   using IndexType = int16_t;
 
-  int32_t batchSize = 64;
+  int32_t batchSize = 256;
 
   // Maps to TB.x
-  int32_t numRowsPerTB = 16;
-  int32_t numRowsPerThread = 2;
+  int32_t numRowsPerTB = 64;
+  int32_t numRowsPerThread = 8;
   // Hpw many rows do we process together?
   // Pick one tree and process this many rows before moving to the next row
   int32_t rowTileSize = -1;
@@ -2214,7 +2243,7 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedRows(
   int32_t numTreesAtATime = 1;
   bool cacheRows = true;
   bool cacheTrees = false;
-  bool unrollTreeWalks = true;
+  bool unrollTreeWalks = false;
 
   TreeBeard::GPUAutoScheduleOptions gpuAutoScheduleOptions{
       numRowsPerTB,    numRowsPerThread, rowTileSize, numTreeThreads,
@@ -2249,11 +2278,11 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedTrees(
   using ThresholdType = float;
   using IndexType = int16_t;
 
-  int32_t batchSize = 64;
+  int32_t batchSize = 256;
 
   // Maps to TB.x
-  int32_t numRowsPerTB = 16;
-  int32_t numRowsPerThread = 2;
+  int32_t numRowsPerTB = 64;
+  int32_t numRowsPerThread = 8;
   // Hpw many rows do we process together?
   // Pick one tree and process this many rows before moving to the next row
   int32_t rowTileSize = -1;
@@ -2267,7 +2296,7 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedTrees(
   int32_t numTreesAtATime = 1;
   bool cacheRows = false;
   bool cacheTrees = true;
-  bool unrollTreeWalks = true;
+  bool unrollTreeWalks = false;
 
   TreeBeard::GPUAutoScheduleOptions gpuAutoScheduleOptions{
       numRowsPerTB,    numRowsPerThread, rowTileSize, numTreeThreads,

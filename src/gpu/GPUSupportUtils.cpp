@@ -31,6 +31,55 @@ namespace {
 
 StringRef getMappingAttrName() { return "mapping"; }
 
+FlatSymbolRefAttr getOrInsertFunction(std::string &functionName,
+                                      mlir::FunctionType functionType,
+                                      OpBuilder &rewriter, ModuleOp module) {
+  auto *context = module.getContext();
+  if (module.lookupSymbol<func::FuncOp>(functionName))
+    return SymbolRefAttr::get(context, functionName);
+
+  PatternRewriter::InsertionGuard insertGuard(rewriter);
+  rewriter.setInsertionPointToStart(module.getBody());
+  auto func = rewriter.create<func::FuncOp>(module.getLoc(), functionName,
+                                            functionType);
+  func.setVisibility(SymbolTable::Visibility::Private);
+  return SymbolRefAttr::get(context, functionName);
+}
+
+FlatSymbolRefAttr getOrInsertStartTimerFunc(OpBuilder &rewriter,
+                                            ModuleOp module) {
+  std::string functionName = "startKernelTimer";
+  auto functionType = rewriter.getFunctionType({}, {});
+  return getOrInsertFunction(functionName, functionType, rewriter, module);
+}
+
+FlatSymbolRefAttr getOrInsertEndTimerFunc(OpBuilder &rewriter,
+                                          ModuleOp module) {
+  std::string functionName = "endKernelTimer";
+  auto functionType = rewriter.getFunctionType({}, {});
+  return getOrInsertFunction(functionName, functionType, rewriter, module);
+}
+
+void addGPUKernelTimingCalls(gpu::LaunchOp launchOp, mlir::OpBuilder &builder) {
+  if (!decisionforest::measureGpuKernelTime)
+    return;
+
+  auto location = launchOp.getLoc();
+  auto module = launchOp->getParentOfType<ModuleOp>();
+  auto startTimerFunc = getOrInsertStartTimerFunc(builder, module);
+  auto endTimerFunc = getOrInsertEndTimerFunc(builder, module);
+
+  {
+    PatternRewriter::InsertionGuard insertionGuard(builder);
+
+    builder.setInsertionPoint(launchOp.getOperation());
+    builder.create<func::CallOp>(location, startTimerFunc, TypeRange{});
+
+    builder.setInsertionPointAfter(launchOp.getOperation());
+    builder.create<func::CallOp>(location, endTimerFunc, TypeRange{});
+  }
+}
+
 // Replace all uses of the input argument memref with the gpu memref inside
 // the gpu kernel
 void ReplaceCPUReferencesWithGPUMemref(
@@ -216,6 +265,7 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
       builder.create<gpu::WaitOp>(location, Type(), waitToken);
 
       ReplaceCPUReferencesWithGPUMemref(cpuToGpuMemrefMap);
+      addGPUKernelTimingCalls(gpuLaunchOp, builder);
     }
     return mlir::WalkResult::advance();
   });
@@ -269,6 +319,8 @@ struct MakeGPULoopsPerfectlyNestedPass
 
 namespace mlir {
 namespace decisionforest {
+
+bool measureGpuKernelTime = false;
 
 gpu::ParallelLoopDimMappingAttr getMappingAttr(scf::ParallelOp parallelOp) {
   auto mappingAttr = parallelOp->getAttr(getMappingAttrName());
