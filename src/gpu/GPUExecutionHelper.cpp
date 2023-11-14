@@ -83,10 +83,10 @@ GPUInferenceRunner::CreateExecutionEngine(mlir::ModuleOp module) {
   assert(FileExists(libompPath));
   executionEngineLibs.push_back(libompPath);
 #endif
-
+  std::string debugSOPath;
   if (decisionforest::measureGpuKernelTime) {
-    auto debugSOPath = GetDebugSOPath();
-    executionEngineLibs.push_back(debugSOPath.data());
+    debugSOPath = GetDebugSOPath();
+    executionEngineLibs.push_back(debugSOPath);
   }
 
   std::string libCudaRuntimePath =

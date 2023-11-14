@@ -241,18 +241,20 @@ struct LoadTileShapeOpLowering : public ConversionPattern {
 };
 
 struct LoadChildIndexOpLowering : public ConversionPattern {
-  LoadChildIndexOpLowering(LLVMTypeConverter &typeConverter)
+  int32_t m_childIndexElementNumber;
+  LoadChildIndexOpLowering(LLVMTypeConverter &typeConverter,
+                           int32_t childIndexElementNumber)
       : ConversionPattern(
             typeConverter,
             mlir::decisionforest::LoadChildIndexOp::getOperationName(),
-            1 /*benefit*/, &typeConverter.getContext()) {}
+            1 /*benefit*/, &typeConverter.getContext()),
+        m_childIndexElementNumber(childIndexElementNumber) {}
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     assert(operands.size() == 2);
-    generateLoadStructElement(op, operands, rewriter,
-                              kChildIndexElementNumberInTile,
+    generateLoadStructElement(op, operands, rewriter, m_childIndexElementNumber,
                               getTypeConverter());
     return mlir::success();
   }
@@ -268,8 +270,6 @@ struct ReinterpretToI32AndLoadElementLowering : public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    auto loadElemOp =
-        AssertOpIsOfType<decisionforest::ReinterpretToI32AndLoadElement>(op);
     Value elementPtr;
     auto elementType = generateGetElementPtrForI32Ops(
         op, operands, rewriter, getTypeConverter(), elementPtr, operands[0],
@@ -293,8 +293,6 @@ struct ReinterpretToI32AndStoreElementLowering : public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    auto storeElemOp =
-        AssertOpIsOfType<decisionforest::ReinterpretToI32AndStoreElement>(op);
     Value elementPtr;
     /*auto elementType =*/generateGetElementPtrForI32Ops(
         op, operands, rewriter, getTypeConverter(), elementPtr, operands[1],
@@ -357,13 +355,20 @@ struct InitSparseTileOpLowering : public ConversionPattern {
     auto modelMemrefType = op->getOperand(0).getType().cast<MemRefType>();
     auto tileType = modelMemrefType.getElementType()
                         .cast<decisionforest::TiledNumericalNodeType>();
-    if (tileType.getTileSize() > 1)
+    if (tileType.getTileSize() > 1) {
       generateStoreStructElement(
           op, operands, rewriter, tileOpAdaptor.getTileShapeID().getType(), 2,
           getTypeConverter(), tileOpAdaptor.getTileShapeID());
-    generateStoreStructElement(
-        op, operands, rewriter, tileOpAdaptor.getChildIndex().getType(), 3,
-        getTypeConverter(), tileOpAdaptor.getChildIndex());
+      generateStoreStructElement(
+          op, operands, rewriter, tileOpAdaptor.getChildIndex().getType(), 3,
+          getTypeConverter(), tileOpAdaptor.getChildIndex());
+    } else {
+      // When tile size is 1, we don't store the tile shape, so child index is
+      // element 2.
+      generateStoreStructElement(
+          op, operands, rewriter, tileOpAdaptor.getChildIndex().getType(), 2,
+          getTypeConverter(), tileOpAdaptor.getChildIndex());
+    }
 
     rewriter.eraseOp(op);
     return mlir::success();
@@ -1003,8 +1008,7 @@ void ArrayBasedRepresentation::AddLLVMConversionPatterns(
                LoadTileShapeOpLowering, InitTileOpLowering,
                GetModelMemrefSizeOpLowering, GetModelMemrefElemSizeOpLowering,
                ReinterpretToI32AndLoadElementLowering,
-               ReinterpretToI32AndStoreElementLowering>(
-      converter);
+               ReinterpretToI32AndStoreElementLowering>(converter);
 }
 
 void ArrayBasedRepresentation::LowerCacheRowsOp(
@@ -1663,8 +1667,7 @@ void SparseRepresentation::AddTypeConversions(
     auto tileShapeIDType = type.getTileShapeType();
     if (type.getTileSize() == 1) {
       return LLVM::LLVMStructType::getLiteral(
-          &context,
-          {thresholdType, indexType, tileShapeIDType, childIndexType});
+          &context, {thresholdType, indexType, childIndexType});
     } else {
       return LLVM::LLVMStructType::getLiteral(
           &context,
@@ -1676,11 +1679,12 @@ void SparseRepresentation::AddTypeConversions(
 void SparseRepresentation::AddLLVMConversionPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<LoadTileFeatureIndicesOpLowering, LoadTileThresholdOpLowering,
-               LoadTileShapeOpLowering, LoadChildIndexOpLowering,
-               InitSparseTileOpLowering, GetModelMemrefSizeOpLowering,
-               GetModelMemrefElemSizeOpLowering,
+               LoadTileShapeOpLowering, InitSparseTileOpLowering,
+               GetModelMemrefSizeOpLowering, GetModelMemrefElemSizeOpLowering,
                ReinterpretToI32AndLoadElementLowering,
                ReinterpretToI32AndStoreElementLowering>(converter);
+  auto childIndexElementNum = GetTileSize() == 1 ? 2 : 3;
+  patterns.add<LoadChildIndexOpLowering>(converter, childIndexElementNum);
 }
 
 mlir::Value SparseRepresentation::GetTreeIndex(Value tree) {

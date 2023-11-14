@@ -2190,7 +2190,7 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleBasic(
   int32_t numTreesAtATime = 1;
   bool cacheRows = false;
   bool cacheTrees = false;
-  bool unrollTreeWalks = false;
+  bool unrollTreeWalks = true;
 
   TreeBeard::GPUAutoScheduleOptions gpuAutoScheduleOptions{
       numRowsPerTB,    numRowsPerThread, rowTileSize, numTreeThreads,
@@ -2243,7 +2243,7 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedRows(
   int32_t numTreesAtATime = 1;
   bool cacheRows = true;
   bool cacheTrees = false;
-  bool unrollTreeWalks = false;
+  bool unrollTreeWalks = true;
 
   TreeBeard::GPUAutoScheduleOptions gpuAutoScheduleOptions{
       numRowsPerTB,    numRowsPerThread, rowTileSize, numTreeThreads,
@@ -2296,7 +2296,7 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedTrees(
   int32_t numTreesAtATime = 1;
   bool cacheRows = false;
   bool cacheTrees = true;
-  bool unrollTreeWalks = false;
+  bool unrollTreeWalks = true;
 
   TreeBeard::GPUAutoScheduleOptions gpuAutoScheduleOptions{
       numRowsPerTB,    numRowsPerThread, rowTileSize, numTreeThreads,
