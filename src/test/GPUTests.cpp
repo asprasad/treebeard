@@ -2553,6 +2553,1371 @@ bool VerifyGPUAutoScheduleCodeGeneration(
         16, // child index width
         gpuAutoScheduleOptions);
   }
+  return true;
+}
+
+bool Test_GPUModelInit_LeftHeavy_Reorg_DoubleInt(TestArgs_t &args) {
+  return CheckGPUModelInitialization_ReorgForest<double, int32_t>(
+      args, AddLeftHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_RightHeavy_Reorg_DoubleInt(TestArgs_t &args) {
+  return CheckGPUModelInitialization_ReorgForest<double, int32_t>(
+      args, AddRightHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_Balanced_Reorg_DoubleInt(TestArgs_t &args) {
+  return CheckGPUModelInitialization_ReorgForest<double, int32_t>(
+      args, AddBalancedTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_LeftAndRightHeavy_Reorg_DoubleInt(TestArgs_t &args) {
+  return CheckGPUModelInitialization_ReorgForest<double, int32_t>(
+      args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_LeftHeavy_Reorg_FloatInt(TestArgs_t &args) {
+  return CheckGPUModelInitialization_ReorgForest<float, int32_t>(
+      args, AddLeftHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_RightHeavy_Reorg_FloatInt(TestArgs_t &args) {
+  return CheckGPUModelInitialization_ReorgForest<float, int32_t>(
+      args, AddRightHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_Balanced_Reorg_FloatInt(TestArgs_t &args) {
+  return CheckGPUModelInitialization_ReorgForest<float, int32_t>(
+      args, AddBalancedTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt(TestArgs_t &args) {
+  return CheckGPUModelInitialization_ReorgForest<float, int32_t>(
+      args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_LeftHeavy_Reorg_FloatInt16(TestArgs_t &args) {
+  return CheckGPUModelInitialization_ReorgForest<float, int16_t>(
+      args, AddLeftHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_RightHeavy_Reorg_FloatInt16(TestArgs_t &args) {
+  return CheckGPUModelInitialization_ReorgForest<float, int16_t>(
+      args, AddRightHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_Balanced_Reorg_FloatInt16(TestArgs_t &args) {
+  return CheckGPUModelInitialization_ReorgForest<float, int16_t>(
+      args, AddBalancedTree<DoubleInt32Tile>);
+}
+
+bool Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt16(TestArgs_t &args) {
+  return CheckGPUModelInitialization_ReorgForest<float, int16_t>(
+      args, AddRightAndLeftHeavyTrees<DoubleInt32Tile>);
+}
+
+// ===---------------------------------------------------=== //
+// GPU Shared Memory Tests
+// ===---------------------------------------------------=== //
+
+template <typename ThresholdType, typename IndexType>
+bool Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize_AnyRep(
+    TestArgs_t &args, const int32_t batchSize,
+    ForestConstructor_t forestConstructor,
+    std::shared_ptr<decisionforest::IModelSerializer> serializer,
+    std::shared_ptr<decisionforest::IRepresentation> representation,
+    int32_t childIndexBitWidth,
+    std::function<void(decisionforest::Schedule &)> scheduleManipulator) {
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+  FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType,
+                         ThresholdType>
+      irConstructor(context, serializer, batchSize, forestConstructor);
+  return VerifyGPUCodeGeneration<ThresholdType, IndexType>(
+      args, batchSize, irConstructor, serializer, representation,
+      1 /*tileSize*/, 1 /*tileShapeBitwidth*/, childIndexBitWidth,
+      scheduleManipulator);
+}
+
+template <typename ThresholdType, typename IndexType>
+bool Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize(
+    TestArgs_t &args, const int32_t batchSize,
+    ForestConstructor_t forestConstructor, std::string rep = "gpu_array",
+    int32_t childIndexBitWidth = 1) {
+
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  auto serializer =
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          rep, modelGlobalsJSONPath);
+  auto representation =
+      decisionforest::RepresentationFactory::Get().GetRepresentation(rep);
+  std::function<void(decisionforest::Schedule &)> scheduleManipulator =
+      std::bind(TahoeSharedForestStrategy, std::placeholders::_1, 8);
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize_AnyRep<ThresholdType,
+                                                                IndexType>(
+      args, batchSize, forestConstructor, serializer, representation,
+      childIndexBitWidth, scheduleManipulator);
+}
+
+template <typename ThresholdType, typename IndexType>
+bool Test_GPUCodeGen_InputShdMem_Scalar(TestArgs_t &args,
+                                        const int32_t batchSize,
+                                        ForestConstructor_t forestConstructor,
+                                        int32_t childIndexBitWidth = 1) {
+
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  std::function<void(decisionforest::Schedule &)> scheduleManipulator =
+      std::bind(TahoeSharedDataStrategy_Modified, std::placeholders::_1, 8);
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize_AnyRep<ThresholdType,
+                                                                IndexType>(
+      args, batchSize, forestConstructor,
+      decisionforest::ConstructGPUModelSerializer(modelGlobalsJSONPath),
+      decisionforest::ConstructGPURepresentation(), childIndexBitWidth,
+      scheduleManipulator);
+}
+
+// ===---------------------------------------------------=== //
+// GPU Array Rep Shared Memory Tests
+// ===---------------------------------------------------=== //
+
+bool Test_SimpleSharedMem_LeftHeavy(TestArgs_t &args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<double, int32_t>(
+      args, 32, AddLeftHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_SimpleSharedMem_LeftRightAndBalanced(TestArgs_t &args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<double, int32_t>(
+      args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>);
+}
+
+bool Test_SimpleSharedMem_LeftHeavy_F32I16(TestArgs_t &args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<float, int16_t>(
+      args, 32, AddLeftHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_SimpleSharedMem_LeftRightAndBalanced_F32I16(TestArgs_t &args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<float, int16_t>(
+      args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>);
+}
+
+// ===---------------------------------------------------=== //
+// GPU Input Shared Memory Tests
+// ===---------------------------------------------------=== //
+
+bool Test_InputSharedMem_LeftHeavy(TestArgs_t &args) {
+  return Test_GPUCodeGen_InputShdMem_Scalar<double, int32_t>(
+      args, 32, AddLeftHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_InputSharedMem_RightHeavy(TestArgs_t &args) {
+  return Test_GPUCodeGen_InputShdMem_Scalar<double, int32_t>(
+      args, 32, AddRightHeavyTree<DoubleInt32Tile>);
+}
+
+bool Test_InputSharedMem_LeftRightAndBalanced(TestArgs_t &args) {
+  return Test_GPUCodeGen_InputShdMem_Scalar<double, int32_t>(
+      args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>);
+}
+
+// ===---------------------------------------------------=== //
+// GPU Multi-class Tests
+// ===---------------------------------------------------=== //
+
+bool Test_GPUCodeGeneration_Covtype_ArrayRep_DoubleInt32_BatchSize32(
+    TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel_VariableBatchSize<float, int8_t,
+                                                               int32_t>(
+      args, 32, "covtype_xgb_model_save.json", "gpu_array");
+}
+
+bool Test_GPUCodeGeneration_Covtype_SparseRep_DoubleInt32_BatchSize32(
+    TestArgs_t &args) {
+  mlir::decisionforest::UseSparseTreeRepresentation = true;
+  return Test_GPUCodeGeneration_XGBoostModel_VariableBatchSize<float, int8_t,
+                                                               int32_t>(
+      args, 32, "covtype_xgb_model_save.json", "gpu_sparse", 16);
+}
+
+bool Test_GPUCodeGeneration_Covtype_ReorgRep_DoubleInt32_BatchSize32(
+    TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel_VariableBatchSize<float, int8_t,
+                                                               int32_t>(
+      args, 32, "covtype_xgb_model_save.json", "gpu_reorg");
+}
+
+bool Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache(
+    TestArgs_t &args) {
+  using ThresholdType = float;
+  using IndexType = int16_t;
+  using ReturnType = int8_t;
+
+  int32_t batchSize = 64;
+  int32_t numRowsPerBlock = 4, numTreesPerIter = 10;
+  const std::string xgboostModelFile = "covtype_xgb_model_save.json";
+  auto representation =
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse");
+
+  auto xgboostModelPath = GetXGBoostModelPath(xgboostModelFile);
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          xgboostModelPath);
+  auto csvPath = xgboostModelPath + ".csv";
+
+  auto serializer =
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath);
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
+  TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, IndexType, IndexType,
+                               ThresholdType>
+      xgBoostParser(context, xgboostModelPath, serializer, batchSize);
+
+  std::function<void(decisionforest::Schedule &)> scheduleManipulator =
+      std::bind(decisionforest::iterativeCachedPartialForestStrategy_NoCache,
+                std::placeholders::_1, numTreesPerIter, numRowsPerBlock);
+  return VerifyGPUCodeGeneration<ThresholdType, IndexType>(
+      args, batchSize, xgBoostParser, serializer, representation,
+      1,  // Tile size
+      16, // Tile shape width
+      16, // child index width
+      scheduleManipulator, csvPath);
+
+  //   return Test_GPUCodeGeneration_XGBoostModel_VariableBatchSize<float,
+  //   int8_t,
+  //                                                                int32_t>(
+  //       args, 32, "covtype_xgb_model_save.json", "gpu_sparse", 16);
+}
+
+bool Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache_SharedReduce(
+    TestArgs_t &args) {
+  using ThresholdType = float;
+  using IndexType = int16_t;
+  using ReturnType = int8_t;
+
+  int32_t batchSize = 64;
+  int32_t numRowsPerBlock = 4, numTreesPerIter = 10;
+  const std::string xgboostModelFile = "covtype_xgb_model_save.json";
+  auto representation =
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse");
+
+  auto xgboostModelPath = GetXGBoostModelPath(xgboostModelFile);
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          xgboostModelPath);
+  auto csvPath = xgboostModelPath + ".csv";
+
+  auto serializer =
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath);
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
+  TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, IndexType, IndexType,
+                               ThresholdType>
+      xgBoostParser(context, xgboostModelPath, serializer, batchSize);
+
+  std::function<void(decisionforest::Schedule &)> scheduleManipulator =
+      std::bind(decisionforest::
+                    iterativeCachedPartialForestStrategy_NoCache_SharedReduce,
+                std::placeholders::_1, numTreesPerIter, numRowsPerBlock);
+  return VerifyGPUCodeGeneration<ThresholdType, IndexType>(
+      args, batchSize, xgBoostParser, serializer, representation,
+      1,  // Tile size
+      16, // Tile shape width
+      16, // child index width
+      scheduleManipulator, csvPath);
+
+  //   return Test_GPUCodeGeneration_XGBoostModel_VariableBatchSize<float,
+  //   int8_t,
+  //                                                                int32_t>(
+  //       args, 32, "covtype_xgb_model_save.json", "gpu_sparse", 16);
+}
+
+// ===---------------------------------------------------=== //
+// GPU Reorg Rep Shared Memory Tests
+// ===---------------------------------------------------=== //
+
+bool Test_SimpleSharedMem_LeftHeavy_ReorgRep(TestArgs_t &args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<double, int32_t>(
+      args, 32, AddLeftHeavyTree<DoubleInt32Tile>, "gpu_reorg");
+}
+
+bool Test_SimpleSharedMem_LeftRightAndBalanced_Reorg(TestArgs_t &args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<double, int32_t>(
+      args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>, "gpu_reorg");
+}
+
+bool Test_SimpleSharedMem_LeftHeavy_ReorgRep_F32I16(TestArgs_t &args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<float, int16_t>(
+      args, 32, AddLeftHeavyTree<DoubleInt32Tile>, "gpu_reorg");
+}
+
+bool Test_SimpleSharedMem_LeftRightAndBalanced_Reorg_F32I16(TestArgs_t &args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<float, int16_t>(
+      args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>, "gpu_reorg");
+}
+// ===---------------------------------------------------=== //
+// GPU Sparse Rep Shared Memory Tests
+// ===---------------------------------------------------=== //
+
+bool Test_SimpleSharedMem_LeftHeavy_SparseRep(TestArgs_t &args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<double, int32_t>(
+      args, 32, AddLeftHeavyTree<DoubleInt32Tile>, "gpu_sparse", 32);
+}
+
+bool Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep(TestArgs_t &args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<double, int32_t>(
+      args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>, "gpu_sparse",
+      32);
+}
+
+bool Test_SimpleSharedMem_LeftHeavy_SparseRep_F32I16(TestArgs_t &args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<float, int16_t>(
+      args, 32, AddLeftHeavyTree<DoubleInt32Tile>, "gpu_sparse", 16);
+}
+
+bool Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep_F32I16(
+    TestArgs_t &args) {
+  return Test_GPUCodeGen_ShdMem_Scalar_VariableBatchSize<float, int16_t>(
+      args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>, "gpu_sparse",
+      16);
+}
+
+// ===---------------------------------------------------=== //
+// GPU Basic Tiled Code Generation Tests
+// ===---------------------------------------------------=== //
+
+template <typename ThresholdType, typename IndexType>
+bool VerifyGPUCodeGenerationOutput_Tiled_VariableBatchSize_AnyRep(
+    TestArgs_t &args, const int32_t batchSize, ForestCreator &forestCreator,
+    std::shared_ptr<decisionforest::IModelSerializer> serializer,
+    std::shared_ptr<decisionforest::IRepresentation> representation,
+    int32_t tileSize, int32_t tileShapeBitwidth, int32_t childIndexBitWidth = 1,
+    const std::string &csvPath = "") {
+  std::function<void(decisionforest::Schedule &)> scheduleManipulator =
+      std::bind(GPUBasicSchedule, std::placeholders::_1, 4);
+  return VerifyGPUCodeGeneration<ThresholdType, IndexType>(
+      args, batchSize, forestCreator, serializer, representation, tileSize,
+      tileShapeBitwidth, childIndexBitWidth, scheduleManipulator, csvPath);
+}
+
+template <typename ThresholdType, typename IndexType>
+bool Test_GPU_FixedConstructor_Tiled_VariableBatchSize_AnyRep(
+    TestArgs_t &args, const int32_t batchSize,
+    ForestConstructor_t forestConstructor,
+    std::shared_ptr<decisionforest::IModelSerializer> serializer,
+    std::shared_ptr<decisionforest::IRepresentation> representation,
+    int32_t tileSize, int32_t tileShapeBitWidth,
+    int32_t childIndexBitWidth = 1) {
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+  FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType,
+                         ThresholdType>
+      irConstructor(context, serializer, batchSize, forestConstructor);
+  return VerifyGPUCodeGenerationOutput_Tiled_VariableBatchSize_AnyRep<
+      ThresholdType, IndexType>(args, batchSize, irConstructor, serializer,
+                                representation, tileSize, tileShapeBitWidth,
+                                childIndexBitWidth);
+}
+
+// ===---------------------------------------------------=== //
+// GPU Sparse Representation - Basic Tiled Code Generation Tests
+// ===---------------------------------------------------=== //
+
+bool Test_TiledSparseGPU_LeftHeavy_DblI32_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_Tiled_VariableBatchSize_AnyRep<double,
+                                                                  int32_t>(
+      args, 32, AddLeftHeavyTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse"),
+      2,   // Tile size
+      32,  // Tile shape width
+      32); // child index width
+}
+
+bool Test_TiledSparseGPU_RightHeavy_DblI32_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_Tiled_VariableBatchSize_AnyRep<double,
+                                                                  int32_t>(
+      args, 32, AddRightHeavyTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse"),
+      2,   // Tile size
+      32,  // Tile shape width
+      32); // child index width
+}
+
+bool Test_TiledSparseGPU_Balanced_DblI32_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_Tiled_VariableBatchSize_AnyRep<double,
+                                                                  int32_t>(
+      args, 32, AddBalancedTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse"),
+      2,   // Tile size
+      32,  // Tile shape width
+      32); // child index width
+}
+
+bool Test_TiledSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_Tiled_VariableBatchSize_AnyRep<double,
+                                                                  int32_t>(
+      args, 32, AddRightAndLeftHeavyTrees<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse"),
+      2,   // Tile size
+      32,  // Tile shape width
+      32); // child index width
+}
+
+bool Test_TiledSparseGPU_LeftHeavy_FltI16_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_Tiled_VariableBatchSize_AnyRep<float,
+                                                                  int16_t>(
+      args, 32, AddLeftHeavyTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse"),
+      2,   // Tile size
+      16,  // Tile shape width
+      16); // child index width
+}
+
+bool Test_TiledSparseGPU_RightHeavy_FltI16_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_Tiled_VariableBatchSize_AnyRep<float,
+                                                                  int16_t>(
+      args, 32, AddRightHeavyTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse"),
+      2,   // Tile size
+      16,  // Tile shape width
+      16); // child index width
+}
+
+bool Test_TiledSparseGPU_Balanced_FltI16_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_Tiled_VariableBatchSize_AnyRep<float,
+                                                                  int16_t>(
+      args, 32, AddBalancedTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse"),
+      2,   // Tile size
+      16,  // Tile shape width
+      16); // child index width
+}
+
+bool Test_TiledSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_Tiled_VariableBatchSize_AnyRep<float,
+                                                                  int16_t>(
+      args, 32, AddRightAndLeftHeavyTrees<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse"),
+      2,   // Tile size
+      16,  // Tile shape width
+      16); // child index width
+}
+
+// ===---------------------------------------------------=== //
+// GPU Array Representation -- Basic Tiled Code Generation Tests
+// ===---------------------------------------------------=== //
+
+bool Test_TiledArrayGPU_LeftHeavy_DblI32_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_Tiled_VariableBatchSize_AnyRep<double,
+                                                                  int32_t>(
+      args, 32, AddLeftHeavyTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_array", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_array"),
+      2,   // Tile size
+      32,  // Tile shape width
+      32); // child index width
+}
+
+bool Test_TiledArrayGPU_RightHeavy_DblI32_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_Tiled_VariableBatchSize_AnyRep<double,
+                                                                  int32_t>(
+      args, 32, AddRightHeavyTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_array", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_array"),
+      2,   // Tile size
+      32,  // Tile shape width
+      32); // child index width
+}
+
+bool Test_TiledArrayGPU_Balanced_DblI32_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_Tiled_VariableBatchSize_AnyRep<double,
+                                                                  int32_t>(
+      args, 32, AddBalancedTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_array", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_array"),
+      2,   // Tile size
+      32,  // Tile shape width
+      32); // child index width
+}
+
+bool Test_TiledArrayGPU_LeftAndRightHeavy_DblI32_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_Tiled_VariableBatchSize_AnyRep<double,
+                                                                  int32_t>(
+      args, 32, AddRightAndLeftHeavyTrees<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_array", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_array"),
+      2,   // Tile size
+      32,  // Tile shape width
+      32); // child index width
+}
+
+bool Test_TiledArrayGPU_LeftHeavy_FltI16_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_Tiled_VariableBatchSize_AnyRep<float,
+                                                                  int16_t>(
+      args, 32, AddLeftHeavyTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_array", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_array"),
+      2,   // Tile size
+      16,  // Tile shape width
+      16); // child index width
+}
+
+bool Test_TiledArrayGPU_RightHeavy_FltI16_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_Tiled_VariableBatchSize_AnyRep<float,
+                                                                  int16_t>(
+      args, 32, AddRightHeavyTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_array", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_array"),
+      2,   // Tile size
+      16,  // Tile shape width
+      16); // child index width
+}
+
+bool Test_TiledArrayGPU_Balanced_FltI16_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_Tiled_VariableBatchSize_AnyRep<float,
+                                                                  int16_t>(
+      args, 32, AddBalancedTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_array", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_array"),
+      2,   // Tile size
+      16,  // Tile shape width
+      16); // child index width
+}
+
+bool Test_TiledArrayGPU_LeftAndRightHeavy_FltI16_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_Tiled_VariableBatchSize_AnyRep<float,
+                                                                  int16_t>(
+      args, 32, AddRightAndLeftHeavyTrees<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_array", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_array"),
+      2,   // Tile size
+      16,  // Tile shape width
+      16); // child index width
+}
+
+// ===---------------------------------------------------=== //
+// GPU Tiling + Caching Tests
+// ===---------------------------------------------------=== //
+
+template <typename ThresholdType, typename IndexType>
+bool VerifyGPUCodeGen_TiledAndCached_AnyRep(
+    TestArgs_t &args, const int32_t batchSize, ForestCreator &forestCreator,
+    std::shared_ptr<decisionforest::IModelSerializer> serializer,
+    std::shared_ptr<decisionforest::IRepresentation> representation,
+    int32_t tileSize, int32_t tileShapeBitwidth, int32_t childIndexBitWidth = 1,
+    const std::string &csvPath = "") {
+  std::function<void(decisionforest::Schedule &)> scheduleManipulator =
+      std::bind(TahoeSharedForestStrategy, std::placeholders::_1, 8);
+  return VerifyGPUCodeGeneration<ThresholdType, IndexType>(
+      args, batchSize, forestCreator, serializer, representation, tileSize,
+      tileShapeBitwidth, childIndexBitWidth, scheduleManipulator, csvPath);
+}
+
+template <typename ThresholdType, typename IndexType>
+bool Test_GPU_FixedConstructor_SharedMemAndTiled_AnyRep(
+    TestArgs_t &args, const int32_t batchSize,
+    ForestConstructor_t forestConstructor,
+    std::shared_ptr<decisionforest::IModelSerializer> serializer,
+    std::shared_ptr<decisionforest::IRepresentation> representation,
+    int32_t tileSize, int32_t tileShapeBitWidth,
+    int32_t childIndexBitWidth = 1) {
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+  FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType,
+                         ThresholdType>
+      irConstructor(context, serializer, batchSize, forestConstructor);
+  return VerifyGPUCodeGen_TiledAndCached_AnyRep<ThresholdType, IndexType>(
+      args, batchSize, irConstructor, serializer, representation, tileSize,
+      tileShapeBitWidth, childIndexBitWidth);
+}
+
+// ===---------------------------------------------------=== //
+// GPU Array Representation - Tiling + Caching Code Generation Tests
+// ===---------------------------------------------------=== //
+
+bool Test_TiledCachedArrayGPU_LeftHeavy_DblI32_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_SharedMemAndTiled_AnyRep<double, int32_t>(
+      args, 32, AddLeftHeavyTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_array", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_array"),
+      2,   // Tile size
+      32); // Tile shape width
+}
+
+bool Test_TiledCachedArrayGPU_RightHeavy_DblI32_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_SharedMemAndTiled_AnyRep<double, int32_t>(
+      args, 32, AddRightHeavyTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_array", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_array"),
+      2,   // Tile size
+      32); // Tile shape width
+}
+
+bool Test_TiledCachedArrayGPU_Balanced_DblI32_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_SharedMemAndTiled_AnyRep<double, int32_t>(
+      args, 32, AddBalancedTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_array", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_array"),
+      2,   // Tile size
+      32); // Tile shape width
+}
+
+bool Test_TiledCachedArrayGPU_LeftAndRightHeavy_DblI32_B32_TSz2(
+    TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_SharedMemAndTiled_AnyRep<double, int32_t>(
+      args, 32, AddRightAndLeftHeavyTrees<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_array", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_array"),
+      2,   // Tile size
+      32); // Tile shape width
+}
+
+bool Test_TiledCachedArrayGPU_LeftRightAndBalanced_DblI32_B32_TSz2(
+    TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_SharedMemAndTiled_AnyRep<double, int32_t>(
+      args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_array", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_array"),
+      2,   // Tile size
+      32); // Tile shape width
+}
+
+bool Test_TiledCachedArrayGPU_LeftHeavy_FltI16_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_SharedMemAndTiled_AnyRep<float, int16_t>(
+      args, 32, AddLeftHeavyTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_array", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_array"),
+      2,   // Tile size
+      16); // Tile shape width
+}
+
+bool Test_TiledCachedArrayGPU_RightHeavy_FltI16_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_SharedMemAndTiled_AnyRep<float, int16_t>(
+      args, 32, AddRightHeavyTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_array", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_array"),
+      2,   // Tile size
+      16); // Tile shape width
+}
+
+bool Test_TiledCachedArrayGPU_Balanced_FltI16_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_SharedMemAndTiled_AnyRep<float, int16_t>(
+      args, 32, AddBalancedTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_array", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_array"),
+      2,   // Tile size
+      16); // Tile shape width
+}
+
+bool Test_TiledCachedArrayGPU_LeftAndRightHeavy_FltI16_B32_TSz2(
+    TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_SharedMemAndTiled_AnyRep<float, int16_t>(
+      args, 32, AddRightAndLeftHeavyTrees<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_array", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_array"),
+      2,   // Tile size
+      16); // Tile shape width
+}
+
+bool Test_TiledCachedArrayGPU_LeftRightAndBalanced_FltI16_B32_TSz2(
+    TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_SharedMemAndTiled_AnyRep<float, int16_t>(
+      args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_array", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_array"),
+      2,   // Tile size
+      16); // Tile shape width
+}
+
+// ===---------------------------------------------------=== //
+// GPU Sparse Representation - Tiling + Caching Code Generation Tests
+// ===---------------------------------------------------=== //
+
+bool Test_TiledCachedSparseGPU_LeftHeavy_DblI32_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_SharedMemAndTiled_AnyRep<double, int32_t>(
+      args, 32, AddLeftHeavyTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse"),
+      2,   // Tile size
+      32,  // Tile shape width
+      32); // child index width
+}
+
+bool Test_TiledCachedSparseGPU_RightHeavy_DblI32_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_SharedMemAndTiled_AnyRep<double, int32_t>(
+      args, 32, AddRightHeavyTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse"),
+      2,   // Tile size
+      32,  // Tile shape width
+      32); // child index width
+}
+
+bool Test_TiledCachedSparseGPU_Balanced_DblI32_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_SharedMemAndTiled_AnyRep<double, int32_t>(
+      args, 32, AddBalancedTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse"),
+      2,   // Tile size
+      32,  // Tile shape width
+      32); // child index width
+}
+
+bool Test_TiledCachedSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2(
+    TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_SharedMemAndTiled_AnyRep<double, int32_t>(
+      args, 32, AddRightAndLeftHeavyTrees<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse"),
+      2,   // Tile size
+      32,  // Tile shape width
+      32); // child index width
+}
+
+bool Test_TiledCachedSparseGPU_LeftRightAndBalanced_DblI32_B32_TSz2(
+    TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_SharedMemAndTiled_AnyRep<double, int32_t>(
+      args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse"),
+      2,   // Tile size
+      32,  // Tile shape width
+      32); // child index width
+}
+
+bool Test_TiledCachedSparseGPU_LeftHeavy_FltI16_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_SharedMemAndTiled_AnyRep<float, int16_t>(
+      args, 32, AddLeftHeavyTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse"),
+      2,   // Tile size
+      16,  // Tile shape width
+      16); // child index width
+}
+
+bool Test_TiledCachedSparseGPU_RightHeavy_FltI16_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_SharedMemAndTiled_AnyRep<float, int16_t>(
+      args, 32, AddRightHeavyTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse"),
+      2,   // Tile size
+      16,  // Tile shape width
+      16); // child index width
+}
+
+bool Test_TiledCachedSparseGPU_Balanced_FltI16_B32_TSz2(TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_SharedMemAndTiled_AnyRep<float, int16_t>(
+      args, 32, AddBalancedTree<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse"),
+      2,   // Tile size
+      16,  // Tile shape width
+      16); // child index width
+}
+
+bool Test_TiledCachedSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2(
+    TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_SharedMemAndTiled_AnyRep<float, int16_t>(
+      args, 32, AddRightAndLeftHeavyTrees<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse"),
+      2,   // Tile size
+      16,  // Tile shape width
+      16); // child index width
+}
+
+bool Test_TiledCachedSparseGPU_LeftRightAndBalanced_FltI16_B32_TSz2(
+    TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  return Test_GPU_FixedConstructor_SharedMemAndTiled_AnyRep<float, int16_t>(
+      args, 32, AddRightLeftAndBalancedTrees<DoubleInt32Tile>,
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath),
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse"),
+      2,   // Tile size
+      16,  // Tile shape width
+      16); // child index width
+}
+
+// ===---------------------------------------------------=== //
+// GPU Sparse Representation - Tahoe shared input strategy
+// ===---------------------------------------------------=== //
+bool Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInp_FltI16_B32(
+    TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  using ThresholdType = float;
+  using IndexType = int16_t;
+
+  int32_t batchSize = 32;
+  ForestConstructor_t forestConstructor =
+      AddRightLeftAndBalancedTrees<DoubleInt32Tile>;
+  auto serializer =
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath);
+  auto representation =
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse");
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+  FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType,
+                         ThresholdType>
+      irConstructor(context, serializer, batchSize, forestConstructor);
+  std::function<void(decisionforest::Schedule &)> scheduleManipulator =
+      decisionforest::TahoeSharedDataStrategy;
+  return VerifyGPUCodeGeneration<ThresholdType, IndexType>(
+      args, batchSize, irConstructor, serializer, representation,
+      1,  // Tile size
+      16, // Tile shape width
+      16, // child index width
+      scheduleManipulator);
+}
+
+// ===---------------------------------------------------=== //
+// GPU Sparse Representation - Tahoe shared input multi-row strategy
+// ===---------------------------------------------------=== //
+bool Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInpMultiRow_FltI16_B32(
+    TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  using ThresholdType = float;
+  using IndexType = int16_t;
+
+  int32_t batchSize = 64;
+  int32_t numRowsPerBlock = 4;
+  ForestConstructor_t forestConstructor =
+      AddRightLeftAndBalancedTrees<DoubleInt32Tile>;
+  auto serializer =
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath);
+  auto representation =
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse");
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+  FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType,
+                         ThresholdType>
+      irConstructor(context, serializer, batchSize, forestConstructor);
+  std::function<void(decisionforest::Schedule &)> scheduleManipulator =
+      std::bind(decisionforest::tahoeSharedDataStrategy_MultipleRowsPerBlock,
+                std::placeholders::_1, numRowsPerBlock);
+  return VerifyGPUCodeGeneration<ThresholdType, IndexType>(
+      args, batchSize, irConstructor, serializer, representation,
+      1,  // Tile size
+      16, // Tile shape width
+      16, // child index width
+      scheduleManipulator);
+}
+
+bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_TahoeShdInpMultiRow_FltI16_B32(
+    TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  using ThresholdType = float;
+  using IndexType = int16_t;
+
+  int32_t batchSize = 64;
+  int32_t numRowsPerBlock = 4;
+  ForestConstructor_t forestConstructor =
+      AddRightLeftAndBalancedTreesTwice<DoubleInt32Tile>;
+  auto serializer =
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath);
+  auto representation =
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse");
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+  FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType,
+                         ThresholdType>
+      irConstructor(context, serializer, batchSize, forestConstructor);
+  std::function<void(decisionforest::Schedule &)> scheduleManipulator =
+      std::bind(decisionforest::tahoeSharedDataStrategy_MultipleRowsPerBlock,
+                std::placeholders::_1, numRowsPerBlock);
+  return VerifyGPUCodeGeneration<ThresholdType, IndexType>(
+      args, batchSize, irConstructor, serializer, representation,
+      1,  // Tile size
+      16, // Tile shape width
+      16, // child index width
+      scheduleManipulator);
+}
+
+bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_IterShdPartialForest_FltI16_B32(
+    TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  using ThresholdType = float;
+  using IndexType = int16_t;
+
+  int32_t batchSize = 64;
+  int32_t numRowsPerBlock = 4, numTreesPerIter = 3;
+  ForestConstructor_t forestConstructor =
+      AddRightLeftAndBalancedTreesTwice<DoubleInt32Tile>;
+  auto serializer =
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath);
+  auto representation =
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse");
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+  FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType,
+                         ThresholdType>
+      irConstructor(context, serializer, batchSize, forestConstructor);
+  std::function<void(decisionforest::Schedule &)> scheduleManipulator =
+      std::bind(decisionforest::iterativeCachedPartialForestStrategy,
+                std::placeholders::_1, numTreesPerIter, numRowsPerBlock);
+  return VerifyGPUCodeGeneration<ThresholdType, IndexType>(
+      args, batchSize, irConstructor, serializer, representation,
+      1,  // Tile size
+      16, // Tile shape width
+      16, // child index width
+      scheduleManipulator);
+}
+
+// ===------------------------------------------------------------=== //
+// GPU Sparse Representation -
+// iterativeCachedPartialForestStrategy_NoCache_SharedReduce strategy
+// ===------------------------------------------------------------=== //
+bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SharedReduce_FltI16_B64(
+    TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  using ThresholdType = float;
+  using IndexType = int16_t;
+
+  int32_t batchSize = 64;
+  int32_t numRowsPerBlock = 4, numTreesPerIter = 3;
+  ForestConstructor_t forestConstructor =
+      AddRightLeftAndBalancedTreesTwice<DoubleInt32Tile>;
+  auto serializer =
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath);
+  auto representation =
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse");
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+  FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType,
+                         ThresholdType>
+      irConstructor(context, serializer, batchSize, forestConstructor);
+  std::function<void(decisionforest::Schedule &)> scheduleManipulator =
+      std::bind(decisionforest::
+                    iterativeCachedPartialForestStrategy_NoCache_SharedReduce,
+                std::placeholders::_1, numTreesPerIter, numRowsPerBlock);
+  return VerifyGPUCodeGeneration<ThresholdType, IndexType>(
+      args, batchSize, irConstructor, serializer, representation,
+      1,  // Tile size
+      16, // Tile shape width
+      16, // child index width
+      scheduleManipulator);
+}
+
+// ===------------------------------------------------------------=== //
+// GPU Sparse Representation -
+// iterativeCachedPartialForestStrategy_NoCache_SpecializedTreeLoop strategy
+// ===------------------------------------------------------------=== //
+bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SpecializedTreeLoop_FltI16_B64(
+    TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  using ThresholdType = float;
+  using IndexType = int16_t;
+
+  int32_t batchSize = 64;
+  int32_t numRowsPerBlock = 4, numTreesPerIter = 3;
+  ForestConstructor_t forestConstructor =
+      AddRightLeftAndBalancedTreesTwice<DoubleInt32Tile>;
+  auto serializer =
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath);
+  auto representation =
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse");
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+  FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType,
+                         ThresholdType>
+      irConstructor(context, serializer, batchSize, forestConstructor);
+  std::function<void(decisionforest::Schedule &)> scheduleManipulator =
+      std::bind(
+          decisionforest::
+              iterativeCachedPartialForestStrategy_NoCache_SpecializeTreeLoop,
+          std::placeholders::_1, numTreesPerIter, numRowsPerBlock);
+  return VerifyGPUCodeGeneration<ThresholdType, IndexType>(
+      args, batchSize, irConstructor, serializer, representation,
+      1,  // Tile size
+      16, // Tile shape width
+      16, // child index width
+      scheduleManipulator);
+}
+
+// ===------------------------------------------------------------=== //
+// GPU Sparse Representation -
+// GPU Auto schedule
+// ===------------------------------------------------------------=== //
+bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleBasic(
+    TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  using ThresholdType = float;
+  using IndexType = int16_t;
+
+  int32_t batchSize = 256;
+
+  // Maps to TB.x
+  int32_t numRowsPerTB = 64;
+  int32_t numRowsPerThread = 8;
+  // Hpw many rows do we process together?
+  // Pick one tree and process this many rows before moving to the next row
+  int32_t rowTileSize = -1;
+
+  // How many threads do we divide the trees across?
+  // Maps to TB.y
+  int32_t numTreeThreads = 2;
+
+  // How many trees do we process at a time? Only useful if single threaded
+  // TODO Do we really need this? Can't we always do one tree at a time
+  int32_t numTreesAtATime = 1;
+  bool cacheRows = false;
+  bool cacheTrees = false;
+  bool unrollTreeWalks = true;
+
+  TreeBeard::GPUAutoScheduleOptions gpuAutoScheduleOptions{
+      numRowsPerTB,    numRowsPerThread, rowTileSize, numTreeThreads,
+      numTreesAtATime, cacheRows,        cacheTrees,  unrollTreeWalks};
+
+  ForestConstructor_t forestConstructor =
+      AddRightLeftAndBalancedTreesTwice<DoubleInt32Tile>;
+  auto serializer =
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath);
+  auto representation =
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse");
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+  FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType,
+                         ThresholdType>
+      irConstructor(context, serializer, batchSize, forestConstructor);
+  return VerifyGPUAutoScheduleCodeGeneration<ThresholdType, IndexType>(
+      args, batchSize, irConstructor, serializer, representation,
+      1,  // Tile size
+      16, // Tile shape width
+      16, // child index width
+      gpuAutoScheduleOptions);
+}
+
+bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedRows(
+    TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  using ThresholdType = float;
+  using IndexType = int16_t;
+
+  int32_t batchSize = 256;
+
+  // Maps to TB.x
+  int32_t numRowsPerTB = 64;
+  int32_t numRowsPerThread = 8;
+  // Hpw many rows do we process together?
+  // Pick one tree and process this many rows before moving to the next row
+  int32_t rowTileSize = -1;
+
+  // How many threads do we divide the trees across?
+  // Maps to TB.y
+  int32_t numTreeThreads = 2;
+
+  // How many trees do we process at a time? Only useful if single threaded
+  // TODO Do we really need this? Can't we always do one tree at a time
+  int32_t numTreesAtATime = 1;
+  bool cacheRows = true;
+  bool cacheTrees = false;
+  bool unrollTreeWalks = true;
+
+  TreeBeard::GPUAutoScheduleOptions gpuAutoScheduleOptions{
+      numRowsPerTB,    numRowsPerThread, rowTileSize, numTreeThreads,
+      numTreesAtATime, cacheRows,        cacheTrees,  unrollTreeWalks};
+
+  ForestConstructor_t forestConstructor =
+      AddRightLeftAndBalancedTreesTwice<DoubleInt32Tile>;
+  auto serializer =
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath);
+  auto representation =
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse");
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+  FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType,
+                         ThresholdType>
+      irConstructor(context, serializer, batchSize, forestConstructor);
+  return VerifyGPUAutoScheduleCodeGeneration<ThresholdType, IndexType>(
+      args, batchSize, irConstructor, serializer, representation,
+      1,  // Tile size
+      16, // Tile shape width
+      16, // child index width
+      gpuAutoScheduleOptions);
+}
+
+bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedTrees(
+    TestArgs_t &args) {
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          TreeBeard::test::GetGlobalJSONNameForTests());
+  using ThresholdType = float;
+  using IndexType = int16_t;
+
+  int32_t batchSize = 256;
+
+  // Maps to TB.x
+  int32_t numRowsPerTB = 64;
+  int32_t numRowsPerThread = 8;
+  // Hpw many rows do we process together?
+  // Pick one tree and process this many rows before moving to the next row
+  int32_t rowTileSize = -1;
+
+  // How many threads do we divide the trees across?
+  // Maps to TB.y
+  int32_t numTreeThreads = 2;
+
+  // How many trees do we process at a time? Only useful if single threaded
+  // TODO Do we really need this? Can't we always do one tree at a time
+  int32_t numTreesAtATime = 1;
+  bool cacheRows = false;
+  bool cacheTrees = true;
+  bool unrollTreeWalks = true;
+
+  TreeBeard::GPUAutoScheduleOptions gpuAutoScheduleOptions{
+      numRowsPerTB,    numRowsPerThread, rowTileSize, numTreeThreads,
+      numTreesAtATime, cacheRows,        cacheTrees,  unrollTreeWalks};
+
+  ForestConstructor_t forestConstructor =
+      AddRightLeftAndBalancedTreesTwice<DoubleInt32Tile>;
+  auto serializer =
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath);
+  auto representation =
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse");
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+  FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType,
+                         ThresholdType>
+      irConstructor(context, serializer, batchSize, forestConstructor);
+  return VerifyGPUAutoScheduleCodeGeneration<ThresholdType, IndexType>(
+      args, batchSize, irConstructor, serializer, representation,
+      1,  // Tile size
+      16, // Tile shape width
+      16, // child index width
+      gpuAutoScheduleOptions);
+}
 
 } // namespace test
 } // namespace TreeBeard
