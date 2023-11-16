@@ -5,6 +5,39 @@ from typing import List
 from enum import Enum
 
 treebeardAPI = TreebeardAPI()
+#### ---------------------------------------------------------------- ####
+#### GPU Autoschedule options
+#### ---------------------------------------------------------------- ####
+class GPUAutoScheduleOptions:
+  def __init__(self) -> None:
+      self.optionsPtr = treebeardAPI.runtime_lib.CreateGPUAutoScheduleOptions()
+  
+  def __del__(self):
+      treebeardAPI.runtime_lib.DeleteGPUAutoScheduleOptions(self.optionsPtr)
+  
+  def NumberOfRowsPerThreadBlock(self, val : int):
+    treebeardAPI.runtime_lib.Set_numRowsPerTB(self.optionsPtr, ctypes.c_int32(val))
+
+  def NumberOfRowsPerThread(self, val : int):
+    treebeardAPI.runtime_lib.Set_numRowsPerThread(self.optionsPtr, ctypes.c_int32(val))  
+ 
+  def RowTileSize(self, val : int):
+    treebeardAPI.runtime_lib.Set_rowTileSize(self.optionsPtr, ctypes.c_int32(val))
+  
+  def NumberOfTreeThreads(self, val : int):
+    treebeardAPI.runtime_lib.Set_numTreeThreads(self.optionsPtr, ctypes.c_int32(val))
+  
+  def NumberOfTreesAtATime(self, val : int):
+    treebeardAPI.runtime_lib.Set_numTreesAtATime(self.optionsPtr, ctypes.c_int32(val))
+
+  def CacheRows(self, val : bool):
+    treebeardAPI.runtime_lib.Set_cacheRows(self.optionsPtr, ctypes.c_int32(1 if val else 0))
+  
+  def CacheTrees(self, val : bool):
+    treebeardAPI.runtime_lib.Set_cacheTrees(self.optionsPtr, ctypes.c_int32(1 if val else 0))
+
+  def UnrollTreeWalks(self, val : bool):
+    treebeardAPI.runtime_lib.Set_unrollTreeWalks(self.optionsPtr, ctypes.c_int32(1 if val else 0))
 
 #### ---------------------------------------------------------------- ####
 #### Compiler options
@@ -182,8 +215,11 @@ class Schedule:
 #### Treebeard Context
 #### ---------------------------------------------------------------- ####
 class TreebeardContext:
-  def __init__(self, model_filepath :str, globals_file_path : str, options : CompilerOptions) -> None:
-     self.tbcontextPtr = treebeardAPI.ConstructTreebeardContext(model_filepath, globals_file_path, options.optionsPtr)
+  def __init__(self, model_filepath :str, globals_file_path : str, options : CompilerOptions, gpuAutoScheduleOptions : GPUAutoScheduleOptions = None) -> None:
+    if gpuAutoScheduleOptions is None:
+      self.tbcontextPtr = treebeardAPI.ConstructTreebeardContext(model_filepath, globals_file_path, options.optionsPtr)
+    else:
+      self.tbcontextPtr = treebeardAPI.ConstructTreebeardContextFromGPUAutoscheduleOptions(model_filepath, globals_file_path, options.optionsPtr, gpuAutoScheduleOptions.optionsPtr)
   
   def __del__(self):
     treebeardAPI.DestroyTreebeardContext(self.tbcontextPtr)
@@ -254,6 +290,15 @@ class TreebeardInferenceRunner:
     inferenceRunner = TreebeardInferenceRunner()
     treebeardAPI.runtime_lib.BuildHIRRepresentation(tbContext.tbcontextPtr)
     inferenceRunner.inferenceRunner = int(treebeardAPI.runtime_lib.ConstructInferenceRunnerFromHIR(tbContext.tbcontextPtr))
+    inferenceRunner.rowSize = treebeardAPI.GetRowSize(inferenceRunner.inferenceRunner)
+    inferenceRunner.batchSize = treebeardAPI.GetBatchSize(inferenceRunner.inferenceRunner)
+    return inferenceRunner
+
+  @classmethod
+  def GPUInferenceRunnerFromTBContext(self, tbContext):
+    inferenceRunner = TreebeardInferenceRunner()
+    inferenceRunnerPtr = treebeardAPI.runtime_lib.ConstructGPUInferenceRunnerFromTBContext(tbContext.tbcontextPtr)
+    inferenceRunner.inferenceRunner = int(inferenceRunnerPtr)
     inferenceRunner.rowSize = treebeardAPI.GetRowSize(inferenceRunner.inferenceRunner)
     inferenceRunner.batchSize = treebeardAPI.GetBatchSize(inferenceRunner.inferenceRunner)
     return inferenceRunner

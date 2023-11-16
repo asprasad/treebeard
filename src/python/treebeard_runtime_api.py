@@ -192,6 +192,9 @@ class TreebeardAPI:
       self.runtime_lib.ConstructTreebeardContext.restype = ctypes.c_int64
       self.runtime_lib.ConstructTreebeardContext.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int64]
 
+      self.runtime_lib.ConstructTreebeardContextFromGPUAutoscheduleOptions.restype = ctypes.c_int64
+      self.runtime_lib.ConstructTreebeardContextFromGPUAutoscheduleOptions.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int64, ctypes.c_int64]
+
       self.runtime_lib.DestroyTreebeardContext.argTypes = [ctypes.c_int64]
 
       self.runtime_lib.SetForestCreatorType.argTypes = [ctypes.c_int64, ctypes.c_char_p]
@@ -213,9 +216,39 @@ class TreebeardAPI:
       self.runtime_lib.ConstructGPUInferenceRunnerFromHIR.restype = ctypes.c_int64
       self.runtime_lib.ConstructGPUInferenceRunnerFromHIR.argtypes = [ctypes.c_int64]
 
+      # extern "C" void *ConstructGPUInferenceRunnerFromTBContext(void *tbContext)
+      self.runtime_lib.ConstructGPUInferenceRunnerFromTBContext.restype = ctypes.c_int64
+      self.runtime_lib.ConstructGPUInferenceRunnerFromTBContext.argtypes = [ctypes.c_int64]
+
       # void IndexVariable_SetGPUThreadDim(intptr_t indexVarPtr, int32_t construct, int32_t dim)
       self.runtime_lib.IndexVariable_SetGPUThreadDim.restype = None
       self.runtime_lib.IndexVariable_SetGPUThreadDim.argtypes = [ctypes.c_int64, ctypes.c_int32, ctypes.c_int32]
+
+      # extern "C" intptr_t CreateGPUAutoScheduleOptions()
+      self.runtime_lib.CreateGPUAutoScheduleOptions.restype = ctypes.c_int64
+      self.runtime_lib.CreateGPUAutoScheduleOptions.argtypes = None
+
+      # extern "C" void DeleteGPUAutoScheduleOptions(intptr_t options) 
+      self.runtime_lib.DeleteGPUAutoScheduleOptions.restype = None
+      self.runtime_lib.DeleteGPUAutoScheduleOptions.argtypes = [ctypes.c_int64]
+
+      self.runtime_lib.Set_numRowsPerTB.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
+      self.runtime_lib.Set_numRowsPerThread.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
+      self.runtime_lib.Set_rowTileSize.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
+      self.runtime_lib.Set_numTreeThreads.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
+      self.runtime_lib.Set_numTreesAtATime.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
+      self.runtime_lib.Set_cacheRows.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
+      self.runtime_lib.Set_cacheTrees.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
+      self.runtime_lib.Set_unrollTreeWalks.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
+
+      self.runtime_lib.Set_numRowsPerTB.restype = None
+      self.runtime_lib.Set_numRowsPerThread.restype = None
+      self.runtime_lib.Set_rowTileSize.restype = None
+      self.runtime_lib.Set_numTreeThreads.restype = None
+      self.runtime_lib.Set_numTreesAtATime.restype = None
+      self.runtime_lib.Set_cacheRows.restype = None
+      self.runtime_lib.Set_cacheTrees.restype = None
+      self.runtime_lib.Set_unrollTreeWalks.restype = None
 
     except Exception as e:
       print("Loading the TreeBeard runtime failed with exception :", e)
@@ -310,6 +343,13 @@ class TreebeardAPI:
     model_path_ascii = model_path.encode('ascii')
     model_globals_path_ascii = model_globals_path.encode('ascii')
     tbContext = self.runtime_lib.ConstructTreebeardContext(model_path_ascii, model_globals_path_ascii, options_ptr)
+    # print("TBContext_Create: ", tbContext, type(tbContext))
+    return tbContext
+  
+  def ConstructTreebeardContextFromGPUAutoscheduleOptions(self, model_path, model_globals_path, options_ptr, gpu_autoschedule_options_ptr):
+    model_path_ascii = model_path.encode('ascii')
+    model_globals_path_ascii = model_globals_path.encode('ascii')
+    tbContext = self.runtime_lib.ConstructTreebeardContextFromGPUAutoscheduleOptions(model_path_ascii, model_globals_path_ascii, options_ptr, gpu_autoschedule_options_ptr)
     # print("TBContext_Create: ", tbContext, type(tbContext))
     return tbContext
 

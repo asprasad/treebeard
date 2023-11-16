@@ -166,6 +166,36 @@ extern "C" void Set_tilingType(intptr_t options, int32_t val) {
 }
 
 // ===-------------------------------------------------------------=== //
+// GPU Auto-scheduling options API
+// ===-------------------------------------------------------------=== //
+extern "C" intptr_t CreateGPUAutoScheduleOptions() {
+  return reinterpret_cast<intptr_t>(new TreeBeard::GPUAutoScheduleOptions);
+}
+
+extern "C" void DeleteGPUAutoScheduleOptions(intptr_t options) {
+  auto *optionsPtr =
+      reinterpret_cast<TreeBeard::GPUAutoScheduleOptions *>(options);
+  delete optionsPtr;
+}
+
+#define GPU_AUTOSCHEDULE_OPTION_SETTER(propName, propType)                     \
+  extern "C" void Set_##propName(intptr_t options, propType val) {             \
+    auto *optionsPtr =                                                         \
+        reinterpret_cast<TreeBeard::GPUAutoScheduleOptions *>(options);        \
+    optionsPtr->propName = reinterpret_cast<propType>(val);                    \
+  }
+
+GPU_AUTOSCHEDULE_OPTION_SETTER(numRowsPerTB, int32_t)
+GPU_AUTOSCHEDULE_OPTION_SETTER(numRowsPerThread, int32_t)
+GPU_AUTOSCHEDULE_OPTION_SETTER(rowTileSize, int32_t)
+GPU_AUTOSCHEDULE_OPTION_SETTER(numTreeThreads, int32_t)
+GPU_AUTOSCHEDULE_OPTION_SETTER(numTreesAtATime, int32_t)
+
+GPU_AUTOSCHEDULE_OPTION_SETTER(cacheRows, int32_t);
+GPU_AUTOSCHEDULE_OPTION_SETTER(cacheTrees, int32_t);
+GPU_AUTOSCHEDULE_OPTION_SETTER(unrollTreeWalks, int32_t);
+
+// ===-------------------------------------------------------------=== //
 // Compilation API
 // ===-------------------------------------------------------------=== //
 
@@ -348,6 +378,19 @@ extern "C" intptr_t ConstructTreebeardContext(const char *modelPath,
   return reinterpret_cast<intptr_t>(tbContext);
 }
 
+extern "C" intptr_t ConstructTreebeardContextFromGPUAutoscheduleOptions(
+    const char *modelPath, const char *modelGlobalsJSONPath, intptr_t options,
+    intptr_t gpuScheduleOptions) {
+  TreeBeard::CompilerOptions *optionsPtr =
+      reinterpret_cast<TreeBeard::CompilerOptions *>(options);
+  auto *gpuScheduleOptionsPtr =
+      reinterpret_cast<TreeBeard::GPUAutoScheduleOptions *>(gpuScheduleOptions);
+  auto *tbContext = new TreeBeard::TreebeardContext(
+      modelPath, modelGlobalsJSONPath, *optionsPtr, nullptr, nullptr, nullptr,
+      gpuScheduleOptionsPtr);
+  return reinterpret_cast<intptr_t>(tbContext);
+}
+
 extern "C" void DestroyTreebeardContext(intptr_t tbContext) {
   TreeBeard::TreebeardContext *tbContextPtr =
       reinterpret_cast<TreeBeard::TreebeardContext *>(tbContext);
@@ -413,8 +456,21 @@ extern "C" void *ConstructInferenceRunnerFromHIR(void *tbContext) {
 extern "C" void *ConstructGPUInferenceRunnerFromHIR(void *tbContext) {
   TreeBeard::TreebeardContext *tbContextPtr =
       reinterpret_cast<TreeBeard::TreebeardContext *>(tbContext);
-  auto module = TreeBeard::LowerHIRModuleToGPU(
-      tbContextPtr->forestConstructor->GetModule(), *tbContextPtr);
+  auto module = tbContextPtr->forestConstructor->GetModule();
+  TreeBeard::DoTilingTransformation(module, *tbContextPtr);
+  module = TreeBeard::LowerHIRModuleToGPU(module, *tbContextPtr);
+  auto *inferenceRunner = new mlir::decisionforest::GPUInferenceRunner(
+      tbContextPtr->serializer, module, tbContextPtr->options.tileSize,
+      tbContextPtr->options.thresholdTypeWidth,
+      tbContextPtr->options.featureIndexTypeWidth);
+  return reinterpret_cast<void *>(inferenceRunner);
+}
+
+extern "C" void *ConstructGPUInferenceRunnerFromTBContext(void *tbContext) {
+  TreeBeard::TreebeardContext *tbContextPtr =
+      reinterpret_cast<TreeBeard::TreebeardContext *>(tbContext);
+  auto module =
+      TreeBeard::ConstructGPUModuleFromTreebeardContext(*tbContextPtr);
   auto *inferenceRunner = new mlir::decisionforest::GPUInferenceRunner(
       tbContextPtr->serializer, module, tbContextPtr->options.tileSize,
       tbContextPtr->options.thresholdTypeWidth,
