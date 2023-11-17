@@ -860,6 +860,10 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedRows(
 bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedTrees(
     TestArgs_t &args);
 
+// GPU XGBoost auto scheduling tests
+bool Test_ScalarGPU_Airline_AutoScheduleBasic(TestArgs_t &args);
+bool Test_ScalarGPU_Abalone_AutoScheduleBasic(TestArgs_t &args);
+
 // CPU Autoschedule tests
 bool Test_TileSize8_Abalone_TestInputs_CPUAutoSchedule_TreeParallel_f32i16(
     TestArgs_t &args);
@@ -2087,234 +2091,234 @@ TestDescriptor testList[] = {
 //     TEST_LIST_ENTRY(Test_PeeledHybridProbabilisticTiling_TileSize8_Abalone),
 
 #ifdef TREEBEARD_GPU_SUPPORT
-    //     // GPU model buffer initialization tests (scalar)
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_DoubleInt),
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_DoubleInt),
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_DoubleInt),
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_DoubleInt),
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_FloatInt),
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_FloatInt),
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_FloatInt),
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt),
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_FloatInt16),
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_FloatInt16),
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_FloatInt16),
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt16),
+//     // GPU model buffer initialization tests (scalar)
+//     TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_DoubleInt),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_DoubleInt),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_DoubleInt),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_DoubleInt),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_FloatInt),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_FloatInt),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_FloatInt),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_FloatInt16),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_FloatInt16),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_FloatInt16),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt16),
 
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Reorg_DoubleInt),
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Reorg_DoubleInt),
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Reorg_DoubleInt),
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Reorg_DoubleInt),
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Reorg_FloatInt),
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Reorg_FloatInt),
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Reorg_FloatInt),
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt),
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Reorg_FloatInt16),
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Reorg_FloatInt16),
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Reorg_FloatInt16),
-    //     TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt16),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Reorg_DoubleInt),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Reorg_DoubleInt),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Reorg_DoubleInt),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Reorg_DoubleInt),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Reorg_FloatInt),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Reorg_FloatInt),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Reorg_FloatInt),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Reorg_FloatInt16),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Reorg_FloatInt16),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Reorg_FloatInt16),
+//     TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt16),
 
-    //     // Basic Array Scalar GPU Codegen Tests
-    //     TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
-    //     TEST_LIST_ENTRY(Test_GPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
-    //     TEST_LIST_ENTRY(Test_GPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
-    //     TEST_LIST_ENTRY(
-    //         Test_GPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
-    //     TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32),
-    //     TEST_LIST_ENTRY(Test_GPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32),
-    //     TEST_LIST_ENTRY(Test_GPUCodeGeneration_Balanced_FloatInt16_BatchSize32),
-    //     TEST_LIST_ENTRY(
-    //         Test_GPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32),
+//     // Basic Array Scalar GPU Codegen Tests
+//     TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
+//     TEST_LIST_ENTRY(Test_GPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
+//     TEST_LIST_ENTRY(Test_GPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
+//     TEST_LIST_ENTRY(
+//         Test_GPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
+//     TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32),
+//     TEST_LIST_ENTRY(Test_GPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32),
+//     TEST_LIST_ENTRY(Test_GPUCodeGeneration_Balanced_FloatInt16_BatchSize32),
+//     TEST_LIST_ENTRY(
+//         Test_GPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32),
 
-    //     // Basic scalar sparse GPU codegen tests
-    TEST_LIST_ENTRY(
-        Test_SparseGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
-    //     TEST_LIST_ENTRY(
-    //         Test_SparseGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
-    //     TEST_LIST_ENTRY(
-    //         Test_SparseGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
-    //     TEST_LIST_ENTRY(
-    //         Test_SparseGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
-    //     TEST_LIST_ENTRY(
-    //         Test_SparseGPUCodeGeneration_LeftHeavy_FloatInt16_ChI16_BatchSize32),
-    //     TEST_LIST_ENTRY(
-    //         Test_SparseGPUCodeGeneration_RightHeavy_FloatInt16_ChI16_BatchSize32),
-    //     TEST_LIST_ENTRY(
-    //         Test_SparseGPUCodeGeneration_Balanced_FloatInt16_ChI16_BatchSize32),
-    //     TEST_LIST_ENTRY(
-    //         Test_SparseGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_ChI16_BatchSize32),
+//     // Basic scalar sparse GPU codegen tests
+// TEST_LIST_ENTRY(
+//     Test_SparseGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
+//     TEST_LIST_ENTRY(
+//         Test_SparseGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
+//     TEST_LIST_ENTRY(
+//         Test_SparseGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
+//     TEST_LIST_ENTRY(
+//         Test_SparseGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
+//     TEST_LIST_ENTRY(
+//         Test_SparseGPUCodeGeneration_LeftHeavy_FloatInt16_ChI16_BatchSize32),
+//     TEST_LIST_ENTRY(
+//         Test_SparseGPUCodeGeneration_RightHeavy_FloatInt16_ChI16_BatchSize32),
+//     TEST_LIST_ENTRY(
+//         Test_SparseGPUCodeGeneration_Balanced_FloatInt16_ChI16_BatchSize32),
+//     TEST_LIST_ENTRY(
+//         Test_SparseGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_ChI16_BatchSize32),
 
-    //     // Basic reorg forest tests
-    //     TEST_LIST_ENTRY(
-    //         Test_ReorgGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
-    //     TEST_LIST_ENTRY(
-    //         Test_ReorgGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
-    //     TEST_LIST_ENTRY(
-    //         Test_ReorgGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
-    //     TEST_LIST_ENTRY(
-    //         Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
-    //     TEST_LIST_ENTRY(
-    //         Test_ReorgGPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32),
-    //     TEST_LIST_ENTRY(
-    //         Test_ReorgGPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32),
-    //     TEST_LIST_ENTRY(
-    //         Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32),
-    //     TEST_LIST_ENTRY(
-    //         Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32),
+//     // Basic reorg forest tests
+//     TEST_LIST_ENTRY(
+//         Test_ReorgGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
+//     TEST_LIST_ENTRY(
+//         Test_ReorgGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
+//     TEST_LIST_ENTRY(
+//         Test_ReorgGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
+//     TEST_LIST_ENTRY(
+//         Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
+//     TEST_LIST_ENTRY(
+//         Test_ReorgGPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32),
+//     TEST_LIST_ENTRY(
+//         Test_ReorgGPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32),
+//     TEST_LIST_ENTRY(
+//         Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32),
+//     TEST_LIST_ENTRY(
+//         Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32),
 
-    //     // Basic GPU caching tests
-    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
-    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy),
-    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_F32I16),
-    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_F32I16),
+//     // Basic GPU caching tests
+//     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
+//     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy),
+//     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_F32I16),
+//     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_F32I16),
 
-    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep),
-    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg),
-    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep_F32I16),
-    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg_F32I16),
+//     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep),
+//     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg),
+//     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_ReorgRep_F32I16),
+//     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg_F32I16),
 
-    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_SparseRep),
-    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep),
-    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_SparseRep_F32I16),
-    //     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep_F32I16),
+//     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_SparseRep),
+//     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep),
+//     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftHeavy_SparseRep_F32I16),
+//     TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep_F32I16),
 
-    //     TEST_LIST_ENTRY(Test_InputSharedMem_LeftHeavy),
-    //     TEST_LIST_ENTRY(Test_InputSharedMem_RightHeavy),
-    //     TEST_LIST_ENTRY(Test_InputSharedMem_LeftRightAndBalanced),
+//     TEST_LIST_ENTRY(Test_InputSharedMem_LeftHeavy),
+//     TEST_LIST_ENTRY(Test_InputSharedMem_RightHeavy),
+//     TEST_LIST_ENTRY(Test_InputSharedMem_LeftRightAndBalanced),
 
-    //     // Simple GPU Tiling tests
-    //     TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_DblI32_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_DblI32_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_DblI32_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_FltI16_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_FltI16_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_FltI16_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
+//     // Simple GPU Tiling tests
+//     TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_DblI32_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_DblI32_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_DblI32_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_FltI16_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_FltI16_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_FltI16_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
 
-    //     TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftHeavy_DblI32_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledArrayGPU_RightHeavy_DblI32_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledArrayGPU_Balanced_DblI32_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftHeavy_FltI16_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledArrayGPU_RightHeavy_FltI16_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledArrayGPU_Balanced_FltI16_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftHeavy_DblI32_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledArrayGPU_RightHeavy_DblI32_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledArrayGPU_Balanced_DblI32_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftHeavy_FltI16_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledArrayGPU_RightHeavy_FltI16_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledArrayGPU_Balanced_FltI16_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledArrayGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
 
-    //     // Tiling + Caching
-    //     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_LeftHeavy_DblI32_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_RightHeavy_DblI32_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_Balanced_DblI32_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
-    //     TEST_LIST_ENTRY(
-    //         Test_TiledCachedArrayGPU_LeftRightAndBalanced_DblI32_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_LeftHeavy_FltI16_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_RightHeavy_FltI16_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_Balanced_FltI16_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
-    //     TEST_LIST_ENTRY(
-    //         Test_TiledCachedArrayGPU_LeftRightAndBalanced_FltI16_B32_TSz2),
+//     // Tiling + Caching
+//     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_LeftHeavy_DblI32_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_RightHeavy_DblI32_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_Balanced_DblI32_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
+//     TEST_LIST_ENTRY(
+//         Test_TiledCachedArrayGPU_LeftRightAndBalanced_DblI32_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_LeftHeavy_FltI16_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_RightHeavy_FltI16_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_Balanced_FltI16_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledCachedArrayGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
+//     TEST_LIST_ENTRY(
+//         Test_TiledCachedArrayGPU_LeftRightAndBalanced_FltI16_B32_TSz2),
 
-    //     TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_LeftHeavy_DblI32_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_RightHeavy_DblI32_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_Balanced_DblI32_B32_TSz2),
-    //     TEST_LIST_ENTRY(
-    //         Test_TiledCachedSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_LeftHeavy_FltI16_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_RightHeavy_FltI16_B32_TSz2),
-    //     TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_Balanced_FltI16_B32_TSz2),
-    //     TEST_LIST_ENTRY(
-    //         Test_TiledCachedSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
-    //     TEST_LIST_ENTRY(
-    //         Test_TiledCachedSparseGPU_LeftRightAndBalanced_DblI32_B32_TSz2),
-    //     TEST_LIST_ENTRY(
-    //         Test_TiledCachedSparseGPU_LeftRightAndBalanced_FltI16_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_LeftHeavy_DblI32_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_RightHeavy_DblI32_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_Balanced_DblI32_B32_TSz2),
+//     TEST_LIST_ENTRY(
+//         Test_TiledCachedSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_LeftHeavy_FltI16_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_RightHeavy_FltI16_B32_TSz2),
+//     TEST_LIST_ENTRY(Test_TiledCachedSparseGPU_Balanced_FltI16_B32_TSz2),
+//     TEST_LIST_ENTRY(
+//         Test_TiledCachedSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2),
+//     TEST_LIST_ENTRY(
+//         Test_TiledCachedSparseGPU_LeftRightAndBalanced_DblI32_B32_TSz2),
+//     TEST_LIST_ENTRY(
+//         Test_TiledCachedSparseGPU_LeftRightAndBalanced_FltI16_B32_TSz2),
 
-    //     // GPU Synthetic XGB tests -- scalar
-    //     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Array_Scalar),
-    //     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Array_Scalar),
-    //     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Array_Scalar),
-    //     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Array_Scalar_f32i16),
-    //     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Array_Scalar_f32i16),
-    //     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Array_Scalar_f32i16),
-    //     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Sparse_Scalar),
-    //     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Sparse_Scalar),
-    //     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Sparse_Scalar),
-    //     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Sparse_Scalar_f32i16),
-    //     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Sparse_Scalar_f32i16),
-    //     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Sparse_Scalar_f32i16),
-    //     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Reorg_Scalar),
-    //     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Reorg_Scalar),
-    //     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Reorg_Scalar),
-    //     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Reorg_Scalar_f32i16),
-    //     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Reorg_Scalar_f32i16),
-    //     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Reorg_Scalar_f32i16),
+//     // GPU Synthetic XGB tests -- scalar
+//     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Array_Scalar),
+//     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Array_Scalar),
+//     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Array_Scalar),
+//     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Array_Scalar_f32i16),
+//     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Array_Scalar_f32i16),
+//     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Array_Scalar_f32i16),
+//     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Sparse_Scalar),
+//     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Sparse_Scalar),
+//     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Sparse_Scalar),
+//     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Sparse_Scalar_f32i16),
+//     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Sparse_Scalar_f32i16),
+//     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Sparse_Scalar_f32i16),
+//     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Reorg_Scalar),
+//     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Reorg_Scalar),
+//     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Reorg_Scalar),
+//     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Reorg_Scalar_f32i16),
+//     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Reorg_Scalar_f32i16),
+//     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Reorg_Scalar_f32i16),
 
-    //     // GPU Synthetic XGB tests -- tile4
-    //     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Sparse_Tile4),
-    //     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Sparse_Tile4),
-    //     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Sparse_Tile4),
-    //     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Sparse_Tile4_f32i16),
-    //     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Sparse_Tile4_f32i16),
-    //     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Sparse_Tile4_f32i16),
-    //     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Array_Tile4),
-    //     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Array_Tile4),
-    //     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Array_Tile4),
-    //     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Array_Tile4_f32i16),
-    //     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Array_Tile4_f32i16),
-    //     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Array_Tile4_f32i16),
+//     // GPU Synthetic XGB tests -- tile4
+//     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Sparse_Tile4),
+//     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Sparse_Tile4),
+//     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Sparse_Tile4),
+//     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Sparse_Tile4_f32i16),
+//     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Sparse_Tile4_f32i16),
+//     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Sparse_Tile4_f32i16),
+//     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Array_Tile4),
+//     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Array_Tile4),
+//     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Array_Tile4),
+//     TEST_LIST_ENTRY(Test_GPU_1TreeXGB_Array_Tile4_f32i16),
+//     TEST_LIST_ENTRY(Test_GPU_2TreeXGB_Array_Tile4_f32i16),
+//     TEST_LIST_ENTRY(Test_GPU_4TreeXGB_Array_Tile4_f32i16),
 
-    //     // GPU Synthetic XGB tests -- Shared Forest -- Scalar
-    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Reorg_Scalar),
-    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Reorg_Scalar),
-    //     // TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Reorg_Scalar),
-    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Reorg_Scalar_f32i16),
-    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Reorg_Scalar_f32i16),
-    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Reorg_Scalar_f32i16),
+//     // GPU Synthetic XGB tests -- Shared Forest -- Scalar
+//     TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Reorg_Scalar),
+//     TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Reorg_Scalar),
+//     // TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Reorg_Scalar),
+//     TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Reorg_Scalar_f32i16),
+//     TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Reorg_Scalar_f32i16),
+//     TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Reorg_Scalar_f32i16),
 
-    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Array_Scalar),
-    //     // TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Array_Scalar),
-    //     // TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Array_Scalar),
-    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Array_Scalar_f32i16),
-    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Array_Scalar_f32i16),
-    //     //
-    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Array_Scalar_f32i16),
+//     TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Array_Scalar),
+//     // TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Array_Scalar),
+//     // TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Array_Scalar),
+//     TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Array_Scalar_f32i16),
+//     TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Array_Scalar_f32i16),
+//     //
+//     TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Array_Scalar_f32i16),
 
-    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Sparse_Scalar),
-    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Sparse_Scalar),
-    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Sparse_Scalar),
-    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Sparse_Scalar_f32i16),
-    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Sparse_Scalar_f32i16),
-    //     TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Sparse_Scalar_f32i16),
+//     TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Sparse_Scalar),
+//     TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Sparse_Scalar),
+//     TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Sparse_Scalar),
+//     TEST_LIST_ENTRY(Test_GPU_SharedForest_1TreeXGB_Sparse_Scalar_f32i16),
+//     TEST_LIST_ENTRY(Test_GPU_SharedForest_2TreeXGB_Sparse_Scalar_f32i16),
+//     TEST_LIST_ENTRY(Test_GPU_SharedForest_4TreeXGB_Sparse_Scalar_f32i16),
 
-    //     // GPU Synthetic XGB tests -- Cache Partial Forest -- Scalar
-    //     // NOTE: These schedules are different than Tahoe's partial shared
-    //     forest
-    //     // schedule
-    //     TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Sparse_Scalar),
-    //     TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar),
-    //     TEST_LIST_ENTRY(
-    //         Test_GPU_CachePartialForest2Trees_2TreeXGB_Sparse_Scalar_f32i16),
-    //     TEST_LIST_ENTRY(
-    //         Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar_f32i16),
+//     // GPU Synthetic XGB tests -- Cache Partial Forest -- Scalar
+//     // NOTE: These schedules are different than Tahoe's partial shared
+//     forest
+//     // schedule
+//     TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Sparse_Scalar),
+//     TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar),
+//     TEST_LIST_ENTRY(
+//         Test_GPU_CachePartialForest2Trees_2TreeXGB_Sparse_Scalar_f32i16),
+//     TEST_LIST_ENTRY(
+//         Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar_f32i16),
 
-    //     TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Reorg_Scalar),
-    //     TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar),
-    //     TEST_LIST_ENTRY(
-    //         Test_GPU_CachePartialForest2Trees_2TreeXGB_Reorg_Scalar_f32i16),
-    //     TEST_LIST_ENTRY(
-    //         Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar_f32i16),
+//     TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Reorg_Scalar),
+//     TEST_LIST_ENTRY(Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar),
+//     TEST_LIST_ENTRY(
+//         Test_GPU_CachePartialForest2Trees_2TreeXGB_Reorg_Scalar_f32i16),
+//     TEST_LIST_ENTRY(
+//         Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar_f32i16),
 
-    //     TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Array_Scalar),
-    //     TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_4TreeXGB_Array_Scalar),
-    //     TEST_LIST_ENTRY(
-    //         Test_GPU_CachePartialForest2Trees_2TreeXGB_Array_Scalar_f32i16),
-    //     TEST_LIST_ENTRY(
-    //         Test_GPU_CachePartialForest2Trees_4TreeXGB_Array_Scalar_f32i16),
+//     TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_2TreeXGB_Array_Scalar),
+//     TEST_LIST_ENTRY(Test_GPU_CachePartialForest1Tree_4TreeXGB_Array_Scalar),
+//     TEST_LIST_ENTRY(
+//         Test_GPU_CachePartialForest2Trees_2TreeXGB_Array_Scalar_f32i16),
+//     TEST_LIST_ENTRY(
+//         Test_GPU_CachePartialForest2Trees_4TreeXGB_Array_Scalar_f32i16),
 
-    // XGBoost benchmark tests on GPU
-    // TEST_LIST_ENTRY(Test_GPUCodeGeneration_Abalone_TileSize1_BasicSchedule),
-    TEST_LIST_ENTRY(Test_GPUCodeGeneration_Abalone_TileSize2_BasicSchedule),
+// XGBoost benchmark tests on GPU
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Abalone_TileSize1_BasicSchedule),
+// TEST_LIST_ENTRY(Test_GPUCodeGeneration_Abalone_TileSize2_BasicSchedule),
 // TEST_LIST_ENTRY(Test_GPUCodeGeneration_Abalone_TileSize4_BasicSchedule),
 // TEST_LIST_ENTRY(Test_GPUCodeGeneration_Abalone_TileSize8_BasicSchedule),
 
@@ -2410,62 +2414,65 @@ TestDescriptor testList[] = {
 
 #ifdef TREEBEARD_GPU_SUPPORT
     // GPU Parallelize across trees
-    TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_TwiceLeftRightBalanced_TahoeShdInpMultiRow_FltI16_B32),
-    TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInpMultiRow_FltI16_B32),
-    TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInp_FltI16_B32),
-    TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_TwiceLeftRightBalanced_IterShdPartialForest_FltI16_B32),
-    TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Sparse_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Sparse_Scalar),
-    TEST_LIST_ENTRY(
-        Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Sparse_Scalar_f32i16),
-    TEST_LIST_ENTRY(
-        Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Sparse_Scalar_f32i16),
-    TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Array_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Array_Scalar),
-    TEST_LIST_ENTRY(
-        Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Array_Scalar_f32i16),
-    TEST_LIST_ENTRY(
-        Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Array_Scalar_f32i16),
-    TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Reorg_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Reorg_Scalar),
-    TEST_LIST_ENTRY(
-        Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Reorg_Scalar_f32i16),
-    TEST_LIST_ENTRY(
-        Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Reorg_Scalar_f32i16),
-    TEST_LIST_ENTRY(
-        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Array_Scalar_f32i16),
-    TEST_LIST_ENTRY(
-        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Scalar),
-    TEST_LIST_ENTRY(
-        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Scalar_f32i16),
-    TEST_LIST_ENTRY(
-        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Reorg_Scalar),
-    TEST_LIST_ENTRY(
-        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Reorg_Scalar_f32i16),
-    // GPU Tree parallelization tests - Tile size 4
-    TEST_LIST_ENTRY(
-        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Tile4),
-    TEST_LIST_ENTRY(
-        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Tile4_f32i16),
-    TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SharedReduce_FltI16_B64),
-    TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SpecializedTreeLoop_FltI16_B64),
-    // Tree Parallelization Multi-class tests
-    TEST_LIST_ENTRY(
-        Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache),
-    TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedTrees),
-    TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedRows),
-    TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleBasic),
-    TEST_LIST_ENTRY(
-        Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache_SharedReduce),
+    // TEST_LIST_ENTRY(
+    //     Test_ScalarSparseGPU_TwiceLeftRightBalanced_TahoeShdInpMultiRow_FltI16_B32),
+    // TEST_LIST_ENTRY(
+    //     Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInpMultiRow_FltI16_B32),
+    // TEST_LIST_ENTRY(
+    //     Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInp_FltI16_B32),
+    // TEST_LIST_ENTRY(
+    //     Test_ScalarSparseGPU_TwiceLeftRightBalanced_IterShdPartialForest_FltI16_B32),
+    // TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Sparse_Scalar),
+    // TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Sparse_Scalar),
+    // TEST_LIST_ENTRY(
+    //     Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Sparse_Scalar_f32i16),
+    // TEST_LIST_ENTRY(
+    //     Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Sparse_Scalar_f32i16),
+    // TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Array_Scalar),
+    // TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Array_Scalar),
+    // TEST_LIST_ENTRY(
+    //     Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Array_Scalar_f32i16),
+    // TEST_LIST_ENTRY(
+    //     Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Array_Scalar_f32i16),
+    // TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Reorg_Scalar),
+    // TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Reorg_Scalar),
+    // TEST_LIST_ENTRY(
+    //     Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Reorg_Scalar_f32i16),
+    // TEST_LIST_ENTRY(
+    //     Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Reorg_Scalar_f32i16),
+    // TEST_LIST_ENTRY(
+    //     Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Array_Scalar_f32i16),
+    // TEST_LIST_ENTRY(
+    //     Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Scalar),
+    // TEST_LIST_ENTRY(
+    //     Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Scalar_f32i16),
+    // TEST_LIST_ENTRY(
+    //     Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Reorg_Scalar),
+    // TEST_LIST_ENTRY(
+    //     Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Reorg_Scalar_f32i16),
+    // // GPU Tree parallelization tests - Tile size 4
+    // TEST_LIST_ENTRY(
+    //     Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Tile4),
+    // TEST_LIST_ENTRY(
+    //     Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Tile4_f32i16),
+    // TEST_LIST_ENTRY(
+    //     Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SharedReduce_FltI16_B64),
+    // TEST_LIST_ENTRY(
+    //     Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SpecializedTreeLoop_FltI16_B64),
+    // // Tree Parallelization Multi-class tests
+    // TEST_LIST_ENTRY(
+    //     Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache),
+    // TEST_LIST_ENTRY(
+    //     Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedTrees),
+    // TEST_LIST_ENTRY(
+    //     Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedRows),
+    // TEST_LIST_ENTRY(
+    //     Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleBasic),
+    // TEST_LIST_ENTRY(
+    //     Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache_SharedReduce),
+
+    TEST_LIST_ENTRY(Test_ScalarGPU_Airline_AutoScheduleBasic),
+    TEST_LIST_ENTRY(Test_ScalarGPU_Abalone_AutoScheduleBasic),
 #endif // TREEBEARD_GPU_SUPPORT
     TEST_LIST_ENTRY(
         Test_TileSize8_Abalone_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
@@ -2702,14 +2709,6 @@ TestDescriptor gpuTestList[] = {
     TEST_LIST_ENTRY(Test_InputSharedMem_LeftHeavy),
     TEST_LIST_ENTRY(Test_InputSharedMem_RightHeavy),
     TEST_LIST_ENTRY(Test_InputSharedMem_LeftRightAndBalanced),
-
-    // XGBoost tests on GPU
-    TEST_LIST_ENTRY(
-        Test_GPUCodeGeneration_Covtype_ArrayRep_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_GPUCodeGeneration_Covtype_SparseRep_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_GPUCodeGeneration_Covtype_ReorgRep_DoubleInt32_BatchSize32),
 
     // Simple GPU Tiling tests
     TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_DblI32_B32_TSz2),

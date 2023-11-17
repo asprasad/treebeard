@@ -147,6 +147,7 @@ void RunTests();
 void RunSanityTests();
 void RunXGBoostBenchmarks();
 void RunXGBoostParallelBenchmarks();
+void RunXGBoostGPUBenchmarks();
 
 // ===---------------------------------------------=== //
 // Configuration for tests

@@ -109,14 +109,14 @@ ConstructLLVMDialectModuleFromXGBoostJSON(TreebeardContext &tbContext) {
   const std::string &modelJsonPath = tbContext.modelPath;
   const CompilerOptions &options = tbContext.options;
 
-  if (options.compileToGPU) {
-    tbContext.forestConstructor = std::make_shared<
-        XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType,
-                          NodeIndexType, InputElementType>>(
-        context, modelJsonPath, tbContext.serializer,
-        options.statsProfileCSVPath, options.batchSize);
-    return ConstructGPUModuleFromTreebeardContext(tbContext);
-  }
+  // if (options.compileToGPU) {
+  //   tbContext.forestConstructor = std::make_shared<
+  //       XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType,
+  //                         NodeIndexType, InputElementType>>(
+  //       context, modelJsonPath, tbContext.serializer,
+  //       options.statsProfileCSVPath, options.batchSize);
+  //   return ConstructGPUModuleFromTreebeardContext(tbContext);
+  // }
 
   TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType,
                                NodeIndexType, InputElementType>
