@@ -35,6 +35,7 @@
 #include "ReorgForestRepresentation.h"
 #include "Representations.h"
 #include "TestUtilsCommon.h"
+#include <cassert>
 
 using namespace mlir;
 
@@ -45,6 +46,7 @@ using mlir::decisionforest::TahoeSharedForestStrategy;
 using mlir::decisionforest::TahoeSharedPartialForestStrategy;
 
 #define NUM_RUNS 100
+#define VERIFY_RESULT true
 
 namespace TreeBeard {
 namespace test {
@@ -63,6 +65,15 @@ GPUTimes BenchmarkGPUCodeGeneration(TreeBeard::TreebeardContext &tbContext) {
   GPUInferenceRunnerForTest inferenceRunner(
       tbContext.serializer, module, tbContext.options.tileSize,
       sizeof(ThresholdType) * 8, sizeof(IndexType) * 8);
+
+  if (VERIFY_RESULT) {
+    bool validResult =
+        ValidateModuleOutputAgainstCSVdata<ThresholdType, ReturnType>(
+            inferenceRunner, tbContext.modelPath + ".test.sampled.csv",
+            batchSize);
+    assert(validResult && "Result validation failed");
+  }
+
   TestCSVReader csvReader(tbContext.modelPath + ".test.sampled.csv",
                           2000 /*num lines*/);
 
@@ -189,8 +200,6 @@ void RunAutoScheduleBenchmarks(const std::string &xgboostModelFile,
                                                  false, false, true>(
       xgboostModelFile, representationName, batchSize, 64, 8, 2, 1);
 
-  std::cout << "model,representation,batch_size,unroll,total,kernel"
-            << std::endl;
   std::cout << xgboostModelFile << "," << representationName << "," << batchSize
             << ","
             << "false"
@@ -205,6 +214,8 @@ void RunAutoScheduleBenchmarks(const std::string &xgboostModelFile,
 
 void RunXGBoostGPUBenchmarks() {
   mlir::decisionforest::measureGpuKernelTime = true;
+  std::cout << "model,representation,batch_size,unroll,total,kernel"
+            << std::endl;
 
   RunAutoScheduleBenchmarks<float, float>("airline_xgb_model_save.json",
                                           "gpu_sparse", 256);
