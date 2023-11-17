@@ -5,6 +5,7 @@ CodeGenTests.cpp
 TestUtilsCommon.cpp
 XGBoostTests.cpp
 XGBoostBenchmarks.cpp
+XGBoostGPUBenchmarks.cpp
 StatsTests.cpp
 XGBoostProbTiling.cpp
 ONNXTests.cpp

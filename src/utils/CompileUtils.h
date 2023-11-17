@@ -2,6 +2,7 @@
 #define _COMPILEUTILS_H_
 
 #include "Dialect.h"
+#include "GPUCompileUtils.h"
 #include "LowerReduceOps.h"
 #include "TreebeardContext.h"
 #include "forestcreator.h"
@@ -108,11 +109,19 @@ ConstructLLVMDialectModuleFromXGBoostJSON(TreebeardContext &tbContext) {
   const std::string &modelJsonPath = tbContext.modelPath;
   const CompilerOptions &options = tbContext.options;
 
+  // if (options.compileToGPU) {
+  //   tbContext.forestConstructor = std::make_shared<
+  //       XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType,
+  //                         NodeIndexType, InputElementType>>(
+  //       context, modelJsonPath, tbContext.serializer,
+  //       options.statsProfileCSVPath, options.batchSize);
+  //   return ConstructGPUModuleFromTreebeardContext(tbContext);
+  // }
+
   TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, FeatureIndexType,
                                NodeIndexType, InputElementType>
       xgBoostParser(context, modelJsonPath, tbContext.serializer,
                     options.statsProfileCSVPath, options.batchSize);
-
   return ConstructLLVMDialectModuleFromForestCreator(tbContext, xgBoostParser);
 }
 

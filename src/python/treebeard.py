@@ -97,7 +97,12 @@ class CompilerOptions:
   def SetOneTreeAtATimeSchedule(self) :
     treebeardAPI.runtime_lib.SetOneTreeAtATimeSchedule(self.optionsPtr)
 
+  def SetCompileToGPU(self):
+    treebeardAPI.runtime_lib.Set_compileToGPU(self.optionsPtr, True)
 
+  def SetBasicGPUSchedule(self, tileSize : int) :
+    treebeardAPI.runtime_lib.SetBasicGPUSchedule(self.optionsPtr, tileSize)
+       
 #### ---------------------------------------------------------------- ####
 #### Index Variable
 #### ---------------------------------------------------------------- ####

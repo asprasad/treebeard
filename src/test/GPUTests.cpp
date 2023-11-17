@@ -29,6 +29,7 @@
 #include "GPUModelSerializers.h"
 #include "GPUSchedules.h"
 #include "GPUSupportUtils.h"
+#include "GPUTestUtils.h"
 #include "LowerReduceOps.h"
 #include "ModelSerializers.h"
 #include "ReorgForestRepresentation.h"
@@ -45,44 +46,6 @@ using mlir::decisionforest::TahoeSharedPartialForestStrategy;
 
 namespace TreeBeard {
 namespace test {
-
-class GPUInferenceRunnerForTest : public InferenceRunnerForTestTemplate<
-                                      decisionforest::GPUInferenceRunner> {
-public:
-  GPUInferenceRunnerForTest(
-      std::shared_ptr<decisionforest::IModelSerializer> serializer,
-      mlir::ModuleOp module, int32_t tileSize, int32_t thresholdSize,
-      int32_t featureIndexSize)
-      : InferenceRunnerForTestTemplate<decisionforest::GPUInferenceRunner>(
-            serializer, module, tileSize, thresholdSize, featureIndexSize) {
-    if (decisionforest::measureGpuKernelTime) {
-      typedef void (*ResetFunc_t)();
-      auto resetFunc =
-          reinterpret_cast<ResetFunc_t>(dlsym(NULL, "resetTotalKernelTime"));
-      assert(resetFunc);
-      resetFunc();
-    }
-  }
-
-  //   using InferenceRunnerForTestTemplate<
-  //       decisionforest::GPUInferenceRunner>::InferenceRunnerForTestTemplate;
-
-  decisionforest::ModelMemrefType GetModelMemref() {
-    return reinterpret_cast<decisionforest::GPUArraySparseSerializerBase *>(
-               m_serializer.get())
-        ->GetModelMemref();
-  }
-
-  int64_t GetKernelExecutionTime() {
-    if (!decisionforest::measureGpuKernelTime)
-      return 0;
-    typedef int64_t (*GetKernelTimeFunc_t)();
-    auto getKernelTimeFunc = reinterpret_cast<GetKernelTimeFunc_t>(
-        dlsym(NULL, "getTotalKernelTime"));
-    assert(getKernelTimeFunc);
-    return getKernelTimeFunc();
-  }
-};
 
 // ===---------------------------------------------------=== //
 // GPU Model Initialization Test Helpers
@@ -442,13 +405,8 @@ bool Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt16(TestArgs_t &args) {
 // GPU Code Generation Tests -- Helpers
 // ===---------------------------------------------------=== //
 
-struct NoOpDeleter {
-  void operator()(ForestCreator *ptr) const {
-    // Do nothing
-  }
-};
-
-template <typename ThresholdType, typename IndexType>
+template <typename ThresholdType, typename IndexType,
+          typename ReturnType = ThresholdType>
 bool VerifyGPUCodeGeneration(
     TestArgs_t &args, const int32_t batchSize, ForestCreator &forestCreator,
     std::shared_ptr<decisionforest::IModelSerializer> serializer,
@@ -479,37 +437,39 @@ bool VerifyGPUCodeGeneration(
                                             sizeof(ThresholdType) * 8,
                                             sizeof(IndexType) * 8);
 
-  if (!csvPath.empty()) {
-    return ValidateModuleOutputAgainstCSVdata<ThresholdType, int8_t>(
+  if (!csvPath.empty() && std::filesystem::exists(csvPath)) {
+    return ValidateModuleOutputAgainstCSVdata<ThresholdType, ReturnType>(
         inferenceRunner, csvPath, batchSize);
   }
 
   assert(batchSize % 2 == 0);
-  std::vector<std::vector<ThresholdType>> inputData;
-  inputData.emplace_back(std::vector<ThresholdType>());
-  auto &firstVec = inputData.front();
-  for (int32_t i = 0; i < batchSize / 2; ++i) {
-    auto data = GetBatchSize2Data();
-    firstVec.insert(firstVec.end(), data.front().begin(), data.front().end());
-  }
-  for (auto &batch : inputData) {
-    assert(batch.size() % batchSize == 0);
-    size_t rowSize = batch.size() / batchSize;
-    std::vector<ThresholdType> result(batchSize, -1);
-    inferenceRunner.RunInference<ThresholdType, ThresholdType>(batch.data(),
-                                                               result.data());
-    for (int64_t rowIdx = 0; rowIdx < batchSize; ++rowIdx) {
-      std::vector<double> row(batch.begin() + rowIdx * rowSize,
-                              batch.begin() + (rowIdx + 1) * rowSize);
-      ThresholdType expectedResult =
-          static_cast<ThresholdType>(forestCreator.GetForest()->Predict(row));
-      Test_ASSERT(FPEqual(result[rowIdx], expectedResult));
+  std::vector<ThresholdType> inputData;
+  for (int32_t i = 0; i < batchSize; ++i) {
+    size_t numFeatures = forestCreator.GetForest()->GetFeatures().size();
+    std::vector<ThresholdType> curVec;
+    // generate 'numFeatures' random numbers.
+    for (size_t j = 0; j < numFeatures; ++j) {
+      inputData.push_back(static_cast<ThresholdType>(rand()) /
+                          static_cast<ThresholdType>(RAND_MAX));
     }
   }
+
+  size_t rowSize = inputData.size() / batchSize;
+  std::vector<ReturnType> result(batchSize, -1);
+  inferenceRunner.RunInference<ThresholdType, ReturnType>(inputData.data(),
+                                                          result.data());
+  for (int64_t rowIdx = 0; rowIdx < batchSize; ++rowIdx) {
+    std::vector<double> row(inputData.begin() + rowIdx * rowSize,
+                            inputData.begin() + (rowIdx + 1) * rowSize);
+    ReturnType expectedResult =
+        static_cast<ReturnType>(forestCreator.GetForest()->Predict(row));
+    Test_ASSERT(FPEqual(result[rowIdx], expectedResult));
+  }
+
   return true;
 }
 
-template <typename ThresholdType, typename IndexType>
+template <typename ThresholdType, typename IndexType, typename ReturnType>
 bool VerifyGPUAutoScheduleCodeGeneration(
     TestArgs_t &args, const int32_t batchSize, ForestCreator &forestCreator,
     std::shared_ptr<decisionforest::IModelSerializer> serializer,
@@ -540,8 +500,11 @@ bool VerifyGPUAutoScheduleCodeGeneration(
                                             sizeof(IndexType) * 8);
 
   if (!csvPath.empty()) {
-    return ValidateModuleOutputAgainstCSVdata<ThresholdType, int8_t>(
+    bool res = ValidateModuleOutputAgainstCSVdata<ThresholdType, ReturnType>(
         inferenceRunner, csvPath, batchSize);
+    std::cout << "Kernel execution time: "
+              << inferenceRunner.GetKernelExecutionTime() << std::endl;
+    return res;
   }
 
   assert(batchSize % 2 == 0);
@@ -555,20 +518,33 @@ bool VerifyGPUAutoScheduleCodeGeneration(
   for (auto &batch : inputData) {
     assert(batch.size() % batchSize == 0);
     size_t rowSize = batch.size() / batchSize;
-    std::vector<ThresholdType> result(batchSize, -1);
-    inferenceRunner.RunInference<ThresholdType, ThresholdType>(batch.data(),
-                                                               result.data());
+    std::vector<ReturnType> result(batchSize, -1);
+    inferenceRunner.RunInference<ThresholdType, ReturnType>(batch.data(),
+                                                            result.data());
     for (int64_t rowIdx = 0; rowIdx < batchSize; ++rowIdx) {
       std::vector<double> row(batch.begin() + rowIdx * rowSize,
                               batch.begin() + (rowIdx + 1) * rowSize);
-      ThresholdType expectedResult =
-          static_cast<ThresholdType>(forestCreator.GetForest()->Predict(row));
+      ReturnType expectedResult =
+          static_cast<ReturnType>(forestCreator.GetForest()->Predict(row));
       Test_ASSERT(FPEqual(result[rowIdx], expectedResult));
     }
   }
-  //   std::cout << "Kernel execution time: "
-  //             << inferenceRunner.GetKernelExecutionTime() << std::endl;
   return true;
+}
+
+template <typename ThresholdType, typename IndexType,
+          typename ReturnType = ThresholdType>
+bool VerifyGPUCodeGenerationOutput_Tiled_VariableBatchSize_AnyRep(
+    TestArgs_t &args, const int32_t batchSize, ForestCreator &forestCreator,
+    std::shared_ptr<decisionforest::IModelSerializer> serializer,
+    std::shared_ptr<decisionforest::IRepresentation> representation,
+    int32_t tileSize, int32_t tileShapeBitwidth, int32_t childIndexBitWidth = 1,
+    std::function<void(decisionforest::Schedule &)> scheduleManipulator =
+        std::bind(GPUBasicSchedule, std::placeholders::_1, 4),
+    const std::string &csvPath = "") {
+  return VerifyGPUCodeGeneration<ThresholdType, IndexType, ReturnType>(
+      args, batchSize, forestCreator, serializer, representation, tileSize,
+      tileShapeBitwidth, childIndexBitWidth, scheduleManipulator, csvPath);
 }
 
 // ===---------------------------------------------------=== //
@@ -627,16 +603,11 @@ template <typename ThresholdType, typename ReturnType, typename IndexType>
 bool Test_GPUCodeGeneration_XGBoostModel_VariableBatchSize(
     TestArgs_t &args, const int32_t batchSize,
     const std::string &xgboostModelFile, const std::string &representation,
-    int32_t childIndexBitWidth = 1) {
+    int32_t tileSize = 1, int32_t tileShapeBitWidth = 1,
+    int32_t childIndexBitWidth = 1,
+    std::function<void(decisionforest::Schedule &)> scheduleManipulator =
+        std::bind(GPUBasicSchedule, std::placeholders::_1, 4)) {
   using NodeIndexType = int32_t;
-  int32_t floatTypeBitWidth = sizeof(FloatType) * 8;
-  TreeBeard::CompilerOptions options(
-      floatTypeBitWidth, sizeof(ThresholdType) * 8,
-      IsFloatType(ThresholdType()), 32 /*feature index type*/,
-      sizeof(NodeIndexType) * 8, floatTypeBitWidth, batchSize, 8, 32,
-      childIndexBitWidth, TreeBeard::TilingType::kUniform, false, false,
-      nullptr);
-
   auto xgboostModelPath = GetXGBoostModelPath(xgboostModelFile);
   auto modelGlobalsJSONPath =
       TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
@@ -653,12 +624,32 @@ bool Test_GPUCodeGeneration_XGBoostModel_VariableBatchSize(
                                NodeIndexType, ThresholdType>
       xgBoostParser(context, xgboostModelPath, serializer, batchSize);
 
-  return VerifyGPUCodeGenerationOutput_Scalar_VariableBatchSize_AnyRep<
-      ThresholdType, IndexType>(
+  return VerifyGPUCodeGenerationOutput_Tiled_VariableBatchSize_AnyRep<
+      ThresholdType, IndexType, ReturnType>(
       args, batchSize, xgBoostParser, serializer,
       decisionforest::RepresentationFactory::Get().GetRepresentation(
           representation),
-      childIndexBitWidth, csvPath);
+      tileSize, tileShapeBitWidth, childIndexBitWidth, scheduleManipulator,
+      csvPath);
+}
+
+template <typename ThresholdType, typename ReturnType, typename IndexType>
+bool Test_GPUCodeGeneration_XGBoostModel_MultipleRepresentations(
+    TestArgs_t &args, const int32_t batchSize,
+    const std::string &xgboostModelFile,
+    std::vector<std::string> representations, int32_t tileSize = 1,
+    int32_t tileShapeBitWidth = 1, int32_t childIndexBitWidth = 1,
+    std::function<void(decisionforest::Schedule &)> scheduleManipulator =
+        std::bind(GPUBasicSchedule, std::placeholders::_1, 4)) {
+  bool success = true;
+  for (auto representation : representations) {
+    success &= Test_GPUCodeGeneration_XGBoostModel_VariableBatchSize<
+        ThresholdType, ReturnType, IndexType>(
+        args, batchSize, xgboostModelFile, representation, tileSize,
+        tileShapeBitWidth, childIndexBitWidth, scheduleManipulator);
+    assert(success);
+  }
+  return success;
 }
 
 template <typename ThresholdType, typename IndexType>
@@ -958,6 +949,212 @@ bool CheckGPUModelInitialization_ReorgForest(
     Test_ASSERT(std::get<0>(indexTuple) == std::get<1>(indexTuple));
   }
   return true;
+}
+
+// ===---------------------------------------------------=== //
+// XGBoost benchmark GPU Tests
+// ===---------------------------------------------------=== //
+
+template <typename ThresholdType, typename ReturnType, typename IndexType,
+          int32_t tileSize>
+bool Test_GPUCodeGeneration_XGBoostModel(
+    TestArgs_t &args, const std::string &modelName,
+    std::function<void(decisionforest::Schedule &)> scheduleManipulator =
+        std::bind(GPUBasicSchedule, std::placeholders::_1, 32)) {
+
+  int32_t tileShapeBitWidth = tileSize == 1 ? 1 : 16;
+  auto representations =
+      tileSize == 1
+          ? std::vector<std::string>{"gpu_array", "gpu_sparse", "gpu_reorg"}
+          : std::vector<std::string>{"gpu_array", "gpu_sparse"};
+  return Test_GPUCodeGeneration_XGBoostModel_MultipleRepresentations<
+      ThresholdType, ReturnType, IndexType>(
+      args, 32, modelName, representations, tileSize, tileShapeBitWidth,
+      16 /*childIndexBitWidth*/, scheduleManipulator);
+}
+
+bool Test_GPUCodeGeneration_Abalone_TileSize1_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 1>(
+      args, "abalone_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Abalone_TileSize2_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 2>(
+      args, "abalone_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Abalone_TileSize4_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 4>(
+      args, "abalone_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Abalone_TileSize8_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 8>(
+      args, "abalone_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Airline_TileSize1_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 1>(
+      args, "airline_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Airline_TileSize2_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 2>(
+      args, "airline_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Airline_TileSize4_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 4>(
+      args, "airline_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Airline_TileSize8_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 8>(
+      args, "airline_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_AirlineOHE_TileSize1_BasicSchedule(
+    TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 1>(
+      args, "airline-ohe_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_AirlineOHE_TileSize2_BasicSchedule(
+    TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 2>(
+      args, "airline-ohe_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_AirlineOHE_TileSize4_BasicSchedule(
+    TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 4>(
+      args, "airline-ohe_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_AirlineOHE_TileSize8_BasicSchedule(
+    TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 8>(
+      args, "airline-ohe_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Bosch_TileSize1_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 1>(
+      args, "bosch_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Bosch_TileSize2_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 2>(
+      args, "bosch_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Bosch_TileSize4_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 4>(
+      args, "bosch_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Bosch_TileSize8_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 8>(
+      args, "bosch_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_CovType_TileSize1_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, int8_t, int32_t, 1>(
+      args, "covtype_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_CovType_TileSize2_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, int8_t, int32_t, 2>(
+      args, "covtype_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_CovType_TileSize4_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, int8_t, int32_t, 4>(
+      args, "covtype_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_CovType_TileSize8_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, int8_t, int32_t, 8>(
+      args, "covtype_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Epsilon_TileSize1_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 1>(
+      args, "epsilon_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Epsilon_TileSize2_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 2>(
+      args, "epsilon_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Epsilon_TileSize4_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 4>(
+      args, "epsilon_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Epsilon_TileSize8_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 8>(
+      args, "epsilon_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Higgs_TileSize1_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 1>(
+      args, "higgs_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Higgs_TileSize2_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 2>(
+      args, "higgs_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Higgs_TileSize4_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 4>(
+      args, "higgs_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Higgs_TileSize8_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 8>(
+      args, "higgs_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Letters_TileSize1_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, int8_t, int32_t, 1>(
+      args, "letters_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Letters_TileSize2_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, int8_t, int32_t, 2>(
+      args, "letters_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Letters_TileSize4_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, int8_t, int32_t, 4>(
+      args, "letters_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Letters_TileSize8_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, int8_t, int32_t, 8>(
+      args, "letters_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Year_TileSize1_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 1>(
+      args, "year_prediction_msd_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Year_TileSize2_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 2>(
+      args, "year_prediction_msd_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Year_TileSize4_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 4>(
+      args, "year_prediction_msd_xgb_model_save.json");
+}
+
+bool Test_GPUCodeGeneration_Year_TileSize8_BasicSchedule(TestArgs_t &args) {
+  return Test_GPUCodeGeneration_XGBoostModel<float, float, int32_t, 8>(
+      args, "year_prediction_msd_xgb_model_save.json");
 }
 
 bool Test_GPUModelInit_LeftHeavy_Reorg_DoubleInt(TestArgs_t &args) {
@@ -1299,20 +1496,6 @@ bool Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep_F32I16(
 // ===---------------------------------------------------=== //
 // GPU Basic Tiled Code Generation Tests
 // ===---------------------------------------------------=== //
-
-template <typename ThresholdType, typename IndexType>
-bool VerifyGPUCodeGenerationOutput_Tiled_VariableBatchSize_AnyRep(
-    TestArgs_t &args, const int32_t batchSize, ForestCreator &forestCreator,
-    std::shared_ptr<decisionforest::IModelSerializer> serializer,
-    std::shared_ptr<decisionforest::IRepresentation> representation,
-    int32_t tileSize, int32_t tileShapeBitwidth, int32_t childIndexBitWidth = 1,
-    const std::string &csvPath = "") {
-  std::function<void(decisionforest::Schedule &)> scheduleManipulator =
-      std::bind(GPUBasicSchedule, std::placeholders::_1, 4);
-  return VerifyGPUCodeGeneration<ThresholdType, IndexType>(
-      args, batchSize, forestCreator, serializer, representation, tileSize,
-      tileShapeBitwidth, childIndexBitWidth, scheduleManipulator, csvPath);
-}
 
 template <typename ThresholdType, typename IndexType>
 bool Test_GPU_FixedConstructor_Tiled_VariableBatchSize_AnyRep(
@@ -2164,6 +2347,72 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache
 // GPU Sparse Representation -
 // GPU Auto schedule
 // ===------------------------------------------------------------=== //
+
+template <typename ThresholdType, typename IndexType, typename ReturnType>
+bool Test_ScalarGPU_XGBoost_AutoScheduleBasic(
+    TestArgs_t &args, const std::string &xgboostModelFile) {
+  auto xgboostModelPath = GetXGBoostModelPath(xgboostModelFile);
+  auto csvPath = xgboostModelPath + ".csv";
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          xgboostModelPath);
+
+  int32_t batchSize = 256;
+
+  // Maps to TB.x
+  int32_t numRowsPerTB = 64;
+  int32_t numRowsPerThread = 8;
+  // Hpw many rows do we process together?
+  // Pick one tree and process this many rows before moving to the next row
+  int32_t rowTileSize = -1;
+
+  // How many threads do we divide the trees across?
+  // Maps to TB.y
+  int32_t numTreeThreads = 2;
+
+  // How many trees do we process at a time? Only useful if single threaded
+  // TODO Do we really need this? Can't we always do one tree at a time
+  int32_t numTreesAtATime = 1;
+  bool cacheRows = false;
+  bool cacheTrees = false;
+  bool unrollTreeWalks = false;
+
+  TreeBeard::GPUAutoScheduleOptions gpuAutoScheduleOptions{
+      numRowsPerTB,    numRowsPerThread, rowTileSize, numTreeThreads,
+      numTreesAtATime, cacheRows,        cacheTrees,  unrollTreeWalks};
+
+  auto serializer =
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath);
+  auto representation =
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse");
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+  TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, IndexType, IndexType,
+                               ThresholdType>
+      xgBoostParser(context, xgboostModelPath, serializer, batchSize);
+  return VerifyGPUAutoScheduleCodeGeneration<ThresholdType, IndexType,
+                                             ReturnType>(
+      args, batchSize, xgBoostParser, serializer, representation,
+      1,                     // Tile size
+      16,                    // Tile shape width
+      sizeof(IndexType) * 8, // child index width
+      gpuAutoScheduleOptions, csvPath);
+}
+
+bool Test_ScalarGPU_Abalone_AutoScheduleBasic(TestArgs_t &args) {
+  mlir::decisionforest::measureGpuKernelTime = true;
+  return Test_ScalarGPU_XGBoost_AutoScheduleBasic<float, int32_t, float>(
+      args, "abalone_xgb_model_save.json");
+}
+
+bool Test_ScalarGPU_Airline_AutoScheduleBasic(TestArgs_t &args) {
+  return Test_ScalarGPU_XGBoost_AutoScheduleBasic<float, int32_t, float>(
+      args, "airline_xgb_model_save.json");
+}
+
 bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleBasic(
     TestArgs_t &args) {
   auto modelGlobalsJSONPath =
@@ -2209,7 +2458,8 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleBasic(
   FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType,
                          ThresholdType>
       irConstructor(context, serializer, batchSize, forestConstructor);
-  return VerifyGPUAutoScheduleCodeGeneration<ThresholdType, IndexType>(
+  return VerifyGPUAutoScheduleCodeGeneration<ThresholdType, IndexType,
+                                             ThresholdType>(
       args, batchSize, irConstructor, serializer, representation,
       1,  // Tile size
       16, // Tile shape width
@@ -2262,7 +2512,8 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedRows(
   FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType,
                          ThresholdType>
       irConstructor(context, serializer, batchSize, forestConstructor);
-  return VerifyGPUAutoScheduleCodeGeneration<ThresholdType, IndexType>(
+  return VerifyGPUAutoScheduleCodeGeneration<ThresholdType, IndexType,
+                                             ThresholdType>(
       args, batchSize, irConstructor, serializer, representation,
       1,  // Tile size
       16, // Tile shape width
@@ -2296,7 +2547,7 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedTrees(
   int32_t numTreesAtATime = 1;
   bool cacheRows = false;
   bool cacheTrees = true;
-  bool unrollTreeWalks = true;
+  bool unrollTreeWalks = false;
 
   TreeBeard::GPUAutoScheduleOptions gpuAutoScheduleOptions{
       numRowsPerTB,    numRowsPerThread, rowTileSize, numTreeThreads,
@@ -2315,7 +2566,8 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedTrees(
   FixedTreeIRConstructor<ThresholdType, ThresholdType, IndexType, IndexType,
                          ThresholdType>
       irConstructor(context, serializer, batchSize, forestConstructor);
-  return VerifyGPUAutoScheduleCodeGeneration<ThresholdType, IndexType>(
+  return VerifyGPUAutoScheduleCodeGeneration<ThresholdType, IndexType,
+                                             ThresholdType>(
       args, batchSize, irConstructor, serializer, representation,
       1,  // Tile size
       16, // Tile shape width

@@ -16,6 +16,8 @@
 #include "GPUExecutionHelper.h"
 #include "ModelSerializers.h"
 #include "Representations.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "onnxmodelparser.h"
 #include "schedule.h"
 #include "tbruntime.h"
@@ -149,6 +151,7 @@ COMPILER_OPTION_SETTER(reorderTreesByDepth, int32_t)
 COMPILER_OPTION_SETTER(statsProfileCSVPath, const char *)
 COMPILER_OPTION_SETTER(pipelineSize, int32_t)
 COMPILER_OPTION_SETTER(numberOfCores, int32_t)
+// COMPILER_OPTION_SETTER(compileToGPU, bool)
 
 extern "C" void Set_tilingType(intptr_t options, int32_t val) {
   TreeBeard::CompilerOptions *optionsPtr =
