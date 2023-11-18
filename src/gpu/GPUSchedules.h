@@ -6,7 +6,8 @@
 namespace mlir {
 namespace decisionforest {
 
-void GPUBasicSchedule(decisionforest::Schedule &schedule, int32_t gridXSize);
+void GPUBasicSchedule(decisionforest::Schedule &schedule,
+                      int32_t rowsPerThreadBlock);
 
 void TahoeSharedForestStrategy(decisionforest::Schedule &schedule,
                                int32_t rowsPerThreadBlock);

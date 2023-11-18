@@ -48,6 +48,12 @@ using mlir::decisionforest::TahoeSharedPartialForestStrategy;
 #define NUM_RUNS 100
 #define VERIFY_RESULT true
 
+std::vector<int32_t> batchSizes{32,   64,   256,  512,  1024,
+                                2048, 4096, 8192, 16384};
+std::vector<int32_t> rowsPerTB{8, 16, 32, 64, 128, 256, 512, 1024, 2048};
+std::vector<int32_t> rowsPerThread{1, 2, 4, 8, 16, 32, 64, 128, 256};
+std::vector<int32_t> numTreeThreads{1, 2, 4, 10, 20, 50, 100};
+
 namespace TreeBeard {
 namespace test {
 
@@ -55,6 +61,49 @@ struct GPUTimes {
   double totalTimePerSample;
   double kernelTimePerSample;
 };
+
+// ===---------------------------------------------------=== //
+//  Helpers
+// ===---------------------------------------------------=== //
+
+template <typename T>
+void populateInputdata(int32_t batchSize,
+                       std::vector<std::vector<T>> &inputData,
+                       TestCSVReader &csvReader) {
+  if (batchSize < (int32_t)csvReader.NumberOfRows()) {
+    for (size_t i = batchSize; i <= csvReader.NumberOfRows(); i += batchSize) {
+      std::vector<T> batch, preds;
+      for (int32_t j = 0; j < batchSize; ++j) {
+        auto rowIndex = (i - batchSize) + j;
+        auto row = csvReader.GetRowOfType<T>(rowIndex);
+        row.pop_back();
+        batch.insert(batch.end(), row.begin(), row.end());
+      }
+      inputData.push_back(batch);
+    }
+  } else {
+    auto numRepeat = batchSize / csvReader.NumberOfRows();
+    auto remainder = batchSize % csvReader.NumberOfRows();
+    std::vector<T> batch, allRows;
+
+    for (size_t j = 0; j < csvReader.NumberOfRows(); ++j) {
+      auto row = csvReader.GetRowOfType<T>(j);
+      row.pop_back();
+      allRows.insert(allRows.end(), row.begin(), row.end());
+    }
+
+    for (size_t i = 0; i < numRepeat; ++i) {
+      batch.insert(batch.end(), allRows.begin(), allRows.end());
+    }
+
+    for (size_t i = 0; i < remainder; ++i) {
+      auto row = csvReader.GetRowOfType<T>(i);
+      row.pop_back();
+      batch.insert(batch.end(), row.begin(), row.end());
+    }
+    inputData.push_back(batch);
+  }
+}
 
 template <typename ThresholdType, typename IndexType, typename ReturnType>
 GPUTimes BenchmarkGPUCodeGeneration(TreeBeard::TreebeardContext &tbContext) {
@@ -78,17 +127,9 @@ GPUTimes BenchmarkGPUCodeGeneration(TreeBeard::TreebeardContext &tbContext) {
                           2000 /*num lines*/);
 
   assert(csvReader.NumberOfRows() == 2000);
+
   std::vector<std::vector<ThresholdType>> inputData;
-  for (size_t i = batchSize; i <= csvReader.NumberOfRows(); i += batchSize) {
-    std::vector<ThresholdType> batch, preds;
-    for (int32_t j = 0; j < batchSize; ++j) {
-      auto rowIndex = (i - batchSize) + j;
-      auto row = csvReader.GetRowOfType<ThresholdType>(rowIndex);
-      row.pop_back();
-      batch.insert(batch.end(), row.begin(), row.end());
-    }
-    inputData.push_back(batch);
-  }
+  populateInputdata<ThresholdType>(batchSize, inputData, csvReader);
 
   std::vector<ReturnType> result(batchSize, -1);
   std::chrono::steady_clock::time_point begin =
@@ -110,6 +151,10 @@ GPUTimes BenchmarkGPUCodeGeneration(TreeBeard::TreebeardContext &tbContext) {
       (double)inferenceRunner.GetKernelExecutionTime() / (double)numSamples;
   return GPUTimes{totalTimePerSample, kernelTimePerSample};
 }
+
+// ===---------------------------------------------------=== //
+//  GPU Autoscheduling Benchmark Helpers
+// ===---------------------------------------------------=== //
 
 template <typename ThresholdType, typename IndexType, typename ReturnType>
 GPUTimes BenchmarkAutoScheduleCodeGeneration(
@@ -212,7 +257,7 @@ void RunAutoScheduleBenchmarks(const std::string &xgboostModelFile,
             << unrollTime.kernelTimePerSample << std::endl;
 }
 
-void RunXGBoostGPUBenchmarks() {
+void RunAllAutoScheduleXGBoostGPUBenchmarks() {
   mlir::decisionforest::measureGpuKernelTime = true;
   std::cout << "model,representation,batch_size,unroll,total,kernel"
             << std::endl;
@@ -236,6 +281,152 @@ void RunXGBoostGPUBenchmarks() {
   RunAutoScheduleBenchmarks<float, float>(
       "year_prediction_msd_xgb_model_save.json", "gpu_sparse", 256);
   mlir::decisionforest::measureGpuKernelTime = false;
+}
+
+// ===---------------------------------------------------=== //
+// GPU Custom Schedule Benchmarks - Helpers
+// ===---------------------------------------------------=== //
+
+template <typename ThresholdType, typename IndexType, typename ReturnType>
+GPUTimes BenchmarkCustomScheduleCodeGeneration(
+    const int32_t batchSize, const int32_t tileSize,
+    ForestCreator &forestCreator, const std::string &modelPath,
+    const std::string &modelGlobalsJSONPath,
+    std::shared_ptr<decisionforest::IModelSerializer> serializer,
+    std::shared_ptr<decisionforest::IRepresentation> representation,
+    std::function<void(decisionforest::Schedule &)> scheduleManipulator) {
+
+  const int32_t tileShapeBitwidth = 16;
+  const int32_t childIndexBitWidth = 16;
+
+  decisionforest::ScheduleManipulationFunctionWrapper
+      scheduleManipulatorWrapper(scheduleManipulator);
+
+  TreeBeard::CompilerOptions options(
+      sizeof(FloatType) * 8, sizeof(FloatType) * 8, true, sizeof(IndexType) * 8,
+      sizeof(IndexType) * 8, sizeof(FloatType) * 8, batchSize, tileSize,
+      tileShapeBitwidth, childIndexBitWidth, TreeBeard::TilingType::kUniform,
+      true, false, &scheduleManipulatorWrapper);
+
+  // [HACK!] Create a shared pointer that points to forestCreator
+  std::shared_ptr<ForestCreator> forestCreatorPtr(&forestCreator,
+                                                  NoOpDeleter());
+
+  TreeBeard::TreebeardContext tbContext(
+      forestCreator.GetContext(), modelPath, modelGlobalsJSONPath, options,
+      representation, serializer, forestCreatorPtr);
+
+  return BenchmarkGPUCodeGeneration<ThresholdType, IndexType, ReturnType>(
+      tbContext);
+}
+
+template <typename ThresholdType, typename ReturnType>
+void RunCustomScheduleBenchmarks(
+    const std::string &configName, const std::string &xgboostModelFile,
+    const std::string representationName, int32_t batchSize,
+    std::function<void(decisionforest::Schedule &)> scheduleManipulator) {
+  using IndexType = int16_t;
+
+  const int32_t tileSize = 1;
+
+  auto xgboostModelPath = GetXGBoostModelPath(xgboostModelFile);
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          xgboostModelPath);
+
+  auto serializer =
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          representationName, modelGlobalsJSONPath);
+  auto representation =
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          representationName);
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+  TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, IndexType, IndexType,
+                               ThresholdType>
+      xgBoostParser(context, xgboostModelPath, serializer, batchSize);
+
+  auto time = BenchmarkCustomScheduleCodeGeneration<ThresholdType, IndexType,
+                                                    ReturnType>(
+      batchSize, tileSize, xgBoostParser, xgboostModelPath,
+      modelGlobalsJSONPath, serializer, representation, scheduleManipulator);
+
+  std::cout << configName << "," << xgboostModelFile << ","
+            << representationName << "," << batchSize << ","
+            << "false"
+            << "," << time.totalTimePerSample << "," << time.kernelTimePerSample
+            << std::endl;
+}
+
+void RunCustomScheduleXGBoostGPUBenchmarks(
+    const std::string &configName, const std::string representationName,
+    int32_t batchSize,
+    std::function<void(decisionforest::Schedule &)> scheduleManipulator) {
+
+  mlir::decisionforest::measureGpuKernelTime = true;
+  std::cout << "config,model,representation,batch_size,unroll,total,kernel"
+            << std::endl;
+
+  RunCustomScheduleBenchmarks<float, float>(
+      configName, "abalone_xgb_model_save.json", representationName, batchSize,
+      scheduleManipulator);
+  RunCustomScheduleBenchmarks<float, float>(
+      configName, "airline_xgb_model_save.json", representationName, batchSize,
+      scheduleManipulator);
+  RunCustomScheduleBenchmarks<float, float>(
+      configName, "airline-ohe_xgb_model_save.json", representationName,
+      batchSize, scheduleManipulator);
+  // RunCustomScheduleBenchmarks<float, float>(configName,
+  // "bosch_xgb_model_save.json",
+  //                                           representationName, batchSize,
+  //                                           scheduleManipulator);
+  RunCustomScheduleBenchmarks<float, int8_t>(
+      configName, "covtype_xgb_model_save.json", representationName, batchSize,
+      scheduleManipulator);
+  RunCustomScheduleBenchmarks<float, float>(
+      configName, "epsilon_xgb_model_save.json", representationName, batchSize,
+      scheduleManipulator);
+  RunCustomScheduleBenchmarks<float, float>(
+      configName, "higgs_xgb_model_save.json", representationName, batchSize,
+      scheduleManipulator);
+  // RunCustomScheduleBenchmarks<float, int8_t>(
+  //     configName, "letters_xgb_model_save.json", representationName,
+  //     batchSize, scheduleManipulator);
+  RunCustomScheduleBenchmarks<float, float>(
+      configName, "year_prediction_msd_xgb_model_save.json", representationName,
+      batchSize, scheduleManipulator);
+  mlir::decisionforest::measureGpuKernelTime = false;
+}
+
+// ===---------------------------------------------------=== //
+// GPU Custom Schedule Benchmarks
+// ===---------------------------------------------------=== //
+
+void RunAllSimpleGPUScheduleBenchmarks() {
+  for (auto batchSize : batchSizes) {
+    for (auto numRowsPerTB : rowsPerTB) {
+      if (numRowsPerTB > batchSize)
+        break;
+
+      auto scheduleManipulator = std::bind(decisionforest::GPUBasicSchedule,
+                                           std::placeholders::_1, numRowsPerTB);
+      std::string configName = "basic-" + std::to_string(numRowsPerTB);
+      RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_array", batchSize,
+                                            scheduleManipulator);
+      RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_sparse", batchSize,
+                                            scheduleManipulator);
+      RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_reorg", batchSize,
+                                            scheduleManipulator);
+    }
+  }
+}
+
+void RunAllCustomScheduleBenchmarks() { RunAllSimpleGPUScheduleBenchmarks(); }
+
+void RunXGBoostGPUBenchmarks() {
+  // RunAllAutoScheduleXGBoostGPUBenchmarks();
+  RunAllCustomScheduleBenchmarks();
 }
 
 } // namespace test

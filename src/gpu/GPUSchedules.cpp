@@ -3,12 +3,13 @@
 namespace mlir {
 namespace decisionforest {
 
-void GPUBasicSchedule(decisionforest::Schedule &schedule, int32_t gridXSize) {
+void GPUBasicSchedule(decisionforest::Schedule &schedule,
+                      int32_t rowsPerThreadBlock) {
   auto &batchIndex = schedule.GetBatchIndex();
   auto &blockIndex = schedule.NewIndexVariable("gridX");
   auto &threadIndex = schedule.NewIndexVariable("blockX");
 
-  schedule.Tile(batchIndex, blockIndex, threadIndex, gridXSize);
+  schedule.Tile(batchIndex, blockIndex, threadIndex, rowsPerThreadBlock);
   blockIndex.SetGPUDimension(decisionforest::IndexVariable::GPUConstruct::Grid,
                              decisionforest::IndexVariable::Dimension::X);
   threadIndex.SetGPUDimension(
