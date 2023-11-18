@@ -13,6 +13,11 @@ void OneTreeAtATimeGPUSchedule(decisionforest::Schedule &schedule,
                                int32_t rowsPerThreadBlock,
                                int32_t rowsPerThread);
 
+void SplitTreesAcrossThreadsGPUSchedule(decisionforest::Schedule &schedule,
+                                        int32_t rowsPerThreadBlock,
+                                        int32_t rowsPerThread,
+                                        int32_t numParallelTreeGroups);
+
 void TahoeSharedForestStrategy(decisionforest::Schedule &schedule,
                                int32_t rowsPerThreadBlock);
 
