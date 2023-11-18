@@ -48,11 +48,15 @@ using mlir::decisionforest::TahoeSharedPartialForestStrategy;
 #define NUM_RUNS 100
 #define VERIFY_RESULT true
 
-std::vector<int32_t> batchSizes{32,   64,   256,  512,  1024,
-                                2048, 4096, 8192, 16384};
-std::vector<int32_t> rowsPerTB{8, 16, 32, 64, 128, 256, 512, 1024, 2048};
-std::vector<int32_t> rowsPerThread{1, 2, 4, 8, 16, 32, 64, 128, 256};
+// std::vector<int32_t> batchSizes{32,   64,   256,  512, 1024, 2048, 4096,
+//                                 8192, 16384};
+// std::vector<int32_t> rowsPerTB{8, 16, 32, 64, 128, 256, 512, 1024, 2048};
+// std::vector<int32_t> rowsPerThread{1, 2, 4, 8, 16, 32, 64, 128, 256};
 std::vector<int32_t> numTreeThreads{1, 2, 4, 10, 20, 50, 100};
+
+std::vector<int32_t> batchSizes{1024, 4096, 8192, 16384};
+std::vector<int32_t> rowsPerTB{64, 256, 512, 1024};
+std::vector<int32_t> rowsPerThread{1, 2, 4, 16};
 
 namespace TreeBeard {
 namespace test {
@@ -422,7 +426,35 @@ void RunAllSimpleGPUScheduleBenchmarks() {
   }
 }
 
-void RunAllCustomScheduleBenchmarks() { RunAllSimpleGPUScheduleBenchmarks(); }
+void RunAllOneTreeAtATimeGPUScheduleBenchmarks() {
+  for (auto batchSize : batchSizes) {
+    for (auto numRowsPerTB : rowsPerTB) {
+      if (numRowsPerTB > batchSize)
+        break;
+      for (auto numRowsPerThread : rowsPerThread) {
+        if (numRowsPerThread > numRowsPerTB)
+          break;
+
+        auto scheduleManipulator =
+            std::bind(decisionforest::OneTreeAtATimeGPUSchedule,
+                      std::placeholders::_1, numRowsPerTB, numRowsPerThread);
+        std::string configName = "oneTree-" + std::to_string(numRowsPerTB) +
+                                 "-" + std::to_string(numRowsPerThread);
+        RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_array",
+                                              batchSize, scheduleManipulator);
+        RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_sparse",
+                                              batchSize, scheduleManipulator);
+        RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_reorg",
+                                              batchSize, scheduleManipulator);
+      }
+    }
+  }
+}
+
+void RunAllCustomScheduleBenchmarks() {
+  RunAllOneTreeAtATimeGPUScheduleBenchmarks();
+  // RunAllSimpleGPUScheduleBenchmarks();
+}
 
 void RunXGBoostGPUBenchmarks() {
   // RunAllAutoScheduleXGBoostGPUBenchmarks();

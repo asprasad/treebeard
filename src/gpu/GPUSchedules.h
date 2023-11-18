@@ -9,6 +9,10 @@ namespace decisionforest {
 void GPUBasicSchedule(decisionforest::Schedule &schedule,
                       int32_t rowsPerThreadBlock);
 
+void OneTreeAtATimeGPUSchedule(decisionforest::Schedule &schedule,
+                               int32_t rowsPerThreadBlock,
+                               int32_t rowsPerThread);
+
 void TahoeSharedForestStrategy(decisionforest::Schedule &schedule,
                                int32_t rowsPerThreadBlock);
 

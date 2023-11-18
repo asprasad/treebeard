@@ -20,6 +20,32 @@ void GPUBasicSchedule(decisionforest::Schedule &schedule,
   // treeIndex.SetTreeWalkUnrollFactor(2);
 }
 
+// Divides the rows among threads (one thread processes one row fully)
+// Processes one tree at a time -- all threads pick the same tree and
+// walk that tree using all their rows.
+void OneTreeAtATimeGPUSchedule(decisionforest::Schedule &schedule,
+                               int32_t rowsPerThreadBlock,
+                               int32_t rowsPerThread) {
+  auto &batchIndex = schedule.GetBatchIndex();
+  auto &treeIndex = schedule.GetTreeIndex();
+  auto &threadBlockIndex = schedule.NewIndexVariable("b0");
+  auto &threadIndexTemp = schedule.NewIndexVariable("b1_temp");
+  auto &threadIndex = schedule.NewIndexVariable("b1_outer");
+  auto &perThreadIndex = schedule.NewIndexVariable("b1_inner");
+
+  schedule.Tile(batchIndex, threadBlockIndex, threadIndexTemp,
+                rowsPerThreadBlock);
+  schedule.Tile(threadIndexTemp, threadIndex, perThreadIndex, rowsPerThread);
+  schedule.Reorder(
+      {&threadBlockIndex, &threadIndex, &treeIndex, &perThreadIndex});
+  threadBlockIndex.SetGPUDimension(
+      decisionforest::IndexVariable::GPUConstruct::Grid,
+      decisionforest::IndexVariable::Dimension::X);
+  threadIndex.SetGPUDimension(
+      decisionforest::IndexVariable::GPUConstruct::ThreadBlock,
+      decisionforest::IndexVariable::Dimension::X);
+}
+
 void TahoeSharedForestStrategy(decisionforest::Schedule &schedule,
                                int32_t rowsPerThreadBlock) {
   auto &batchIndex = schedule.GetBatchIndex();
