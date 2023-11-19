@@ -189,7 +189,21 @@ public:
         math::MathDialect, arith::ArithDialect, func::FuncDialect,
         gpu::GPUDialect>();
 
-    target.addIllegalOp<memref::GlobalOp>();
+    // target.addIllegalOp<memref::GlobalOp>();
+    target.addDynamicallyLegalOp<memref::GlobalOp>([](memref::GlobalOp op) {
+      auto globalType = op.getType();
+      if (!globalType.isa<MemRefType>())
+        return true;
+      auto globalMemrefType = globalType.cast<MemRefType>();
+      auto memorySpaceAttr = globalMemrefType.getMemorySpace();
+      if (!memorySpaceAttr)
+        return true;
+      auto memorySpace =
+          memorySpaceAttr.cast<IntegerAttr>().getValue().getSExtValue();
+      if (memorySpace != 3) // not a shared memory buffer
+        return true;
+      return false;
+    });
 
     RewritePatternSet patterns(&getContext());
     patterns.add<DeleteSharedMemoryGlobalsPattern>(patterns.getContext());

@@ -315,6 +315,25 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
     }
   }
 
+  Value addPrivatizedBufferGlobal(ConversionPatternRewriter &rewriter,
+                                  decisionforest::ReduceOp reduceOp,
+                                  MemRefType privatizedBufferType,
+                                  const std::string &globalName) const {
+    {
+      decisionforest::helpers::SaveAndRestoreInsertionPoint saveIP(rewriter);
+      // Set insertion point to start of module
+      auto module = reduceOp->getParentOfType<ModuleOp>();
+      rewriter.setInsertionPointToStart(module.getBody());
+
+      /*auto privatizedBuffer =*/rewriter.create<memref::GlobalOp>(
+          reduceOp->getLoc(), globalName, rewriter.getStringAttr("private"),
+          privatizedBufferType, rewriter.getUnitAttr(), false, IntegerAttr());
+    }
+    auto getGlobal = rewriter.create<memref::GetGlobalOp>(
+        reduceOp->getLoc(), privatizedBufferType, globalName);
+    return getGlobal;
+  }
+
   Value createOrGetPrivatizedBuffer(Value originalBuffer, Value inputValue,
                                     decisionforest::ReduceOp reduceOp,
                                     const std::vector<scf::ParallelOp> &loops,
@@ -336,8 +355,13 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
         originalBuffer.getType(), inputValue.getType(), reduceOp, loops);
     Value privatizedBuffer;
     if (privatizedBufferType.getMemorySpaceAsInt() != 3) {
-      privatizedBuffer = rewriter.create<memref::AllocaOp>(
-          originalBuffer.getLoc(), privatizedBufferType);
+      // privatizedBuffer = rewriter.create<memref::AllocaOp>(
+      //     originalBuffer.getLoc(), privatizedBufferType);
+      privatizedBuffer = addPrivatizedBufferGlobal(
+          rewriter, reduceOp, privatizedBufferType,
+          "privatizedBuffer_" +
+              std::to_string(
+                  (intptr_t)privatizedBufferType.getAsOpaquePointer()));
       initializePrivatizedBuffer(privatizedBuffer, privatizedBufferType,
                                  rewriter, originalBuffer.getLoc());
     } else {

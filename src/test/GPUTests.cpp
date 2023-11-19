@@ -502,8 +502,8 @@ bool VerifyGPUAutoScheduleCodeGeneration(
   if (!csvPath.empty()) {
     bool res = ValidateModuleOutputAgainstCSVdata<ThresholdType, ReturnType>(
         inferenceRunner, csvPath, batchSize);
-    std::cout << "Kernel execution time: "
-              << inferenceRunner.GetKernelExecutionTime() << std::endl;
+    // std::cout << "Kernel execution time: "
+    //           << inferenceRunner.GetKernelExecutionTime() << std::endl;
     return res;
   }
 
@@ -1383,7 +1383,7 @@ bool Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialF
   std::function<void(decisionforest::Schedule &)> scheduleManipulator =
       std::bind(decisionforest::iterativeCachedPartialForestStrategy_NoCache,
                 std::placeholders::_1, numTreesPerIter, numRowsPerBlock);
-  return VerifyGPUCodeGeneration<ThresholdType, IndexType>(
+  return VerifyGPUCodeGeneration<ThresholdType, IndexType, ReturnType>(
       args, batchSize, xgBoostParser, serializer, representation,
       1,  // Tile size
       16, // Tile shape width
@@ -1430,7 +1430,7 @@ bool Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialF
       std::bind(decisionforest::
                     iterativeCachedPartialForestStrategy_NoCache_SharedReduce,
                 std::placeholders::_1, numTreesPerIter, numRowsPerBlock);
-  return VerifyGPUCodeGeneration<ThresholdType, IndexType>(
+  return VerifyGPUCodeGeneration<ThresholdType, IndexType, ReturnType>(
       args, batchSize, xgBoostParser, serializer, representation,
       1,  // Tile size
       16, // Tile shape width
@@ -2403,7 +2403,7 @@ bool Test_ScalarGPU_XGBoost_AutoScheduleBasic(
 }
 
 bool Test_ScalarGPU_Abalone_AutoScheduleBasic(TestArgs_t &args) {
-  mlir::decisionforest::measureGpuKernelTime = true;
+  // mlir::decisionforest::measureGpuKernelTime = true;
   return Test_ScalarGPU_XGBoost_AutoScheduleBasic<float, int32_t, float>(
       args, "abalone_xgb_model_save.json");
 }
