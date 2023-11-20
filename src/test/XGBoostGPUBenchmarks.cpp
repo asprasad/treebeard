@@ -76,41 +76,93 @@ struct GPUTimes {
 //  Helpers
 // ===---------------------------------------------------=== //
 
+class TestDataReader {
+  std::map<std::string, std::vector<double>> m_benchmarkToDataMap;
+
+  std::vector<double> readDataForBenchmark(const std::string &benchmarkName) {
+
+    auto modelFilePath = GetXGBoostModelPath(benchmarkName);
+    auto csvFilename = modelFilePath + ".test.sampled.csv";
+
+    TestCSVReader csvReader(csvFilename, 2000 /*num lines*/);
+    assert(csvReader.NumberOfRows() == 2000);
+
+    std::vector<double> data;
+    for (size_t i = 0; i < csvReader.NumberOfRows(); ++i) {
+      auto row = csvReader.GetRowOfType<double>(i);
+      data.insert(data.end(), row.begin(), row.end());
+    }
+
+    m_benchmarkToDataMap[benchmarkName] = data;
+    m_benchmarkToDataMap[csvFilename] = data;
+
+    return data;
+  }
+
+public:
+  TestDataReader() {
+    std::list<std::string> benchmarks{
+        "abalone_xgb_model_save.json",
+        "airline_xgb_model_save.json",
+        "airline-ohe_xgb_model_save.json",
+        "bosch_xgb_model_save.json",
+        "covtype_xgb_model_save.json",
+        "epsilon_xgb_model_save.json",
+        "higgs_xgb_model_save.json",
+        "letters_xgb_model_save.json",
+        "year_prediction_msd_xgb_model_save.json"};
+    for (auto &benchmark : benchmarks) {
+      readDataForBenchmark(benchmark);
+    }
+  }
+
+  int32_t getRowSize(const std::string &benchmarkName) {
+    auto iter = m_benchmarkToDataMap.find(benchmarkName);
+    assert(iter != m_benchmarkToDataMap.end());
+    return iter->second.size() / 2000;
+  }
+
+  template <typename T>
+  std::vector<T> getData(const std::string &benchmarkName, int32_t batchNum,
+                         int32_t batchSize) {
+    auto iter = m_benchmarkToDataMap.find(benchmarkName);
+    assert(iter != m_benchmarkToDataMap.end());
+    auto rowSize = iter->second.size() / 2000;
+    auto start = iter->second.begin() + (batchNum * batchSize * rowSize);
+    std::vector<T> batch(start, start + batchSize * rowSize);
+    return batch;
+  }
+};
+
+TestDataReader dataReader;
+
 template <typename T>
 void populateInputdata(int32_t batchSize,
                        std::vector<std::vector<T>> &inputData,
-                       TestCSVReader &csvReader) {
-  if (batchSize < (int32_t)csvReader.NumberOfRows()) {
-    for (size_t i = batchSize; i <= csvReader.NumberOfRows(); i += batchSize) {
-      std::vector<T> batch, preds;
-      for (int32_t j = 0; j < batchSize; ++j) {
-        auto rowIndex = (i - batchSize) + j;
-        auto row = csvReader.GetRowOfType<T>(rowIndex);
-        row.pop_back();
-        batch.insert(batch.end(), row.begin(), row.end());
-      }
+                       const std::string &csvFileName) {
+  const int32_t numRows = 2000;
+
+  if (batchSize < numRows) {
+    for (size_t i = batchSize; i <= numRows; i += batchSize) {
+      auto batchNum = (i / batchSize) - 1;
+      std::vector<T> batch =
+          dataReader.getData<T>(csvFileName, batchNum, batchSize);
       inputData.push_back(batch);
     }
   } else {
-    auto numRepeat = batchSize / csvReader.NumberOfRows();
-    auto remainder = batchSize % csvReader.NumberOfRows();
-    std::vector<T> batch, allRows;
+    auto numRepeat = batchSize / numRows;
+    auto remainder = batchSize % numRows;
+    std::vector<T> batch,
+        allRows = dataReader.getData<T>(csvFileName, 0, numRows);
 
-    for (size_t j = 0; j < csvReader.NumberOfRows(); ++j) {
-      auto row = csvReader.GetRowOfType<T>(j);
-      row.pop_back();
-      allRows.insert(allRows.end(), row.begin(), row.end());
-    }
-
-    for (size_t i = 0; i < numRepeat; ++i) {
+    for (auto i = 0; i < numRepeat; ++i) {
       batch.insert(batch.end(), allRows.begin(), allRows.end());
     }
 
-    for (size_t i = 0; i < remainder; ++i) {
-      auto row = csvReader.GetRowOfType<T>(i);
-      row.pop_back();
-      batch.insert(batch.end(), row.begin(), row.end());
-    }
+    auto rowSize = dataReader.getRowSize(csvFileName);
+    batch.insert(batch.end(), allRows.begin(),
+                 allRows.begin() + remainder * rowSize);
+
     inputData.push_back(batch);
   }
 }
@@ -133,13 +185,10 @@ GPUTimes BenchmarkGPUCodeGeneration(TreeBeard::TreebeardContext &tbContext) {
     assert(validResult && "Result validation failed");
   }
 
-  TestCSVReader csvReader(tbContext.modelPath + ".test.sampled.csv",
-                          2000 /*num lines*/);
-
-  assert(csvReader.NumberOfRows() == 2000);
+  auto csvFilename = tbContext.modelPath + ".test.sampled.csv";
 
   std::vector<std::vector<ThresholdType>> inputData;
-  populateInputdata<ThresholdType>(batchSize, inputData, csvReader);
+  populateInputdata<ThresholdType>(batchSize, inputData, csvFilename);
 
   std::vector<ReturnType> result(batchSize, -1);
   std::chrono::steady_clock::time_point begin =
@@ -387,22 +436,22 @@ void RunCustomScheduleXGBoostGPUBenchmarks(
   RunCustomScheduleBenchmarks<float, float>(
       configName, "airline-ohe_xgb_model_save.json", representationName,
       batchSize, scheduleManipulator);
-  // // RunCustomScheduleBenchmarks<float, float>(configName,
-  // // "bosch_xgb_model_save.json",
-  // //                                           representationName, batchSize,
-  // //                                           scheduleManipulator);
-  // RunCustomScheduleBenchmarks<float, int8_t>(
-  //     configName, "covtype_xgb_model_save.json", representationName,
-  //     batchSize, scheduleManipulator);
+  // RunCustomScheduleBenchmarks<float, float>(configName,
+  // "bosch_xgb_model_save.json",
+  //                                           representationName, batchSize,
+  //                                           scheduleManipulator);
+  RunCustomScheduleBenchmarks<float, int8_t>(
+      configName, "covtype_xgb_model_save.json", representationName, batchSize,
+      scheduleManipulator);
   RunCustomScheduleBenchmarks<float, float>(
       configName, "epsilon_xgb_model_save.json", representationName, batchSize,
       scheduleManipulator);
   RunCustomScheduleBenchmarks<float, float>(
       configName, "higgs_xgb_model_save.json", representationName, batchSize,
       scheduleManipulator);
-  // // RunCustomScheduleBenchmarks<float, int8_t>(
-  // //     configName, "letters_xgb_model_save.json", representationName,
-  // //     batchSize, scheduleManipulator);
+  // RunCustomScheduleBenchmarks<float, int8_t>(
+  //     configName, "letters_xgb_model_save.json", representationName,
+  //     batchSize, scheduleManipulator);
   RunCustomScheduleBenchmarks<float, float>(
       configName, "year_prediction_msd_xgb_model_save.json", representationName,
       batchSize, scheduleManipulator);
@@ -488,10 +537,43 @@ void RunAllTreeParallelizationGPUScheduleBenchmarks() {
   }
 }
 
+void RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks() {
+  for (auto batchSize : batchSizes) {
+    for (auto numRowsPerTB : rowsPerTB) {
+      if (numRowsPerTB > batchSize)
+        break;
+      for (auto numRowsPerThread : rowsPerThread) {
+        if (numRowsPerThread > numRowsPerTB)
+          break;
+        for (auto treeThreads : numTreeThreads) {
+          auto tbSize = numRowsPerTB / numRowsPerThread * treeThreads;
+          if (tbSize > MAX_TB_SIZE)
+            break;
+          auto scheduleManipulator = std::bind(
+              decisionforest::SplitTreesAcrossThreadsAndCacheRowsGPUSchedule,
+              std::placeholders::_1, numRowsPerTB, numRowsPerThread,
+              treeThreads);
+          std::string configName = "treepar-cacherow-" +
+                                   std::to_string(numRowsPerTB) + "-" +
+                                   std::to_string(numRowsPerThread) + "-" +
+                                   std::to_string(treeThreads);
+          RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_array",
+                                                batchSize, scheduleManipulator);
+          RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_sparse",
+                                                batchSize, scheduleManipulator);
+          RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_reorg",
+                                                batchSize, scheduleManipulator);
+        }
+      }
+    }
+  }
+}
+
 void RunAllCustomScheduleBenchmarks() {
   // RunAllSimpleGPUScheduleBenchmarks();
   // RunAllOneTreeAtATimeGPUScheduleBenchmarks();
   RunAllTreeParallelizationGPUScheduleBenchmarks();
+  // RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks();
 }
 
 void RunXGBoostGPUBenchmarks() {
