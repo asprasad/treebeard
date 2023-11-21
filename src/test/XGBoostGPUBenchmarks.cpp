@@ -677,6 +677,36 @@ void RunOneTreeAtATimeAndCacheRowsGPUScheduleBenchmarks() {
   }
 }
 
+void RunOneTreeAtATimeAndCacheTreesGPUScheduleBenchmarks() {
+
+  for (auto batchSize : batchSizes) {
+    for (auto numRowsPerTB : rowsPerTB) {
+      if (numRowsPerTB > batchSize)
+        break;
+      for (auto numRowsPerThread : rowsPerThread) {
+        if (numRowsPerThread > numRowsPerTB)
+          break;
+        auto tbSize = numRowsPerTB / numRowsPerThread;
+        if (tbSize > MAX_TB_SIZE)
+          break;
+
+        auto scheduleManipulator =
+            std::bind(decisionforest::OneTreeAtATimeCacheTreeGPUSchedule,
+                      std::placeholders::_1, numRowsPerTB, numRowsPerThread);
+        std::string configName = "onetree-cachetree-" +
+                                 std::to_string(numRowsPerTB) + "-" +
+                                 std::to_string(numRowsPerThread);
+        RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_array",
+                                              batchSize, scheduleManipulator);
+        RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_sparse",
+                                              batchSize, scheduleManipulator);
+        RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_reorg",
+                                              batchSize, scheduleManipulator);
+      }
+    }
+  }
+}
+
 void RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks() {
 
   for (auto batchSize : batchSizes) {
@@ -729,12 +759,13 @@ void RunAllCustomScheduleBenchmarks() {
   // RunAllOneTreeAtATimeGPUScheduleBenchmarks();
   // RunAllTreeParallelizationGPUScheduleBenchmarks();
   // RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks();
-  RunOneTreeAtATimeAndCacheRowsGPUScheduleBenchmarks();
+  // RunOneTreeAtATimeAndCacheRowsGPUScheduleBenchmarks();
+  RunOneTreeAtATimeAndCacheTreesGPUScheduleBenchmarks();
 }
 
 void RunXGBoostGPUBenchmarks() {
-  RunAllAutoScheduleXGBoostGPUBenchmarks();
-  // RunAllCustomScheduleBenchmarks();
+  // RunAllAutoScheduleXGBoostGPUBenchmarks();
+  RunAllCustomScheduleBenchmarks();
 }
 
 } // namespace test
