@@ -514,6 +514,39 @@ void LowerCacheRowsOpToCPU(ConversionPatternRewriter &rewriter,
   rewriter.replaceOp(op, allocCache.getResult());
 }
 
+int32_t getFieldSize(mlir::Type type) {
+  if (type.isa<mlir::VectorType>()) {
+    auto vecType = type.cast<mlir::VectorType>();
+    return vecType.getNumElements() *
+           vecType.getElementType().getIntOrFloatBitWidth();
+  }
+  return type.getIntOrFloatBitWidth();
+}
+
+void updateOffset(int32_t &currOffset, int32_t elemSize) {
+  auto padding = currOffset % elemSize;
+  if (padding == 0) {
+    return;
+  } else {
+    padding = elemSize - padding;
+    currOffset += padding;
+    return;
+  }
+}
+
+void updateOffsetAndSize(int32_t &currOffset, int32_t elemSize) {
+  auto padding = currOffset % elemSize;
+  if (padding == 0) {
+    currOffset += elemSize;
+    return;
+  } else {
+    padding = elemSize - padding;
+    currOffset += padding;
+    currOffset += elemSize;
+    return;
+  }
+}
+
 } // anonymous namespace
 
 namespace mlir {
@@ -521,6 +554,22 @@ namespace decisionforest {
 // ===---------------------------------------------------=== //
 // Array based representation
 // ===---------------------------------------------------=== //
+
+int32_t ArrayBasedRepresentation::getTypeBitWidth(mlir::Type type) {
+  assert(type.isa<decisionforest::TiledNumericalNodeType>());
+  auto elemType = type.cast<decisionforest::TiledNumericalNodeType>();
+  int32_t size = 0;
+  auto thresholdSize = getFieldSize(elemType.getThresholdFieldType());
+  updateOffsetAndSize(size, thresholdSize);
+  auto featureIndexSize = getFieldSize(elemType.getIndexFieldType());
+  updateOffsetAndSize(size, featureIndexSize);
+  if (elemType.getTileSize() != 1) {
+    auto tileShapeSize = getFieldSize(elemType.getTileShapeType());
+    updateOffsetAndSize(size, tileShapeSize);
+  }
+  updateOffset(size, thresholdSize);
+  return size;
+}
 
 void ArrayBasedRepresentation::InitRepresentation() {
   ensembleConstantToMemrefsMap.clear();
@@ -1030,6 +1079,24 @@ REGISTER_REPRESENTATION(array, constructArrayBasedRepresentation)
 // ===---------------------------------------------------=== //
 // Sparse representation
 // ===---------------------------------------------------=== //
+
+int32_t SparseRepresentation::getTypeBitWidth(mlir::Type type) {
+  assert(type.isa<decisionforest::TiledNumericalNodeType>());
+  auto elemType = type.cast<decisionforest::TiledNumericalNodeType>();
+  int32_t size = 0;
+  auto thresholdSize = getFieldSize(elemType.getThresholdFieldType());
+  updateOffsetAndSize(size, thresholdSize);
+  auto featureIndexSize = getFieldSize(elemType.getIndexFieldType());
+  updateOffsetAndSize(size, featureIndexSize);
+  if (elemType.getTileSize() != 1) {
+    auto tileShapeSize = getFieldSize(elemType.getTileShapeType());
+    updateOffsetAndSize(size, tileShapeSize);
+  }
+  auto childIndexSize = getFieldSize(elemType.getChildIndexType());
+  updateOffsetAndSize(size, childIndexSize);
+  updateOffset(size, thresholdSize);
+  return size;
+}
 
 void SparseRepresentation::InitRepresentation() {
   sparseEnsembleConstantToMemrefsMap.clear();

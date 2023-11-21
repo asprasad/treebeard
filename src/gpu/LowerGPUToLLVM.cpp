@@ -50,6 +50,7 @@
 
 #include "Dialect.h"
 #include "Representations.h"
+#include "TreebeardContext.h"
 
 #include "llvm-c/Target.h"
 #include "llvm-c/TargetMachine.h"
@@ -429,17 +430,19 @@ namespace mlir {
 namespace decisionforest {
 
 std::unique_ptr<mlir::Pass> createConvertGlobalsToWorkgroupAllocationsPass();
-std::unique_ptr<mlir::Pass> createDeleteSharedMemoryGlobalsPass();
+std::unique_ptr<mlir::Pass> createDeleteSharedMemoryGlobalsPass(
+    int32_t &sharedMemorySize,
+    std::shared_ptr<decisionforest::IRepresentation> representation);
 
 void LowerGPUToLLVM(
     mlir::MLIRContext &context, mlir::ModuleOp module,
-    std::shared_ptr<decisionforest::IRepresentation> representation) {
+    std::shared_ptr<decisionforest::IRepresentation> representation,
+    TreeBeard::GPUCompileInfo &compileInfo) {
   // Initialize LLVM NVPTX backend.
   LLVMInitializeNVPTXTarget();
   LLVMInitializeNVPTXTargetInfo();
   LLVMInitializeNVPTXTargetMC();
   LLVMInitializeNVPTXAsmPrinter();
-
   // llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
@@ -450,7 +453,8 @@ void LowerGPUToLLVM(
   // pm.addPass(createMemRefToLLVMPass());
   pm.addNestedPass<gpu::GPUModuleOp>(
       createConvertGlobalsToWorkgroupAllocationsPass());
-  pm.addPass(createDeleteSharedMemoryGlobalsPass());
+  pm.addPass(createDeleteSharedMemoryGlobalsPass(
+      compileInfo.sharedMemoryInBytes, representation));
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
   // pm.addPass(std::make_unique<PrintModulePass>());
   pm.addNestedPass<gpu::GPUModuleOp>(

@@ -155,6 +155,10 @@ struct GPUAutoScheduleOptions {
   bool unrollTreeWalks;
 };
 
+struct GPUCompileInfo {
+  int32_t sharedMemoryInBytes = 0;
+};
+
 void InitializeMLIRContext(mlir::MLIRContext &context);
 
 struct TreebeardContext {
@@ -180,6 +184,7 @@ public:
   std::shared_ptr<mlir::decisionforest::IModelSerializer> serializer = nullptr;
   std::shared_ptr<ForestCreator> forestConstructor = nullptr;
   GPUAutoScheduleOptions gpuScheduleOptions;
+  GPUCompileInfo gpuCompileInfo;
 
   TreebeardContext(
       const std::string &modelFilePath, const std::string &globalsJSONPath,

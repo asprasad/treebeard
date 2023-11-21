@@ -169,6 +169,8 @@ public:
   mlir::Type GetIndexElementType() override { return m_featureIndexType; }
   mlir::Type GetThresholdElementType() override { return m_thresholdType; }
 
+  int32_t getTypeBitWidth(mlir::Type type) override;
+
   // This should never be needed because this representation only
   // supports scalar code generation. Returning a default Type
   // object so that anyone trying to use it crashes.

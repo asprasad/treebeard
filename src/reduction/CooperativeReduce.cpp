@@ -23,6 +23,7 @@
 #include "Dialect.h"
 #include "MemrefTypes.h"
 #include "TreeTilingUtils.h"
+#include "TreebeardContext.h"
 
 #include "GPUSupportUtils.h"
 #include "LIRLoweringHelpers.h"

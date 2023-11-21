@@ -254,6 +254,7 @@ bool CheckGPUModelInitialization_Scalar(TestArgs_t &args,
   auto serializer =
       decisionforest::ConstructGPUModelSerializer(modelGlobalsJSONPath);
 
+  TreeBeard::GPUCompileInfo compileInfo;
   MLIRContext context;
   TreeBeard::InitializeMLIRContext(context);
 
@@ -284,7 +285,8 @@ bool CheckGPUModelInitialization_Scalar(TestArgs_t &args,
   AddGPUModelMemrefGetter_Scalar(module);
   // module->dump();
 
-  mlir::decisionforest::LowerGPUToLLVM(context, module, representation);
+  mlir::decisionforest::LowerGPUToLLVM(context, module, representation,
+                                       compileInfo);
   // module->dump();
 
   GPUInferenceRunnerForTest inferenceRunner(
@@ -845,6 +847,7 @@ bool CheckGPUModelInitialization_ReorgForest(
   // model initialization. So just hard coding those.
   const int32_t batchSize = 32;
 
+  TreeBeard::GPUCompileInfo compileInfo;
   MLIRContext context;
   TreeBeard::InitializeMLIRContext(context);
 
@@ -887,7 +890,8 @@ bool CheckGPUModelInitialization_ReorgForest(
   AddGPUModelMemrefGetter_Reorg(module);
   // module->dump();
 
-  mlir::decisionforest::LowerGPUToLLVM(context, module, representation);
+  mlir::decisionforest::LowerGPUToLLVM(context, module, representation,
+                                       compileInfo);
   // module->dump();
 
   GPUInferenceRunnerForTest inferenceRunner(

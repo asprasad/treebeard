@@ -49,6 +49,7 @@
 
 #include "Dialect.h"
 #include "OpLoweringUtils.h"
+#include "Representations.h"
 
 using namespace mlir;
 
@@ -139,9 +140,15 @@ public:
 };
 
 struct DeleteSharedMemoryGlobalsPattern : public ConversionPattern {
-  DeleteSharedMemoryGlobalsPattern(MLIRContext *ctx)
+  int32_t &m_sharedMemorySize;
+  std::shared_ptr<decisionforest::IRepresentation> m_representation;
+  DeleteSharedMemoryGlobalsPattern(
+      MLIRContext *ctx, int32_t &sharedMemorySize,
+      std::shared_ptr<decisionforest::IRepresentation> representation)
       : ConversionPattern(mlir::memref::GlobalOp::getOperationName(),
-                          1 /*benefit*/, ctx) {}
+                          1 /*benefit*/, ctx),
+        m_sharedMemorySize(sharedMemorySize), m_representation(representation) {
+  }
 
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
@@ -158,6 +165,21 @@ struct DeleteSharedMemoryGlobalsPattern : public ConversionPattern {
         memorySpaceAttr.cast<IntegerAttr>().getValue().getSExtValue();
     if (memorySpace != 3) // not a shared memory buffer
       return mlir::failure();
+
+    if (op->getParentOfType<gpu::GPUModuleOp>()) {
+      int32_t numElems = 1;
+      for (auto dim : globalMemrefType.getShape())
+        numElems *= dim;
+      auto elemType = globalMemrefType.getElementType();
+      if (elemType.isIntOrFloat()) {
+        m_sharedMemorySize += numElems * elemType.getIntOrFloatBitWidth() / 8;
+      } else {
+        auto numBits = m_representation->getTypeBitWidth(elemType);
+        m_sharedMemorySize += numElems * numBits / 8;
+        // std::cout << op << " " << numElems << " " << numBits << "\n";
+      }
+    }
+
     rewriter.eraseOp(op);
     return mlir::success();
   }
@@ -165,11 +187,20 @@ struct DeleteSharedMemoryGlobalsPattern : public ConversionPattern {
 
 class DeleteSharedMemoryGlobals : public ::mlir::OperationPass<ModuleOp> {
 public:
-  DeleteSharedMemoryGlobals()
+  int32_t &m_sharedMemorySize;
+  std::shared_ptr<decisionforest::IRepresentation> m_representation;
+  DeleteSharedMemoryGlobals(
+      int32_t &sharedMemorySize,
+      std::shared_ptr<decisionforest::IRepresentation> representation)
       : ::mlir::OperationPass<ModuleOp>(
-            ::mlir::TypeID::get<DeleteSharedMemoryGlobals>()) {}
+            ::mlir::TypeID::get<DeleteSharedMemoryGlobals>()),
+        m_sharedMemorySize(sharedMemorySize), m_representation(representation) {
+    m_sharedMemorySize = 0;
+  }
   DeleteSharedMemoryGlobals(const DeleteSharedMemoryGlobals &other)
-      : ::mlir::OperationPass<ModuleOp>(other) {}
+      : ::mlir::OperationPass<ModuleOp>(other),
+        m_sharedMemorySize(other.m_sharedMemorySize),
+        m_representation(other.m_representation) {}
 
   ::llvm::StringRef getName() const override {
     return "DeleteSharedMemoryGlobals";
@@ -206,8 +237,9 @@ public:
     });
 
     RewritePatternSet patterns(&getContext());
-    patterns.add<DeleteSharedMemoryGlobalsPattern>(patterns.getContext());
-
+    patterns.add<DeleteSharedMemoryGlobalsPattern>(
+        patterns.getContext(), m_sharedMemorySize, m_representation);
+    // getOperation()->dump();
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns)))) {
       signalPassFailure();
@@ -225,8 +257,11 @@ std::unique_ptr<mlir::Pass> createConvertGlobalsToWorkgroupAllocationsPass() {
   return std::make_unique<ConvertGlobalsToWorkgroupAllocations>();
 }
 
-std::unique_ptr<mlir::Pass> createDeleteSharedMemoryGlobalsPass() {
-  return std::make_unique<DeleteSharedMemoryGlobals>();
+std::unique_ptr<mlir::Pass> createDeleteSharedMemoryGlobalsPass(
+    int32_t &sharedMemorySize,
+    std::shared_ptr<decisionforest::IRepresentation> representation) {
+  return std::make_unique<DeleteSharedMemoryGlobals>(sharedMemorySize,
+                                                     representation);
 }
 
 } // namespace decisionforest

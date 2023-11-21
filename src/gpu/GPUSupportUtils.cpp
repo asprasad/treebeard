@@ -23,6 +23,8 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/Support/Casting.h"
 
+#include "TreebeardContext.h"
+
 #include "GPUSupportUtils.h"
 
 using namespace mlir;

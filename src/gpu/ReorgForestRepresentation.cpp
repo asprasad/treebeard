@@ -838,6 +838,12 @@ void ReorgForestRepresentation::LowerCacheRowsOp(
   LowerCacheRowsOpToGPU(rewriter, op, operands, m_cacheBufferNamesMap);
 }
 
+int32_t ReorgForestRepresentation::getTypeBitWidth(mlir::Type type) {
+  assert(type.isa<decisionforest::ReorgMemrefElementType>());
+  auto elemType = type.cast<decisionforest::ReorgMemrefElementType>();
+  return elemType.getElementType().getIntOrFloatBitWidth();
+}
+
 std::shared_ptr<IRepresentation> ConstructGPUReorgForestRepresentation() {
   return std::make_shared<ReorgForestRepresentation>();
 }

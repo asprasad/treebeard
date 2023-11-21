@@ -77,8 +77,11 @@ mlir::ModuleOp LowerHIRModuleToGPU(mlir::ModuleOp module,
   mlir::decisionforest::ConvertNodeTypeToIndexType(context, module);
   // module->dump();
 
-  mlir::decisionforest::LowerGPUToLLVM(context, module, representation);
+  mlir::decisionforest::LowerGPUToLLVM(context, module, representation,
+                                       tbContext.gpuCompileInfo);
   // module->dump();
+  // std::cout << "Shared memory used: "
+  //           << tbContext.gpuCompileInfo.sharedMemoryInBytes << "\n";
   return module;
 }
 

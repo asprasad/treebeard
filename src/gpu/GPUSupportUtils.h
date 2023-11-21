@@ -22,7 +22,8 @@ void ConvertParallelLoopsToGPU(mlir::MLIRContext &context,
 void OutlineGPUKernels(mlir::MLIRContext &context, mlir::ModuleOp module);
 void LowerGPUToLLVM(
     mlir::MLIRContext &context, mlir::ModuleOp module,
-    std::shared_ptr<decisionforest::IRepresentation> representation);
+    std::shared_ptr<decisionforest::IRepresentation> representation,
+    TreeBeard::GPUCompileInfo &compileInfo);
 } // namespace decisionforest
 } // namespace mlir
 

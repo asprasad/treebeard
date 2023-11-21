@@ -2484,112 +2484,15 @@ TestDescriptor testList[] = {
         Test_TileSize8_Year_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
 };
 
-#else // RUN_ALL_TESTS
+#else  // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Epsilon_TestInputs_4ParallelTreeSets_VectorReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Higgs_TestInputs_4ParallelTreeSets_VectorReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Year_TestInputs_4ParallelTreeSets_VectorReduce),
-
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Abalone_TestInputs_4ParallelTreeSets_AtomicReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Airline_TestInputs_4ParallelTreeSets_AtomicReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_AirlineOHE_TestInputs_4ParallelTreeSets_AtomicReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Covtype_TestInputs_4ParallelTreeSets_AtomicReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Letters_TestInputs_4ParallelTreeSets_AtomicReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Epsilon_TestInputs_4ParallelTreeSets_AtomicReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Higgs_TestInputs_4ParallelTreeSets_AtomicReduce),
-    TEST_LIST_ENTRY(
-        Test_SparseTileSize8_Year_TestInputs_4ParallelTreeSets_AtomicReduce),
-
-#ifdef TREEBEARD_GPU_SUPPORT
-    // GPU Parallelize across trees
-    TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_TwiceLeftRightBalanced_TahoeShdInpMultiRow_FltI16_B32),
-    TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInpMultiRow_FltI16_B32),
-    TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInp_FltI16_B32),
-    TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_TwiceLeftRightBalanced_IterShdPartialForest_FltI16_B32),
-    TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Sparse_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Sparse_Scalar),
-    TEST_LIST_ENTRY(
-        Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Sparse_Scalar_f32i16),
-    TEST_LIST_ENTRY(
-        Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Sparse_Scalar_f32i16),
-    TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Array_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Array_Scalar),
-    TEST_LIST_ENTRY(
-        Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Array_Scalar_f32i16),
-    TEST_LIST_ENTRY(
-        Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Array_Scalar_f32i16),
-    TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Reorg_Scalar),
-    TEST_LIST_ENTRY(Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Reorg_Scalar),
-    TEST_LIST_ENTRY(
-        Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Reorg_Scalar_f32i16),
-    TEST_LIST_ENTRY(
-        Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Reorg_Scalar_f32i16),
-    TEST_LIST_ENTRY(
-        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Array_Scalar_f32i16),
-    TEST_LIST_ENTRY(
-        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Scalar),
-    TEST_LIST_ENTRY(
-        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Scalar_f32i16),
-    TEST_LIST_ENTRY(
-        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Reorg_Scalar),
-    TEST_LIST_ENTRY(
-        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Reorg_Scalar_f32i16),
-    // GPU Tree parallelization tests - Tile size 4
-    TEST_LIST_ENTRY(
-        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Tile4),
-    TEST_LIST_ENTRY(
-        Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Tile4_f32i16),
-    TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SharedReduce_FltI16_B64),
-    TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SpecializedTreeLoop_FltI16_B64),
-    // Tree Parallelization Multi-class tests
-    TEST_LIST_ENTRY(
-        Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache),
-    TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedTrees),
-    TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedRows),
-    TEST_LIST_ENTRY(
-        Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleBasic),
-    TEST_LIST_ENTRY(
-        Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache_SharedReduce),
-
-    TEST_LIST_ENTRY(Test_ScalarGPU_Airline_AutoScheduleBasic),
-    TEST_LIST_ENTRY(Test_ScalarGPU_Abalone_AutoScheduleBasic),
-#endif // TREEBEARD_GPU_SUPPORT
-    TEST_LIST_ENTRY(
-        Test_TileSize8_Abalone_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
-    TEST_LIST_ENTRY(
-        Test_TileSize8_Airline_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
-    TEST_LIST_ENTRY(
-        Test_TileSize8_AirlineOHE_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
-    // TODO_Ashwin Failing due to bug in atomic reduce
-    // TEST_LIST_ENTRY(
-    //     Test_TileSize8_Covtype_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
-    TEST_LIST_ENTRY(
-        Test_TileSize8_Epsilon_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
-    TEST_LIST_ENTRY(
-        Test_TileSize8_Higgs_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
-    TEST_LIST_ENTRY(
-        Test_TileSize8_Letters_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
-    TEST_LIST_ENTRY(
-        Test_TileSize8_Year_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
+    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
+    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_F32I16),
+    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg),
+    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg_F32I16),
+    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep),
+    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep_F32I16),
 };
 #endif // RUN_ALL_TESTS
 
