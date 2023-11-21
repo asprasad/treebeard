@@ -69,6 +69,11 @@ std::vector<int32_t> rowsPerThread{1, 2, 4, 16};
 namespace TreeBeard {
 namespace test {
 
+struct GPUBenchmarkExecState {
+  std::shared_ptr<TreeBeard::TreebeardContext> tbContext;
+  mlir::ModuleOp module;
+};
+
 struct GPUTimes {
   double totalTimePerSample;
   double kernelTimePerSample;
@@ -170,9 +175,9 @@ void populateInputdata(int32_t batchSize,
 }
 
 template <typename ThresholdType, typename IndexType, typename ReturnType>
-GPUTimes BenchmarkGPUCodeGeneration(TreeBeard::TreebeardContext &tbContext) {
+GPUTimes BenchmarkGPUCodeGeneration(mlir::ModuleOp module,
+                                    TreeBeard::TreebeardContext &tbContext) {
 
-  auto module = ConstructGPUModuleFromTreebeardContext(tbContext);
   auto batchSize = tbContext.options.batchSize;
 
   GPUInferenceRunnerForTest inferenceRunner(
@@ -218,7 +223,7 @@ GPUTimes BenchmarkGPUCodeGeneration(TreeBeard::TreebeardContext &tbContext) {
 // ===---------------------------------------------------=== //
 
 template <typename ThresholdType, typename IndexType, typename ReturnType>
-GPUTimes BenchmarkAutoScheduleCodeGeneration(
+GPUBenchmarkExecState CompileAutoScheduleBenchmark(
     const int32_t batchSize, ForestCreator &forestCreator,
     const std::string &modelPath, const std::string &modelGlobalsJSONPath,
     std::shared_ptr<decisionforest::IModelSerializer> serializer,
@@ -236,17 +241,21 @@ GPUTimes BenchmarkAutoScheduleCodeGeneration(
   std::shared_ptr<ForestCreator> forestCreatorPtr(&forestCreator,
                                                   NoOpDeleter());
 
-  TreeBeard::TreebeardContext tbContext(
+  GPUBenchmarkExecState gpuExecInfo;
+  auto tbContext = std::make_shared<TreeBeard::TreebeardContext>(
       forestCreator.GetContext(), modelPath, modelGlobalsJSONPath, options,
       representation, serializer, forestCreatorPtr, &gpuAutoScheduleOptions);
 
-  return BenchmarkGPUCodeGeneration<ThresholdType, IndexType, ReturnType>(
-      tbContext);
+  auto module = ConstructGPUModuleFromTreebeardContext(*tbContext);
+  gpuExecInfo.module = module;
+  gpuExecInfo.tbContext = tbContext;
+
+  return gpuExecInfo;
 }
 
 template <typename ThresholdType, typename IndexType, typename ReturnType>
-GPUTimes BenchmarkXGBoostAutoSchedule(
-    const std::string &xgboostModelFile,
+GPUBenchmarkExecState CompileXGBoostAutoScheduleBenchmark(
+    const std::string &xgboostModelFile, MLIRContext &context,
     TreeBeard::GPUAutoScheduleOptions &gpuAutoScheduleOptions,
     const std::string &representationName, int32_t batchSize) {
   auto xgboostModelPath = GetXGBoostModelPath(xgboostModelFile);
@@ -261,13 +270,11 @@ GPUTimes BenchmarkXGBoostAutoSchedule(
       decisionforest::RepresentationFactory::Get().GetRepresentation(
           representationName);
 
-  MLIRContext context;
-  TreeBeard::InitializeMLIRContext(context);
   TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, IndexType, IndexType,
                                ThresholdType>
       xgBoostParser(context, xgboostModelPath, serializer, batchSize);
-  return BenchmarkAutoScheduleCodeGeneration<ThresholdType, IndexType,
-                                             ReturnType>(
+
+  return CompileAutoScheduleBenchmark<ThresholdType, IndexType, ReturnType>(
       batchSize, xgBoostParser, xgboostModelPath, modelGlobalsJSONPath,
       serializer, representation,
       1,                     // Tile size
@@ -278,69 +285,145 @@ GPUTimes BenchmarkXGBoostAutoSchedule(
 
 template <typename ThresholdType, typename ReturnType, bool cacheRows,
           bool cacheTrees, bool unrollTreeWalk>
-GPUTimes BenchmarkXGBoostAutoSchedule(const std::string &xgboostModelFile,
-                                      const std::string representationName,
-                                      int32_t batchSize, int32_t numRowsPerTB,
-                                      int32_t numRowsPerThread,
-                                      int32_t numTreeThreads,
-                                      int numTreesAtATime) {
+GPUBenchmarkExecState CompileXGBoostAutoScheduleBenchmark(
+    const std::string &xgboostModelFile, MLIRContext &context,
+    const std::string representationName, int32_t batchSize,
+    int32_t numRowsPerTB, int32_t numRowsPerThread, int32_t numTreeThreads,
+    int numTreesAtATime) {
   using IndexType = int16_t;
 
   TreeBeard::GPUAutoScheduleOptions gpuAutoScheduleOptions{
       numRowsPerTB,    numRowsPerThread, -1,         numTreeThreads,
       numTreesAtATime, cacheRows,        cacheTrees, unrollTreeWalk};
 
-  return BenchmarkXGBoostAutoSchedule<ThresholdType, IndexType, ReturnType>(
-      xgboostModelFile, gpuAutoScheduleOptions, representationName, batchSize);
+  return CompileXGBoostAutoScheduleBenchmark<ThresholdType, IndexType,
+                                             ReturnType>(
+      xgboostModelFile, context, gpuAutoScheduleOptions, representationName,
+      batchSize);
 }
 
-template <typename ThresholdType, typename ReturnType>
-void RunAutoScheduleBenchmarks(const std::string &xgboostModelFile,
-                               const std::string representationName,
-                               int32_t batchSize) {
+template <typename ThresholdType, typename ReturnType, bool cacheRows,
+          bool cacheTrees, bool unrollTreeWalk>
+void BenchmarkIfNoSharedMemOverflow(const std::string &modelName,
+                                    const std::string &representationName,
+                                    int32_t batchSize, int32_t numRowsPerTB,
+                                    int32_t numRowsPerThread,
+                                    int32_t numTreeThreads) {
+  using IndexType = int16_t;
 
-  auto noUnrollTime = BenchmarkXGBoostAutoSchedule<ThresholdType, ReturnType,
-                                                   false, false, false>(
-      xgboostModelFile, representationName, batchSize, 64, 8, 2, 1);
-  auto unrollTime = BenchmarkXGBoostAutoSchedule<ThresholdType, ReturnType,
-                                                 false, false, true>(
-      xgboostModelFile, representationName, batchSize, 64, 8, 2, 1);
+  auto xgboostModelFile = modelName + "_xgb_model_save.json";
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+  auto execInfo =
+      CompileXGBoostAutoScheduleBenchmark<ThresholdType, ReturnType, cacheRows,
+                                          cacheTrees, unrollTreeWalk>(
+          xgboostModelFile, context, representationName, batchSize,
+          numRowsPerTB, numRowsPerThread, numTreeThreads, 1);
 
-  std::cout << xgboostModelFile << "," << representationName << "," << batchSize
-            << ","
-            << "false"
-            << "," << noUnrollTime.totalTimePerSample << ","
-            << noUnrollTime.kernelTimePerSample << std::endl;
-  std::cout << xgboostModelFile << "," << representationName << "," << batchSize
-            << ","
-            << "true"
-            << "," << unrollTime.totalTimePerSample << ","
-            << unrollTime.kernelTimePerSample << std::endl;
+  if (execInfo.tbContext->gpuCompileInfo.sharedMemoryInBytes <=
+      MAX_SHMEM_SIZE) {
+
+    auto times =
+        BenchmarkGPUCodeGeneration<ThresholdType, IndexType, ReturnType>(
+            execInfo.module, *execInfo.tbContext);
+
+    std::cout << modelName << "," << representationName << "," << batchSize
+              << "," << numRowsPerTB << "," << numRowsPerThread << ","
+              << numTreeThreads << std::boolalpha << "," << cacheRows << ","
+              << cacheTrees << "," << unrollTreeWalk << ","
+              << times.totalTimePerSample << "," << times.kernelTimePerSample
+              << std::endl;
+  }
+}
+
+template <typename ThresholdType, typename ReturnType, bool unrollTreeWalk>
+void RunAutoScheduleBenchmarks(const std::string &modelName,
+                               const std::string &representationName,
+                               int32_t batchSize, int32_t numRowsPerTB,
+                               int32_t numRowsPerThread,
+                               int32_t numTreeThreads) {
+  BenchmarkIfNoSharedMemOverflow<ThresholdType, ReturnType, false, false,
+                                 unrollTreeWalk>(
+      modelName, representationName, batchSize, numRowsPerTB, numRowsPerThread,
+      numTreeThreads);
+
+  BenchmarkIfNoSharedMemOverflow<ThresholdType, ReturnType, true, false,
+                                 unrollTreeWalk>(
+      modelName, representationName, batchSize, numRowsPerTB, numRowsPerThread,
+      numTreeThreads);
+
+  BenchmarkIfNoSharedMemOverflow<ThresholdType, ReturnType, false, true,
+                                 unrollTreeWalk>(
+      modelName, representationName, batchSize, numRowsPerTB, numRowsPerThread,
+      numTreeThreads);
+
+  BenchmarkIfNoSharedMemOverflow<ThresholdType, ReturnType, true, true,
+                                 unrollTreeWalk>(
+      modelName, representationName, batchSize, numRowsPerTB, numRowsPerThread,
+      numTreeThreads);
 }
 
 void RunAllAutoScheduleXGBoostGPUBenchmarks() {
   mlir::decisionforest::measureGpuKernelTime = true;
-  std::cout << "model,representation,batch_size,unroll,total,kernel"
+  std::cout << "model,representation,batch_size,rowsPerTB,rowsPerT,"
+               "numTreeThreads,cache_rows,cache_trees,unroll,"
+               "total,kernel"
             << std::endl;
 
-  RunAutoScheduleBenchmarks<float, float>("airline_xgb_model_save.json",
-                                          "gpu_sparse", 256);
-  RunAutoScheduleBenchmarks<float, float>("airline_xgb_model_save.json",
-                                          "gpu_sparse", 256);
-  RunAutoScheduleBenchmarks<float, float>("airline-ohe_xgb_model_save.json",
-                                          "gpu_sparse", 256);
-  RunAutoScheduleBenchmarks<float, float>("bosch_xgb_model_save.json",
-                                          "gpu_sparse", 256);
-  RunAutoScheduleBenchmarks<float, int8_t>("covtype_xgb_model_save.json",
-                                           "gpu_sparse", 256);
-  RunAutoScheduleBenchmarks<float, float>("epsilon_xgb_model_save.json",
-                                          "gpu_sparse", 256);
-  RunAutoScheduleBenchmarks<float, float>("higgs_xgb_model_save.json",
-                                          "gpu_sparse", 256);
-  RunAutoScheduleBenchmarks<float, int8_t>("letters_xgb_model_save.json",
-                                           "gpu_sparse", 256);
-  RunAutoScheduleBenchmarks<float, float>(
-      "year_prediction_msd_xgb_model_save.json", "gpu_sparse", 256);
+  for (auto batchSize : batchSizes) {
+    for (auto numRowsPerTB : rowsPerTB) {
+      for (auto numRowsPerThread : rowsPerThread) {
+        for (auto numTreeThreads : numTreeThreads) {
+          for (auto rep : {"gpu_array", "gpu_sparse", "gpu_reorg"}) {
+            RunAutoScheduleBenchmarks<float, float, false>(
+                "airline", rep, batchSize, numRowsPerTB, numRowsPerThread,
+                numTreeThreads);
+            RunAutoScheduleBenchmarks<float, float, false>(
+                "airline-ohe", rep, batchSize, numRowsPerTB, numRowsPerThread,
+                numTreeThreads);
+            RunAutoScheduleBenchmarks<float, int8_t, false>(
+                "covtype", rep, batchSize, numRowsPerTB, numRowsPerThread,
+                numTreeThreads);
+            RunAutoScheduleBenchmarks<float, float, false>(
+                "epsilon", rep, batchSize, numRowsPerTB, numRowsPerThread,
+                numTreeThreads);
+            RunAutoScheduleBenchmarks<float, float, false>(
+                "higgs", rep, batchSize, numRowsPerTB, numRowsPerThread,
+                numTreeThreads);
+            RunAutoScheduleBenchmarks<float, int8_t, false>(
+                "letters", rep, batchSize, numRowsPerTB, numRowsPerThread,
+                numTreeThreads);
+            RunAutoScheduleBenchmarks<float, float, false>(
+                "year_prediction_msd", rep, batchSize, numRowsPerTB,
+                numRowsPerThread, numTreeThreads);
+
+            RunAutoScheduleBenchmarks<float, float, true>(
+                "airline", rep, batchSize, numRowsPerTB, numRowsPerThread,
+                numTreeThreads);
+            RunAutoScheduleBenchmarks<float, float, true>(
+                "airline-ohe", rep, batchSize, numRowsPerTB, numRowsPerThread,
+                numTreeThreads);
+            RunAutoScheduleBenchmarks<float, int8_t, true>(
+                "covtype", rep, batchSize, numRowsPerTB, numRowsPerThread,
+                numTreeThreads);
+            RunAutoScheduleBenchmarks<float, float, true>(
+                "epsilon", rep, batchSize, numRowsPerTB, numRowsPerThread,
+                numTreeThreads);
+            RunAutoScheduleBenchmarks<float, float, true>(
+                "higgs", rep, batchSize, numRowsPerTB, numRowsPerThread,
+                numTreeThreads);
+            RunAutoScheduleBenchmarks<float, int8_t, true>(
+                "letters", rep, batchSize, numRowsPerTB, numRowsPerThread,
+                numTreeThreads);
+            RunAutoScheduleBenchmarks<float, float, true>(
+                "year_prediction_msd", rep, batchSize, numRowsPerTB,
+                numRowsPerThread, numTreeThreads);
+          }
+        }
+      }
+    }
+  }
+
   mlir::decisionforest::measureGpuKernelTime = false;
 }
 
@@ -377,8 +460,10 @@ GPUTimes BenchmarkCustomScheduleCodeGeneration(
       forestCreator.GetContext(), modelPath, modelGlobalsJSONPath, options,
       representation, serializer, forestCreatorPtr);
 
+  auto module = ConstructGPUModuleFromTreebeardContext(tbContext);
+
   return BenchmarkGPUCodeGeneration<ThresholdType, IndexType, ReturnType>(
-      tbContext);
+      module, tbContext);
 }
 
 template <typename ThresholdType, typename ReturnType>
@@ -648,8 +733,8 @@ void RunAllCustomScheduleBenchmarks() {
 }
 
 void RunXGBoostGPUBenchmarks() {
-  // RunAllAutoScheduleXGBoostGPUBenchmarks();
-  RunAllCustomScheduleBenchmarks();
+  RunAllAutoScheduleXGBoostGPUBenchmarks();
+  // RunAllCustomScheduleBenchmarks();
 }
 
 } // namespace test
