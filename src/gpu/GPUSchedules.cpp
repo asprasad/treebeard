@@ -46,6 +46,31 @@ void OneTreeAtATimeGPUSchedule(decisionforest::Schedule &schedule,
       decisionforest::IndexVariable::Dimension::X);
 }
 
+void OneTreeAtATimeCacheRowsGPUSchedule(decisionforest::Schedule &schedule,
+                                        int32_t rowsPerThreadBlock,
+                                        int32_t rowsPerThread) {
+  auto &batchIndex = schedule.GetBatchIndex();
+  auto &treeIndex = schedule.GetTreeIndex();
+  auto &threadBlockIndex = schedule.NewIndexVariable("b0");
+  auto &threadIndexTemp = schedule.NewIndexVariable("b1_temp");
+  auto &threadIndex = schedule.NewIndexVariable("b1_outer");
+  auto &perThreadIndex = schedule.NewIndexVariable("b1_inner");
+
+  schedule.Tile(batchIndex, threadBlockIndex, threadIndexTemp,
+                rowsPerThreadBlock);
+  schedule.Tile(threadIndexTemp, threadIndex, perThreadIndex, rowsPerThread);
+  schedule.Reorder(
+      {&threadBlockIndex, &threadIndex, &treeIndex, &perThreadIndex});
+  threadBlockIndex.SetGPUDimension(
+      decisionforest::IndexVariable::GPUConstruct::Grid,
+      decisionforest::IndexVariable::Dimension::X);
+  threadIndex.SetGPUDimension(
+      decisionforest::IndexVariable::GPUConstruct::ThreadBlock,
+      decisionforest::IndexVariable::Dimension::X);
+
+  schedule.Cache(threadIndex);
+}
+
 void SplitTreesAcrossThreadsGPUSchedule(decisionforest::Schedule &schedule,
                                         int32_t rowsPerThreadBlock,
                                         int32_t rowsPerThread,

@@ -13,6 +13,10 @@ void OneTreeAtATimeGPUSchedule(decisionforest::Schedule &schedule,
                                int32_t rowsPerThreadBlock,
                                int32_t rowsPerThread);
 
+void OneTreeAtATimeCacheRowsGPUSchedule(decisionforest::Schedule &schedule,
+                                        int32_t rowsPerThreadBlock,
+                                        int32_t rowsPerThread);
+
 void SplitTreesAcrossThreadsGPUSchedule(decisionforest::Schedule &schedule,
                                         int32_t rowsPerThreadBlock,
                                         int32_t rowsPerThread,
