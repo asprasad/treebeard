@@ -640,16 +640,6 @@ void RunOneTreeAtATimeAndCacheRowsGPUScheduleBenchmarks() {
         if (tbSize > MAX_TB_SIZE)
           break;
 
-        // Don't run this configuration if the amount of shared memory per TB
-        // is greater than 48kB
-        std::function<bool(const std::string &)> skipBenchmark =
-            [&](const std::string &benchmarkName) {
-              auto numFeatures = dataReader.getRowSize(benchmarkName);
-              auto sharedMemorySize =
-                  numRowsPerTB * numFeatures * sizeof(float);
-              return sharedMemorySize >= MAX_SHMEM_SIZE;
-            };
-
         auto scheduleManipulator =
             std::bind(decisionforest::OneTreeAtATimeCacheRowsGPUSchedule,
                       std::placeholders::_1, numRowsPerTB, numRowsPerThread);
@@ -657,14 +647,11 @@ void RunOneTreeAtATimeAndCacheRowsGPUScheduleBenchmarks() {
                                  std::to_string(numRowsPerTB) + "-" +
                                  std::to_string(numRowsPerThread);
         RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_array",
-                                              batchSize, scheduleManipulator,
-                                              skipBenchmark);
+                                              batchSize, scheduleManipulator);
         RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_sparse",
-                                              batchSize, scheduleManipulator,
-                                              skipBenchmark);
+                                              batchSize, scheduleManipulator);
         RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_reorg",
-                                              batchSize, scheduleManipulator,
-                                              skipBenchmark);
+                                              batchSize, scheduleManipulator);
       }
     }
   }
@@ -775,16 +762,6 @@ void RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks() {
           if (tbSize > MAX_TB_SIZE)
             break;
 
-          // Don't run this configuration if the amount of shared memory per TB
-          // is greater than 48kB
-          std::function<bool(const std::string &)> skipBenchmark =
-              [&](const std::string &benchmarkName) {
-                auto numFeatures = dataReader.getRowSize(benchmarkName);
-                auto sharedMemorySize =
-                    numRowsPerTB * numFeatures * sizeof(float);
-                return sharedMemorySize >= MAX_SHMEM_SIZE;
-              };
-
           auto scheduleManipulator = std::bind(
               decisionforest::SplitTreesAcrossThreadsAndCacheRowsGPUSchedule,
               std::placeholders::_1, numRowsPerTB, numRowsPerThread,
@@ -794,14 +771,11 @@ void RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks() {
                                    std::to_string(numRowsPerThread) + "-" +
                                    std::to_string(treeThreads);
           RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_array",
-                                                batchSize, scheduleManipulator,
-                                                skipBenchmark);
+                                                batchSize, scheduleManipulator);
           RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_sparse",
-                                                batchSize, scheduleManipulator,
-                                                skipBenchmark);
+                                                batchSize, scheduleManipulator);
           RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_reorg",
-                                                batchSize, scheduleManipulator,
-                                                skipBenchmark);
+                                                batchSize, scheduleManipulator);
         }
       }
     }
