@@ -189,6 +189,7 @@ class DeleteSharedMemoryGlobals : public ::mlir::OperationPass<ModuleOp> {
 public:
   int32_t &m_sharedMemorySize;
   std::shared_ptr<decisionforest::IRepresentation> m_representation;
+  const int32_t MAX_SHARED_MEMORY_SIZE = 49152;
   DeleteSharedMemoryGlobals(
       int32_t &sharedMemorySize,
       std::shared_ptr<decisionforest::IRepresentation> representation)
@@ -244,6 +245,11 @@ public:
                                       std::move(patterns)))) {
       signalPassFailure();
       llvm::errs() << "Delete shared memory globals failed.\n";
+    }
+
+    if (m_sharedMemorySize >= MAX_SHARED_MEMORY_SIZE) {
+      llvm::errs() << "Shared memory size exceeds maximum allowed size.\n";
+      signalPassFailure();
     }
   }
 };

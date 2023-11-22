@@ -462,6 +462,10 @@ GPUTimes BenchmarkCustomScheduleCodeGeneration(
 
   auto module = ConstructGPUModuleFromTreebeardContext(tbContext);
 
+  if (tbContext.gpuCompileInfo.sharedMemoryInBytes >= MAX_SHMEM_SIZE) {
+    return GPUTimes{-1, -1};
+  }
+
   return BenchmarkGPUCodeGeneration<ThresholdType, IndexType, ReturnType>(
       module, tbContext);
 }
@@ -578,6 +582,26 @@ void RunAllSimpleGPUScheduleBenchmarks() {
   }
 }
 
+void RunAllSimpleGPUScheduleWithRowCacheBenchmarks() {
+  for (auto batchSize : batchSizes) {
+    for (auto numRowsPerTB : rowsPerTB) {
+      if (numRowsPerTB > batchSize)
+        break;
+
+      auto scheduleManipulator =
+          std::bind(decisionforest::GPUBasicScheduleCacheRows,
+                    std::placeholders::_1, numRowsPerTB);
+      std::string configName = "basic-cacheRow-" + std::to_string(numRowsPerTB);
+      RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_array", batchSize,
+                                            scheduleManipulator);
+      RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_sparse", batchSize,
+                                            scheduleManipulator);
+      RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_reorg", batchSize,
+                                            scheduleManipulator);
+    }
+  }
+}
+
 void RunAllOneTreeAtATimeGPUScheduleBenchmarks() {
   for (auto batchSize : batchSizes) {
     for (auto numRowsPerTB : rowsPerTB) {
@@ -598,37 +622,6 @@ void RunAllOneTreeAtATimeGPUScheduleBenchmarks() {
                                               batchSize, scheduleManipulator);
         RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_reorg",
                                               batchSize, scheduleManipulator);
-      }
-    }
-  }
-}
-
-void RunAllTreeParallelizationGPUScheduleBenchmarks() {
-  for (auto batchSize : batchSizes) {
-    for (auto numRowsPerTB : rowsPerTB) {
-      if (numRowsPerTB > batchSize)
-        break;
-      for (auto numRowsPerThread : rowsPerThread) {
-        if (numRowsPerThread > numRowsPerTB)
-          break;
-        for (auto treeThreads : numTreeThreads) {
-          auto tbSize = numRowsPerTB / numRowsPerThread * treeThreads;
-          if (tbSize > MAX_TB_SIZE)
-            break;
-          auto scheduleManipulator =
-              std::bind(decisionforest::SplitTreesAcrossThreadsGPUSchedule,
-                        std::placeholders::_1, numRowsPerTB, numRowsPerThread,
-                        treeThreads);
-          std::string configName = "treepar-" + std::to_string(numRowsPerTB) +
-                                   "-" + std::to_string(numRowsPerThread) +
-                                   "-" + std::to_string(treeThreads);
-          RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_array",
-                                                batchSize, scheduleManipulator);
-          RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_sparse",
-                                                batchSize, scheduleManipulator);
-          RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_reorg",
-                                                batchSize, scheduleManipulator);
-        }
       }
     }
   }
@@ -707,6 +700,67 @@ void RunOneTreeAtATimeAndCacheTreesGPUScheduleBenchmarks() {
   }
 }
 
+void RunOneTreeAtATimeAndCacheTreesAndRowsGPUScheduleBenchmarks() {
+
+  for (auto batchSize : batchSizes) {
+    for (auto numRowsPerTB : rowsPerTB) {
+      if (numRowsPerTB > batchSize)
+        break;
+      for (auto numRowsPerThread : rowsPerThread) {
+        if (numRowsPerThread > numRowsPerTB)
+          break;
+        auto tbSize = numRowsPerTB / numRowsPerThread;
+        if (tbSize > MAX_TB_SIZE)
+          break;
+
+        auto scheduleManipulator = std::bind(
+            decisionforest::OneTreeAtATimeCacheRowsAndTreesGPUSchedule,
+            std::placeholders::_1, numRowsPerTB, numRowsPerThread);
+        std::string configName = "onetree-cachetreeAndRow-" +
+                                 std::to_string(numRowsPerTB) + "-" +
+                                 std::to_string(numRowsPerThread);
+        RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_array",
+                                              batchSize, scheduleManipulator);
+        RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_sparse",
+                                              batchSize, scheduleManipulator);
+        RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_reorg",
+                                              batchSize, scheduleManipulator);
+      }
+    }
+  }
+}
+
+void RunAllTreeParallelizationGPUScheduleBenchmarks() {
+  for (auto batchSize : batchSizes) {
+    for (auto numRowsPerTB : rowsPerTB) {
+      if (numRowsPerTB > batchSize)
+        break;
+      for (auto numRowsPerThread : rowsPerThread) {
+        if (numRowsPerThread > numRowsPerTB)
+          break;
+        for (auto treeThreads : numTreeThreads) {
+          auto tbSize = numRowsPerTB / numRowsPerThread * treeThreads;
+          if (tbSize > MAX_TB_SIZE)
+            break;
+          auto scheduleManipulator =
+              std::bind(decisionforest::SplitTreesAcrossThreadsGPUSchedule,
+                        std::placeholders::_1, numRowsPerTB, numRowsPerThread,
+                        treeThreads);
+          std::string configName = "treepar-" + std::to_string(numRowsPerTB) +
+                                   "-" + std::to_string(numRowsPerThread) +
+                                   "-" + std::to_string(treeThreads);
+          RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_array",
+                                                batchSize, scheduleManipulator);
+          RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_sparse",
+                                                batchSize, scheduleManipulator);
+          RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_reorg",
+                                                batchSize, scheduleManipulator);
+        }
+      }
+    }
+  }
+}
+
 void RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks() {
 
   for (auto batchSize : batchSizes) {
@@ -754,13 +808,86 @@ void RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks() {
   }
 }
 
+void RunAllTreeParallelizationAndCacheTreesGPUScheduleBenchmarks() {
+
+  for (auto batchSize : batchSizes) {
+    for (auto numRowsPerTB : rowsPerTB) {
+      if (numRowsPerTB > batchSize)
+        break;
+      for (auto numRowsPerThread : rowsPerThread) {
+        if (numRowsPerThread > numRowsPerTB)
+          break;
+        for (auto treeThreads : numTreeThreads) {
+          auto tbSize = numRowsPerTB / numRowsPerThread * treeThreads;
+          if (tbSize > MAX_TB_SIZE)
+            break;
+
+          auto scheduleManipulator = std::bind(
+              decisionforest::SplitTreesAcrossThreadsAndCacheTreesGPUSchedule,
+              std::placeholders::_1, numRowsPerTB, numRowsPerThread,
+              treeThreads);
+          std::string configName = "treepar-cachetree-" +
+                                   std::to_string(numRowsPerTB) + "-" +
+                                   std::to_string(numRowsPerThread) + "-" +
+                                   std::to_string(treeThreads);
+          RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_array",
+                                                batchSize, scheduleManipulator);
+          RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_sparse",
+                                                batchSize, scheduleManipulator);
+          RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_reorg",
+                                                batchSize, scheduleManipulator);
+        }
+      }
+    }
+  }
+}
+
+void RunAllTreeParallelizationCacheTreesAndRowsGPUScheduleBenchmarks() {
+
+  for (auto batchSize : batchSizes) {
+    for (auto numRowsPerTB : rowsPerTB) {
+      if (numRowsPerTB > batchSize)
+        break;
+      for (auto numRowsPerThread : rowsPerThread) {
+        if (numRowsPerThread > numRowsPerTB)
+          break;
+        for (auto treeThreads : numTreeThreads) {
+          auto tbSize = numRowsPerTB / numRowsPerThread * treeThreads;
+          if (tbSize > MAX_TB_SIZE)
+            break;
+
+          auto scheduleManipulator = std::bind(
+              decisionforest::
+                  SplitTreesAcrossThreadsAndCacheTreesAndRowsGPUSchedule,
+              std::placeholders::_1, numRowsPerTB, numRowsPerThread,
+              treeThreads);
+          std::string configName = "treepar-cachetreeAndRows-" +
+                                   std::to_string(numRowsPerTB) + "-" +
+                                   std::to_string(numRowsPerThread) + "-" +
+                                   std::to_string(treeThreads);
+          RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_array",
+                                                batchSize, scheduleManipulator);
+          RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_sparse",
+                                                batchSize, scheduleManipulator);
+          RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_reorg",
+                                                batchSize, scheduleManipulator);
+        }
+      }
+    }
+  }
+}
+
 void RunAllCustomScheduleBenchmarks() {
-  // RunAllSimpleGPUScheduleBenchmarks();
-  // RunAllOneTreeAtATimeGPUScheduleBenchmarks();
-  // RunAllTreeParallelizationGPUScheduleBenchmarks();
-  // RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks();
-  // RunOneTreeAtATimeAndCacheRowsGPUScheduleBenchmarks();
+  RunAllSimpleGPUScheduleBenchmarks();
+  RunAllSimpleGPUScheduleWithRowCacheBenchmarks();
+  RunAllOneTreeAtATimeGPUScheduleBenchmarks();
+  RunAllTreeParallelizationGPUScheduleBenchmarks();
+  RunOneTreeAtATimeAndCacheRowsGPUScheduleBenchmarks();
   RunOneTreeAtATimeAndCacheTreesGPUScheduleBenchmarks();
+  RunOneTreeAtATimeAndCacheTreesAndRowsGPUScheduleBenchmarks();
+  RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks();
+  RunAllTreeParallelizationAndCacheTreesGPUScheduleBenchmarks();
+  RunAllTreeParallelizationCacheTreesAndRowsGPUScheduleBenchmarks();
 }
 
 void RunXGBoostGPUBenchmarks() {
