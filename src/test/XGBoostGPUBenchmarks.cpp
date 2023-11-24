@@ -45,7 +45,7 @@ using mlir::decisionforest::TahoeSharedDataStrategy_Modified;
 using mlir::decisionforest::TahoeSharedForestStrategy;
 using mlir::decisionforest::TahoeSharedPartialForestStrategy;
 
-#define NUM_RUNS 1
+#define NUM_RUNS 100
 #define VERIFY_RESULT true
 const int32_t MAX_TB_SIZE = 1024;
 const int32_t MAX_SHMEM_SIZE = 49152;
@@ -59,7 +59,12 @@ const bool PAD_TREES = true;
 std::vector<int32_t> numTreeThreads{2, 10, 20};
 std::vector<int32_t> batchSizes{4096, 8192, 16384};
 std::vector<int32_t> rowsPerTB{32, 64, 256, 512};
-std::vector<int32_t> rowsPerThread{1, 2, 4, 16};
+std::vector<int32_t> rowsPerThread{
+    1,
+    2,
+    4,
+};
+std::vector<int32_t> tileSizes{4, 8, 16};
 
 // std::vector<int32_t> numTreeThreads{10, 20};
 // std::vector<int32_t> batchSizes{4096};
@@ -375,6 +380,12 @@ void RunAllAutoScheduleXGBoostGPUBenchmarks() {
       for (auto numRowsPerThread : rowsPerThread) {
         for (auto numTreeThreads : numTreeThreads) {
           for (auto rep : {"gpu_array", "gpu_sparse", "gpu_reorg"}) {
+
+            auto threadBlockSize =
+                numRowsPerTB / numRowsPerThread * numTreeThreads;
+            if (threadBlockSize > MAX_TB_SIZE)
+              break;
+
             RunAutoScheduleBenchmarks<float, float, false>(
                 "abalone", rep, batchSize, numRowsPerTB, numRowsPerThread,
                 numTreeThreads);
@@ -479,11 +490,9 @@ GPUTimes BenchmarkCustomScheduleCodeGeneration(
 template <typename ThresholdType, typename ReturnType>
 void RunCustomScheduleBenchmarks(
     const std::string &configName, const std::string &xgboostModelFile,
-    const std::string representationName, int32_t batchSize,
+    const std::string representationName, int32_t batchSize, int32_t tileSize,
     std::function<void(decisionforest::Schedule &)> scheduleManipulator) {
   using IndexType = int16_t;
-
-  const int32_t tileSize = 1;
 
   auto xgboostModelPath = GetXGBoostModelPath(xgboostModelFile);
   auto modelGlobalsJSONPath =
@@ -521,6 +530,7 @@ void RunCustomScheduleXGBoostGPUBenchmarks(
     const std::string &configName, const std::string representationName,
     int32_t batchSize,
     std::function<void(decisionforest::Schedule &)> scheduleManipulator,
+    int32_t tileSize = 1,
     std::function<bool(const std::string &)> skipBenchmark = returnFalse) {
 
   mlir::decisionforest::measureGpuKernelTime = true;
@@ -554,11 +564,11 @@ void RunCustomScheduleXGBoostGPUBenchmarks(
              benchmarks[i] == "letters_xgb_model_save.json");
       RunCustomScheduleBenchmarks<float, int8_t>(configName, benchmarks[i],
                                                  representationName, batchSize,
-                                                 scheduleManipulator);
+                                                 tileSize, scheduleManipulator);
     } else {
       RunCustomScheduleBenchmarks<float, float>(configName, benchmarks[i],
                                                 representationName, batchSize,
-                                                scheduleManipulator);
+                                                tileSize, scheduleManipulator);
     }
   }
 
@@ -788,6 +798,44 @@ void RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks() {
   }
 }
 
+void RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarksTiled() {
+
+  for (auto batchSize : batchSizes) {
+    for (auto numRowsPerTB : rowsPerTB) {
+      if (numRowsPerTB > batchSize)
+        break;
+      for (auto numRowsPerThread : rowsPerThread) {
+        if (numRowsPerThread > numRowsPerTB)
+          break;
+        for (auto treeThreads : numTreeThreads) {
+          auto tbSize = numRowsPerTB / numRowsPerThread * treeThreads;
+          if (tbSize > MAX_TB_SIZE)
+            break;
+          for (auto tileSize : tileSizes) {
+            auto scheduleManipulator = std::bind(
+                decisionforest::SplitTreesAcrossThreadsAndCacheRowsGPUSchedule,
+                std::placeholders::_1, numRowsPerTB, numRowsPerThread,
+                treeThreads);
+            std::string configName =
+                "treepar-cacherow-tiled-" + std::to_string(numRowsPerTB) + "-" +
+                std::to_string(numRowsPerThread) + "-" +
+                std::to_string(treeThreads) + "-" + std::to_string(tileSize);
+            RunCustomScheduleXGBoostGPUBenchmarks(
+                configName, "gpu_array", batchSize, scheduleManipulator,
+                tileSize);
+            RunCustomScheduleXGBoostGPUBenchmarks(
+                configName, "gpu_sparse", batchSize, scheduleManipulator,
+                tileSize);
+            // RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_reorg",
+            //                                       batchSize,
+            //                                       scheduleManipulator);
+          }
+        }
+      }
+    }
+  }
+}
+
 void RunAllTreeParallelizationAndCacheTreesGPUScheduleBenchmarks() {
 
   for (auto batchSize : batchSizes) {
@@ -868,6 +916,7 @@ void RunAllCustomScheduleBenchmarks() {
   RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks();
   RunAllTreeParallelizationAndCacheTreesGPUScheduleBenchmarks();
   RunAllTreeParallelizationCacheTreesAndRowsGPUScheduleBenchmarks();
+  // RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarksTiled();
 }
 
 void RunXGBoostGPUBenchmarks() {
