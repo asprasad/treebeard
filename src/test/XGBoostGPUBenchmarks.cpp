@@ -45,7 +45,7 @@ using mlir::decisionforest::TahoeSharedDataStrategy_Modified;
 using mlir::decisionforest::TahoeSharedForestStrategy;
 using mlir::decisionforest::TahoeSharedPartialForestStrategy;
 
-#define NUM_RUNS 100
+#define NUM_RUNS 1
 #define VERIFY_RESULT true
 const int32_t MAX_TB_SIZE = 1024;
 const int32_t MAX_SHMEM_SIZE = 49152;
@@ -376,6 +376,9 @@ void RunAllAutoScheduleXGBoostGPUBenchmarks() {
         for (auto numTreeThreads : numTreeThreads) {
           for (auto rep : {"gpu_array", "gpu_sparse", "gpu_reorg"}) {
             RunAutoScheduleBenchmarks<float, float, false>(
+                "abalone", rep, batchSize, numRowsPerTB, numRowsPerThread,
+                numTreeThreads);
+            RunAutoScheduleBenchmarks<float, float, false>(
                 "airline", rep, batchSize, numRowsPerTB, numRowsPerThread,
                 numTreeThreads);
             RunAutoScheduleBenchmarks<float, float, false>(
@@ -397,6 +400,9 @@ void RunAllAutoScheduleXGBoostGPUBenchmarks() {
                 "year_prediction_msd", rep, batchSize, numRowsPerTB,
                 numRowsPerThread, numTreeThreads);
 
+            RunAutoScheduleBenchmarks<float, float, true>(
+                "abalone", rep, batchSize, numRowsPerTB, numRowsPerThread,
+                numTreeThreads);
             RunAutoScheduleBenchmarks<float, float, true>(
                 "airline", rep, batchSize, numRowsPerTB, numRowsPerThread,
                 numTreeThreads);
@@ -865,8 +871,8 @@ void RunAllCustomScheduleBenchmarks() {
 }
 
 void RunXGBoostGPUBenchmarks() {
-  // RunAllAutoScheduleXGBoostGPUBenchmarks();
-  RunAllCustomScheduleBenchmarks();
+  RunAllAutoScheduleXGBoostGPUBenchmarks();
+  // RunAllCustomScheduleBenchmarks();
 }
 
 } // namespace test

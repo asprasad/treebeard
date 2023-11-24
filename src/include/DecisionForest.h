@@ -607,13 +607,15 @@ inline std::vector<int32_t> DecisionTree::GetChildIndexArray() {
 
 inline void DecisionTree::IncreaseLeafDepth(int32_t nodeIndex,
                                             int32_t depthIncr) {
-  auto &node = m_nodes.at(nodeIndex);
-  assert(node.IsLeaf());
+  assert(m_nodes[nodeIndex].IsLeaf());
   if (depthIncr == 0)
     return;
-  auto leftChild = this->NewNode(node.threshold, INVALID_NODE_INDEX);
-  auto rightChild = this->NewNode(node.threshold, INVALID_NODE_INDEX);
-  node.featureIndex = 0; // Just some valid feature index
+  auto leftChild =
+      this->NewNode(m_nodes[nodeIndex].threshold, INVALID_NODE_INDEX);
+  auto rightChild =
+      this->NewNode(m_nodes[nodeIndex].threshold, INVALID_NODE_INDEX);
+
+  m_nodes[nodeIndex].featureIndex = 0; // Just some valid feature index
   SetNodeLeftChild(nodeIndex, leftChild);
   SetNodeParent(leftChild, nodeIndex);
   SetNodeRightChild(nodeIndex, rightChild);
@@ -626,16 +628,14 @@ inline void DecisionTree::IncreaseLeafDepth(int32_t nodeIndex,
 
 inline void DecisionTree::MakeAllLeavesSameDepth() {
   auto treeDepth = GetTreeDepth();
-  auto nodeIdx = 0;
-  for (auto &node : m_nodes) {
-    if (!node.IsLeaf()) {
-      ++nodeIdx;
+  auto numNodes = m_nodes.size();
+  for (int32_t nodeIdx = 0; nodeIdx < (int32_t)numNodes; ++nodeIdx) {
+    if (!m_nodes[nodeIdx].IsLeaf()) {
       continue;
     }
-    auto leadDepth = GetDepth(node);
-    auto diff = treeDepth - leadDepth;
+    auto leafDepth = GetDepth(m_nodes[nodeIdx]);
+    auto diff = treeDepth - leafDepth;
     IncreaseLeafDepth(nodeIdx, diff);
-    ++nodeIdx;
   }
 
   // Sanity check
@@ -643,6 +643,8 @@ inline void DecisionTree::MakeAllLeavesSameDepth() {
   for (auto &node : m_nodes) {
     if (node.IsLeaf()) {
       assert(GetDepth(node) == treeDepth);
+    } else {
+      assert(node.featureIndex != -1);
     }
   }
 }
