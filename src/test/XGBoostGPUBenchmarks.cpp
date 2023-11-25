@@ -47,6 +47,7 @@ using mlir::decisionforest::TahoeSharedPartialForestStrategy;
 
 #define NUM_RUNS 100
 #define VERIFY_RESULT true
+const int32_t MIN_TB_SIZE = 32;
 const int32_t MAX_TB_SIZE = 1024;
 const int32_t MAX_SHMEM_SIZE = 49152;
 const bool PAD_TREES = true;
@@ -58,13 +59,12 @@ const bool PAD_TREES = true;
 
 std::vector<int32_t> numTreeThreads{2, 10, 20};
 std::vector<int32_t> batchSizes{4096, 8192, 16384};
-std::vector<int32_t> rowsPerTB{32, 64, 256, 512};
-std::vector<int32_t> rowsPerThread{
-    1,
-    2,
-    4,
-};
-std::vector<int32_t> tileSizes{4, 8, 16};
+std::vector<int32_t> rowsPerTB{32, 64, 256}; //, 512};
+std::vector<int32_t> rowsPerThread{1};       //, 2, 4};
+// TODO_Ashwin the compiler is not currently equiped to handle tile size 16!
+// there are 35357670 tile shapes. We need to change
+// to only compute LUT, tile shape IDs etc for required tile shapes.
+std::vector<int32_t> tileSizes{4, 8}; //, 16};
 
 // std::vector<int32_t> numTreeThreads{10, 20};
 // std::vector<int32_t> batchSizes{4096};
@@ -381,9 +381,10 @@ void RunAllAutoScheduleXGBoostGPUBenchmarks() {
         for (auto numTreeThreads : numTreeThreads) {
           for (auto rep : {"gpu_array", "gpu_sparse", "gpu_reorg"}) {
 
-            auto threadBlockSize =
-                numRowsPerTB / numRowsPerThread * numTreeThreads;
-            if (threadBlockSize > MAX_TB_SIZE)
+            auto tbSize = numRowsPerTB / numRowsPerThread * numTreeThreads;
+            if (tbSize < MIN_TB_SIZE)
+              continue;
+            if (tbSize > MAX_TB_SIZE)
               break;
 
             RunAutoScheduleBenchmarks<float, float, false>(
@@ -650,6 +651,8 @@ void RunOneTreeAtATimeAndCacheRowsGPUScheduleBenchmarks() {
         if (numRowsPerThread > numRowsPerTB)
           break;
         auto tbSize = numRowsPerTB / numRowsPerThread;
+        if (tbSize < MIN_TB_SIZE)
+          continue;
         if (tbSize > MAX_TB_SIZE)
           break;
 
@@ -680,6 +683,8 @@ void RunOneTreeAtATimeAndCacheTreesGPUScheduleBenchmarks() {
         if (numRowsPerThread > numRowsPerTB)
           break;
         auto tbSize = numRowsPerTB / numRowsPerThread;
+        if (tbSize < MIN_TB_SIZE)
+          continue;
         if (tbSize > MAX_TB_SIZE)
           break;
 
@@ -710,6 +715,8 @@ void RunOneTreeAtATimeAndCacheTreesAndRowsGPUScheduleBenchmarks() {
         if (numRowsPerThread > numRowsPerTB)
           break;
         auto tbSize = numRowsPerTB / numRowsPerThread;
+        if (tbSize < MIN_TB_SIZE)
+          continue;
         if (tbSize > MAX_TB_SIZE)
           break;
 
@@ -742,6 +749,8 @@ void RunAllTreeParallelizationGPUScheduleBenchmarks() {
           auto tbSize = numRowsPerTB / numRowsPerThread * treeThreads;
           if (tbSize > MAX_TB_SIZE)
             break;
+          if (tbSize < MIN_TB_SIZE)
+            continue;
           auto scheduleManipulator =
               std::bind(decisionforest::SplitTreesAcrossThreadsGPUSchedule,
                         std::placeholders::_1, numRowsPerTB, numRowsPerThread,
@@ -774,7 +783,8 @@ void RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks() {
           auto tbSize = numRowsPerTB / numRowsPerThread * treeThreads;
           if (tbSize > MAX_TB_SIZE)
             break;
-
+          if (tbSize < MIN_TB_SIZE)
+            continue;
           auto scheduleManipulator = std::bind(
               decisionforest::SplitTreesAcrossThreadsAndCacheRowsGPUSchedule,
               std::placeholders::_1, numRowsPerTB, numRowsPerThread,
@@ -795,6 +805,46 @@ void RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks() {
   }
 }
 
+void RunAllTreeParallelizationGPUScheduleBenchmarksTiled() {
+
+  for (auto batchSize : batchSizes) {
+    for (auto numRowsPerTB : rowsPerTB) {
+      if (numRowsPerTB > batchSize)
+        break;
+      for (auto numRowsPerThread : rowsPerThread) {
+        if (numRowsPerThread > numRowsPerTB)
+          break;
+        for (auto treeThreads : numTreeThreads) {
+          auto tbSize = numRowsPerTB / numRowsPerThread * treeThreads;
+          if (tbSize > MAX_TB_SIZE)
+            break;
+          if (tbSize < MIN_TB_SIZE)
+            continue;
+          for (auto tileSize : tileSizes) {
+            auto scheduleManipulator = std::bind(
+                decisionforest::SplitTreesAcrossThreadsGPUSchedule_Tiling,
+                std::placeholders::_1, numRowsPerTB, numRowsPerThread,
+                treeThreads);
+            std::string configName =
+                "treepar-tiled-" + std::to_string(numRowsPerTB) + "-" +
+                std::to_string(numRowsPerThread) + "-" +
+                std::to_string(treeThreads) + "-" + std::to_string(tileSize);
+            RunCustomScheduleXGBoostGPUBenchmarks(
+                configName, "gpu_array", batchSize, scheduleManipulator,
+                tileSize);
+            RunCustomScheduleXGBoostGPUBenchmarks(
+                configName, "gpu_sparse", batchSize, scheduleManipulator,
+                tileSize);
+            // RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_reorg",
+            //                                       batchSize,
+            //                                       scheduleManipulator);
+          }
+        }
+      }
+    }
+  }
+}
+
 void RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarksTiled() {
 
   for (auto batchSize : batchSizes) {
@@ -808,9 +858,12 @@ void RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarksTiled() {
           auto tbSize = numRowsPerTB / numRowsPerThread * treeThreads;
           if (tbSize > MAX_TB_SIZE)
             break;
+          if (tbSize < MIN_TB_SIZE)
+            continue;
           for (auto tileSize : tileSizes) {
             auto scheduleManipulator = std::bind(
-                decisionforest::SplitTreesAcrossThreadsAndCacheRowsGPUSchedule,
+                decisionforest::
+                    SplitTreesAcrossThreadsAndCacheRowsGPUSchedule_Tiling,
                 std::placeholders::_1, numRowsPerTB, numRowsPerThread,
                 treeThreads);
             std::string configName =
@@ -846,7 +899,8 @@ void RunAllTreeParallelizationAndCacheTreesGPUScheduleBenchmarks() {
           auto tbSize = numRowsPerTB / numRowsPerThread * treeThreads;
           if (tbSize > MAX_TB_SIZE)
             break;
-
+          if (tbSize < MIN_TB_SIZE)
+            continue;
           auto scheduleManipulator = std::bind(
               decisionforest::SplitTreesAcrossThreadsAndCacheTreesGPUSchedule,
               std::placeholders::_1, numRowsPerTB, numRowsPerThread,
@@ -880,7 +934,8 @@ void RunAllTreeParallelizationCacheTreesAndRowsGPUScheduleBenchmarks() {
           auto tbSize = numRowsPerTB / numRowsPerThread * treeThreads;
           if (tbSize > MAX_TB_SIZE)
             break;
-
+          if (tbSize < MIN_TB_SIZE)
+            continue;
           auto scheduleManipulator = std::bind(
               decisionforest::
                   SplitTreesAcrossThreadsAndCacheTreesAndRowsGPUSchedule,
@@ -903,17 +958,18 @@ void RunAllTreeParallelizationCacheTreesAndRowsGPUScheduleBenchmarks() {
 }
 
 void RunAllCustomScheduleBenchmarks() {
-  RunAllSimpleGPUScheduleBenchmarks();
-  RunAllSimpleGPUScheduleWithRowCacheBenchmarks();
-  RunAllOneTreeAtATimeGPUScheduleBenchmarks();
-  RunAllTreeParallelizationGPUScheduleBenchmarks();
-  RunOneTreeAtATimeAndCacheRowsGPUScheduleBenchmarks();
-  RunOneTreeAtATimeAndCacheTreesGPUScheduleBenchmarks();
-  RunOneTreeAtATimeAndCacheTreesAndRowsGPUScheduleBenchmarks();
-  RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks();
-  RunAllTreeParallelizationAndCacheTreesGPUScheduleBenchmarks();
-  RunAllTreeParallelizationCacheTreesAndRowsGPUScheduleBenchmarks();
-  // RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarksTiled();
+  // RunAllSimpleGPUScheduleBenchmarks();
+  // RunAllSimpleGPUScheduleWithRowCacheBenchmarks();
+  // RunAllOneTreeAtATimeGPUScheduleBenchmarks();
+  // RunAllTreeParallelizationGPUScheduleBenchmarks();
+  // RunOneTreeAtATimeAndCacheRowsGPUScheduleBenchmarks();
+  // RunOneTreeAtATimeAndCacheTreesGPUScheduleBenchmarks();
+  // RunOneTreeAtATimeAndCacheTreesAndRowsGPUScheduleBenchmarks();
+  // RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks();
+  // RunAllTreeParallelizationAndCacheTreesGPUScheduleBenchmarks();
+  // RunAllTreeParallelizationCacheTreesAndRowsGPUScheduleBenchmarks();
+  RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarksTiled();
+  RunAllTreeParallelizationGPUScheduleBenchmarksTiled();
 }
 
 void RunXGBoostGPUBenchmarks() {
