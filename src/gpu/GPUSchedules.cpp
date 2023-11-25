@@ -209,7 +209,7 @@ void SplitTreesAcrossThreadsAndCacheRowsGPUSchedule(
       decisionforest::IndexVariable::GPUConstruct::ThreadBlock,
       decisionforest::IndexVariable::Dimension::Y);
 
-  schedule.Cache(threadIndex);
+  schedule.Cache(threadBlockIndex);
 }
 
 void SplitTreesAcrossThreadsAndCacheTreesGPUSchedule(
@@ -282,7 +282,7 @@ void SplitTreesAcrossThreadsAndCacheTreesAndRowsGPUSchedule(
       decisionforest::IndexVariable::Dimension::Y);
 
   schedule.Cache(treeIndexSerial);
-  schedule.Cache(threadIndex);
+  schedule.Cache(threadBlockIndex);
 }
 
 void TahoeSharedForestStrategy(decisionforest::Schedule &schedule,

@@ -542,14 +542,11 @@ void RunCustomScheduleXGBoostGPUBenchmarks(
       "airline-ohe_xgb_model_save.json",
       // "bosch_xgb_model_save.json",
       "covtype_xgb_model_save.json", "epsilon_xgb_model_save.json",
-      "higgs_xgb_model_save.json",
-      // "letters_xgb_model_save.json",
+      "higgs_xgb_model_save.json", "letters_xgb_model_save.json",
       "year_prediction_msd_xgb_model_save.json"};
 
   std::vector<bool> isMultiClass{false, false, false, // false,
-                                 true, false, false,
-                                 // true,
-                                 false};
+                                 true,  false, false, true, false};
 
   for (size_t i = 0; i < benchmarks.size(); ++i) {
     if (skipBenchmark(benchmarks[i])) {
@@ -920,8 +917,8 @@ void RunAllCustomScheduleBenchmarks() {
 }
 
 void RunXGBoostGPUBenchmarks() {
-  RunAllAutoScheduleXGBoostGPUBenchmarks();
-  // RunAllCustomScheduleBenchmarks();
+  // RunAllAutoScheduleXGBoostGPUBenchmarks();
+  RunAllCustomScheduleBenchmarks();
 }
 
 } // namespace test

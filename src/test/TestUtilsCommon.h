@@ -164,11 +164,27 @@ bool ValidateModuleOutputAgainstCSVdata(
 
   std::vector<std::vector<FloatType>> inputData;
   std::vector<std::vector<FloatType>> xgBoostPredictions;
-  for (size_t i = batchSize; i < csvReader.NumberOfRows() - 1; i += batchSize) {
+  if (batchSize <= (int32_t)csvReader.NumberOfRows() - 1) {
+    for (size_t i = batchSize; i < csvReader.NumberOfRows() - 1;
+         i += batchSize) {
+      std::vector<FloatType> batch, preds;
+      for (int32_t j = 0; j < batchSize; ++j) {
+        auto rowIndex = (i - batchSize) + j;
+        auto row = csvReader.GetRowOfType<FloatType>(rowIndex);
+        auto xgBoostPrediction = row.back();
+        row.pop_back();
+        preds.push_back(xgBoostPrediction);
+        batch.insert(batch.end(), row.begin(), row.end());
+      }
+      inputData.push_back(batch);
+      xgBoostPredictions.push_back(preds);
+    }
+  } else {
     std::vector<FloatType> batch, preds;
-    for (int32_t j = 0; j < batchSize; ++j) {
-      auto rowIndex = (i - batchSize) + j;
-      auto row = csvReader.GetRowOfType<FloatType>(rowIndex);
+    int32_t numRows = csvReader.NumberOfRows() - 1;
+    for (auto i = 0; i < batchSize; ++i) {
+      auto index = i % numRows;
+      auto row = csvReader.GetRowOfType<FloatType>(index);
       auto xgBoostPrediction = row.back();
       row.pop_back();
       preds.push_back(xgBoostPrediction);
