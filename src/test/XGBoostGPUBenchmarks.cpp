@@ -60,7 +60,7 @@ const bool PAD_TREES = true;
 std::vector<int32_t> numTreeThreads{2, 10, 20};
 std::vector<int32_t> batchSizes{4096, 8192, 16384};
 std::vector<int32_t> rowsPerTB{32, 64, 256}; //, 512};
-std::vector<int32_t> rowsPerThread{1};       //, 2, 4};
+std::vector<int32_t> rowsPerThread{1, 2, 4};
 // TODO_Ashwin the compiler is not currently equiped to handle tile size 16!
 // there are 35357670 tile shapes. We need to change
 // to only compute LUT, tile shape IDs etc for required tile shapes.
@@ -958,18 +958,18 @@ void RunAllTreeParallelizationCacheTreesAndRowsGPUScheduleBenchmarks() {
 }
 
 void RunAllCustomScheduleBenchmarks() {
-  // RunAllSimpleGPUScheduleBenchmarks();
-  // RunAllSimpleGPUScheduleWithRowCacheBenchmarks();
-  // RunAllOneTreeAtATimeGPUScheduleBenchmarks();
-  // RunAllTreeParallelizationGPUScheduleBenchmarks();
-  // RunOneTreeAtATimeAndCacheRowsGPUScheduleBenchmarks();
-  // RunOneTreeAtATimeAndCacheTreesGPUScheduleBenchmarks();
-  // RunOneTreeAtATimeAndCacheTreesAndRowsGPUScheduleBenchmarks();
-  // RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks();
-  // RunAllTreeParallelizationAndCacheTreesGPUScheduleBenchmarks();
-  // RunAllTreeParallelizationCacheTreesAndRowsGPUScheduleBenchmarks();
-  RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarksTiled();
-  RunAllTreeParallelizationGPUScheduleBenchmarksTiled();
+  RunAllSimpleGPUScheduleBenchmarks();
+  RunAllSimpleGPUScheduleWithRowCacheBenchmarks();
+  RunAllOneTreeAtATimeGPUScheduleBenchmarks();
+  RunAllTreeParallelizationGPUScheduleBenchmarks();
+  RunOneTreeAtATimeAndCacheRowsGPUScheduleBenchmarks();
+  RunOneTreeAtATimeAndCacheTreesGPUScheduleBenchmarks();
+  RunOneTreeAtATimeAndCacheTreesAndRowsGPUScheduleBenchmarks();
+  RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks();
+  RunAllTreeParallelizationAndCacheTreesGPUScheduleBenchmarks();
+  RunAllTreeParallelizationCacheTreesAndRowsGPUScheduleBenchmarks();
+  // RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarksTiled();
+  // RunAllTreeParallelizationGPUScheduleBenchmarksTiled();
 }
 
 void RunXGBoostGPUBenchmarks() {

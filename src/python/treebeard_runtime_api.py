@@ -89,14 +89,14 @@ class TreebeardAPI:
       self.runtime_lib.Set_statsProfileCSVPath.argtypes = [ctypes.c_int64, ctypes.c_char_p]
       self.runtime_lib.Set_statsProfileCSVPath.restype = None
 
-      self.runtime_lib.Set_compileToGPU.argtypes = [ctypes.c_int64, ctypes.c_bool]
-      self.runtime_lib.Set_compileToGPU.restype = None
+      # self.runtime_lib.Set_compileToGPU.argtypes = [ctypes.c_int64, ctypes.c_bool]
+      # self.runtime_lib.Set_compileToGPU.restype = None
 
       self.runtime_lib.SetOneTreeAtATimeSchedule.argtypes = [ctypes.c_int64]
       self.runtime_lib.SetOneTreeAtATimeSchedule.restype = None
 
-      self.runtime_lib.SetBasicGPUSchedule.argtypes = [ctypes.c_int64, ctypes.c_int32]
-      self.runtime_lib.SetBasicGPUSchedule.restype = None
+      # self.runtime_lib.SetBasicGPUSchedule.argtypes = [ctypes.c_int64, ctypes.c_int32]
+      # self.runtime_lib.SetBasicGPUSchedule.restype = None
 
       self.runtime_lib.GenerateLLVMIRForXGBoostModel.argtypes = (ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int64)
       self.runtime_lib.GenerateLLVMIRForXGBoostModel.restype = None

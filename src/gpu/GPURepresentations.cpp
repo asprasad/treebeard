@@ -270,6 +270,149 @@ mlir::gpu::KernelDim3 GetBlockID(mlir::Operation *op) {
   return blockNum;
 }
 
+int32_t getMemrefFlatSize(Value memref) {
+  auto memrefType = memref.getType().cast<MemRefType>();
+  int32_t size = 1;
+  for (auto dim : memrefType.getShape()) {
+    size *= dim;
+  }
+  return size;
+}
+
+MemRefType constructFlatTypeForValue(Value memref) {
+  auto memrefType = memref.getType().cast<MemRefType>();
+  auto elementType = memrefType.getElementType();
+  std::vector<int64_t> shape{getMemrefFlatSize(memref)};
+  auto flatMemrefType =
+      MemRefType::get(shape, elementType, {}, memrefType.getMemorySpaceAsInt());
+  return flatMemrefType;
+}
+
+#define OPTIMIZED_CACHE_ROWS
+
+#ifdef OPTIMIZED_CACHE_ROWS
+void LowerCacheRowsOpToGPU(
+    ConversionPatternRewriter &rewriter, mlir::Operation *op,
+    ArrayRef<Value> operands,
+    std::map<int64_t, std::string> &cacheBufferNamesMap) {
+  auto location = op->getLoc();
+  auto cacheRowsOp = AssertOpIsOfType<decisionforest::CacheInputRowsOp>(op);
+  // Add the required globals to the owning module
+  auto owningModule = cacheRowsOp->getParentOfType<mlir::ModuleOp>();
+  assert(owningModule);
+
+  int64_t cacheId = cacheRowsOp.getCacheID();
+  std::string globalCacheBufferName =
+      std::string("inputRowCache_") + std::to_string(cacheId);
+  // TODO_Ashwin Use the right memory space ID
+  auto cacheBufferType = cacheRowsOp.getType().cast<MemRefType>();
+  if (cacheBufferNamesMap.find(cacheId) == cacheBufferNamesMap.end()) {
+    SaveAndRestoreInsertionPoint saveAndRestoreInsertPoint(rewriter);
+    rewriter.setInsertionPoint(&owningModule.front());
+    rewriter.create<memref::GlobalOp>(
+        location, globalCacheBufferName,
+        /*sym_visibility=*/rewriter.getStringAttr("private"),
+        /*type=*/cacheBufferType,
+        /*initial_value=*/rewriter.getUnitAttr(),
+        /*constant=*/false,
+        /*alignment*/ IntegerAttr());
+    cacheBufferNamesMap[cacheId] = globalCacheBufferName;
+  }
+
+  auto getGlobal = rewriter.create<memref::GetGlobalOp>(
+      location, cacheBufferType, globalCacheBufferName);
+
+  // Load required rows from input memref into the shared memory
+
+  /*
+  startRow = ... [16] // The index of the first row that needs to be cached
+  numElements = ... [40]
+  numThreads =  ... [8]
+  [tid = 0] [tid = 1]
+  buffer = reinterpret_cast<FloatType*>(input)
+  cache = reinterpret_cast<FloatType*>(getGlobal)
+  bufferStartOffset = startRow*num_columns
+  threadOffset = f(threadId.x, threadId.y)
+  __syncthreads()
+  for i = threadOffset : numElements
+      cache[i] = buffer[i+bufferStartOffset]
+  __syncthreads()
+  */
+  CacheInputRowsOpAdaptor cacheInputRowsAdaptor(operands);
+  auto startRow = cacheInputRowsAdaptor.getStartIndex();
+  auto numElements = rewriter.create<arith::ConstantIndexOp>(
+      location, cacheBufferType.getShape()[0] * cacheBufferType.getShape()[1]);
+  auto numColumns = rewriter.create<arith::ConstantIndexOp>(
+      location, cacheBufferType.getShape()[1]);
+  auto startOffset = rewriter.create<arith::MulIOp>(
+      location, startRow, static_cast<Value>(numColumns));
+  // TODO_Ashwin we know all these dimensions are compile time constants. Can we
+  // just const fold? Get the number of threads in the thread block
+  auto owningGPULaunchOp = cacheRowsOp->getParentOfType<gpu::LaunchOp>();
+  assert(owningGPULaunchOp);
+  auto numThreadsXVal =
+      getConstantIntValue(owningGPULaunchOp.getBlockSizeX()).value();
+  auto numThreadsYVal =
+      getConstantIntValue(owningGPULaunchOp.getBlockSizeY()).value();
+  auto numThreadsVal = numThreadsXVal * numThreadsYVal;
+
+  auto numThreadsX =
+      rewriter.create<arith::ConstantIndexOp>(location, numThreadsXVal);
+
+  auto threadNum = owningGPULaunchOp.getThreadIds();
+
+  // TODO_Ashwin everything below assumes that thread blocks are 2D!
+  auto numThreads =
+      rewriter.create<arith::ConstantIndexOp>(location, numThreadsVal);
+
+  auto flatInputType = constructFlatTypeForValue(cacheRowsOp.getData());
+  auto flatInputSize = getMemrefFlatSize(cacheRowsOp.getData());
+
+  auto buffer = rewriter.create<memref::ReinterpretCastOp>(
+      location, flatInputType, cacheRowsOp.getData(), 0 /*offset*/,
+      ArrayRef<int64_t>{flatInputSize} /*sizes*/,
+      ArrayRef<int64_t>{1} /*strides*/);
+
+  auto flatCacheType = constructFlatTypeForValue(getGlobal);
+  auto flatCacheSize = getMemrefFlatSize(getGlobal);
+  auto flatCache = rewriter.create<memref::ReinterpretCastOp>(
+      location, flatCacheType, getGlobal, 0 /*offset*/,
+      ArrayRef<int64_t>{flatCacheSize} /*sizes*/,
+      ArrayRef<int64_t>{1} /*strides*/);
+
+  // index = numThreadsX*threadNum.Y + threadNum.X
+  auto nxTimesTy =
+      rewriter.create<arith::MulIOp>(location, numThreadsX, threadNum.y);
+  auto threadOffset = rewriter.create<arith::AddIOp>(
+      location, static_cast<Value>(nxTimesTy), threadNum.x);
+
+  auto loopStart = threadOffset.getResult();
+  auto loopStop = numElements.getResult();
+  auto loopStep = numThreads.getResult();
+
+  // All threads need to be synchronized before we can start caching
+  rewriter.create<gpu::BarrierOp>(location);
+
+  auto loop = rewriter.create<scf::ForOp>(
+      location, static_cast<Value>(loopStart), static_cast<Value>(loopStop),
+      static_cast<Value>(loopStep));
+  rewriter.setInsertionPointToStart(loop.getBody());
+
+  auto loadIndex = rewriter.create<arith::AddIOp>(
+      location, startOffset.getResult(), loop.getInductionVar());
+  auto value = rewriter.create<memref::LoadOp>(
+      location, buffer, ValueRange{loadIndex.getResult()});
+  rewriter.create<memref::StoreOp>(location, value.getResult(), flatCache,
+                                   ValueRange{loop.getInductionVar()});
+
+  rewriter.setInsertionPointAfter(loop);
+
+  // __syncthreads()
+  rewriter.create<gpu::BarrierOp>(location);
+
+  rewriter.replaceOp(op, static_cast<Value>(getGlobal));
+}
+#else  // OPTIMIZED_CACHE_ROWS
 void LowerCacheRowsOpToGPU(
     ConversionPatternRewriter &rewriter, mlir::Operation *op,
     ArrayRef<Value> operands,
@@ -454,6 +597,7 @@ void LowerCacheRowsOpToGPU(
   // rewriter.create<gpu::BarrierOp>(location);
   rewriter.replaceOp(op, static_cast<Value>(getGlobal));
 }
+#endif // OPTIMIZED_CACHE_ROWS
 
 // NOTE : Assumes Canonicalization pass has been run!
 int64_t GetNumberOfThreadsInThreadBlock(gpu::LaunchOp gpuLaunchOp) {

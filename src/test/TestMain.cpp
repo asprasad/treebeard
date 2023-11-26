@@ -2487,12 +2487,9 @@ TestDescriptor testList[] = {
 #else  // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced),
-    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_F32I16),
-    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg),
-    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_Reorg_F32I16),
-    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep),
-    TEST_LIST_ENTRY(Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep_F32I16),
+    TEST_LIST_ENTRY(Test_InputSharedMem_LeftHeavy),
+    TEST_LIST_ENTRY(Test_InputSharedMem_RightHeavy),
+    TEST_LIST_ENTRY(Test_InputSharedMem_LeftRightAndBalanced),
 };
 #endif // RUN_ALL_TESTS
 
