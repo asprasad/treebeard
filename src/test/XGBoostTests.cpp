@@ -2201,6 +2201,22 @@ bool Test_TileSize8_Abalone_4Pipelined_TestInputs(TestArgs_t &args) {
       true, 4);
 }
 
+void pipelineTreeLoop(Schedule *schedule) {
+  auto &treeIndex = schedule->GetTreeIndex();
+  schedule->Pipeline(treeIndex, 4);
+}
+
+bool Test_TileSize8_Abalone_4PipelinedTrees_TestInputs(TestArgs_t &args) {
+  auto repoPath = GetTreeBeardRepoPath();
+  auto testModelsDir = repoPath + "/xgb_models";
+  auto modelJSONPath = testModelsDir + "/abalone_xgb_model_save.json";
+  auto csvPath = modelJSONPath + ".test.sampled.csv";
+  int32_t tileSize = 8;
+  return Test_SingleTileSize_SingleModel_FloatOnly(
+      args, modelJSONPath, tileSize, false, 16, 16, csvPath, pipelineTreeLoop,
+      true, false, -1);
+}
+
 bool Test_TileSize8_AirlineOHE_TestInputs(TestArgs_t &args) {
   auto repoPath = GetTreeBeardRepoPath();
   auto testModelsDir = repoPath + "/xgb_models";

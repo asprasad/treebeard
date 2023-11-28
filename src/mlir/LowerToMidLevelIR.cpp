@@ -1426,6 +1426,14 @@ struct HighLevelIRToMidLevelIRLoweringPass
   }
 };
 
+struct PrintModulePass
+    : public PassWrapper<PrintModulePass, OperationPass<ModuleOp>> {
+  void runOnOperation() final {
+    auto module = getOperation();
+    module->dump();
+  }
+};
+
 } // anonymous namespace
 
 namespace mlir {
@@ -1440,6 +1448,7 @@ void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext &context,
   mlir::PassManager pm(&context);
   mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
   optPM.addPass(std::make_unique<HighLevelIRToMidLevelIRLoweringPass>());
+  // pm.addPass(std::make_unique<PrintModulePass>());
   AddWalkDecisionTreeOpLoweringPass(optPM);
 
   mlir::GreedyRewriteConfig config;
