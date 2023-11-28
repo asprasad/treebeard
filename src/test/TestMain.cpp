@@ -1630,7 +1630,7 @@ bool Test_SplitSchedule(TestArgs_t &args) {
   return true;
 }
 
-// #define RUN_ALL_TESTS
+#define RUN_ALL_TESTS
 
 #ifdef RUN_ALL_TESTS
 TestDescriptor testList[] = {
