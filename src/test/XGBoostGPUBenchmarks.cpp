@@ -57,7 +57,7 @@ const bool PAD_TREES = true;
 // std::vector<int32_t> rowsPerTB{8, 16, 32, 64, 128, 256, 512, 1024, 2048};
 // std::vector<int32_t> rowsPerThread{1, 2, 4, 8, 16, 32, 64, 128, 256};
 
-std::vector<int32_t> batchSizes{4096, 8192, 16384};
+// std::vector<int32_t> batchSizes{4096, 8192, 16384};
 
 // std::vector<int32_t> numTreeThreads{2, 10}; //, 20, 25};
 // std::vector<int32_t> rowsPerTB{32, 64, 256}; //, 512};
@@ -75,10 +75,10 @@ std::vector<int32_t> tileSizes{4, 8}; //, 16};
 // std::vector<int32_t> interleaveDepth{2, 4};
 
 // airline, higgs
-std::vector<int32_t> numTreeThreads{2, 10, 25};
-std::vector<int32_t> rowsPerTB{32, 64, 256}; //, 512};
-std::vector<int32_t> rowsPerThread{1, 2, 4};
-std::vector<int32_t> interleaveDepth{2};
+// std::vector<int32_t> numTreeThreads{2, 10, 25};
+// std::vector<int32_t> rowsPerTB{32, 64, 256}; //, 512};
+// std::vector<int32_t> rowsPerThread{1, 2, 4};
+// std::vector<int32_t> interleaveDepth{2};
 
 // airline-ohe
 // std::vector<int32_t> numTreeThreads{10, 25, 50}; //, 20, 25};
@@ -92,10 +92,11 @@ std::vector<int32_t> interleaveDepth{2};
 // std::vector<int32_t> rowsPerThread{1};
 // std::vector<int32_t> interleaveDepth{2};
 
-// std::vector<int32_t> batchSizes{4096};
-// std::vector<int32_t> numTreeThreads{10};
-// std::vector<int32_t> rowsPerTB{128};
-// std::vector<int32_t> rowsPerThread{4};
+std::vector<int32_t> batchSizes{16384};
+std::vector<int32_t> numTreeThreads{10};
+std::vector<int32_t> rowsPerTB{32};
+std::vector<int32_t> rowsPerThread{1};
+std::vector<int32_t> interleaveDepth;
 
 namespace TreeBeard {
 namespace test {
@@ -114,6 +115,8 @@ struct GPUTimes {
 //  Helpers
 // ===---------------------------------------------------=== //
 
+bool useSameRowForAllInputs = true;
+
 class TestDataReader {
   std::map<std::string, std::vector<double>> m_benchmarkToDataMap;
 
@@ -127,8 +130,13 @@ class TestDataReader {
 
     std::vector<double> data;
     for (size_t i = 0; i < csvReader.NumberOfRows(); ++i) {
-      auto row = csvReader.GetRowOfType<double>(i);
-      data.insert(data.end(), row.begin(), row.end());
+      if (useSameRowForAllInputs) {
+        auto row = csvReader.GetRowOfType<double>(0);
+        data.insert(data.end(), row.begin(), row.end());
+      } else {
+        auto row = csvReader.GetRowOfType<double>(i);
+        data.insert(data.end(), row.begin(), row.end());
+      }
     }
 
     m_benchmarkToDataMap[benchmarkName] = data;
@@ -565,13 +573,13 @@ void RunCustomScheduleXGBoostGPUBenchmarks(
   //           << std::endl;
 
   std::vector<std::string> benchmarks{
-      // "abalone_xgb_model_save.json",
-      "airline_xgb_model_save.json",
+      "abalone_xgb_model_save.json",
+      // "airline_xgb_model_save.json",
       // "airline-ohe_xgb_model_save.json",
       // // "bosch_xgb_model_save.json",
       // "covtype_xgb_model_save.json",
       // "epsilon_xgb_model_save.json",
-      "higgs_xgb_model_save.json",
+      // "higgs_xgb_model_save.json",
       // "letters_xgb_model_save.json",
       // "year_prediction_msd_xgb_model_save.json"
   };
@@ -825,10 +833,12 @@ void RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks() {
                                    std::to_string(treeThreads);
           RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_array",
                                                 batchSize, scheduleManipulator);
-          RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_sparse",
-                                                batchSize, scheduleManipulator);
-          RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_reorg",
-                                                batchSize, scheduleManipulator);
+          // RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_sparse",
+          //                                       batchSize,
+          //                                       scheduleManipulator);
+          // RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_reorg",
+          //                                       batchSize,
+          //                                       scheduleManipulator);
         }
       }
     }
@@ -1074,7 +1084,7 @@ void RunAllCustomScheduleBenchmarks() {
   // RunOneTreeAtATimeAndCacheTreesAndRowsGPUScheduleBenchmarks();
   // RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks();
   RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks();
-  RunAllTreeParallelizationCacheRowsAndInterleaveTreesGPUScheduleBenchmarks();
+  // RunAllTreeParallelizationCacheRowsAndInterleaveTreesGPUScheduleBenchmarks();
   // RunAllTreeParallelizationCacheRowsAndInterleaveRowsGPUScheduleBenchmarks();
   // RunAllTreeParallelizationAndCacheTreesGPUScheduleBenchmarks();
   // RunAllTreeParallelizationCacheTreesAndRowsGPUScheduleBenchmarks();
