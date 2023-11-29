@@ -57,14 +57,40 @@ const bool PAD_TREES = true;
 // std::vector<int32_t> rowsPerTB{8, 16, 32, 64, 128, 256, 512, 1024, 2048};
 // std::vector<int32_t> rowsPerThread{1, 2, 4, 8, 16, 32, 64, 128, 256};
 
-std::vector<int32_t> numTreeThreads{2, 10, 25}; //, 20, 25};
 std::vector<int32_t> batchSizes{4096, 8192, 16384};
-std::vector<int32_t> rowsPerTB{32, 64, 256}; //, 512};
-std::vector<int32_t> rowsPerThread{1, 2, 4};
+
+// std::vector<int32_t> numTreeThreads{2, 10}; //, 20, 25};
+// std::vector<int32_t> rowsPerTB{32, 64, 256}; //, 512};
+// std::vector<int32_t> rowsPerThread{1, 2, 4};
+
 // TODO_Ashwin the compiler is not currently equiped to handle tile size 16!
 // there are 35357670 tile shapes. We need to change
 // to only compute LUT, tile shape IDs etc for required tile shapes.
 std::vector<int32_t> tileSizes{4, 8}; //, 16};
+
+// abalone
+// std::vector<int32_t> numTreeThreads{2, 10, 25};
+// std::vector<int32_t> rowsPerTB{32, 64, 256}; //, 512};
+// std::vector<int32_t> rowsPerThread{1, 2, 4};
+// std::vector<int32_t> interleaveDepth{2, 4};
+
+// airline, higgs
+std::vector<int32_t> numTreeThreads{2, 10, 25};
+std::vector<int32_t> rowsPerTB{32, 64, 256}; //, 512};
+std::vector<int32_t> rowsPerThread{1, 2, 4};
+std::vector<int32_t> interleaveDepth{2};
+
+// airline-ohe
+// std::vector<int32_t> numTreeThreads{10, 25, 50}; //, 20, 25};
+// std::vector<int32_t> rowsPerTB{4, 8, 16};
+// std::vector<int32_t> rowsPerThread{1};
+// std::vector<int32_t> interleaveDepth{2, 4};
+
+// epsilon
+// std::vector<int32_t> numTreeThreads{25, 50}; //, 20, 25};
+// std::vector<int32_t> rowsPerTB{4};
+// std::vector<int32_t> rowsPerThread{1};
+// std::vector<int32_t> interleaveDepth{2};
 
 // std::vector<int32_t> batchSizes{4096};
 // std::vector<int32_t> numTreeThreads{10};
@@ -539,13 +565,14 @@ void RunCustomScheduleXGBoostGPUBenchmarks(
   //           << std::endl;
 
   std::vector<std::string> benchmarks{
-      "abalone_xgb_model_save.json",
-      // "airline_xgb_model_save.json",
+      // "abalone_xgb_model_save.json",
+      "airline_xgb_model_save.json",
       // "airline-ohe_xgb_model_save.json",
       // // "bosch_xgb_model_save.json",
       // "covtype_xgb_model_save.json",
       // "epsilon_xgb_model_save.json",
-      // "higgs_xgb_model_save.json", "letters_xgb_model_save.json",
+      "higgs_xgb_model_save.json",
+      // "letters_xgb_model_save.json",
       // "year_prediction_msd_xgb_model_save.json"
   };
 
@@ -809,7 +836,6 @@ void RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks() {
 }
 
 void RunAllTreeParallelizationCacheRowsAndInterleaveTreesGPUScheduleBenchmarks() {
-
   for (auto batchSize : batchSizes) {
     for (auto numRowsPerTB : rowsPerTB) {
       if (numRowsPerTB > batchSize)
@@ -823,21 +849,24 @@ void RunAllTreeParallelizationCacheRowsAndInterleaveTreesGPUScheduleBenchmarks()
             break;
           if (tbSize < MIN_TB_SIZE)
             continue;
-          auto scheduleManipulator = std::bind(
-              decisionforest::
-                  SplitTreesAcrossThreadsCacheRowsAndInterleaveTreesGPUSchedule,
-              std::placeholders::_1, numRowsPerTB, numRowsPerThread,
-              treeThreads, 4);
-          std::string configName = "treepar-cacherow-interleavetrees-" +
-                                   std::to_string(numRowsPerTB) + "-" +
-                                   std::to_string(numRowsPerThread) + "-" +
-                                   std::to_string(treeThreads) + "-4";
-          RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_array",
-                                                batchSize, scheduleManipulator);
-          RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_sparse",
-                                                batchSize, scheduleManipulator);
-          RunCustomScheduleXGBoostGPUBenchmarks(configName, "gpu_reorg",
-                                                batchSize, scheduleManipulator);
+          for (auto depth : interleaveDepth) {
+            auto scheduleManipulator = std::bind(
+                decisionforest::
+                    SplitTreesAcrossThreadsCacheRowsAndInterleaveTreesGPUSchedule,
+                std::placeholders::_1, numRowsPerTB, numRowsPerThread,
+                treeThreads, depth);
+            std::string configName = "treepar-cacherow-interleavetrees-" +
+                                     std::to_string(numRowsPerTB) + "-" +
+                                     std::to_string(numRowsPerThread) + "-" +
+                                     std::to_string(treeThreads) + "-" +
+                                     std::to_string(depth);
+            RunCustomScheduleXGBoostGPUBenchmarks(
+                configName, "gpu_array", batchSize, scheduleManipulator);
+            RunCustomScheduleXGBoostGPUBenchmarks(
+                configName, "gpu_sparse", batchSize, scheduleManipulator);
+            RunCustomScheduleXGBoostGPUBenchmarks(
+                configName, "gpu_reorg", batchSize, scheduleManipulator);
+          }
         }
       }
     }
