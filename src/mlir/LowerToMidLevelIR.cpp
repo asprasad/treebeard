@@ -841,6 +841,7 @@ struct PredictForestOpLowering : public ConversionPattern {
             loop.getBody()->getArguments()[1]);
         rewriter.create<scf::YieldOp>(location,
                                       static_cast<Value>(accumulatedValue));
+        treeIndices.pop_back();
       }
 
       Value treeIndex =

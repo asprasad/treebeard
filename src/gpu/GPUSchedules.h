@@ -41,6 +41,15 @@ void SplitTreesAcrossThreadsAndCacheRowsGPUSchedule(
     decisionforest::Schedule &schedule, int32_t rowsPerThreadBlock,
     int32_t rowsPerThread, int32_t numParallelTreeGroups);
 
+void SplitTreesAcrossThreadsCacheRowsAndInterleaveTreesGPUSchedule(
+    decisionforest::Schedule &schedule, int32_t rowsPerThreadBlock,
+    int32_t rowsPerThread, int32_t numParallelTreeGroups,
+    int32_t numTreesToInterleave);
+
+void SplitTreesAcrossThreadsCacheRowsAndInterleaveRowsGPUSchedule(
+    decisionforest::Schedule &schedule, int32_t rowsPerThreadBlock,
+    int32_t rowsPerThread, int32_t numParallelTreeGroups);
+
 void SplitTreesAcrossThreadsAndCacheRowsGPUSchedule_Tiling(
     decisionforest::Schedule &schedule, int32_t rowsPerThreadBlock,
     int32_t rowsPerThread, int32_t numParallelTreeGroups);
