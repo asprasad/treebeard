@@ -325,6 +325,7 @@ bool Test_TileSize8_CovType_TestInputs(TestArgs_t &args);
 bool Test_TileSize8_CovType_4Pipelined_TestInputs(TestArgs_t &args);
 
 bool Test_TileSize8_Abalone_4PipelinedTrees_TestInputs(TestArgs_t &args);
+bool Test_TileSize8_Abalone_PipelinedTreesPeeling_TestInputs(TestArgs_t &args);
 
 // Tiled schedule test
 bool Test_TileSize8_Abalone_TestInputs_TiledSchedule(TestArgs_t &args);
@@ -2064,6 +2065,7 @@ TestDescriptor testList[] = {
     TEST_LIST_ENTRY(Test_SparseTileSize8_Pipelined_Epsilon),
 
     TEST_LIST_ENTRY(Test_TileSize8_Abalone_4PipelinedTrees_TestInputs),
+    TEST_LIST_ENTRY(Test_TileSize8_Abalone_PipelinedTreesPeeling_TestInputs),
 
     // Hybrid Tiling
     TEST_LIST_ENTRY(Test_WalkPeeling_BalancedTree_TileSize2),
@@ -2491,7 +2493,7 @@ TestDescriptor testList[] = {
 #else  // RUN_ALL_TESTS
 
 TestDescriptor testList[] = {
-    TEST_LIST_ENTRY(Test_TileSize8_Abalone_4PipelinedTrees_TestInputs),
+    TEST_LIST_ENTRY(Test_TileSize8_Abalone_PipelinedTreesPeeling_TestInputs),
 };
 #endif // RUN_ALL_TESTS
 

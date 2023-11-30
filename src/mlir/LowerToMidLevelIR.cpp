@@ -841,15 +841,14 @@ struct PredictForestOpLowering : public ConversionPattern {
             loop.getBody()->getArguments()[1]);
         rewriter.create<scf::YieldOp>(location,
                                       static_cast<Value>(accumulatedValue));
-        treeIndices.pop_back();
       }
 
-      Value treeIndex =
-          decisionforest::SumOfValues(rewriter, location, treeIndices);
-      // Generate the store back in to the result memref
-      auto accumulatedValue = loop.getResults()[0];
-      GenerateResultReduction(rewriter, location, state, accumulatedValue,
-                              rowIndex, treeIndex);
+      if (!state.isMultiClass) {
+        // Generate the store back in to the result memref
+        auto accumulatedValue = loop.getResults()[0];
+        GenerateResultReduction(rewriter, location, state, accumulatedValue,
+                                rowIndex, Value{});
+      }
 
       if (peeledLoopStart < range.m_stop) {
         stopConst =
@@ -876,11 +875,11 @@ struct PredictForestOpLowering : public ConversionPattern {
                                         static_cast<Value>(accumulatedValue));
         }
 
-        Value treeIndex =
-            decisionforest::SumOfValues(rewriter, location, treeIndices);
-        Value accumulatedValue = peeledLoop.getResults()[0];
-        GenerateResultReduction(rewriter, location, state, accumulatedValue,
-                                rowIndex, treeIndex);
+        if (!state.isMultiClass) {
+          Value accumulatedValue = peeledLoop.getResults()[0];
+          GenerateResultReduction(rewriter, location, state, accumulatedValue,
+                                  rowIndex, Value{});
+        }
       }
     } else {
       // Generate leaf loop for tree index var
