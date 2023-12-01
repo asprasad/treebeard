@@ -95,12 +95,14 @@ extern "C" void DeleteCompilerOptions(intptr_t options) {
   delete optionsPtr;
 }
 
+
 #define COMPILER_OPTION_SETTER(propName, propType) \
 extern "C" void Set_##propName(intptr_t options, propType val) { \
   TreeBeard::CompilerOptions *optionsPtr = reinterpret_cast<TreeBeard::CompilerOptions*>(options);  \
   optionsPtr->propName = reinterpret_cast<propType>(val); \
 } 
 
+COMPILER_OPTION_SETTER(numberOfFeatures, int32_t);
 COMPILER_OPTION_SETTER(batchSize, int32_t)
 COMPILER_OPTION_SETTER(tileSize, int32_t)
 
@@ -188,7 +190,7 @@ extern "C" void CreateLLVMIRForONNXModel(const char *modelPath, const char* llvm
   TreeBeard::ConvertONNXModelToLLVMIR(tbContext, llvmIrPath);
 }
 
-extern "C" intptr_t CreateInferenceRunnerForONNXModelInputs(
+extern "C" intptr_t CreateInferenceRunnerForONNXModelInputs(int32_t numFeatures, 
     int64_t inputAndThresholdSize, int64_t numNodes, const char *predTransform,
     double baseValue, const int64_t *treeIds, const int64_t *nodeIds,
     const int64_t *featureIds, void *thresholds, const int64_t *leftChildIds,
@@ -215,6 +217,7 @@ extern "C" intptr_t CreateInferenceRunnerForONNXModelInputs(
     auto onnxModelConverter = TreeBeard::ONNXModelConverter<double>(
     tbContext.serializer,
     context,
+    numFeatures,
     baseValue,
     GetPredictionTransformation(predTransform),
     mlir::arith::CmpFPredicate::ULE, // TODO - Hardcoded for now
@@ -240,6 +243,7 @@ extern "C" intptr_t CreateInferenceRunnerForONNXModelInputs(
     auto onnxModelConverter = TreeBeard::ONNXModelConverter<float>(
     tbContext.serializer,
     context,
+    numFeatures,
     baseValue,
     GetPredictionTransformation(predTransform),
     mlir::arith::CmpFPredicate::ULE, // TODO - Hardcoded for now

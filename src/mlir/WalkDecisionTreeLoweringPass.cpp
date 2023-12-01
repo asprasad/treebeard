@@ -278,7 +278,7 @@ struct WalkDecisionTreePeeledOpLowering: public ConversionPattern {
   }
 };
 
-struct WalkDecisionTreeOpLoweringPass: public PassWrapper<WalkDecisionTreeOpLoweringPass, OperationPass<mlir::func::FuncOp>> {
+struct WalkDecisionTreeOpLoweringPass: public PassWrapper<WalkDecisionTreeOpLoweringPass, OperationPass<mlir::ModuleOp>> {
   
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<scf::SCFDialect>();
@@ -300,7 +300,7 @@ struct WalkDecisionTreeOpLoweringPass: public PassWrapper<WalkDecisionTreeOpLowe
   }
 };
 
-struct PipelinedWalkDecisionTreeOpLoweringPass: public PassWrapper<PipelinedWalkDecisionTreeOpLoweringPass, OperationPass<mlir::func::FuncOp>> {
+struct PipelinedWalkDecisionTreeOpLoweringPass: public PassWrapper<PipelinedWalkDecisionTreeOpLoweringPass, OperationPass<mlir::ModuleOp>> {
   
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<scf::SCFDialect>();
@@ -321,9 +321,9 @@ struct PipelinedWalkDecisionTreeOpLoweringPass: public PassWrapper<PipelinedWalk
   }
 };
 
-void AddWalkDecisionTreeOpLoweringPass(mlir::OpPassManager &optPM) {
-  optPM.addPass(std::make_unique<WalkDecisionTreeOpLoweringPass>());
-  optPM.addPass(std::make_unique<PipelinedWalkDecisionTreeOpLoweringPass>());
+void AddWalkDecisionTreeOpLoweringPass(mlir::PassManager &pm) {
+  pm.addPass(std::make_unique<WalkDecisionTreeOpLoweringPass>());
+  pm.addPass(std::make_unique<PipelinedWalkDecisionTreeOpLoweringPass>());
 }
 
 } // namespace decisionforest

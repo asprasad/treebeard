@@ -83,6 +83,9 @@ class TreebeardAPI:
       self.runtime_lib.Set_pipelineSize.argtypes = [ctypes.c_int64, ctypes.c_int32]
       self.runtime_lib.Set_pipelineSize.restype = None
 
+      self.runtime_lib.Set_numberOfFeatures.argtypes = [ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Set_numberOfFeatures.restype = None
+
       self.runtime_lib.Set_numberOfCores.argtypes = [ctypes.c_int64, ctypes.c_int32]
       self.runtime_lib.Set_numberOfCores.restype = None
 

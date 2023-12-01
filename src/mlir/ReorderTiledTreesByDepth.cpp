@@ -134,7 +134,7 @@ struct ReorderEnsembleConstants : public RewritePattern {
 
 };
 
-struct ReorderTreesByDepthPass : public PassWrapper<ReorderTreesByDepthPass, OperationPass<mlir::func::FuncOp>> {
+struct ReorderTreesByDepthPass : public PassWrapper<ReorderTreesByDepthPass, OperationPass<mlir::ModuleOp>> {
   ReorderTreesByDepthPass() 
   { }
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -336,7 +336,7 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
 
 };
 
-struct SplitTreeLoopByDepth : public PassWrapper<SplitTreeLoopByDepth, OperationPass<mlir::func::FuncOp>> {
+struct SplitTreeLoopByDepth : public PassWrapper<SplitTreeLoopByDepth, OperationPass<mlir::ModuleOp>> {
   int32_t m_pipelineSize;
   int32_t m_numCores;
   SplitTreeLoopByDepth(int32_t pipelineSize, int32_t numCores) 
@@ -363,10 +363,9 @@ namespace decisionforest
 {
 void DoReorderTreesByDepth(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t pipelineSize, int32_t numCores) {
   mlir::PassManager pm(&context);
-  mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
-  optPM.addPass(std::make_unique<ReorderTreesByDepthPass>());
+  pm.addPass(std::make_unique<ReorderTreesByDepthPass>());
   // TODO pipelineSize needs to be added to CompilerOptions
-  optPM.addPass(std::make_unique<SplitTreeLoopByDepth>(pipelineSize, numCores));
+  pm.addPass(std::make_unique<SplitTreeLoopByDepth>(pipelineSize, numCores));
 
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to mid level IR failed.\n";

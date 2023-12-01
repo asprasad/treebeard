@@ -209,7 +209,7 @@ struct TileEnsembleAttribute : public RewritePattern {
   }
 };
 
-struct ProbabilityBasedTilingPass : public PassWrapper<ProbabilityBasedTilingPass, OperationPass<mlir::func::FuncOp>> {
+struct ProbabilityBasedTilingPass : public PassWrapper<ProbabilityBasedTilingPass, OperationPass<mlir::ModuleOp>> {
   int32_t m_tileSize;
   int32_t m_tileShapeBitWidth;
   bool m_hybrid;
@@ -241,8 +241,7 @@ namespace decisionforest
 {
 void DoProbabilityBasedTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth) {
   mlir::PassManager pm(&context);
-  mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
-  optPM.addPass(std::make_unique<ProbabilityBasedTilingPass>(tileSize, tileShapeBitWidth));
+  pm.addPass(std::make_unique<ProbabilityBasedTilingPass>(tileSize, tileShapeBitWidth));
 
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to mid level IR failed.\n";
@@ -251,8 +250,7 @@ void DoProbabilityBasedTiling(mlir::MLIRContext& context, mlir::ModuleOp module,
 
 void DoHybridTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth) {
   mlir::PassManager pm(&context);
-  mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
-  optPM.addPass(std::make_unique<ProbabilityBasedTilingPass>(tileSize, tileShapeBitWidth, true, 0.20));
+  pm.addPass(std::make_unique<ProbabilityBasedTilingPass>(tileSize, tileShapeBitWidth, true, 0.20));
 
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to mid level IR failed.\n";
