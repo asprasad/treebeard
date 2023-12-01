@@ -80,7 +80,7 @@ struct IndexToNodeOpLowering : public ConversionPattern {
   }
 };
 
-struct ConvertNodeTypeToIndexTypePass : public PassWrapper<ConvertNodeTypeToIndexTypePass, OperationPass<mlir::func::FuncOp>> {
+struct ConvertNodeTypeToIndexTypePass : public PassWrapper<ConvertNodeTypeToIndexTypePass, OperationPass<mlir::ModuleOp>> {
   
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, memref::MemRefDialect, tensor::TensorDialect, scf::SCFDialect>();
@@ -174,8 +174,7 @@ void ConvertNodeTypeToIndexType(mlir::MLIRContext& context, mlir::ModuleOp modul
   // llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
-  mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
-  optPM.addPass(std::make_unique<ConvertNodeTypeToIndexTypePass>());
+  pm.addPass(std::make_unique<ConvertNodeTypeToIndexTypePass>());
 
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Conversion from NodeType to Index failed.\n";

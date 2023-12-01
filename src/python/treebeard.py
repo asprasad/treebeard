@@ -53,6 +53,9 @@ class CompilerOptions:
   def SetPipelineWidth(self, val : int) :
     treebeardAPI.runtime_lib.Set_pipelineSize(self.optionsPtr, val)
 
+  def SetNumberOfFeatures(self, val : int) :
+    treebeardAPI.runtime_lib.Set_numberOfFeatures(self.optionsPtr, val)
+
   def SetNumberOfCores(self, val : int) :
     treebeardAPI.runtime_lib.Set_numberOfCores(self.optionsPtr, val)
   

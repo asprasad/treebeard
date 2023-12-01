@@ -563,7 +563,7 @@ struct CacheRowsOpLowering: public ConversionPattern {
   }
 };
 
-struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLoweringPass, OperationPass<mlir::func::FuncOp>> {
+struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLoweringPass, OperationPass<mlir::ModuleOp>> {
   std::shared_ptr<decisionforest::IModelSerializer> m_serializer;
   std::shared_ptr<decisionforest::IRepresentation> m_representation;
   MidLevelIRToMemrefLoweringPass(std::shared_ptr<decisionforest::IModelSerializer> serializer, std::shared_ptr<decisionforest::IRepresentation> representation)
@@ -615,7 +615,7 @@ struct MidLevelIRToMemrefLoweringPass: public PassWrapper<MidLevelIRToMemrefLowe
   }
 };
 
-struct MidLevelIRToGPUMemrefLoweringPass: public PassWrapper<MidLevelIRToGPUMemrefLoweringPass, OperationPass<mlir::func::FuncOp>> {
+struct MidLevelIRToGPUMemrefLoweringPass: public PassWrapper<MidLevelIRToGPUMemrefLoweringPass, OperationPass<mlir::ModuleOp>> {
   std::shared_ptr<decisionforest::IModelSerializer> m_serializer;
   std::shared_ptr<decisionforest::IRepresentation> m_representation;
   MidLevelIRToGPUMemrefLoweringPass(std::shared_ptr<decisionforest::IModelSerializer> serializer, std::shared_ptr<decisionforest::IRepresentation> representation)
@@ -681,8 +681,7 @@ void LowerEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module,
   // llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
-  mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
-  optPM.addPass(std::make_unique<MidLevelIRToMemrefLoweringPass>(serializer, representation));
+  pm.addPass(std::make_unique<MidLevelIRToMemrefLoweringPass>(serializer, representation));
 
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to memrefs failed.\n";
@@ -697,8 +696,7 @@ void LowerGPUEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module
   // llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
-  mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
-  optPM.addPass(std::make_unique<MidLevelIRToGPUMemrefLoweringPass>(serializer, representation));
+  pm.addPass(std::make_unique<MidLevelIRToGPUMemrefLoweringPass>(serializer, representation));
 
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to memrefs failed.\n";

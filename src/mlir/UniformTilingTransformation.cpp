@@ -124,7 +124,7 @@ struct TileEnsembleAttribute : public RewritePattern {
   }
 };
 
-struct UniformTilingPass : public PassWrapper<UniformTilingPass, OperationPass<mlir::func::FuncOp>> {
+struct UniformTilingPass : public PassWrapper<UniformTilingPass, OperationPass<mlir::ModuleOp>> {
   int32_t m_tileSize;
   int32_t m_tileShapeBitWidth;
   bool m_makeAllLeavesSameDepth;
@@ -152,8 +152,7 @@ namespace decisionforest
 {
 void DoUniformTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth, bool makeAllLeavesSameDepth) {
   mlir::PassManager pm(&context);
-  mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
-  optPM.addPass(std::make_unique<UniformTilingPass>(tileSize, tileShapeBitWidth, makeAllLeavesSameDepth));
+  pm.addPass(std::make_unique<UniformTilingPass>(tileSize, tileShapeBitWidth, makeAllLeavesSameDepth));
 
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to mid level IR failed.\n";
