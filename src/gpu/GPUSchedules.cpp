@@ -254,6 +254,42 @@ void SplitTreesAcrossThreadsCacheRowsAndInterleaveTreesGPUSchedule(
   schedule.Cache(threadBlockIndex);
 }
 
+void SplitTreesAcrossThreadsAndCacheRowsGPUSchedule_Reorg(
+    decisionforest::Schedule &schedule, int32_t rowsPerThreadBlock,
+    int32_t rowsPerThread, int32_t numParallelTreeGroups) {
+  auto &batchIndex = schedule.GetBatchIndex();
+  auto &treeIndex = schedule.GetTreeIndex();
+  auto &threadBlockIndex = schedule.NewIndexVariable("b0");
+  auto &threadIndexTemp = schedule.NewIndexVariable("b1_temp");
+  auto &threadIndex = schedule.NewIndexVariable("b1_outer");
+  auto &perThreadIndex = schedule.NewIndexVariable("b1_inner");
+
+  schedule.Tile(batchIndex, threadBlockIndex, threadIndexTemp,
+                rowsPerThreadBlock);
+  schedule.Tile(threadIndexTemp, threadIndex, perThreadIndex, rowsPerThread);
+
+  auto &treeIndexParallel = schedule.NewIndexVariable("t0_parallel");
+  auto &treeIndexSerial = schedule.NewIndexVariable("t0_serial");
+
+  schedule.Tile(treeIndex, treeIndexSerial, treeIndexParallel,
+                numParallelTreeGroups);
+
+  schedule.Reorder({&threadBlockIndex, &threadIndex, &treeIndexParallel,
+                    &perThreadIndex, &treeIndexSerial});
+
+  threadBlockIndex.SetGPUDimension(
+      decisionforest::IndexVariable::GPUConstruct::Grid,
+      decisionforest::IndexVariable::Dimension::X);
+  threadIndex.SetGPUDimension(
+      decisionforest::IndexVariable::GPUConstruct::ThreadBlock,
+      decisionforest::IndexVariable::Dimension::Y);
+  treeIndexParallel.SetGPUDimension(
+      decisionforest::IndexVariable::GPUConstruct::ThreadBlock,
+      decisionforest::IndexVariable::Dimension::X);
+
+  schedule.Cache(threadBlockIndex);
+}
+
 void SplitTreesAcrossThreadsCacheRowsAndInterleaveRowsGPUSchedule(
     decisionforest::Schedule &schedule, int32_t rowsPerThreadBlock,
     int32_t rowsPerThread, int32_t numParallelTreeGroups) {

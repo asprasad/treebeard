@@ -286,6 +286,8 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
       // No need to split if we're splitting the last index.
       if (intervalEnd == indexToSplit->GetRange().m_stop) {
         indexToSplit->SetTreeWalkUnrollFactor(currDepth - 1);
+        if (m_options.treeWalkInterleaveFactor != -1)
+          schedule->Pipeline(*indexToSplit, m_options.treeWalkInterleaveFactor);
         break;
       }
 
@@ -299,6 +301,8 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
       schedule->Split(*indexToSplit, firstIndex, secondIndex, intervalEnd,
                       indexMap);
       firstIndex.SetTreeWalkUnrollFactor(currDepth - 1);
+      if (m_options.treeWalkInterleaveFactor != -1)
+        schedule->Pipeline(firstIndex, m_options.treeWalkInterleaveFactor);
 
       indexToSplit = &secondIndex;
       currTreeIndex = intervalEnd;

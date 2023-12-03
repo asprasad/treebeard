@@ -149,10 +149,11 @@ struct GPUAutoScheduleOptions {
   // TODO Do we really need this? Can't we always do one tree at a time
   int32_t numTreesAtATime;
 
-  bool cacheRows;
-  bool cacheTrees;
+  bool cacheRows = false;
+  bool cacheTrees = false;
 
-  bool unrollTreeWalks;
+  bool unrollTreeWalks = false;
+  int32_t treeWalkInterleaveFactor = -1;
 };
 
 struct GPUCompileInfo {
