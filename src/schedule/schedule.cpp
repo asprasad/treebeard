@@ -348,7 +348,8 @@ Schedule &Schedule::Pipeline(IndexVariable &index, int32_t stepSize) {
   assert((index.m_range.m_stop - index.m_range.m_start) >= stepSize &&
          "Step size must be smaller than the range");
   index.m_pipelined = true;
-  index.m_range.m_step = stepSize;
+  index.m_unpipelinedStepSize = index.m_range.m_step;
+  index.m_range.m_step = index.m_range.m_step * stepSize;
   return *this;
 }
 

@@ -379,7 +379,12 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
       schedule->Tile(treeIndex, perThreadTreeIndex, threadYIndex,
                      m_options.numTreeThreads);
 
-      perThreadLoops.insert(perThreadLoops.begin(), &perThreadTreeIndex);
+      if (m_options.treeWalkInterleaveFactor == -1) {
+        perThreadLoops.insert(perThreadLoops.begin(), &perThreadTreeIndex);
+      } else {
+        perThreadLoops.push_back(&perThreadTreeIndex);
+      }
+
       threadBlockLoops.push_back(&threadYIndex);
       if (m_options.cacheTrees)
         schedule->Cache(perThreadTreeIndex);
@@ -391,7 +396,11 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
       treeLoopToSpecialize = &threadYIndex;
       treeLoopToSplitAndUnroll = &perThreadTreeIndex;
     } else {
-      perThreadLoops.insert(perThreadLoops.begin(), &treeIndex);
+      if (m_options.treeWalkInterleaveFactor == -1) {
+        perThreadLoops.insert(perThreadLoops.begin(), &treeIndex);
+      } else {
+        perThreadLoops.push_back(&treeIndex);
+      }
       if (m_options.cacheTrees)
         schedule->Cache(treeIndex);
       treeLoopToSpecialize = nullptr;

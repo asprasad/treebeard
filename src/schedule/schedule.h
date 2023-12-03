@@ -150,6 +150,9 @@ protected:
       *m_modifier; // Modifier that derives new index variables from this one
 
   bool m_pipelined = false;
+  // Only valid if m_pipelined is true
+  int32_t m_unpipelinedStepSize = -1;
+
   bool m_simdized = false;
   bool m_parallel = false;
   bool m_unrolled = false;
@@ -185,6 +188,10 @@ public:
   std::string GetName() const { return m_name; }
 
   bool Pipelined() const { return m_pipelined; }
+  int32_t GetUnpipelinedStepSize() const {
+    assert(m_pipelined);
+    return m_unpipelinedStepSize;
+  }
   bool Simdized() const { return m_simdized; }
   bool Parallel() const { return m_parallel; }
   bool Unroll() const { return m_unrolled; }

@@ -718,7 +718,8 @@ struct PredictForestOpLowering : public ConversionPattern {
   Value GeneratePipelinedTreeIndexLeafLoopBody(
       ConversionPatternRewriter &rewriter, Location location, int32_t stepSize,
       std::list<Value> treeIndices, PredictOpLoweringState &state, Value row,
-      Value rowIndex, Value prevAccumulatorValue) const {
+      Value rowIndex, Value prevAccumulatorValue, int32_t originalStep,
+      int32_t walkUnrollFactor) const {
 
     // Get the current tree
     auto forestType =
@@ -733,7 +734,7 @@ struct PredictForestOpLowering : public ConversionPattern {
     std::vector<Value> rows;
     std::vector<Value> trees;
     std::vector<Type> treeResultTypes;
-    for (int32_t i = 0; i < stepSize; i++) {
+    for (int32_t i = 0; i < stepSize; i += originalStep) {
       treeIndices.push_back(
           rewriter.create<arith::ConstantIndexOp>(location, i));
 
@@ -750,8 +751,10 @@ struct PredictForestOpLowering : public ConversionPattern {
     }
 
     // Walk the tree.
-    auto unrollLoopAttr =
-        decisionforest::UnrollLoopAttribute::get(treeType, -1);
+    // TODO_Ashwin There is some off by 1 error in the WalkDecisionTreeOp
+    // lowering! We seem to be doing unrollFactor - 1 there. Why?
+    auto unrollLoopAttr = decisionforest::UnrollLoopAttribute::get(
+        treeType, walkUnrollFactor + 1);
     auto walkOp = rewriter.create<decisionforest::PipelinedWalkDecisionTreeOp>(
         location, treeResultTypes, unrollLoopAttr, state.cmpPredicate, trees,
         rows);
@@ -838,7 +841,9 @@ struct PredictForestOpLowering : public ConversionPattern {
         treeIndices.push_back(loop.getInductionVar());
         auto accumulatedValue = GeneratePipelinedTreeIndexLeafLoopBody(
             rewriter, location, range.m_step, treeIndices, state, row, rowIndex,
-            loop.getBody()->getArguments()[1]);
+            loop.getBody()->getArguments()[1],
+            indexVar.GetUnpipelinedStepSize(),
+            indexVar.GetTreeWalkUnrollFactor());
         rewriter.create<scf::YieldOp>(location,
                                       static_cast<Value>(accumulatedValue));
       }
@@ -870,7 +875,9 @@ struct PredictForestOpLowering : public ConversionPattern {
 
           auto accumulatedValue = GeneratePipelinedTreeIndexLeafLoopBody(
               rewriter, location, peeledLoopStep, treeIndices, state, row,
-              rowIndex, peeledLoop.getBody()->getArguments()[1]);
+              rowIndex, peeledLoop.getBody()->getArguments()[1],
+              indexVar.GetUnpipelinedStepSize(),
+              indexVar.GetTreeWalkUnrollFactor());
           rewriter.create<scf::YieldOp>(location,
                                         static_cast<Value>(accumulatedValue));
         }
