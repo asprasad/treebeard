@@ -67,7 +67,7 @@ std::vector<int32_t> interleaveDepth{2, 4};
 // there are 35357670 tile shapes. We need to change
 // to only compute LUT, tile shape IDs etc for required tile shapes.
 std::vector<int32_t> tileSizes{4, 8}; //, 16};
-std::vector<int32_t> treeInterleaveDepths{-1};
+std::vector<int32_t> treeInterleaveDepths{-1, 2, 4};
 
 // abalone
 // std::vector<int32_t> numTreeThreads{2, 10, 25};
@@ -372,10 +372,10 @@ void BenchmarkIfNoSharedMemOverflow(const std::string &modelName,
 
     std::cout << modelName << "," << representationName << "," << batchSize
               << "," << numRowsPerTB << "," << numRowsPerThread << ","
-              << numTreeThreads << std::boolalpha << "," << cacheRows << ","
-              << cacheTrees << "," << unrollTreeWalk << ","
-              << times.totalTimePerSample << "," << times.kernelTimePerSample
-              << std::endl;
+              << numTreeThreads << "," << treeInterleaveDepth << std::boolalpha
+              << "," << cacheRows << "," << cacheTrees << "," << unrollTreeWalk
+              << "," << times.totalTimePerSample << ","
+              << times.kernelTimePerSample << std::endl;
   }
 }
 
@@ -395,23 +395,31 @@ void RunAutoScheduleBenchmarks(const std::string &modelName,
       modelName, representationName, batchSize, numRowsPerTB, numRowsPerThread,
       numTreeThreads, treeInterleaveDepth);
 
-  BenchmarkIfNoSharedMemOverflow<ThresholdType, ReturnType, false, true,
-                                 unrollTreeWalk>(
-      modelName, representationName, batchSize, numRowsPerTB, numRowsPerThread,
-      numTreeThreads, treeInterleaveDepth);
+  // TODO_Ashwin: There is a bug with tree interleaving and tree caching
+  // We'll worry about it later
+  if (treeInterleaveDepth != -1)
+    return;
 
-  BenchmarkIfNoSharedMemOverflow<ThresholdType, ReturnType, true, true,
-                                 unrollTreeWalk>(
-      modelName, representationName, batchSize, numRowsPerTB, numRowsPerThread,
-      numTreeThreads, treeInterleaveDepth);
+  // Commenting out the following benchmarks for now. They take too long to run
+  // and are never faster than the above benchmarks.
+  // BenchmarkIfNoSharedMemOverflow<ThresholdType, ReturnType, false, true,
+  //                                unrollTreeWalk>(
+  //     modelName, representationName, batchSize, numRowsPerTB,
+  //     numRowsPerThread, numTreeThreads, treeInterleaveDepth);
+
+  // BenchmarkIfNoSharedMemOverflow<ThresholdType, ReturnType, true, true,
+  //                                unrollTreeWalk>(
+  //     modelName, representationName, batchSize, numRowsPerTB,
+  //     numRowsPerThread, numTreeThreads, treeInterleaveDepth);
 }
 
 void RunAllAutoScheduleXGBoostGPUBenchmarks() {
   mlir::decisionforest::measureGpuKernelTime = true;
-  std::cout << "model,representation,batch_size,rowsPerTB,rowsPerT,"
-               "numTreeThreads,cache_rows,cache_trees,unroll,"
-               "total,kernel"
-            << std::endl;
+  std::cout
+      << "model,representation,batch_size,rowsPerTB,rowsPerT,"
+         "numTreeThreads,treeInterleaveDepth,cache_rows,cache_trees,unroll,"
+         "total,kernel"
+      << std::endl;
 
   for (auto batchSize : batchSizes) {
     for (auto numRowsPerTB : rowsPerTB) {
@@ -1135,8 +1143,8 @@ void RunAllCustomScheduleBenchmarks() {
 }
 
 void RunXGBoostGPUBenchmarks() {
-  // RunAllAutoScheduleXGBoostGPUBenchmarks();
-  RunAllCustomScheduleBenchmarks();
+  RunAllAutoScheduleXGBoostGPUBenchmarks();
+  // RunAllCustomScheduleBenchmarks();
 }
 
 } // namespace test
