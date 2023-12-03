@@ -664,7 +664,7 @@ void RunAllOneTreeAtATimeGPUScheduleBenchmarks() {
       if (numRowsPerTB > batchSize)
         break;
       for (auto numRowsPerThread : rowsPerThread) {
-        if (numRowsPerThread > numRowsPerTB)
+        if (numRowsPerThread >= numRowsPerTB)
           break;
 
         auto scheduleManipulator =
@@ -690,7 +690,7 @@ void RunOneTreeAtATimeAndCacheRowsGPUScheduleBenchmarks() {
       if (numRowsPerTB > batchSize)
         break;
       for (auto numRowsPerThread : rowsPerThread) {
-        if (numRowsPerThread > numRowsPerTB)
+        if (numRowsPerThread >= numRowsPerTB)
           break;
         auto tbSize = numRowsPerTB / numRowsPerThread;
         if (tbSize < MIN_TB_SIZE)
@@ -722,7 +722,7 @@ void RunOneTreeAtATimeAndCacheTreesGPUScheduleBenchmarks() {
       if (numRowsPerTB > batchSize)
         break;
       for (auto numRowsPerThread : rowsPerThread) {
-        if (numRowsPerThread > numRowsPerTB)
+        if (numRowsPerThread >= numRowsPerTB)
           break;
         auto tbSize = numRowsPerTB / numRowsPerThread;
         if (tbSize < MIN_TB_SIZE)
@@ -754,7 +754,7 @@ void RunOneTreeAtATimeAndCacheTreesAndRowsGPUScheduleBenchmarks() {
       if (numRowsPerTB > batchSize)
         break;
       for (auto numRowsPerThread : rowsPerThread) {
-        if (numRowsPerThread > numRowsPerTB)
+        if (numRowsPerThread >= numRowsPerTB)
           break;
         auto tbSize = numRowsPerTB / numRowsPerThread;
         if (tbSize < MIN_TB_SIZE)
@@ -785,7 +785,7 @@ void RunAllTreeParallelizationGPUScheduleBenchmarks() {
       if (numRowsPerTB > batchSize)
         break;
       for (auto numRowsPerThread : rowsPerThread) {
-        if (numRowsPerThread > numRowsPerTB)
+        if (numRowsPerThread >= numRowsPerTB)
           break;
         for (auto treeThreads : numTreeThreads) {
           auto tbSize = numRowsPerTB / numRowsPerThread * treeThreads;
@@ -819,7 +819,7 @@ void RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks() {
       if (numRowsPerTB > batchSize)
         break;
       for (auto numRowsPerThread : rowsPerThread) {
-        if (numRowsPerThread > numRowsPerTB)
+        if (numRowsPerThread >= numRowsPerTB)
           break;
         for (auto treeThreads : numTreeThreads) {
           auto tbSize = numRowsPerTB / numRowsPerThread * treeThreads;
@@ -854,7 +854,7 @@ void RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarks_Reorg() {
       if (numRowsPerTB > batchSize)
         break;
       for (auto numRowsPerThread : rowsPerThread) {
-        if (numRowsPerThread > numRowsPerTB)
+        if (numRowsPerThread >= numRowsPerTB)
           break;
         for (auto treeThreads : numTreeThreads) {
           auto tbSize = numRowsPerTB / numRowsPerThread * treeThreads;
@@ -885,7 +885,7 @@ void RunAllTreeParallelizationCacheRowsAndInterleaveTreesGPUScheduleBenchmarks()
       if (numRowsPerTB > batchSize)
         break;
       for (auto numRowsPerThread : rowsPerThread) {
-        if (numRowsPerThread > numRowsPerTB)
+        if (numRowsPerThread >= numRowsPerTB)
           break;
         for (auto treeThreads : numTreeThreads) {
           auto tbSize = numRowsPerTB / numRowsPerThread * treeThreads;
@@ -923,7 +923,7 @@ void RunAllTreeParallelizationCacheRowsAndInterleaveRowsGPUScheduleBenchmarks() 
       if (numRowsPerTB > batchSize)
         break;
       for (auto numRowsPerThread : rowsPerThread) {
-        if (numRowsPerThread > numRowsPerTB)
+        if (numRowsPerThread >= numRowsPerTB)
           break;
         if (numRowsPerThread == 1)
           continue;
@@ -963,7 +963,7 @@ void RunAllTreeParallelizationGPUScheduleBenchmarksTiled() {
       if (numRowsPerTB > batchSize)
         break;
       for (auto numRowsPerThread : rowsPerThread) {
-        if (numRowsPerThread > numRowsPerTB)
+        if (numRowsPerThread >= numRowsPerTB)
           break;
         for (auto treeThreads : numTreeThreads) {
           auto tbSize = numRowsPerTB / numRowsPerThread * treeThreads;
@@ -1003,7 +1003,7 @@ void RunAllTreeParallelizationAndCacheRowsGPUScheduleBenchmarksTiled() {
       if (numRowsPerTB > batchSize)
         break;
       for (auto numRowsPerThread : rowsPerThread) {
-        if (numRowsPerThread > numRowsPerTB)
+        if (numRowsPerThread >= numRowsPerTB)
           break;
         for (auto treeThreads : numTreeThreads) {
           auto tbSize = numRowsPerTB / numRowsPerThread * treeThreads;
@@ -1044,7 +1044,7 @@ void RunAllTreeParallelizationAndCacheTreesGPUScheduleBenchmarks() {
       if (numRowsPerTB > batchSize)
         break;
       for (auto numRowsPerThread : rowsPerThread) {
-        if (numRowsPerThread > numRowsPerTB)
+        if (numRowsPerThread >= numRowsPerTB)
           break;
         for (auto treeThreads : numTreeThreads) {
           auto tbSize = numRowsPerTB / numRowsPerThread * treeThreads;
@@ -1079,7 +1079,7 @@ void RunAllTreeParallelizationCacheTreesAndRowsGPUScheduleBenchmarks() {
       if (numRowsPerTB > batchSize)
         break;
       for (auto numRowsPerThread : rowsPerThread) {
-        if (numRowsPerThread > numRowsPerTB)
+        if (numRowsPerThread >= numRowsPerTB)
           break;
         for (auto treeThreads : numTreeThreads) {
           auto tbSize = numRowsPerTB / numRowsPerThread * treeThreads;
