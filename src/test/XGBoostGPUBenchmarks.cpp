@@ -385,6 +385,14 @@ void RunAutoScheduleBenchmarks(const std::string &modelName,
                                int32_t batchSize, int32_t numRowsPerTB,
                                int32_t numRowsPerThread, int32_t numTreeThreads,
                                int32_t treeInterleaveDepth) {
+
+  // Interleaving is a no-op if unrolling is disabled
+  if (!unrollTreeWalk && treeInterleaveDepth != -1)
+    return;
+
+  if (numRowsPerThread >= numRowsPerTB)
+    return;
+
   BenchmarkIfNoSharedMemOverflow<ThresholdType, ReturnType, false, false,
                                  unrollTreeWalk>(
       modelName, representationName, batchSize, numRowsPerTB, numRowsPerThread,
