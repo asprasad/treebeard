@@ -345,8 +345,13 @@ Schedule &Schedule::Cache(IndexVariable &index) {
 Schedule &Schedule::Pipeline(IndexVariable &index, int32_t stepSize) {
   assert(index.m_containedLoops.size() == 0 &&
          "Pipeline must be called on an innermost loop");
-  assert((index.m_range.m_stop - index.m_range.m_start) >= stepSize &&
-         "Step size must be smaller than the range");
+  // assert((index.m_range.m_stop - index.m_range.m_start) >= stepSize &&
+  //        "Step size must be smaller than the range");
+  auto iterCount =
+      (index.m_range.m_stop - index.m_range.m_start) / (index.m_range.m_step);
+  if (stepSize > iterCount)
+    stepSize = iterCount;
+
   index.m_pipelined = true;
   index.m_unpipelinedStepSize = index.m_range.m_step;
   index.m_range.m_step = index.m_range.m_step * stepSize;
