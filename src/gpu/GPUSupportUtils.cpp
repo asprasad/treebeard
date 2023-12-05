@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
@@ -173,7 +174,28 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
 
       // Determine memrefs to be transferred to and from the gpu.
       llvm::DenseSet<Value> requiresTransferToGpu, requiresTransferFromGpu;
+      llvm::DenseMap<Value, linalg::FillOp> requiresAllocAndMemsetOnGpu;
+
       for (auto &result : memrefsInFuncOp) {
+        bool directlyAllocatedOnGpu = false;
+
+        // Need to run this in a separate loop because getUses may not return
+        // things in order of use. We don't want to add memrefs that are
+        // directly written by linalg.fill to the requiresTransferToGpu set.
+        // TODO Sampath: Ensure that there are no other writes to the memref
+        // apart from the ones inside gpu.launch
+        for (auto &use : result.getUses()) {
+          auto *owningOp = use.getOwner();
+          if (llvm::isa<linalg::FillOp>(owningOp)) {
+            directlyAllocatedOnGpu = true;
+            requiresAllocAndMemsetOnGpu[result] =
+                llvm::cast<linalg::FillOp>(owningOp);
+          }
+        }
+
+        if (directlyAllocatedOnGpu)
+          continue;
+
         for (auto &use : result.getUses()) {
           auto *owningOp = use.getOwner();
           auto launchOp = owningOp->getParentOfType<gpu::LaunchOp>();
@@ -225,6 +247,20 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
         }
       }
 
+      for (auto &allocAndMemsetOnGpu : requiresAllocAndMemsetOnGpu) {
+        auto inputAlloc = builder.create<gpu::AllocOp>(
+            location, allocAndMemsetOnGpu.first.getType(), waitToken.getType(),
+            ValueRange{waitToken}, ValueRange{}, ValueRange{});
+
+        auto fillOp = allocAndMemsetOnGpu.second;
+        auto inputTransfer = builder.create<gpu::MemsetOp>(
+            location, inputAlloc.getAsyncToken().getType(),
+            ValueRange{inputAlloc.getAsyncToken()}, inputAlloc.getMemref(),
+            fillOp.getOperand(0));
+        waitToken = inputTransfer.getAsyncToken();
+        cpuToGpuMemrefMap[allocAndMemsetOnGpu.first] = inputAlloc.getMemref();
+      }
+
       // Wait for all the transfers and allocs before the gpu.launch to finish
       /*auto waitForTransfersAndAllocs =*/builder.create<gpu::WaitOp>(
           location, Type(), ValueRange{waitToken});
@@ -267,6 +303,13 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
       builder.create<gpu::WaitOp>(location, Type(), waitToken);
 
       ReplaceCPUReferencesWithGPUMemref(cpuToGpuMemrefMap);
+
+      // delete the linalgFillOp.
+      for (auto &allocAndMemsetOnGpu : requiresAllocAndMemsetOnGpu) {
+        // TODO - Assert that the there are no uses of the result of fill op?
+        allocAndMemsetOnGpu.second.erase();
+      }
+
       addGPUKernelTimingCalls(gpuLaunchOp, builder);
     }
     return mlir::WalkResult::advance();
