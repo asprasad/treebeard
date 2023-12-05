@@ -184,12 +184,18 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
         // directly written by linalg.fill to the requiresTransferToGpu set.
         // TODO Sampath: Ensure that there are no other writes to the memref
         // apart from the ones inside gpu.launch
-        for (auto &use : result.getUses()) {
-          auto *owningOp = use.getOwner();
-          if (llvm::isa<linalg::FillOp>(owningOp)) {
-            directlyAllocatedOnGpu = true;
-            requiresAllocAndMemsetOnGpu[result] =
-                llvm::cast<linalg::FillOp>(owningOp);
+        auto elementType = result.getType().cast<MemRefType>().getElementType();
+        // Need this check because gpu.memset supports only setting 32-bit
+        // values.
+        if (elementType.isIntOrFloat() &&
+            elementType.getIntOrFloatBitWidth() == 32) {
+          for (auto &use : result.getUses()) {
+            auto *owningOp = use.getOwner();
+            if (llvm::isa<linalg::FillOp>(owningOp)) {
+              directlyAllocatedOnGpu = true;
+              requiresAllocAndMemsetOnGpu[result] =
+                  llvm::cast<linalg::FillOp>(owningOp);
+            }
           }
         }
 
