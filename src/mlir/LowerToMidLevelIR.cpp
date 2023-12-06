@@ -18,7 +18,8 @@
 
 using namespace mlir;
 
-namespace {
+namespace mlir {
+namespace decisionforest {
 
 static MemRefType getRowTypeFromArgumentType(MemRefType type) {
   assert (type.hasRank() && "expected only rank shapes");
@@ -1300,7 +1301,7 @@ struct PredictForestOpLowering: public ConversionPattern {
 
 };
 
-struct HighLevelIRToMidLevelIRLoweringPass: public PassWrapper<HighLevelIRToMidLevelIRLoweringPass, OperationPass<mlir::func::FuncOp>> {
+struct HighLevelIRToMidLevelIRLoweringPass: public PassWrapper<HighLevelIRToMidLevelIRLoweringPass, OperationPass<mlir::ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect>();
   }
@@ -1321,22 +1322,22 @@ struct HighLevelIRToMidLevelIRLoweringPass: public PassWrapper<HighLevelIRToMidL
   }
 };
 
-} // anonymous namespace
+} // namespace decisionforest
+} // namespace mlir
 
 namespace mlir
 {
 namespace decisionforest
 {
 
-void AddWalkDecisionTreeOpLoweringPass(mlir::OpPassManager &optPM);
+void AddWalkDecisionTreeOpLoweringPass(mlir::PassManager &optPM);
 
 void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext& context, mlir::ModuleOp module) {
   // llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
-  mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
-  optPM.addPass(std::make_unique<HighLevelIRToMidLevelIRLoweringPass>());
-  AddWalkDecisionTreeOpLoweringPass(optPM);
+  pm.addPass(std::make_unique<HighLevelIRToMidLevelIRLoweringPass>());
+  AddWalkDecisionTreeOpLoweringPass(pm);
 
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to mid level IR failed.\n";
@@ -1344,5 +1345,5 @@ void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext& context, mlir::ModuleOp m
   // llvm::DebugFlag = false;
 }
 
-} // decisionforest
-} // mlir
+} // namespace decisionforest
+} // namespace mlir

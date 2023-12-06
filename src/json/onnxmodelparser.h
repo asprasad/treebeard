@@ -209,10 +209,12 @@ namespace TreeBeard
             std::unordered_map<int64_t, std::set<int64_t>> _treeToClassIdMap;
             bool _isClassifier;
             std::vector<int64_t> _classIds;
+            int32_t numberOfFeatures = -1;
 
         public:
             ONNXModelConverter(std::shared_ptr<mlir::decisionforest::IModelSerializer> serializer,
                             mlir::MLIRContext& context,
+                            int32_t numFeatures,
                             ValueType baseValue,
                             mlir::decisionforest::PredictionTransformation predTransform,
                             mlir::arith::CmpFPredicate nodeMode,
@@ -242,14 +244,15 @@ namespace TreeBeard
                                 _isClassifier(false)
             {
                 std::unordered_map<ONNXTreeNodeKey, std::shared_ptr<ONNXTreeNode<ValueType>>, ONNXTreeNodeKey::HashFn> nodeMap;
-                std::set<int64_t> featureIdSet;
+
+                assert(numFeatures > 0 && "Number of features should be > 0");
+                this->numberOfFeatures = numFeatures;
 
                 for (int64_t i = 0; i < numNodes; i++) {
                     ONNXTreeNodeKey key = {treeIds[i], nodeIds[i]};
                     auto onnxTreeNode = std::make_shared<ONNXTreeNode<ValueType>>();
                     onnxTreeNode->featureId = featureIds[i];
                     onnxTreeNode->threshold = thresholds[i];
-                    featureIdSet.insert(featureIds[i]);
 
                     nodeMap[key] = onnxTreeNode;
                 }
@@ -318,7 +321,7 @@ namespace TreeBeard
                     }
                 }
 
-                for (auto featureId : featureIdSet) {
+                for (int32_t featureId = 0; featureId < this->numberOfFeatures; featureId++) {
                     this->AddFeature(std::to_string(featureId), sizeof(ValueType) == sizeof(double) ? "double" : "float");
                 }
             }
@@ -370,6 +373,7 @@ namespace TreeBeard
     {
         private:
             std::unique_ptr<ONNXModelConverter<ValueType>> m_modelConvertor = nullptr;
+            int32_t numFeatures = -1;
         public:
             ONNXFileParser(TreebeardContext& tbContext) : ForestCreator(tbContext.serializer,
                                              tbContext.context,
@@ -382,11 +386,13 @@ namespace TreeBeard
                                              GetMLIRType(ValueType(), tbContext.context))
             {
                 mlir::MLIRContext& context = tbContext.context;
+                assert(tbContext.options.numberOfFeatures > 0 && "Number of features must be greater than 0");
+                numFeatures = tbContext.options.numberOfFeatures;
                 const auto &parsedModel = TreeBeard::ONNXModelParseResult::parseModel(tbContext.modelPath);
 
                 // Hardcoding to float because ONNX doesn't support double. Revisit this #TODOSampath
                 m_modelConvertor = std::make_unique<ONNXModelConverter<ValueType>>(
-                    tbContext.serializer, context, parsedModel.baseValue,
+                    tbContext.serializer, context, this->numFeatures, parsedModel.baseValue,
                     parsedModel.predTransform, parsedModel.nodeMode, parsedModel.numNodes, parsedModel.treeIds,
                     parsedModel.nodeIds, parsedModel.featureIds, parsedModel.thresholds,
                     parsedModel.trueNodeIds, parsedModel.falseNodeIds,

@@ -32,8 +32,8 @@
 
 using namespace mlir;
 
-namespace
-{
+namespace mlir {
+namespace decisionforest {
 
 struct TraverseToCooperativeTraverseTreeTileOp : public ConversionPattern {
   TraverseToCooperativeTraverseTreeTileOp(MLIRContext *ctx) 
@@ -57,7 +57,7 @@ struct TraverseToCooperativeTraverseTreeTileOp : public ConversionPattern {
 };
 
 
-struct ConvertTraverseToCooperativeTraverse: public PassWrapper<ConvertTraverseToCooperativeTraverse, OperationPass<mlir::func::FuncOp>> {
+struct ConvertTraverseToCooperativeTraverse: public PassWrapper<ConvertTraverseToCooperativeTraverse, OperationPass<mlir::ModuleOp>> {
   ConvertTraverseToCooperativeTraverse() { }
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -84,26 +84,19 @@ struct ConvertTraverseToCooperativeTraverse: public PassWrapper<ConvertTraverseT
   }
 };
 
-} // anonymous namespace
-
-namespace mlir
-{
-namespace decisionforest
-{
-
-void LowerGPUEnsembleToMemrefs(mlir::MLIRContext& context, mlir::ModuleOp module) {
+void ConvertTraverseToSimtTraverse(mlir::MLIRContext &context,
+                                   mlir::ModuleOp module) {
   // llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
-  mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
-  optPM.addPass(std::make_unique<ConvertTraverseToCooperativeTraverse>());
+  pm.addPass(std::make_unique<ConvertTraverseToCooperativeTraverse>());
 
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "GPU SIMT pass failed.\n";
   }
 }
 
-} // decisionforest
-} // mlir
+} // namespace decisionforest
+} // namespace mlir
 
 #endif

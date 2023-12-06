@@ -22,9 +22,8 @@
 #include "TraverseTreeTileOpLowering.h"
 #include "OpLoweringUtils.h"
 
-using namespace mlir;
-
-namespace {
+namespace mlir {
+namespace decisionforest {
 
 struct EnsembleConstantLoweringInfo {
   Value modelGlobal;
@@ -1099,7 +1098,8 @@ struct GetLeafTileValueOpLowering : public ConversionPattern {
   }
 };
 
-} // anonymous
+} // namespace decisionforest
+} // namespace mlir
 
 namespace mlir
 {
@@ -1124,5 +1124,5 @@ void PopulateLowerToSparseRepresentationPatterns(RewritePatternSet& patterns) {
                 GetLeafTileValueOpLowering>(patterns.getContext());
 }
 
-} // decisionforest
-} // mlir
+} // namespace decisionforest
+} // namespace mlir
