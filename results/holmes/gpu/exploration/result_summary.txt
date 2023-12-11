@@ -224,3 +224,136 @@ treepar-64-2-10	year_prediction_msd_xgb_model_save.json	gpu_array	4096	FALSE	0.0
 treepar-64-1-10	year_prediction_msd_xgb_model_save.json	gpu_sparse	8192	FALSE	0.0618465	0.0124194	151993.9584
 treepar-64-1-10	year_prediction_msd_xgb_model_save.json	gpu_sparse	16384	FALSE	0.0512893	0.00976746	252097.1674
 
+--------------------------------
+4060 - Autoschedule - With pipelining - 600 reps (Sorted on total time)
+--------------------------------
+model	representation	batch_size	rowsPerTB	rowsPerT	numTreeThreads	treeInterleaveDepth	cache_rows	cache_trees	unroll	total	kernel
+
+abalone	gpu_array	4096	64	1	10	4	TRUE	FALSE	TRUE	0.0556095	0.0406698
+abalone	gpu_array	4096	32	2	10	-1	FALSE	FALSE	FALSE	0.0677454	0.0530863
+abalone	gpu_array	8192	32	1	2	4	TRUE	FALSE	TRUE	0.048808	0.0379218
+abalone	gpu_array	8192	32	1	10	-1	FALSE	FALSE	FALSE	0.0593107	0.0452883
+abalone	gpu_array	16384	64	1	2	2	FALSE	FALSE	TRUE	0.039939	0.0333434
+abalone	gpu_array	16384	32	1	2	-1	TRUE	FALSE	FALSE	0.0448762	0.038347
+
+airline	gpu_sparse	4096	64	1	10	2	TRUE	FALSE	TRUE	0.0298682	0.011768
+airline	gpu_array	4096	64	2	10	-1	FALSE	FALSE	FALSE	0.0310319	0.0132524
+airline	gpu_sparse	8192	32	1	2	2	TRUE	FALSE	TRUE	0.0226849	0.00902181
+airline	gpu_array	8192	64	1	2	-1	TRUE	FALSE	FALSE	0.0253739	0.0118384
+airline	gpu_array	16384	32	1	2	2	TRUE	FALSE	TRUE	0.0154924	0.00511698
+airline	gpu_array	16384	32	1	2	-1	TRUE	FALSE	FALSE	0.0159628	0.00591593
+
+airline-ohe	gpu_array	4096	8	1	50	-1	TRUE	FALSE	TRUE	0.360975	0.0642472
+airline-ohe	gpu_array	4096	8	1	50	-1	TRUE	FALSE	FALSE	0.372987	0.0766642
+airline-ohe	gpu_sparse	8192	8	1	20	2	TRUE	FALSE	TRUE	0.332117	0.0584642
+airline-ohe	gpu_sparse	8192	8	1	50	-1	TRUE	FALSE	FALSE	0.35743	0.0746403
+airline-ohe	gpu_sparse	16384	8	1	20	2	TRUE	FALSE	TRUE	0.330223	0.0550322
+airline-ohe	gpu_array	16384	8	1	50	-1	TRUE	FALSE	FALSE	0.362889	0.0722509
+
+covtype	gpu_array	4096	32	1	2	4	TRUE	FALSE	TRUE	0.099821	0.06288 
+covtype	gpu_array	4096	32	1	2	-1	TRUE	FALSE	FALSE	0.161438	0.124864
+covtype	gpu_array	8192	32	1	2	4	TRUE	FALSE	TRUE	0.0979547	0.0574314 
+covtype	gpu_sparse	8192	32	1	2	-1	TRUE	FALSE	FALSE	0.118706	0.0775623
+covtype	gpu_array	16384	64	1	2	4	TRUE	FALSE	TRUE	0.0871933	0.0537914
+covtype	gpu_sparse	16384	32	1	2	-1	TRUE	FALSE	FALSE	0.10878	0.0760308
+
+epsilon	gpu_array	4096	32	2	10	2	FALSE	FALSE	TRUE	0.825499	0.0481413
+epsilon	gpu_array	4096	64	2	10	-1	FALSE	FALSE	FALSE	0.82857	0.0499512
+epsilon	gpu_sparse	8192	32	1	20	4	FALSE	FALSE	TRUE	0.818763	0.0440098
+epsilon	gpu_array	8192	32	1	20	-1	FALSE	FALSE	FALSE	0.82243	0.0483885
+epsilon	gpu_sparse	16384	32	1	20	4	FALSE	FALSE	TRUE	0.796904	0.0387017
+epsilon	gpu_array	16384	32	1	20	-1	FALSE	FALSE	FALSE	0.799883	0.0420859
+
+epsilon	gpu_sparse	8192	32	2	50	4	FALSE	FALSE	TRUE	0.826289	0.0402677
+epsilon	gpu_sparse	8192	8	1	50	-1	FALSE	FALSE	FALSE	0.82848	0.0438829
+epsilon	gpu_sparse	16384	32	2	50	4	FALSE	FALSE	TRUE	0.809006	0.0321117
+epsilon	gpu_array	16384	8	1	50	-1	FALSE	FALSE	FALSE	0.813994	0.0372913
+
+higgs	gpu_array	4096	64	2	10	-1	TRUE	FALSE	TRUE	0.0397001	0.01382
+higgs	gpu_array	4096	32	2	10	-1	TRUE	FALSE	FALSE	0.0403394	0.0139034
+higgs	gpu_sparse	8192	64	1	2	2	TRUE	FALSE	TRUE	0.029692	0.00980428
+higgs	gpu_sparse	8192	64	1	10	-1	TRUE	FALSE	FALSE	0.0321238	0.010233
+higgs	gpu_array	16384	256	1	2	2	TRUE	FALSE	TRUE	0.0262995	0.00646545
+higgs	gpu_array	16384	256	1	2	-1	TRUE	FALSE	FALSE	0.0270562	0.00718404
+
+higgs	gpu_sparse	4096	64	1	10	2	TRUE	FALSE	TRUE	0.0443856	0.0130249
+higgs	gpu_array	4096	32	2	10	-1	TRUE	FALSE	FALSE	0.0403394	0.0139034
+higgs	gpu_array	8192	64	1	10	2	TRUE	FALSE	TRUE	0.0320831	0.00889099
+higgs	gpu_array	8192	32	1	10	-1	TRUE	FALSE	FALSE	0.0331954	0.00978414
+higgs	gpu_array	16384	32	1	2	2	TRUE	FALSE	TRUE	0.0272414	0.00598287
+higgs	gpu_array	16384	32	1	2	-1	TRUE	FALSE	FALSE	0.0272147	0.00677694
+
+year_prediction_msd	gpu_array	4096	32	1	10	-1	TRUE	FALSE	FALSE	0.0632247	0.0150468
+
+year_prediction_msd	gpu_array	8192	64	1	10	2	TRUE	FALSE	TRUE	0.0616968	0.012264
+year_prediction_msd	gpu_array	8192	8	1	10	-1	TRUE	FALSE	FALSE	0.0617061	0.0116189
+year_prediction_msd	gpu_sparse	16384	32	1	2	2	TRUE	FALSE	TRUE	0.0485412	0.00853241
+year_prediction_msd	gpu_array	16384	32	1	10	-1	TRUE	FALSE	FALSE	0.0489127	0.0070108
+
+year_prediction_msd	gpu_array	4096	32	1	10	-1	TRUE	FALSE	FALSE	0.0632247	0.0150468
+year_prediction_msd	gpu_array	8192	32	1	10	-1	TRUE	FALSE	FALSE	0.0651646	0.010139
+year_prediction_msd	gpu_array	16384	32	1	10	-1	TRUE	FALSE	FALSE	0.0489127	0.0070108
+
+--------------------------------
+4060 with Transfer Optimization (memset) - Autoschedule - With pipelining - 600 reps (Sorted on total time)
+--------------------------------
+model	representation	batch_size	rowsPerTB	rowsPerT	numTreeThreads	treeInterleaveDepth	cache_rows	cache_trees	unroll	total	kernel
+
+abalone	gpu_array	4096	32	1	20	2	TRUE	FALSE	TRUE	0.0499194	0.0388672 (1.22x)
+abalone	gpu_array	4096	32	1	20	-1	TRUE	FALSE	FALSE	0.0581014	0.047476
+abalone	gpu_array	8192	32	1	10	4	TRUE	FALSE	TRUE	0.040378	0.0331268 (1.34x)
+abalone	gpu_array	8192	32	1	10	-1	TRUE	FALSE	FALSE	0.0516148	0.0445351
+abalone	gpu_array	16384	64	1	2	2	FALSE	FALSE	TRUE	0.0403134	0.0336309 (1.15x)
+abalone	gpu_array	16384	64	1	2	-1	TRUE	FALSE	FALSE	0.0453459	0.0385903
+
+airline	gpu_array	4096	64	2	10	2	TRUE	FALSE	TRUE	0.0258903	0.0112166 (1.07x)
+airline	gpu_array	4096	64	2	10	-1	TRUE	FALSE	FALSE	0.0264176	0.0120524
+airline	gpu_array	8192	32	1	10	2	TRUE	FALSE	TRUE	0.0193209	0.00780741 (1.13x)
+airline	gpu_sparse	8192	64	2	20	-1	TRUE	FALSE	FALSE	0.0202974	0.00881226
+airline	gpu_array	16384	32	1	2	4	TRUE	FALSE	TRUE	0.0160925	0.00554016 (1.13x)
+airline	gpu_array	16384	32	1	2	-1	TRUE	FALSE	FALSE	0.0167773	0.00624898
+
+airline-ohe	gpu_array	4096	8	1	50	2	TRUE	FALSE	TRUE	0.34565	0.0557678 (1.35x)
+airline-ohe	gpu_array	4096	8	1	50	-1	TRUE	FALSE	FALSE	0.363778	0.0751086
+airline-ohe	gpu_array	8192	8	1	50	2	TRUE	FALSE	TRUE	0.324783	0.0521134 (1.36x)
+airline-ohe	gpu_array	8192	8	1	50	-1	TRUE	FALSE	FALSE	0.343484	0.0711847
+airline-ohe	gpu_array	16384	8	1	50	2	TRUE	FALSE	TRUE	0.326958	0.0502448 (1.43x)
+airline-ohe	gpu_array	16384	8	1	50	-1	TRUE	FALSE	FALSE	0.34594	0.0720669
+
+covtype	gpu_array	4096	32	1	2	4	TRUE	FALSE	TRUE	0.0928817	0.0628707 (1.1x, 2x)
+covtype	gpu_sparse	4096	32	1	20	-1	TRUE	FALSE	FALSE	0.11686	0.0693896
+covtype	gpu_array	4096	32	1	2	-1	TRUE	FALSE	FALSE	0.154765	0.124701
+covtype	gpu_array	8192	32	1	2	4	TRUE	FALSE	TRUE	0.085353	0.055675 (1.07x, 1.4x)
+covtype	gpu_array	8192	64	1	10	-1	TRUE	FALSE	FALSE	0.0914124	0.0596948
+covtype	gpu_array	8192	32	1	2	-1	TRUE	FALSE	FALSE	0.106313	0.0778249
+covtype	gpu_array	16384	64	1	2	4	TRUE	FALSE	TRUE	0.081852	0.0541864 (1.04x. 1.43x)
+covtype	gpu_sparse	16384	64	1	10	-1	TRUE	FALSE	FALSE	0.0916613	0.0563793
+covtype	gpu_array	16384	64	1	2	-1	TRUE	FALSE	FALSE	0.105102	0.0775726
+
+epsilon	gpu_sparse	4096	64	2	10	2	FALSE	FALSE	TRUE	0.820219	0.0431718 (1.07x)
+epsilon	gpu_sparse	4096	64	2	10	-1	FALSE	FALSE	FALSE	0.821737	0.0462077
+epsilon	gpu_sparse	8192	32	2	50	2	FALSE	FALSE	TRUE	0.807149	0.038785 (1.09x)
+epsilon	gpu_sparse	8192	8	1	50	-1	FALSE	FALSE	FALSE	0.809672	0.0423124
+epsilon	gpu_sparse	16384	32	2	50	2	FALSE	FALSE	TRUE	0.790315	0.031921 (1.17x)
+epsilon	gpu_array	16384	8	1	50	-1	FALSE	FALSE	FALSE	0.794938	0.0374645
+
+higgs	gpu_array	4096	64	2	10	-1	TRUE	FALSE	TRUE	0.0330416	0.0126078 (1.02x, 1.03x)
+higgs	gpu_array	4096	32	1	20	-1	TRUE	FALSE	FALSE	0.0336735	0.0128455
+higgs	gpu_array	4096	64	2	10	-1	TRUE	FALSE	FALSE	0.0340788	0.0130688
+higgs	gpu_array	8192	32	1	10	2	TRUE	FALSE	TRUE	0.026192	0.00847799 (1.07x, 1.11x)
+higgs	gpu_array	8192	64	1	10	-1	TRUE	FALSE	FALSE	0.0268443	0.00910319
+higgs	gpu_sparse	8192	32	1	10	-1	TRUE	FALSE	FALSE	0.0272439	0.00948222
+higgs	gpu_array	16384	32	1	2	2	TRUE	FALSE	TRUE	0.0261952	0.00627065 (1.12x)
+higgs	gpu_array	16384	32	1	2	-1	TRUE	FALSE	FALSE	0.026797	0.00703471
+
+year_prediction_msd	gpu_array	4096	32	1	10	-1	TRUE	FALSE	FALSE	0.0567306	0.0132544
+year_prediction_msd	gpu_sparse	8192	64	1	10	-1	TRUE	FALSE	FALSE	0.0590865	0.00986186
+year_prediction_msd	gpu_array	16384	32	1	10	-1	TRUE	FALSE	FALSE	0.0479652	0.0071402
+
+
+
+
+
+
+
+
