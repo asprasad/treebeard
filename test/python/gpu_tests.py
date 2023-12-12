@@ -292,6 +292,23 @@ def RunGPUAutoScheduleTestsNoCacheUnrollParallelTrees():
   run_auto_schedule_test("no-cache-autoschedule-unroll-treepar-sparse", "gpu_sparse", gpuAutoScheduleOptions, batch_size=batchSize)
   run_auto_schedule_test("no-cache-autoschedule-unroll-treepar-reorg", "gpu_reorg", gpuAutoScheduleOptions, batch_size=batchSize)
 
+def RunGPUAutoScheduleTestsUnrollAndInterleaveParallelTrees():
+  batchSize = 200
+  gpuAutoScheduleOptions = treebeard.GPUAutoScheduleOptions()
+  gpuAutoScheduleOptions.NumberOfRowsPerThreadBlock(20)
+  gpuAutoScheduleOptions.NumberOfRowsPerThread(1)
+  gpuAutoScheduleOptions.UnrollTreeWalks(True)
+  gpuAutoScheduleOptions.CacheRows(False)
+  gpuAutoScheduleOptions.CacheTrees(False)
+  gpuAutoScheduleOptions.NumberOfTreeThreads(4)
+  gpuAutoScheduleOptions.NumberOfTreesAtATime(1)
+  gpuAutoScheduleOptions.TreeWalkInterleaveFactor(2)
+
+  # selected_tests = ["abalone", "airline", "airline-ohe", "covtype", "epsilon", "higgs",  "letters", "year_prediction_msd",]
+  run_auto_schedule_test("no-cache-autoschedule-unroll-interleave-treepar-array", "gpu_array", gpuAutoScheduleOptions, batch_size=batchSize)
+  run_auto_schedule_test("no-cache-autoschedule-unroll-interleave-treepar-sparse", "gpu_sparse", gpuAutoScheduleOptions, batch_size=batchSize)
+  run_auto_schedule_test("no-cache-autoschedule-unroll-interleave-treepar-reorg", "gpu_reorg", gpuAutoScheduleOptions, batch_size=batchSize)
+
 def run_all_tests():
   RunSimpleGPUScheduleTests()
   RunOneRowAtATimeGPUScheduleTests()
@@ -305,6 +322,7 @@ def run_all_tests():
   RunGPUAutoScheduleTestsNoCacheNoUnroll()
   RunGPUAutoScheduleTestsNoCacheUnroll()
   RunGPUAutoScheduleTestsNoCacheUnrollParallelTrees()
+  RunGPUAutoScheduleTestsUnrollAndInterleaveParallelTrees()
 
 if __name__ == "__main__":
   run_all_tests()

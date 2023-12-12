@@ -246,6 +246,7 @@ class TreebeardAPI:
       self.runtime_lib.Set_cacheRows.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
       self.runtime_lib.Set_cacheTrees.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
       self.runtime_lib.Set_unrollTreeWalks.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
+      self.runtime_lib.Set_treeWalkInterleaveFactor.argtypes = [ctypes.c_int64, ctypes.c_int32]
 
       self.runtime_lib.Set_numRowsPerTB.restype = None
       self.runtime_lib.Set_numRowsPerThread.restype = None
@@ -255,6 +256,7 @@ class TreebeardAPI:
       self.runtime_lib.Set_cacheRows.restype = None
       self.runtime_lib.Set_cacheTrees.restype = None
       self.runtime_lib.Set_unrollTreeWalks.restype = None
+      self.runtime_lib.Set_treeWalkInterleaveFactor.restype = None
 
     except Exception as e:
       print("Loading the TreeBeard runtime failed with exception :", e)

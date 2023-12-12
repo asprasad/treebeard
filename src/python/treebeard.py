@@ -39,6 +39,9 @@ class GPUAutoScheduleOptions:
   def UnrollTreeWalks(self, val : bool):
     treebeardAPI.runtime_lib.Set_unrollTreeWalks(self.optionsPtr, ctypes.c_int32(1 if val else 0))
 
+  def TreeWalkInterleaveFactor(self, val : int):
+    treebeardAPI.runtime_lib.Set_treeWalkInterleaveFactor(self.optionsPtr, ctypes.c_int32(val))
+
 #### ---------------------------------------------------------------- ####
 #### Compiler options
 #### ---------------------------------------------------------------- ####

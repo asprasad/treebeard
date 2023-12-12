@@ -197,6 +197,7 @@ GPU_AUTOSCHEDULE_OPTION_SETTER(numTreesAtATime, int32_t)
 GPU_AUTOSCHEDULE_OPTION_SETTER(cacheRows, int32_t);
 GPU_AUTOSCHEDULE_OPTION_SETTER(cacheTrees, int32_t);
 GPU_AUTOSCHEDULE_OPTION_SETTER(unrollTreeWalks, int32_t);
+GPU_AUTOSCHEDULE_OPTION_SETTER(treeWalkInterleaveFactor, int32_t);
 
 // ===-------------------------------------------------------------=== //
 // Compilation API
