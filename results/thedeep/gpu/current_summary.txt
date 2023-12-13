@@ -55,3 +55,13 @@ RAW RESULTS: treebeard/results/thedeep/gpu/exploration/gpu_auto-schedule-results
 year_prediction_msd      gpu_array         256          2         1              50                   -1       False        False   False  0.249071  0.111763   0.027759  0.036604         0.093524          0.051243         0.080399                0.195918
 year_prediction_msd      gpu_array         512          8         1              50                   -1       False        False   False  0.168128  0.068316   0.049171  0.073004         0.103689          0.035605         0.050840                0.139302
 year_prediction_msd      gpu_array        1024         32         1              20                   -1        True        False   False  0.115834  0.038228   0.030216  0.038029         0.053931          0.036583         0.099831                0.129516
+
+
+Degradations with slower schedules
+batch_size  five_diff ten_diff  twentyfive_diff  five_diff_kernel  ten_diff_kernel  twentyfive_diff_kernel
+256         0.033     0.06      0.12             0.040             0.080            0.185
+512         0.032     0.06      0.11             0.04              0.075            0.16
+1024        0.03      0.05      0.09             0.05              0.075            0.17
+4096        0.054     0.07      0.11             0.07              0.100            0.19
+8192        0.035     0.045     0.08             0.07              0.107            0.197
+16384       0.03      0.042     0.08             0.09              0.12             0.217
