@@ -46,7 +46,7 @@ using mlir::decisionforest::TahoeSharedForestStrategy;
 using mlir::decisionforest::TahoeSharedPartialForestStrategy;
 
 #define NUM_RUNS 200
-#define VERIFY_RESULT true
+#define VERIFY_RESULT false
 const int32_t MIN_TB_SIZE = 32;
 const int32_t MAX_TB_SIZE = 1024;
 const int32_t MAX_SHMEM_SIZE = 49152;
@@ -225,6 +225,10 @@ GPUTimes BenchmarkGPUCodeGeneration(mlir::ModuleOp module,
       sizeof(ThresholdType) * 8, sizeof(IndexType) * 8);
 
   if (VERIFY_RESULT) {
+    // NOTE: Setting this calls the kernel in a loop rendering the result
+    // incorrect.
+    assert(mlir::decisionforest::numberOfKernelRuns == 1 &&
+           "Number of kernel runs should be == 1 to verify results!");
     bool validResult =
         ValidateModuleOutputAgainstCSVdata<ThresholdType, ReturnType>(
             inferenceRunner, tbContext.modelPath + ".test.sampled.csv",
@@ -238,20 +242,25 @@ GPUTimes BenchmarkGPUCodeGeneration(mlir::ModuleOp module,
   populateInputdata<ThresholdType>(batchSize, inputData, csvFilename);
 
   std::vector<ReturnType> result(batchSize, -1);
-  std::chrono::steady_clock::time_point begin =
-      std::chrono::steady_clock::now();
-  for (int32_t trial = 0; trial < NUM_RUNS; ++trial) {
+  bool runKernelMultipleTimes = mlir::decisionforest::numberOfKernelRuns > 1;
+  auto numTrials = runKernelMultipleTimes ? 1 : NUM_RUNS;
+  auto begin = std::chrono::steady_clock::now();
+  for (int32_t trial = 0; trial < numTrials; ++trial) {
     for (auto &batch : inputData) {
       inferenceRunner.RunInference<ThresholdType, ReturnType>(batch.data(),
                                                               result.data());
     }
   }
-  std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+  auto end = std::chrono::steady_clock::now();
 
-  int64_t numSamples = NUM_RUNS * inputData.size() * batchSize;
+  int64_t numKernelCallsPerRun = mlir::decisionforest::numberOfKernelRuns;
+
+  int64_t numSamples =
+      numKernelCallsPerRun * numTrials * inputData.size() * batchSize;
   int64_t timeTaken =
       std::chrono::duration_cast<std::chrono::microseconds>(end - begin)
           .count();
+
   auto totalTimePerSample = (double)timeTaken / (double)numSamples;
   auto kernelTimePerSample =
       (double)inferenceRunner.GetKernelExecutionTime() / (double)numSamples;
@@ -422,7 +431,6 @@ void RunAutoScheduleBenchmarks(const std::string &modelName,
 }
 
 void RunAllAutoScheduleXGBoostGPUBenchmarks() {
-  mlir::decisionforest::measureGpuKernelTime = true;
   std::cout
       << "model,representation,batch_size,rowsPerTB,rowsPerT,"
          "numTreeThreads,treeInterleaveDepth,cache_rows,cache_trees,unroll,"
@@ -1151,8 +1159,10 @@ void RunAllCustomScheduleBenchmarks() {
 }
 
 void RunXGBoostGPUBenchmarks() {
+  mlir::decisionforest::measureGpuKernelTime = true;
+  mlir::decisionforest::numberOfKernelRuns = NUM_RUNS;
   RunAllAutoScheduleXGBoostGPUBenchmarks();
-  // RunAllCustomScheduleBenchmarks();
+  RunAllCustomScheduleBenchmarks();
 }
 
 } // namespace test

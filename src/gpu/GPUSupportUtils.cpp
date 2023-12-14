@@ -78,8 +78,28 @@ void addGPUKernelTimingCalls(gpu::LaunchOp launchOp, mlir::OpBuilder &builder) {
     builder.setInsertionPoint(launchOp.getOperation());
     builder.create<func::CallOp>(location, startTimerFunc, TypeRange{});
 
-    builder.setInsertionPointAfter(launchOp.getOperation());
-    builder.create<func::CallOp>(location, endTimerFunc, TypeRange{});
+    if (mlir::decisionforest::numberOfKernelRuns > 1) {
+      auto zeroIndexConst = builder.create<arith::ConstantIndexOp>(location, 0);
+      auto oneIndexConst = builder.create<arith::ConstantIndexOp>(location, 1);
+      auto numRuns = builder.create<arith::ConstantIndexOp>(
+          location, mlir::decisionforest::numberOfKernelRuns);
+
+      // Create a new scf::ForOp
+      auto forOp = builder.create<scf::ForOp>(location, zeroIndexConst, numRuns,
+                                              oneIndexConst);
+
+      // Move the launchOp under the forOp and erase the old op.
+      builder.setInsertionPointToStart(forOp.getBody());
+      builder.clone(*launchOp);
+
+      builder.setInsertionPointAfter(forOp.getOperation());
+      builder.create<func::CallOp>(location, endTimerFunc, TypeRange{});
+
+      launchOp.erase();
+    } else {
+      builder.setInsertionPointAfter(launchOp.getOperation());
+      builder.create<func::CallOp>(location, endTimerFunc, TypeRange{});
+    }
   }
 }
 
@@ -372,6 +392,7 @@ namespace mlir {
 namespace decisionforest {
 
 bool measureGpuKernelTime = false;
+int numberOfKernelRuns = 1;
 
 gpu::ParallelLoopDimMappingAttr getMappingAttr(scf::ParallelOp parallelOp) {
   auto mappingAttr = parallelOp->getAttr(getMappingAttrName());

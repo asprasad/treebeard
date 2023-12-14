@@ -10,6 +10,7 @@ namespace mlir {
 namespace decisionforest {
 
 extern bool measureGpuKernelTime;
+extern int numberOfKernelRuns;
 
 gpu::ParallelLoopDimMappingAttr getMappingAttr(scf::ParallelOp parallelOp);
 bool isThreadBlockLoop(scf::ParallelOp parallelOp);
