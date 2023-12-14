@@ -261,9 +261,17 @@ GPUTimes BenchmarkGPUCodeGeneration(mlir::ModuleOp module,
       std::chrono::duration_cast<std::chrono::microseconds>(end - begin)
           .count();
 
-  auto totalTimePerSample = (double)timeTaken / (double)numSamples;
+  double totalTimePerSample = 0;
   auto kernelTimePerSample =
       (double)inferenceRunner.GetKernelExecutionTime() / (double)numSamples;
+  if (runKernelMultipleTimes) {
+    auto totalOverhead = timeTaken - inferenceRunner.GetKernelExecutionTime();
+    auto overheadPerSample =
+        ((double)(totalOverhead) / (batchSize * inputData.size()));
+    totalTimePerSample = overheadPerSample + kernelTimePerSample;
+  } else {
+    totalTimePerSample = (double)timeTaken / (double)numSamples;
+  }
   return GPUTimes{totalTimePerSample, kernelTimePerSample};
 }
 
