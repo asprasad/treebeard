@@ -348,3 +348,9 @@ def SetPeeledCodeGenForProbabilityBasedTiling(val):
 
 def IsPeeledCodeGenForProbabilityBasedTilingEnabled():
   return treebeardAPI.runtime_lib.IsPeeledCodeGenForProbabilityBasedTilingEnabled()
+
+def SetEnableMeasureGpuKernelTime(val):
+  treebeardAPI.runtime_lib.SetEnableMeasureGpuKernelTime(val)
+
+def SetNumberOfKernelRuns(val):
+  treebeardAPI.runtime_lib.SetNumberOfKernelRuns(val)

@@ -14,6 +14,7 @@
 #include "ExecutionHelpers.h"
 #include "GPUCompileUtils.h"
 #include "GPUExecutionHelper.h"
+#include "GPUSupportUtils.h"
 #include "ModelSerializers.h"
 #include "Representations.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -336,6 +337,14 @@ extern "C" void SetPeeledCodeGenForProbabilityBasedTiling(int32_t val) {
 
 extern "C" int32_t IsPeeledCodeGenForProbabilityBasedTilingEnabled() {
   return mlir::decisionforest::PeeledCodeGenForProbabiltyBasedTiling;
+}
+
+extern "C" void SetEnableMeasureGpuKernelTime(bool val) {
+  mlir::decisionforest::measureGpuKernelTime = val;
+}
+
+extern "C" void SetNumberOfKernelRuns(int32_t val) {
+  mlir::decisionforest::numberOfKernelRuns = val;
 }
 
 // ===-------------------------------------------------------------=== //
