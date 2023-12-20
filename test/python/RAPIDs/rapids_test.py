@@ -285,11 +285,13 @@ def RunTestOnSingleModelTestInputs_Treebeard_KernelTime(modelName : str) -> None
 
 if __name__ == "__main__":
   num_trials = 5
-  benchmarks = ["abalone", "airline", "airline-ohe", "covtype", "higgs", "letters", "year_prediction_msd"]
+  # benchmarks = ["abalone", "airline", "airline-ohe", "covtype", "higgs", "letters", "year_prediction_msd"]
   # benchmarks = ["epsilon"]
-  # benchmarks = ["abalone", "airline", "airline-ohe", "covtype", "epsilon", "higgs", "letters", "year_prediction_msd"]
-  # batch_sizes = [4096, 8192, 16384]
-  batch_sizes = [16384]
+  # batch_sizes = [16384]
+
+  benchmarks = ["abalone", "airline", "airline-ohe", "covtype", "epsilon", "higgs", "letters", "year_prediction_msd"]
+  batch_sizes = [4096, 8192, 16384]
+  
   rapids_total_times = []
   rapids_kernel_times = []
   treebeard_total_times = []
