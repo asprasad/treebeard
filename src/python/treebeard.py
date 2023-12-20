@@ -41,6 +41,24 @@ class GPUAutoScheduleOptions:
 
   def TreeWalkInterleaveFactor(self, val : int):
     treebeardAPI.runtime_lib.Set_treeWalkInterleaveFactor(self.optionsPtr, ctypes.c_int32(val))
+  
+  @classmethod
+  def Construct(cls, num_rows_per_TB : int, num_rows_per_thread : int = 1, num_tree_threads : int = 1, 
+                cache_rows : bool = False, cache_trees : bool = False, unroll_tree_walks : bool = False,
+                tree_walk_interleave_factor : int = -1):
+    row_tile_size : int = 1
+    num_trees_at_a_time : int = 1
+    options = GPUAutoScheduleOptions()
+    options.NumberOfRowsPerThreadBlock(num_rows_per_TB)
+    options.NumberOfRowsPerThread(num_rows_per_thread)
+    options.RowTileSize(row_tile_size)
+    options.NumberOfTreeThreads(num_tree_threads)
+    options.NumberOfTreesAtATime(num_trees_at_a_time)
+    options.CacheRows(cache_rows)
+    options.CacheTrees(cache_trees)
+    options.UnrollTreeWalks(unroll_tree_walks)
+    options.TreeWalkInterleaveFactor(tree_walk_interleave_factor)
+    return options
 
 #### ---------------------------------------------------------------- ####
 #### Compiler options
@@ -354,3 +372,6 @@ def SetEnableMeasureGpuKernelTime(val):
 
 def SetNumberOfKernelRuns(val):
   treebeardAPI.runtime_lib.SetNumberOfKernelRuns(val)
+
+def GetGPUKernelExecutionTime(inferenceRunner):
+  return treebeardAPI.runtime_lib.GetGPUKernelExecutionTime(inferenceRunner.inferenceRunner)

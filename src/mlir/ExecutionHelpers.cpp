@@ -23,15 +23,8 @@ namespace mlir {
 namespace decisionforest {
 
 std::string GetDebugSOPath() {
-  char exePath[PATH_MAX];
-  memset(exePath, 0, sizeof(exePath));
-  if (readlink("/proc/self/exe", exePath, PATH_MAX) == -1)
-    return std::string("");
-  // std::cout << "Calculated executable path : " << exePath << std::endl;
-  char *execDir = dirname(exePath);
-  char *buildDir = dirname(execDir);
-  std::string debugSOPath =
-      std::string(buildDir) + "/src/debug-helpers/libtreebearddebug.so";
+  std::string debugSOPath = std::string(TREEBEARD_BUILD_DIR) +
+                            "/src/debug-helpers/libtreebearddebug.so";
   return debugSOPath;
 }
 

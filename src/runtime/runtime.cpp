@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <dlfcn.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -15,6 +16,7 @@
 #include "GPUCompileUtils.h"
 #include "GPUExecutionHelper.h"
 #include "GPUSupportUtils.h"
+#include "GPUTestUtils.h"
 #include "ModelSerializers.h"
 #include "Representations.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -484,7 +486,7 @@ extern "C" void *ConstructGPUInferenceRunnerFromTBContext(void *tbContext) {
       reinterpret_cast<TreeBeard::TreebeardContext *>(tbContext);
   auto module =
       TreeBeard::ConstructGPUModuleFromTreebeardContext(*tbContextPtr);
-  auto *inferenceRunner = new mlir::decisionforest::GPUInferenceRunner(
+  auto *inferenceRunner = new TreeBeard::test::GPUInferenceRunnerForTest(
       tbContextPtr->serializer, module, tbContextPtr->options.tileSize,
       tbContextPtr->options.thresholdTypeWidth,
       tbContextPtr->options.featureIndexTypeWidth);
@@ -759,6 +761,13 @@ void IndexVariable_SetGPUThreadDim(intptr_t indexVarPtr, int32_t construct,
   auto gpuDim =
       static_cast<mlir::decisionforest::IndexVariable::Dimension>(dim);
   indexVar->SetGPUDimension(gpuConstruct, gpuDim);
+}
+
+int64_t GetGPUKernelExecutionTime(intptr_t inferenceRunnerInt) {
+  auto inferenceRunner =
+      reinterpret_cast<TreeBeard::test::GPUInferenceRunnerForTest *>(
+          inferenceRunnerInt);
+  return inferenceRunner->GetKernelExecutionTime();
 }
 
 } // extern "C"

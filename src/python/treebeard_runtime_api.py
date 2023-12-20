@@ -258,6 +258,12 @@ class TreebeardAPI:
       self.runtime_lib.Set_unrollTreeWalks.restype = None
       self.runtime_lib.Set_treeWalkInterleaveFactor.restype = None
 
+      self.runtime_lib.SetEnableMeasureGpuKernelTime.argtypes = [ctypes.c_int8]
+      self.runtime_lib.SetEnableMeasureGpuKernelTime.restype = None
+
+      self.runtime_lib.GetGPUKernelExecutionTime.argtypes = [ctypes.c_int64]
+      self.runtime_lib.GetGPUKernelExecutionTime.restype = ctypes.c_int64
+
     except Exception as e:
       print("Loading the TreeBeard runtime failed with exception :", e)
   
