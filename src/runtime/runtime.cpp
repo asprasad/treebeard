@@ -190,6 +190,17 @@ extern "C" void CreateLLVMIRForONNXModel(const char *modelPath, const char* llvm
   TreeBeard::ConvertONNXModelToLLVMIR(tbContext, llvmIrPath);
 }
 
+extern "C" intptr_t CreateInferenceRunnerForONNXModel(const char*modelPath, intptr_t options)
+{
+  TreeBeard::CompilerOptions *optionsPtr = reinterpret_cast<TreeBeard::CompilerOptions *>(options);
+
+  auto modelGlobalsJSONPath = std::filesystem::temp_directory_path() / "modelGlobals.json";
+
+  auto inferenceRunner = TreeBeard::CreateInferenceRunnerForONNXModel<float>(modelPath, modelGlobalsJSONPath.string().c_str(), optionsPtr);
+  return reinterpret_cast<intptr_t>(inferenceRunner);
+
+}
+
 extern "C" intptr_t CreateInferenceRunnerForONNXModelInputs(int32_t numFeatures, 
     int64_t inputAndThresholdSize, int64_t numNodes, const char *predTransform,
     double baseValue, const int64_t *treeIds, const int64_t *nodeIds,
@@ -368,7 +379,8 @@ inline mlir::ModuleOp LowerToLLVM(void* tbContext) {
 }
 
 extern "C" bool LowerToLLVMAndDumpIR(void* tbContext, const char* fileName) {
-  auto module = LowerToLLVM(tbContext);
+  TreeBeard::TreebeardContext* tbContextPtr = reinterpret_cast<TreeBeard::TreebeardContext*>(tbContext);
+  auto module = ConstructLLVMDialectModuleFromForestCreator(*tbContextPtr, *tbContextPtr->forestConstructor);
   return mlir::decisionforest::dumpLLVMIRToFile(module, fileName) == 0;
 }
 
