@@ -8,6 +8,7 @@
 
 extern "C"
 {
+    TREEBEARD_RUNTIME_EXPORT intptr_t CreateInferenceRunnerForONNXModel(const char*modelPath, intptr_t options);
     TREEBEARD_RUNTIME_EXPORT intptr_t CreateInferenceRunnerForONNXModelInputs(
     int32_t numFeatures, int64_t inputAndThresholdSize, int64_t numNodes, const char *predTransform,
     double baseValue, const int64_t *treeIds, const int64_t *nodeIds,

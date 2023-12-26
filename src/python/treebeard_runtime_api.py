@@ -17,6 +17,9 @@ class TreebeardAPI:
       self.runtime_lib.CreateInferenceRunner.argtypes = (ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int64)
       self.runtime_lib.CreateInferenceRunner.restype = ctypes.c_int64
 
+      self.runtime_lib.CreateInferenceRunnerForONNXModel.argtypes = (ctypes.c_char_p, ctypes.c_int64)
+      self.runtime_lib.CreateInferenceRunnerForONNXModel.restype = ctypes.c_int64
+
       self.runtime_lib.InitializeInferenceRunner.argtypes = (ctypes.c_char_p, ctypes.c_char_p)
       self.runtime_lib.InitializeInferenceRunner.restype = ctypes.c_int64
       

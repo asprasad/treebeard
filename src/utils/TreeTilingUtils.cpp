@@ -1918,8 +1918,9 @@ void AddTileChildren(DecisionTree& tree, int32_t nodeNumber, int32_t& childNumbe
         tree.SetNodeLeftChild(nodeNumber, childNode);
         ++childNumber;
     }
-    if (node.rightChild != -1)
-        AddTileChildren(tree, node.rightChild, childNumber);
+    auto& newNode = tree.GetNodes().at(nodeNumber);
+    if (newNode.rightChild != -1)
+        AddTileChildren(tree, newNode.rightChild, childNumber);
     else {
         auto childNode = tree.NewNode(-1, childNumber);
         tree.SetNodeParent(childNode, nodeNumber);

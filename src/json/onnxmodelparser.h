@@ -27,23 +27,23 @@
 namespace TreeBeard
 {
     using ONNXModelParseResult = struct OnnxModelParseResult {
-    float baseValue;
-    mlir::decisionforest::PredictionTransformation predTransform;
-    int64_t numNodes;
-    int64_t numTargets;
-    const int64_t *treeIds;
-    const int64_t *nodeIds;
-    const int64_t *featureIds;
-    const float *thresholds;
-    const int64_t *falseNodeIds;
-    const int64_t *trueNodeIds;
-    mlir::arith::CmpFPredicate nodeMode;
-    int64_t numberOfClasses;
-    const int64_t *targetClassTreeId;
-    const int64_t *targetClassNodeId;
-    const int64_t *targetClassIds;
-    const float *targetWeights;
-    int64_t numWeights;
+    float baseValue=0.0f;
+    mlir::decisionforest::PredictionTransformation predTransform=mlir::decisionforest::PredictionTransformation::kIdentity;
+    int64_t numNodes=0;
+    int64_t numTargets=0;
+    const int64_t *treeIds=nullptr;
+    const int64_t *nodeIds=nullptr;
+    const int64_t *featureIds=nullptr;
+    const float *thresholds=nullptr;
+    const int64_t *falseNodeIds=nullptr;
+    const int64_t *trueNodeIds=nullptr;
+    mlir::arith::CmpFPredicate nodeMode=mlir::arith::CmpFPredicate::ULT;
+    int64_t numberOfClasses=0;
+    const int64_t *targetClassTreeId=nullptr;
+    const int64_t *targetClassNodeId=nullptr;
+    const int64_t *targetClassIds=nullptr;
+    const float *targetWeights=nullptr;
+    int64_t numWeights=0;
 
     static struct OnnxModelParseResult parseModel(const std::string &modelPath) {
         std::ifstream input(modelPath, std::ios::ate | std::ios::binary);

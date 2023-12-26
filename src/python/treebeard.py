@@ -165,7 +165,6 @@ class TreebeardContext:
     treebeardAPI.runtime_lib.BuildHIRRepresentation(self.tbcontextPtr)
 
   def DumpLLVMIR(self, path: str):
-    self.BuildHIRRepresentation()
     treebeardAPI.LowerToLLVMAndDumpIR(self.tbcontextPtr, path)
 
   def ConstructInferenceRunnerFromHIR(self):
@@ -203,6 +202,16 @@ class TreebeardInferenceRunner:
     inferenceRunner.rowSize = treebeardAPI.GetRowSize(inferenceRunner.inferenceRunner)
     inferenceRunner.batchSize = treebeardAPI.GetBatchSize(inferenceRunner.inferenceRunner)
     return inferenceRunner
+  
+  @classmethod
+  def FromONNXModelFile(self, onnx_model_path: str, options: CompilerOptions):
+     inferenceRunner = TreebeardInferenceRunner()
+     onnx_model_path = onnx_model_path.encode('ascii')
+     
+     inferenceRunner.inferenceRunner = treebeardAPI.runtime_lib.CreateInferenceRunnerForONNXModel(onnx_model_path, options.optionsPtr)
+     inferenceRunner.rowSize = treebeardAPI.GetRowSize(inferenceRunner.inferenceRunner)
+     inferenceRunner.batchSize = treebeardAPI.GetBatchSize(inferenceRunner.inferenceRunner)
+     return inferenceRunner
   
   @classmethod
   def FromTBContext(self, tbContext):
