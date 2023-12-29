@@ -45,7 +45,7 @@ namespace TreeBeard
     const float *targetWeights=nullptr;
     int64_t numWeights=0;
 
-    static struct OnnxModelParseResult parseModel(const std::string &modelPath) {
+    static struct OnnxModelParseResult parseONNXFile(const std::string &modelPath) {
         std::ifstream input(modelPath, std::ios::ate | std::ios::binary);
         if (!input.is_open()) {
         std::cout << "Error opening file: " << modelPath << std::endl;
@@ -121,21 +121,24 @@ namespace TreeBeard
             }
         } else if (attribute.name() == "nodes_modes") {
             auto size = attribute.strings_size();
-            auto data = attribute.strings().data();
             if (size > 0) {
-                auto first = *data[0];
-                assert((first == "BRANCH_LT" || first == "BRANCH_GEQ" || first == "BRANCH_GT" || first == "BRANCH_LEQ") && "Only BRANCH_{LT, GEQ, GT, LEQ} is supported");
+                std::set<std::string> nodeCmpModes;
                 for (int i = 1; i < size; i++) {
-                    assert((*data[i] == first || *data[i] == "LEAF") &&
-                        "Only BRANCH_{LT, GEQ, GT, LEQ} is supported");
+                    if (attribute.strings(i) != "LEAF") {
+                        nodeCmpModes.insert(attribute.strings(i));
+                    }
                 }
-                if (first == "BRANCH_LT") {
+                assert(nodeCmpModes.size() == 1 && "Only one node mode is supported");
+                auto cmpMode = *nodeCmpModes.begin();
+                assert((cmpMode == "BRANCH_LT" || cmpMode == "BRANCH_GEQ" || cmpMode == "BRANCH_GT" || cmpMode == "BRANCH_LEQ") && "Only BRANCH_{LT, GEQ, GT, LEQ} is supported");
+
+                if (cmpMode == "BRANCH_LT") {
                     nodeMode = mlir::arith::CmpFPredicate::ULT;
-                } else if (first == "BRANCH_GEQ") {
+                } else if (cmpMode == "BRANCH_GEQ") {
                     nodeMode = mlir::arith::CmpFPredicate::UGE;
-                } else if (first == "BRANCH_GT") {
+                } else if (cmpMode == "BRANCH_GT") {
                     nodeMode = mlir::arith::CmpFPredicate::UGT;
-                } else if (first == "BRANCH_LEQ") {
+                } else if (cmpMode == "BRANCH_LEQ") {
                     nodeMode = mlir::arith::CmpFPredicate::ULE;
                 }
                 else {
@@ -202,7 +205,7 @@ namespace TreeBeard
     using ONNXTreeNode = struct _ONNXTreeNode<ThresholdType>;
 
     template<typename ValueType>
-    class ONNXModelConverter : public ForestCreator
+    class ONNXFileParser : public ForestCreator
     {
         private:
             std::vector<std::shared_ptr<ONNXTreeNode<ValueType>>> _trees;
@@ -211,61 +214,32 @@ namespace TreeBeard
             std::vector<int64_t> _classIds;
             int32_t numberOfFeatures = -1;
 
-        public:
-            ONNXModelConverter(std::shared_ptr<mlir::decisionforest::IModelSerializer> serializer,
-                            mlir::MLIRContext& context,
-                            int32_t numFeatures,
-                            ValueType baseValue,
-                            mlir::decisionforest::PredictionTransformation predTransform,
-                            mlir::arith::CmpFPredicate nodeMode,
-                            int64_t numNodes,
-                            const int64_t *treeIds,
-                            const int64_t *nodeIds,
-                            const int64_t *featureIds,
-                            const ValueType *thresholds,
-                            const int64_t *leftChildIds,
-                            const int64_t *rightChildIds,
-                            int64_t numberOfClasess,
-                            const int64_t *targetClassTreeId,
-                            const int64_t *targetClassNodeId,
-                            const int64_t *targetClassIds,
-                            const float *targetWeights,
-                            int64_t numWeights,
-                            int64_t batchSize
-                            ) : ForestCreator(serializer,
-                                                context,
-                                                batchSize,
-                                                // #TODOSampath - Revisit the types
-                                                GetMLIRType(ValueType(), context),
-                                                GetMLIRType(int32_t(), context),
-                                                GetMLIRType(int32_t(), context),
-                                                GetMLIRType(ValueType(), context),
-                                                GetMLIRType(ValueType(), context)),
-                                _isClassifier(false)
+            
+            void GatherForestInformationFromParseResult(const OnnxModelParseResult& parsedModel)
             {
                 std::unordered_map<ONNXTreeNodeKey, std::shared_ptr<ONNXTreeNode<ValueType>>, ONNXTreeNodeKey::HashFn> nodeMap;
 
-                assert(numFeatures > 0 && "Number of features should be > 0");
-                this->numberOfFeatures = numFeatures;
+                auto leftChildIds = parsedModel.trueNodeIds;
+                auto rightChildIds = parsedModel.falseNodeIds;
 
-                for (int64_t i = 0; i < numNodes; i++) {
-                    ONNXTreeNodeKey key = {treeIds[i], nodeIds[i]};
+                for (int64_t i = 0; i < parsedModel.numNodes; i++) {
+                    ONNXTreeNodeKey key = {parsedModel.treeIds[i], parsedModel.nodeIds[i]};
                     auto onnxTreeNode = std::make_shared<ONNXTreeNode<ValueType>>();
-                    onnxTreeNode->featureId = featureIds[i];
-                    onnxTreeNode->threshold = thresholds[i];
+                    onnxTreeNode->featureId = parsedModel.featureIds[i];
+                    onnxTreeNode->threshold = parsedModel.thresholds[i];
 
                     nodeMap[key] = onnxTreeNode;
                 }
 
-                for (int64_t i = 0; i < numNodes; i++) {
-                    ONNXTreeNodeKey key = {treeIds[i], nodeIds[i]};
+                for (int64_t i = 0; i < parsedModel.numNodes; i++) {
+                    ONNXTreeNodeKey key = {parsedModel.treeIds[i], parsedModel.nodeIds[i]};
                     auto node = nodeMap[key];
 
                     ONNXTreeNodeKey rightChildKey = {key.treeId, rightChildIds[i]};
                     auto rightChild = nodeMap.find(rightChildKey);
 
                     if (rightChild != nodeMap.end()) {
-                        if (rightChildIds[i] > 0 && rightChildIds[i] < numNodes)
+                        if (rightChildIds[i] > 0 && rightChildIds[i] < parsedModel.numNodes)
                             node->rightChild = rightChild->second;
                         else
                             node->rightChild = nullptr;
@@ -277,7 +251,7 @@ namespace TreeBeard
                     ONNXTreeNodeKey leftChildKey = {key.treeId, leftChildIds[i]};
                     auto leftChild = nodeMap.find(leftChildKey);
                     if (leftChild != nodeMap.end()) {
-                        if (leftChildIds[i] > 0 && leftChildIds[i] < numNodes)
+                        if (leftChildIds[i] > 0 && leftChildIds[i] < parsedModel.numNodes)
                             node->leftChild = leftChild->second;
                         else
                             node->leftChild = nullptr;
@@ -287,34 +261,34 @@ namespace TreeBeard
                     }
                 }
 
-                if (numberOfClasess > 0) _isClassifier = true;
+                if (parsedModel.numberOfClasses > 0) _isClassifier = true;
 
-                this->SetInitialOffset(baseValue);
-                this->SetNumberOfClasses(numberOfClasess);
-                this->m_forest->SetPredictionTransformation(predTransform);
-                this->SetPredicateType(nodeMode);
+                this->SetInitialOffset(parsedModel.baseValue);
+                this->SetNumberOfClasses(parsedModel.numberOfClasses);
+                this->m_forest->SetPredictionTransformation(parsedModel.predTransform);
+                this->SetPredicateType(parsedModel.nodeMode);
 
                 // #TODOSampath - Revisit this hardcoding.
                 this->SetReductionType(mlir::decisionforest::ReductionType::kAdd);
 
                 int64_t currTreeId = -1;
-                for (int64_t i = 0; i < numNodes; i++) {
-                    if (currTreeId == -1 || treeIds[i] != currTreeId) {
-                        _trees.push_back(nodeMap[{treeIds[i], nodeIds[i]}]);
+                for (int64_t i = 0; i < parsedModel.numNodes; i++) {
+                    if (currTreeId == -1 || parsedModel.treeIds[i] != currTreeId) {
+                        _trees.push_back(nodeMap[{parsedModel.treeIds[i], parsedModel.nodeIds[i]}]);
                     }
-                    currTreeId = treeIds[i];
+                    currTreeId = parsedModel.treeIds[i];
                 }
 
                 // ONNX uses weights instead of threshould of leaves to compute final prediction. Treebeard uses leaf threshold value.
                 // setting threshld value of leaves to weights to compute final prediction.
                 // ONNX also uses different class IDs for each leaf node which treebeard currently doesn't support. We are just storing the data for now.
-                for (int64_t i = 0; i < numWeights; i++) {
-                    ONNXTreeKey key = {targetClassTreeId[i], targetClassNodeId[i]};
+                for (int64_t i = 0; i < parsedModel.numWeights; i++) {
+                    ONNXTreeKey key = {parsedModel.targetClassTreeId[i], parsedModel.targetClassNodeId[i]};
                     auto node = nodeMap.find(key);
 
                     if (node != nodeMap.end()) {
-                        _treeToClassIdMap[targetClassTreeId[i]].insert(targetClassIds[i]);
-                        node->second->threshold = targetWeights[i];
+                        _treeToClassIdMap[parsedModel.targetClassTreeId[i]].insert(parsedModel.targetClassIds[i]);
+                        node->second->threshold = parsedModel.targetWeights[i];
                     }
                     else {
                         assert(false && "Key not found");
@@ -345,7 +319,27 @@ namespace TreeBeard
                 }
 
                 return -1;
-            }   
+            }
+
+        public:
+            ONNXFileParser(TreebeardContext& tbContext) : ForestCreator(tbContext.serializer,
+                                             tbContext.context,
+                                             tbContext.options.batchSize,
+                                             // #TODOSampath - Revisit the types
+                                             GetMLIRType(ValueType(), tbContext.context),
+                                             GetMLIRType(int32_t(), tbContext.context),
+                                             GetMLIRType(int32_t(), tbContext.context),
+                                             GetMLIRType(ValueType(), tbContext.context),
+                                             GetMLIRType(ValueType(), tbContext.context))
+            {
+                mlir::MLIRContext& context = tbContext.context;
+                assert(tbContext.options.numberOfFeatures > 0 && "Number of features must be greater than 0");
+                this->numberOfFeatures = tbContext.options.numberOfFeatures;
+                assert(this->numberOfFeatures > 0 && "Number of features should be > 0");
+
+                const auto &parseResult = TreeBeard::ONNXModelParseResult::parseONNXFile(tbContext.modelPath);
+                GatherForestInformationFromParseResult(parseResult);
+            }
 
             void ConstructForest() override
             {
@@ -365,47 +359,6 @@ namespace TreeBeard
                     this->EndTree();
                     treeIdIndex++;
                 }
-            }
-    };
-
-    template<typename ValueType>
-    class ONNXFileParser : public ForestCreator
-    {
-        private:
-            std::unique_ptr<ONNXModelConverter<ValueType>> m_modelConvertor = nullptr;
-            int32_t numFeatures = -1;
-        public:
-            ONNXFileParser(TreebeardContext& tbContext) : ForestCreator(tbContext.serializer,
-                                             tbContext.context,
-                                             tbContext.options.batchSize,
-                                             // #TODOSampath - Revisit the types
-                                             GetMLIRType(ValueType(), tbContext.context),
-                                             GetMLIRType(int32_t(), tbContext.context),
-                                             GetMLIRType(int32_t(), tbContext.context),
-                                             GetMLIRType(ValueType(), tbContext.context),
-                                             GetMLIRType(ValueType(), tbContext.context))
-            {
-                mlir::MLIRContext& context = tbContext.context;
-                assert(tbContext.options.numberOfFeatures > 0 && "Number of features must be greater than 0");
-                numFeatures = tbContext.options.numberOfFeatures;
-                const auto &parsedModel = TreeBeard::ONNXModelParseResult::parseModel(tbContext.modelPath);
-
-                // Hardcoding to float because ONNX doesn't support double. Revisit this #TODOSampath
-                m_modelConvertor = std::make_unique<ONNXModelConverter<ValueType>>(
-                    tbContext.serializer, context, this->numFeatures, parsedModel.baseValue,
-                    parsedModel.predTransform, parsedModel.nodeMode, parsedModel.numNodes, parsedModel.treeIds,
-                    parsedModel.nodeIds, parsedModel.featureIds, parsedModel.thresholds,
-                    parsedModel.trueNodeIds, parsedModel.falseNodeIds,
-                    parsedModel.numberOfClasses, parsedModel.targetClassTreeId,
-                    parsedModel.targetClassNodeId, parsedModel.targetClassIds,
-                    parsedModel.targetWeights, parsedModel.numWeights, tbContext.options.batchSize);
-                
-                m_modelConvertor->ConstructForest();
-            }
-
-            void ConstructForest() override
-            {
-                *this->m_forest = *m_modelConvertor->GetForest();
             }
     };
 
