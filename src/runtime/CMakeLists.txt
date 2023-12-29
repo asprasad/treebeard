@@ -13,3 +13,6 @@ include_directories(../mlir)
 include_directories(../test)
 include_directories(../utils)
 include_directories(../schedule)
+
+target_include_directories(treebeard-runtime PRIVATE ${Protobuf_INCLUDE_DIRS})
+target_link_libraries(treebeard-runtime PRIVATE protobuf::libprotobuf)
