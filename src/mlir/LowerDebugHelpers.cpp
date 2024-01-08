@@ -15,7 +15,8 @@
 
 using namespace mlir;
 
-namespace {
+namespace mlir {
+namespace decisionforest {
 FlatSymbolRefAttr getOrInsertFunction(std::string &functionName,
                                       LLVM::LLVMFunctionType functionType,
                                       PatternRewriter &rewriter,
@@ -516,7 +517,8 @@ struct PrintVectorOpLowering : public ConversionPattern {
   }
 };
 
-} // anonymous namespace
+} // namespace decisionforest
+} // namespace mlir
 
 namespace mlir {
 namespace decisionforest {

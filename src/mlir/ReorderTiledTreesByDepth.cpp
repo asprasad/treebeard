@@ -24,7 +24,8 @@
 
 using namespace mlir;
 
-namespace {
+namespace mlir {
+namespace decisionforest {
 
 template <typename T> T AssertOpIsOfType(Operation *operation) {
   T typedOp = llvm::dyn_cast<T>(operation);
@@ -146,7 +147,7 @@ struct ReorderEnsembleConstants : public RewritePattern {
 
 struct ReorderTreesByDepthPass
     : public PassWrapper<ReorderTreesByDepthPass,
-                         OperationPass<mlir::func::FuncOp>> {
+                         OperationPass<mlir::ModuleOp>> {
   ReorderTreesByDepthPass() {}
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect,
@@ -450,8 +451,7 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
 };
 
 struct SplitTreeLoopByDepth
-    : public PassWrapper<SplitTreeLoopByDepth,
-                         OperationPass<mlir::func::FuncOp>> {
+    : public PassWrapper<SplitTreeLoopByDepth, OperationPass<mlir::ModuleOp>> {
   int32_t m_pipelineSize;
   int32_t m_numCores;
   int32_t m_parallelTreeBatches;
@@ -474,7 +474,8 @@ struct SplitTreeLoopByDepth
   }
 };
 
-} // anonymous namespace
+} // namespace decisionforest
+} // namespace mlir
 
 namespace mlir {
 namespace decisionforest {
@@ -482,11 +483,10 @@ void DoReorderTreesByDepth(mlir::MLIRContext &context, mlir::ModuleOp module,
                            int32_t pipelineSize, int32_t numCores,
                            int32_t parallelTreeBatches) {
   mlir::PassManager pm(&context);
-  mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
-  optPM.addPass(std::make_unique<ReorderTreesByDepthPass>());
+  pm.addPass(std::make_unique<ReorderTreesByDepthPass>());
   // TODO pipelineSize needs to be added to CompilerOptions
-  optPM.addPass(std::make_unique<SplitTreeLoopByDepth>(pipelineSize, numCores,
-                                                       parallelTreeBatches));
+  pm.addPass(std::make_unique<SplitTreeLoopByDepth>(pipelineSize, numCores,
+                                                    parallelTreeBatches));
 
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to mid level IR failed.\n";

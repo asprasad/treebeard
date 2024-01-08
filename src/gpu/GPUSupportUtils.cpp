@@ -30,8 +30,8 @@
 
 using namespace mlir;
 
-namespace {
-
+namespace mlir {
+namespace decisionforest {
 StringRef getMappingAttrName() { return "mapping"; }
 
 FlatSymbolRefAttr getOrInsertFunction(std::string &functionName,
@@ -385,11 +385,6 @@ struct MakeGPULoopsPerfectlyNestedPass
 
   void runOnOperation() final { makeGPULoopsPerfectlyNested(); }
 };
-
-} // anonymous namespace
-
-namespace mlir {
-namespace decisionforest {
 
 bool measureGpuKernelTime = false;
 int numberOfKernelRuns = 1;

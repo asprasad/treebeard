@@ -62,6 +62,9 @@ class ForestCreator;
 enum class TilingType { kUniform, kProbabilistic, kHybrid };
 
 struct CompilerOptions {
+  // model parameters
+  int32_t numberOfFeatures = -1; // TODO: Currently used only by ONNX.
+
   // optimization parameters
   int32_t batchSize;
   int32_t tileSize;

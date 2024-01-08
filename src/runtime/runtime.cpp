@@ -138,6 +138,7 @@ extern "C" void DeleteCompilerOptions(intptr_t options) {
     optionsPtr->propName = reinterpret_cast<propType>(val);                    \
   }
 
+COMPILER_OPTION_SETTER(numberOfFeatures, int32_t);
 COMPILER_OPTION_SETTER(batchSize, int32_t)
 COMPILER_OPTION_SETTER(tileSize, int32_t)
 
@@ -269,59 +270,16 @@ extern "C" void CreateLLVMIRForONNXModel(const char *modelPath,
   TreeBeard::ConvertONNXModelToLLVMIR(tbContext, llvmIrPath);
 }
 
-extern "C" intptr_t CreateInferenceRunnerForONNXModelInputs(
-    int64_t inputAndThresholdSize, int64_t numNodes, const char *predTransform,
-    double baseValue, const int64_t *treeIds, const int64_t *nodeIds,
-    const int64_t *featureIds, void *thresholds, const int64_t *leftChildIds,
-    const int64_t *rightChildIds, int64_t numberOfClasses,
-    const int64_t *targetClassIds, const int64_t *targetClassTreeId,
-    const int64_t *targetClassNodeId, const float *targetWeights,
-    int64_t numWeights, int64_t batchSize, intptr_t options) {
+extern "C" intptr_t CreateInferenceRunnerForONNXModel(const char *modelPath,
+                                                      intptr_t options) {
+  TreeBeard::CompilerOptions *optionsPtr =
+      reinterpret_cast<TreeBeard::CompilerOptions *>(options);
 
   auto modelGlobalsJSONPath =
       std::filesystem::temp_directory_path() / "modelGlobals.json";
 
-  TreeBeard::CompilerOptions *optionsPtr =
-      reinterpret_cast<TreeBeard::CompilerOptions *>(options);
-  TreeBeard::TreebeardContext tbContext(
-      "", modelGlobalsJSONPath, *optionsPtr,
-      mlir::decisionforest::ConstructRepresentation(),
-      mlir::decisionforest::ConstructModelSerializer(modelGlobalsJSONPath),
-      nullptr /*TODO_ForestCreator*/);
-
-  auto &context = tbContext.context;
-  mlir::ModuleOp module;
-
-  if (inputAndThresholdSize == 8) {
-    auto onnxModelConverter = TreeBeard::ONNXModelConverter<double>(
-        tbContext.serializer, context, baseValue,
-        GetPredictionTransformation(predTransform),
-        mlir::arith::CmpFPredicate::ULE, // TODO - Hardcoded for now
-        numNodes, treeIds, nodeIds, featureIds, (double *)thresholds,
-        leftChildIds, rightChildIds, numberOfClasses, targetClassTreeId,
-        targetClassNodeId, targetClassIds, targetWeights, numWeights,
-        batchSize);
-
-    module = TreeBeard::ConstructLLVMDialectModuleFromForestCreator(
-        tbContext, onnxModelConverter);
-
-  } else if (inputAndThresholdSize == 4) {
-    auto onnxModelConverter = TreeBeard::ONNXModelConverter<float>(
-        tbContext.serializer, context, baseValue,
-        GetPredictionTransformation(predTransform),
-        mlir::arith::CmpFPredicate::ULE, // TODO - Hardcoded for now
-        numNodes, treeIds, nodeIds, featureIds, (float *)thresholds,
-        leftChildIds, rightChildIds, numberOfClasses, targetClassTreeId,
-        targetClassNodeId, targetClassIds, targetWeights, numWeights,
-        batchSize);
-
-    module = TreeBeard::ConstructLLVMDialectModuleFromForestCreator(
-        tbContext, onnxModelConverter);
-  }
-
-  auto *inferenceRunner = new mlir::decisionforest::InferenceRunner(
-      tbContext.serializer, module, optionsPtr->tileSize,
-      optionsPtr->thresholdTypeWidth, optionsPtr->featureIndexTypeWidth);
+  auto inferenceRunner = TreeBeard::CreateInferenceRunnerForONNXModel<float>(
+      modelPath, modelGlobalsJSONPath.string().c_str(), optionsPtr);
   return reinterpret_cast<intptr_t>(inferenceRunner);
 }
 
@@ -453,7 +411,10 @@ inline mlir::ModuleOp LowerToLLVM(void *tbContext) {
 }
 
 extern "C" bool LowerToLLVMAndDumpIR(void *tbContext, const char *fileName) {
-  auto module = LowerToLLVM(tbContext);
+  TreeBeard::TreebeardContext *tbContextPtr =
+      reinterpret_cast<TreeBeard::TreebeardContext *>(tbContext);
+  auto module = ConstructLLVMDialectModuleFromForestCreator(
+      *tbContextPtr, *tbContextPtr->forestConstructor);
   return mlir::decisionforest::dumpLLVMIRToFile(module, fileName) == 0;
 }
 

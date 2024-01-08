@@ -45,7 +45,7 @@ getNestedBlockLoops(scf::ParallelOp reductionLoop) {
   // iterate over the ops in reductionLoop and push any block loops into
   // blockLoops
   reductionLoop->walk([&](scf::ParallelOp parFor) {
-    if (parFor != reductionLoop && decisionforest::isThreadLoop(parFor)) {
+    if (parFor != reductionLoop && isThreadLoop(parFor)) {
       blockLoops.push_back(parFor);
     }
   });
@@ -99,7 +99,7 @@ struct ReduceInplaceToCooperativeReduceOp : public ConversionPattern {
         getNestedBlockLoops(reductionTreeLoop);
     blockLoops.push_back(reductionTreeLoop);
     auto parentOp = reductionTreeLoop->getParentOfType<scf::ParallelOp>();
-    while (parentOp && decisionforest::isThreadLoop(parentOp)) {
+    while (parentOp && isThreadLoop(parentOp)) {
       blockLoops.insert(blockLoops.begin(), parentOp);
       parentOp = parentOp->getParentOfType<scf::ParallelOp>();
     }
@@ -239,7 +239,7 @@ struct ReduceToCooperativeReduceOp : public ConversionPattern {
         getNestedBlockLoops(reductionTreeLoop);
     blockLoops.push_back(reductionTreeLoop);
     auto parentOp = reductionTreeLoop->getParentOfType<scf::ParallelOp>();
-    while (parentOp && decisionforest::isThreadLoop(parentOp)) {
+    while (parentOp && isThreadLoop(parentOp)) {
       blockLoops.insert(blockLoops.begin(), parentOp);
       parentOp = parentOp->getParentOfType<scf::ParallelOp>();
     }

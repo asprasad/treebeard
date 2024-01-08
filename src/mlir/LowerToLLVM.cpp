@@ -68,10 +68,6 @@ void InsertPrintElementAddressIfNeeded(ConversionPatternRewriter &rewriter,
                                        Value extractMemrefBufferPointer,
                                        Value indexVal, Value actualIndex,
                                        Value elemIndexConst, Value elemPtr);
-} // namespace decisionforest
-} // namespace mlir
-
-namespace {
 
 struct DecisionForestToLLVMLoweringPass
     : public PassWrapper<DecisionForestToLLVMLoweringPass,
@@ -180,7 +176,8 @@ struct PrintModulePass
   }
 };
 
-} // end anonymous namespace
+} // namespace decisionforest
+} // namespace mlir
 
 namespace mlir {
 namespace decisionforest {

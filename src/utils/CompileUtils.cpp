@@ -169,25 +169,13 @@ void InitializeMLIRContext(mlir::MLIRContext &context) {
 void ConvertONNXModelToLLVMIR(TreebeardContext &tbContext,
                               const std::string &llvmIRFilePath) {
 
-  mlir::MLIRContext &context = tbContext.context;
-  const auto &parsedModel =
-      TreeBeard::ONNXModelParseResult::parseModel(tbContext.modelPath);
-
   // Hardcoding to float because ONNX doesn't support double. Revisit this
   // #TODOSampath
-  auto onnxModelConverter = TreeBeard::ONNXModelConverter<float>(
-      tbContext.serializer, context, parsedModel.baseValue,
-      parsedModel.predTransform, parsedModel.nodeMode, parsedModel.numNodes,
-      parsedModel.treeIds, parsedModel.nodeIds, parsedModel.featureIds,
-      parsedModel.thresholds, parsedModel.trueNodeIds, parsedModel.falseNodeIds,
-      parsedModel.numberOfClasses, parsedModel.targetClassTreeId,
-      parsedModel.targetClassNodeId, parsedModel.targetClassIds,
-      parsedModel.targetWeights, parsedModel.numWeights,
-      tbContext.options.batchSize);
+  auto onnxFileParser = TreeBeard::ONNXFileParser<float>(tbContext);
 
   mlir::ModuleOp module =
-      TreeBeard::ConstructLLVMDialectModuleFromForestCreator(
-          tbContext, onnxModelConverter);
+      TreeBeard::ConstructLLVMDialectModuleFromForestCreator(tbContext,
+                                                             onnxFileParser);
   mlir::decisionforest::dumpLLVMIRToFile(module, llvmIRFilePath);
 }
 

@@ -43,11 +43,6 @@ Value SumOfValues(ConversionPatternRewriter &rewriter, Location location,
   return accumulator;
 }
 
-} // namespace decisionforest
-} // namespace mlir
-
-namespace {
-
 static MemRefType getRowTypeFromArgumentType(MemRefType type) {
   assert(type.hasRank() && "expected only rank shapes");
   return MemRefType::get({type.getShape()[1]}, type.getElementType());
@@ -1410,7 +1405,7 @@ struct PredictForestOpLowering : public ConversionPattern {
 
 struct HighLevelIRToMidLevelIRLoweringPass
     : public PassWrapper<HighLevelIRToMidLevelIRLoweringPass,
-                         OperationPass<mlir::func::FuncOp>> {
+                         OperationPass<mlir::ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect>();
   }
@@ -1441,27 +1436,21 @@ struct PrintModulePass
   }
 };
 
-} // anonymous namespace
+} // namespace decisionforest
+} // namespace mlir
 
 namespace mlir {
 namespace decisionforest {
 
-void AddWalkDecisionTreeOpLoweringPass(mlir::OpPassManager &optPM);
+void AddWalkDecisionTreeOpLoweringPass(mlir::PassManager &optPM);
 
 void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext &context,
                                     mlir::ModuleOp module) {
   // llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
-  mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
-  optPM.addPass(std::make_unique<HighLevelIRToMidLevelIRLoweringPass>());
-  // pm.addPass(std::make_unique<PrintModulePass>());
-  AddWalkDecisionTreeOpLoweringPass(optPM);
-
-  mlir::GreedyRewriteConfig config;
-  std::vector<std::string> disabledPatterns = {
-      "(anonymous namespace)::MergeNestedParallelLoops"};
-  pm.addPass(createCanonicalizerPass(config, disabledPatterns));
+  pm.addPass(std::make_unique<HighLevelIRToMidLevelIRLoweringPass>());
+  AddWalkDecisionTreeOpLoweringPass(pm);
 
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to mid level IR failed.\n";

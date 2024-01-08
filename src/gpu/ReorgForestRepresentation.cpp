@@ -23,7 +23,8 @@
 using namespace mlir;
 using namespace mlir::decisionforest::helpers;
 
-namespace {
+namespace mlir {
+namespace decisionforest {
 
 const int32_t kAlignedPointerIndexInMemrefStruct = 1;
 const int32_t kOffsetIndexInMemrefStruct = 2;
@@ -158,7 +159,8 @@ struct LoadTileFeatureIndicesOpLowering : public ConversionPattern {
   }
 };
 
-} // namespace
+} // namespace decisionforest
+} // namespace mlir
 
 namespace mlir {
 namespace decisionforest {

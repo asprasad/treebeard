@@ -8,15 +8,6 @@
   TREEBEARD_RUNTIME_EXPORT void Set_##propName(intptr_t options, propType val);
 
 extern "C" {
-TREEBEARD_RUNTIME_EXPORT intptr_t CreateInferenceRunnerForONNXModelInputs(
-    int64_t inputAndThresholdSize, int64_t numNodes, const char *predTransform,
-    double baseValue, const int64_t *treeIds, const int64_t *nodeIds,
-    const int64_t *featureIds, void *thresholds, const int64_t *leftChildIds,
-    const int64_t *rightChildIds, int64_t numberOfClasses,
-    const int64_t *targetClassIds, const int64_t *targetClassTreeId,
-    const int64_t *targetClassNodeId, const float *targetWeights,
-    int64_t numWeights, int64_t batchSize, intptr_t options);
-
 TREEBEARD_RUNTIME_EXPORT void RunInference(intptr_t inferenceRunnerInt,
                                            void *inputs, void *results);
 
@@ -51,6 +42,9 @@ TREEBEARD_RUNTIME_EXPORT int32_t
 IsPeeledCodeGenForProbabilityBasedTilingEnabled();
 TREEBEARD_RUNTIME_EXPORT void SetEnableMeasureGpuKernelTime(bool val);
 TREEBEARD_RUNTIME_EXPORT void SetNumberOfKernelRuns(int32_t val);
+
+TREEBEARD_RUNTIME_EXPORT intptr_t
+CreateInferenceRunnerForONNXModel(const char *modelPath, intptr_t options);
 }
 
 #endif // RUNTIME_H

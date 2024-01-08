@@ -23,9 +23,8 @@
 #include "Logger.h"
 #include "OpLoweringUtils.h"
 
-using namespace mlir;
-
-namespace {
+namespace mlir {
+namespace decisionforest {
 
 struct NodeToIndexOpLowering : public ConversionPattern {
   NodeToIndexOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::NodeToIndexOp::getOperationName(), 1 /*benefit*/, ctx) {}
@@ -74,14 +73,14 @@ struct IndexToNodeOpLowering : public ConversionPattern {
       return mlir::failure();
     }
     else {
-      assert (indexValue.getType().isa<IndexType>());
+      assert (indexValue.getType().isa<mlir::IndexType>());
       rewriter.replaceOp(op, indexValue);
     }
     return mlir::success();
   }
 };
 
-struct ConvertNodeTypeToIndexTypePass : public PassWrapper<ConvertNodeTypeToIndexTypePass, OperationPass<mlir::func::FuncOp>> {
+struct ConvertNodeTypeToIndexTypePass : public PassWrapper<ConvertNodeTypeToIndexTypePass, OperationPass<mlir::ModuleOp>> {
   
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<AffineDialect, memref::MemRefDialect, tensor::TensorDialect, scf::SCFDialect>();
@@ -125,7 +124,7 @@ struct ConvertNodeTypeToIndexTypePass : public PassWrapper<ConvertNodeTypeToInde
         for (auto operand : op->getOperands()) {
           if (operand.getType().isa<decisionforest::NodeType>()) {
             // TreeBeard::Logging::Log("Calling setType on argument of : " + op->getName().getStringRef().str());
-            operand.setType(IndexType::get(op->getContext()));
+            operand.setType(mlir::IndexType::get(op->getContext()));
           }
         }
     }
@@ -164,7 +163,8 @@ struct ConvertNodeTypeToIndexTypePass : public PassWrapper<ConvertNodeTypeToInde
         signalPassFailure();
   }
 };
-} // Anonymous namespace
+} // namespace decisionforest
+} // namespace mlir
 
 namespace mlir
 {
@@ -174,8 +174,7 @@ void ConvertNodeTypeToIndexType(mlir::MLIRContext& context, mlir::ModuleOp modul
   // llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
-  mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
-  optPM.addPass(std::make_unique<ConvertNodeTypeToIndexTypePass>());
+  pm.addPass(std::make_unique<ConvertNodeTypeToIndexTypePass>());
 
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Conversion from NodeType to Index failed.\n";

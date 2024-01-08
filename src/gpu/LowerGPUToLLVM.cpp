@@ -69,7 +69,8 @@
 
 using namespace mlir;
 
-namespace {
+namespace mlir {
+namespace decisionforest {
 
 FlatSymbolRefAttr getOrInsertCacheOpSyncFunc(std::string &functionName,
                                              PatternRewriter &rewriter,
@@ -424,7 +425,8 @@ struct PrintModulePass
   }
 };
 
-} // namespace
+} // namespace decisionforest
+} // namespace mlir
 
 namespace mlir {
 namespace decisionforest {

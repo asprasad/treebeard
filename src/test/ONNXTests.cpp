@@ -50,6 +50,7 @@ namespace test
         options.makeAllLeavesSameDepth = true;
         options.tilingType = TilingType::kUniform;
         options.numberOfCores = 8;
+        options.numberOfFeatures = 8;
 
         // #TODOSampath - Delete this temp file.
         auto modelGlobalsJSONPath = std::filesystem::temp_directory_path() / "modelGlobals.json";

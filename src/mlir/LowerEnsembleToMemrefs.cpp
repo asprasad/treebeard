@@ -97,7 +97,8 @@ mlir::gpu::KernelDim3 GetBlockID(mlir::Operation *op);
 
 Value getLUT;
 
-namespace {
+namespace mlir {
+namespace decisionforest {
 
 struct EnsembleConstantOpLowering : public ConversionPattern {
   std::shared_ptr<decisionforest::IModelSerializer> m_serializer;
@@ -385,13 +386,11 @@ struct GetRootOpLowering : public ConversionPattern {
 #ifdef TREEBEARD_GPU_SUPPORT
 struct GPUGetRootOpLowering : public ConversionPattern {
   std::shared_ptr<mlir::decisionforest::IRepresentation> m_representation;
-  std::shared_ptr<decisionforest::GPUTraverseLoweringState>
-      m_traverseLoweringState;
+  std::shared_ptr<GPUTraverseLoweringState> m_traverseLoweringState;
   GPUGetRootOpLowering(
       MLIRContext *ctx,
       std::shared_ptr<mlir::decisionforest::IRepresentation> representation,
-      std::shared_ptr<decisionforest::GPUTraverseLoweringState>
-          traverseLoweringState)
+      std::shared_ptr<GPUTraverseLoweringState> traverseLoweringState)
       : ConversionPattern(mlir::decisionforest::GetRootOp::getOperationName(),
                           1 /*benefit*/, ctx),
         m_representation(representation),
@@ -584,13 +583,11 @@ struct TraverseTreeTileOpLowering : public ConversionPattern {
 #ifdef TREEBEARD_GPU_SUPPORT
 struct CooperativeTraverseTreeTileOpLowering : public ConversionPattern {
   std::shared_ptr<mlir::decisionforest::IRepresentation> m_representation;
-  std::shared_ptr<decisionforest::GPUTraverseLoweringState>
-      m_traverseTileLoweringState;
+  std::shared_ptr<GPUTraverseLoweringState> m_traverseTileLoweringState;
   CooperativeTraverseTreeTileOpLowering(
       MLIRContext *ctx,
       std::shared_ptr<mlir::decisionforest::IRepresentation> representation,
-      std::shared_ptr<decisionforest::GPUTraverseLoweringState>
-          traverseTileLoweringState)
+      std::shared_ptr<GPUTraverseLoweringState> traverseTileLoweringState)
       : ConversionPattern(mlir::decisionforest::CooperativeTraverseTreeTileOp::
                               getOperationName(),
                           1 /*benefit*/, ctx),
@@ -818,7 +815,7 @@ struct CacheRowsOpLowering : public ConversionPattern {
 
 struct MidLevelIRToMemrefLoweringPass
     : public PassWrapper<MidLevelIRToMemrefLoweringPass,
-                         OperationPass<mlir::func::FuncOp>> {
+                         OperationPass<mlir::ModuleOp>> {
   std::shared_ptr<decisionforest::IModelSerializer> m_serializer;
   std::shared_ptr<decisionforest::IRepresentation> m_representation;
   MidLevelIRToMemrefLoweringPass(
@@ -883,7 +880,7 @@ struct MidLevelIRToMemrefLoweringPass
 #ifdef TREEBEARD_GPU_SUPPORT
 struct MidLevelIRToGPUMemrefLoweringPass
     : public PassWrapper<MidLevelIRToGPUMemrefLoweringPass,
-                         OperationPass<mlir::func::FuncOp>> {
+                         OperationPass<mlir::ModuleOp>> {
   std::shared_ptr<decisionforest::IModelSerializer> m_serializer;
   std::shared_ptr<decisionforest::IRepresentation> m_representation;
   MidLevelIRToGPUMemrefLoweringPass(
@@ -917,8 +914,7 @@ struct MidLevelIRToGPUMemrefLoweringPass
         decisionforest::CacheInputRowsOp,
         decisionforest::CooperativeTraverseTreeTileOp>();
 
-    auto traverseLoweringState =
-        std::make_shared<decisionforest::GPUTraverseLoweringState>();
+    auto traverseLoweringState = std::make_shared<GPUTraverseLoweringState>();
 
     RewritePatternSet patterns(&getContext());
     patterns.add<EnsembleConstantOpGPULowering>(patterns.getContext(),
@@ -951,7 +947,8 @@ struct MidLevelIRToGPUMemrefLoweringPass
 };
 #endif // TREEBEARD_GPU_SUPPORT
 
-} // anonymous namespace
+} // namespace decisionforest
+} // namespace mlir
 
 namespace mlir {
 namespace decisionforest {
@@ -964,9 +961,8 @@ void LowerEnsembleToMemrefs(mlir::MLIRContext &context, mlir::ModuleOp module,
   representation->InitRepresentation();
 
   mlir::PassManager pm(&context);
-  mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
-  optPM.addPass(std::make_unique<MidLevelIRToMemrefLoweringPass>(
-      serializer, representation));
+  pm.addPass(std::make_unique<MidLevelIRToMemrefLoweringPass>(serializer,
+                                                              representation));
 
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to memrefs failed.\n";
@@ -983,8 +979,7 @@ void LowerGPUEnsembleToMemrefs(
   representation->InitRepresentation();
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
-  mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
-  optPM.addPass(std::make_unique<MidLevelIRToGPUMemrefLoweringPass>(
+  pm.addPass(std::make_unique<MidLevelIRToGPUMemrefLoweringPass>(
       serializer, representation));
 
   if (mlir::failed(pm.run(module))) {

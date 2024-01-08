@@ -26,6 +26,7 @@ compiler_options.SetNumberOfCores(16)
 compiler_options.SetMakeAllLeavesSameDepth(1) # make all leaves same depth. Enables unrolling tree walks of same depth.
 compiler_options.SetReorderTreesByDepth(True) # reorder trees by depth. Enables grouping of trees by depth
 compiler_options.SetPipelineWidth(8) # set pipeline width. Enables jamming of unrolled loops. Should be less than batch size.
+# compiler_options.SetNumberOfFeatures(5) # set number of features, needed for ONNX models
 
 onnx_model_path = args.onnx
 tbContext = treebeard.TreebeardContext(onnx_model_path, "", compiler_options)
