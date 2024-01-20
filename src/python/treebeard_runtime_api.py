@@ -253,6 +253,7 @@ class TreebeardAPI:
       self.runtime_lib.Set_cacheTrees.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
       self.runtime_lib.Set_unrollTreeWalks.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
       self.runtime_lib.Set_treeWalkInterleaveFactor.argtypes = [ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Set_sharedMemoryReduce.argtypes = [ctypes.c_int64, ctypes.c_int32]
 
       self.runtime_lib.Set_numRowsPerTB.restype = None
       self.runtime_lib.Set_numRowsPerThread.restype = None
@@ -263,6 +264,7 @@ class TreebeardAPI:
       self.runtime_lib.Set_cacheTrees.restype = None
       self.runtime_lib.Set_unrollTreeWalks.restype = None
       self.runtime_lib.Set_treeWalkInterleaveFactor.restype = None
+      self.runtime_lib.Set_sharedMemoryReduce.restype = None
 
       self.runtime_lib.SetEnableMeasureGpuKernelTime.argtypes = [ctypes.c_int8]
       self.runtime_lib.SetEnableMeasureGpuKernelTime.restype = None

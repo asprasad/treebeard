@@ -389,6 +389,9 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
       if (m_options.cacheTrees)
         schedule->Cache(perThreadTreeIndex);
 
+      if (m_options.sharedMemoryReduce)
+        schedule->SharedReduce(threadYIndex);
+
       threadYIndex.SetGPUDimension(
           decisionforest::IndexVariable::GPUConstruct::ThreadBlock,
           decisionforest::IndexVariable::Dimension::Y);

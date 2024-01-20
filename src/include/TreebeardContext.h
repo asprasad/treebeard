@@ -157,6 +157,8 @@ struct GPUAutoScheduleOptions {
 
   bool unrollTreeWalks = false;
   int32_t treeWalkInterleaveFactor = -1;
+
+  bool sharedMemoryReduce = false;
 };
 
 struct GPUCompileInfo {

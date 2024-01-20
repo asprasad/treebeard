@@ -2579,6 +2579,70 @@ bool Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedTrees(
       gpuAutoScheduleOptions);
 }
 
+bool Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B512_AutoSched_SharedReduce(
+    TestArgs_t &args) {
+  using ThresholdType = float;
+  using IndexType = int16_t;
+  using ReturnType = int8_t;
+
+  int32_t batchSize = 512;
+
+  // Maps to TB.x
+  int32_t numRowsPerTB = 16;
+  int32_t numRowsPerThread = 2;
+  // Hpw many rows do we process together?
+  // Pick one tree and process this many rows before moving to the next row
+  int32_t rowTileSize = -1;
+
+  // How many threads do we divide the trees across?
+  // Maps to TB.y
+  int32_t numTreeThreads = 50;
+
+  // How many trees do we process at a time? Only useful if single threaded
+  // TODO Do we really need this? Can't we always do one tree at a time
+  int32_t numTreesAtATime = 1;
+  bool cacheRows = false;
+  bool cacheTrees = false;
+  bool unrollTreeWalks = true;
+  bool useSharedReduce = true;
+
+  TreeBeard::GPUAutoScheduleOptions gpuAutoScheduleOptions{
+      numRowsPerTB,   numRowsPerThread, rowTileSize,
+      numTreeThreads, numTreesAtATime,  cacheRows,
+      cacheTrees,     unrollTreeWalks,  -1,
+      useSharedReduce};
+
+  const std::string xgboostModelFile = "covtype_xgb_model_save.json";
+  auto representation =
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse");
+
+  auto xgboostModelPath = GetXGBoostModelPath(xgboostModelFile);
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          xgboostModelPath);
+  auto csvPath = xgboostModelPath + ".csv";
+
+  auto serializer =
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath);
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
+  TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, IndexType, IndexType,
+                               ThresholdType>
+      xgBoostParser(context, xgboostModelPath, serializer, batchSize);
+
+  return VerifyGPUAutoScheduleCodeGeneration<ThresholdType, IndexType,
+                                             ReturnType>(
+      args, batchSize, xgBoostParser, serializer, representation,
+      1,  // Tile size
+      16, // Tile shape width
+      16, // child index width
+      gpuAutoScheduleOptions, csvPath);
+}
+
 } // namespace test
 } // namespace TreeBeard
 
