@@ -868,6 +868,8 @@ bool Test_ScalarGPU_Airline_AutoScheduleBasic(TestArgs_t &args);
 bool Test_ScalarGPU_Abalone_AutoScheduleBasic(TestArgs_t &args);
 bool Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B512_AutoSched_SharedReduce(
     TestArgs_t &args);
+bool Test_GPUCodeGeneration_Letters_SparseRep_f32i16_B512_AutoSched_SharedReduce(
+    TestArgs_t &args);
 
 // CPU Autoschedule tests
 bool Test_TileSize8_Abalone_TestInputs_CPUAutoSchedule_TreeParallel_f32i16(
@@ -2475,6 +2477,8 @@ TestDescriptor testList[] = {
     TEST_LIST_ENTRY(Test_ScalarGPU_Abalone_AutoScheduleBasic),
     TEST_LIST_ENTRY(
         Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B512_AutoSched_SharedReduce),
+    TEST_LIST_ENTRY(
+        Test_GPUCodeGeneration_Letters_SparseRep_f32i16_B512_AutoSched_SharedReduce),
 #endif // TREEBEARD_GPU_SUPPORT
     TEST_LIST_ENTRY(
         Test_TileSize8_Abalone_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),
@@ -2499,7 +2503,7 @@ TestDescriptor testList[] = {
 
 TestDescriptor testList[] = {
     TEST_LIST_ENTRY(
-        Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B512_AutoSched_SharedReduce),
+        Test_GPUCodeGeneration_Letters_SparseRep_f32i16_B512_AutoSched_SharedReduce),
 };
 #endif // RUN_ALL_TESTS
 
