@@ -43,7 +43,7 @@ class GPUAutoScheduleOptions:
     treebeardAPI.runtime_lib.Set_treeWalkInterleaveFactor(self.optionsPtr, ctypes.c_int32(val))
   
   def SharedReduce(self, val : bool):
-    treebeardAPI.runtime_lib.Set_sharedReduce(self.optionsPtr, ctypes.c_int32(1 if val else 0))
+    treebeardAPI.runtime_lib.Set_sharedMemoryReduce(self.optionsPtr, ctypes.c_int32(1 if val else 0))
   
   @classmethod
   def Construct(cls, num_rows_per_TB : int, num_rows_per_thread : int = 1, num_tree_threads : int = 1, 

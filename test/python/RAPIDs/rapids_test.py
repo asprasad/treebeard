@@ -79,9 +79,9 @@ def get_model_config(model_name : str, batch_size: int):
     16384: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 10, True, False, False, -1), "gpu_array"),
   }
   letters_best_configs = {
-    256: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, False, -1), "gpu_sparse"),
-    512: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 20, True, False, True, 2), "gpu_array"),
-    1024: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 10, True, False, True, 2), "gpu_sparse"),
+    256: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, False, -1, True), "gpu_sparse"),
+    512: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, False, -1, True), "gpu_sparse"),
+    1024: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, False, -1, True), "gpu_sparse"),
     4096: (treebeard.GPUAutoScheduleOptions.Construct(64, 1, 2, True, False, True, 4), "gpu_sparse"),
     8192: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 2, True, False, True, 4), "gpu_sparse"),
     16384: (treebeard.GPUAutoScheduleOptions.Construct(64, 1, 10, True, False, True, 4), "gpu_sparse"),
@@ -104,7 +104,10 @@ def get_compiler_options_and_result_type(model_name : str, batch_size: int, tile
   defaultMulticlassOptions = treebeard.CompilerOptions(batch_size, tile_size)
   defaultMulticlassOptions.SetReturnTypeWidth(8)
   defaultMulticlassOptions.SetReturnTypeIsFloatType(False)
-  defaultMulticlassOptions.SetMakeAllLeavesSameDepth(1)
+  if model_name == "letters" and batch_size < 4096:
+    defaultMulticlassOptions.SetMakeAllLeavesSameDepth(0)
+  else:
+    defaultMulticlassOptions.SetMakeAllLeavesSameDepth(1)
   if model_name == "covtype" or model_name == "letters":
     return defaultMulticlassOptions, numpy.int8
   else:
@@ -137,9 +140,9 @@ def run_benchmark_function_and_return_median_time(benchmark_function, num_repeat
 
 def get_num_repeats(model_name : str):
   if model_name == "letters":
-    return 50
+    return 200
   else:
-    return 500
+    return 600
 
 #############################################################
 ### RAPIDs Total Time Benchmarking Utils
@@ -286,11 +289,13 @@ def RunTestOnSingleModelTestInputs_Treebeard_KernelTime(modelName : str) -> None
 if __name__ == "__main__":
   num_trials = 5
   # benchmarks = ["abalone", "airline", "airline-ohe", "covtype", "higgs", "letters", "year_prediction_msd"]
-  # benchmarks = ["epsilon"]
-  # batch_sizes = [16384]
+  # benchmarks = ["higgs", "letters"]
+  batch_sizes = [16384]
 
   benchmarks = ["abalone", "airline", "airline-ohe", "covtype", "epsilon", "higgs", "letters", "year_prediction_msd"]
-  batch_sizes = [4096, 8192, 16384]
+  # batch_sizes = [4096, 8192] #, 16384]
+  # batch_sizes = [256, 512, 1024]
+  # batch_sizes = [256, 512, 1024, 4096, 8192] #, 16384]
   
   rapids_total_times = []
   rapids_kernel_times = []

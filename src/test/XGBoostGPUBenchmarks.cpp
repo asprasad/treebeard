@@ -46,11 +46,13 @@ using mlir::decisionforest::TahoeSharedForestStrategy;
 using mlir::decisionforest::TahoeSharedPartialForestStrategy;
 
 #define NUM_RUNS 200
-#define VERIFY_RESULT false
+#define VERIFY_RESULT true
+
 const int32_t MIN_TB_SIZE = 32;
 const int32_t MAX_TB_SIZE = 1024;
 const int32_t MAX_SHMEM_SIZE = 49152;
 const bool PAD_TREES = true;
+const bool SH_MEM_REDUCE = false;
 
 // std::vector<int32_t> batchSizes{32,   64,   256,  512, 1024, 2048, 4096,
 //                                 8192, 16384};
@@ -93,11 +95,12 @@ std::vector<int32_t> treeInterleaveDepths{-1, 2, 4};
 // std::vector<int32_t> rowsPerThread{1};
 // std::vector<int32_t> interleaveDepth{2};
 
-// std::vector<int32_t> batchSizes{4096};
-// std::vector<int32_t> numTreeThreads{20};
-// std::vector<int32_t> rowsPerTB{32};
+// std::vector<int32_t> batchSizes{1024};
+// std::vector<int32_t> numTreeThreads{2, 4, 10, 20, 50, 100};
+// std::vector<int32_t> rowsPerTB{8, 16, 32, 64};
 // std::vector<int32_t> rowsPerThread{1};
 // std::vector<int32_t> interleaveDepth{4};
+// std::vector<int32_t> treeInterleaveDepths{-1};
 
 namespace TreeBeard {
 namespace test {
@@ -292,7 +295,7 @@ GPUBenchmarkExecState CompileAutoScheduleBenchmark(
       sizeof(FloatType) * 8, sizeof(FloatType) * 8, true, sizeof(IndexType) * 8,
       sizeof(IndexType) * 8, sizeof(FloatType) * 8, batchSize, tileSize,
       tileShapeBitwidth, childIndexBitWidth, TreeBeard::TilingType::kUniform,
-      true, false, nullptr);
+      PAD_TREES, false, nullptr);
 
   // [HACK!] Create a shared pointer that points to forestCreator
   std::shared_ptr<ForestCreator> forestCreatorPtr(&forestCreator,
@@ -350,9 +353,9 @@ GPUBenchmarkExecState CompileXGBoostAutoScheduleBenchmark(
   using IndexType = int16_t;
 
   TreeBeard::GPUAutoScheduleOptions gpuAutoScheduleOptions{
-      numRowsPerTB,   numRowsPerThread, -1,
-      numTreeThreads, numTreesAtATime,  cacheRows,
-      cacheTrees,     unrollTreeWalk,   treeInterleaveDepth};
+      numRowsPerTB,        numRowsPerThread, -1,         numTreeThreads,
+      numTreesAtATime,     cacheRows,        cacheTrees, unrollTreeWalk,
+      treeInterleaveDepth, SH_MEM_REDUCE};
 
   return CompileXGBoostAutoScheduleBenchmark<ThresholdType, IndexType,
                                              ReturnType>(
@@ -438,6 +441,37 @@ void RunAutoScheduleBenchmarks(const std::string &modelName,
   //     numRowsPerThread, numTreeThreads, treeInterleaveDepth);
 }
 
+bool skipAirlineOHE(int32_t numRowsPerTB, int32_t numRowsPerThread,
+                    int32_t numTreeThreads, int32_t interleaveDepth) {
+  if (numRowsPerTB == 32 && numRowsPerThread == 2 && numTreeThreads == 50 &&
+      interleaveDepth == 4)
+    return true;
+  return false;
+}
+
+bool skipCovtype(int32_t numRowsPerTB, int32_t numRowsPerThread,
+                 int32_t numTreeThreads, int32_t interleaveDepth,
+                 const std::string &rep) {
+  if (numRowsPerTB == 32 && numRowsPerThread == 2 && numTreeThreads == 50 &&
+      interleaveDepth == 4 && rep == "gpu_reorg")
+    return true;
+  return false;
+}
+
+bool skipLetters(int32_t numRowsPerTB, int32_t numRowsPerThread,
+                 int32_t numTreeThreads, int32_t interleaveDepth,
+                 const std::string &rep) {
+  // if (numTreeThreads >= 20 && interleaveDepth == 4)
+  //   return true;
+  if (numRowsPerTB == 32 && numRowsPerThread == 2 && numTreeThreads == 50 &&
+      interleaveDepth == 2 && rep == "gpu_reorg")
+    return true;
+  if (numRowsPerTB == 64 && numRowsPerThread == 1 && numTreeThreads == 10 &&
+      interleaveDepth == 4 && rep == "gpu_reorg")
+    return true;
+  return false;
+}
+
 void RunAllAutoScheduleXGBoostGPUBenchmarks() {
   std::cout
       << "model,representation,batch_size,rowsPerTB,rowsPerT,"
@@ -447,6 +481,11 @@ void RunAllAutoScheduleXGBoostGPUBenchmarks() {
 
   for (auto batchSize : batchSizes) {
     for (auto numRowsPerTB : rowsPerTB) {
+
+      auto gridSize = batchSize / numRowsPerTB;
+      if (gridSize <= 1)
+        break;
+
       for (auto numRowsPerThread : rowsPerThread) {
         for (auto numTreeThreads : numTreeThreads) {
           for (auto treeInterleaveDepth : treeInterleaveDepths) {
@@ -483,27 +522,36 @@ void RunAllAutoScheduleXGBoostGPUBenchmarks() {
                   "year_prediction_msd", rep, batchSize, numRowsPerTB,
                   numRowsPerThread, numTreeThreads, treeInterleaveDepth);
 
+              if (PAD_TREES == false)
+                continue;
+
               RunAutoScheduleBenchmarks<float, float, true>(
                   "abalone", rep, batchSize, numRowsPerTB, numRowsPerThread,
                   numTreeThreads, treeInterleaveDepth);
               RunAutoScheduleBenchmarks<float, float, true>(
                   "airline", rep, batchSize, numRowsPerTB, numRowsPerThread,
                   numTreeThreads, treeInterleaveDepth);
-              RunAutoScheduleBenchmarks<float, float, true>(
-                  "airline-ohe", rep, batchSize, numRowsPerTB, numRowsPerThread,
-                  numTreeThreads, treeInterleaveDepth);
-              RunAutoScheduleBenchmarks<float, int8_t, true>(
-                  "covtype", rep, batchSize, numRowsPerTB, numRowsPerThread,
-                  numTreeThreads, treeInterleaveDepth);
+              if (!skipAirlineOHE(numRowsPerTB, numRowsPerThread,
+                                  numTreeThreads, treeInterleaveDepth))
+                RunAutoScheduleBenchmarks<float, float, true>(
+                    "airline-ohe", rep, batchSize, numRowsPerTB,
+                    numRowsPerThread, numTreeThreads, treeInterleaveDepth);
+              if (!skipCovtype(numRowsPerTB, numRowsPerThread, numTreeThreads,
+                               treeInterleaveDepth, rep))
+                RunAutoScheduleBenchmarks<float, int8_t, true>(
+                    "covtype", rep, batchSize, numRowsPerTB, numRowsPerThread,
+                    numTreeThreads, treeInterleaveDepth);
               RunAutoScheduleBenchmarks<float, float, true>(
                   "epsilon", rep, batchSize, numRowsPerTB, numRowsPerThread,
                   numTreeThreads, treeInterleaveDepth);
               RunAutoScheduleBenchmarks<float, float, true>(
                   "higgs", rep, batchSize, numRowsPerTB, numRowsPerThread,
                   numTreeThreads, treeInterleaveDepth);
-              RunAutoScheduleBenchmarks<float, int8_t, true>(
-                  "letters", rep, batchSize, numRowsPerTB, numRowsPerThread,
-                  numTreeThreads, treeInterleaveDepth);
+              if (!skipLetters(numRowsPerTB, numRowsPerThread, numTreeThreads,
+                               treeInterleaveDepth, rep))
+                RunAutoScheduleBenchmarks<float, int8_t, true>(
+                    "letters", rep, batchSize, numRowsPerTB, numRowsPerThread,
+                    numTreeThreads, treeInterleaveDepth);
               RunAutoScheduleBenchmarks<float, float, true>(
                   "year_prediction_msd", rep, batchSize, numRowsPerTB,
                   numRowsPerThread, numTreeThreads, treeInterleaveDepth);
@@ -1168,9 +1216,9 @@ void RunAllCustomScheduleBenchmarks() {
 
 void RunXGBoostGPUBenchmarks() {
   mlir::decisionforest::measureGpuKernelTime = true;
-  mlir::decisionforest::numberOfKernelRuns = NUM_RUNS;
+  // mlir::decisionforest::numberOfKernelRuns = NUM_RUNS;
   RunAllAutoScheduleXGBoostGPUBenchmarks();
-  RunAllCustomScheduleBenchmarks();
+  // RunAllCustomScheduleBenchmarks();
 }
 
 } // namespace test
