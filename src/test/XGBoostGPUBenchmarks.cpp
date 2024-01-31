@@ -365,12 +365,12 @@ GPUBenchmarkExecState CompileXGBoostAutoScheduleBenchmark(
 
 template <typename ThresholdType, typename ReturnType, bool cacheRows,
           bool cacheTrees, bool unrollTreeWalk>
-void BenchmarkIfNoSharedMemOverflow(const std::string &modelName,
-                                    const std::string &representationName,
-                                    int32_t batchSize, int32_t numRowsPerTB,
-                                    int32_t numRowsPerThread,
-                                    int32_t numTreeThreads,
-                                    int32_t treeInterleaveDepth) {
+GPUTimes BenchmarkIfNoSharedMemOverflow(const std::string &modelName,
+                                        const std::string &representationName,
+                                        int32_t batchSize, int32_t numRowsPerTB,
+                                        int32_t numRowsPerThread,
+                                        int32_t numTreeThreads,
+                                        int32_t treeInterleaveDepth) {
   using IndexType = int16_t;
 
   auto xgboostModelFile = modelName + "_xgb_model_save.json";
@@ -396,7 +396,9 @@ void BenchmarkIfNoSharedMemOverflow(const std::string &modelName,
               << "," << cacheRows << "," << cacheTrees << "," << unrollTreeWalk
               << "," << times.totalTimePerSample << ","
               << times.kernelTimePerSample << std::endl;
+    return times;
   }
+  return GPUTimes{-1, -1};
 }
 
 template <typename ThresholdType, typename ReturnType, bool unrollTreeWalk>
@@ -1188,6 +1190,226 @@ void RunAllTreeParallelizationCacheTreesAndRowsGPUScheduleBenchmarks() {
   }
 }
 
+// ===---------------------------------------------------=== //
+// GPU Auto-tuning Heuristic
+// ===---------------------------------------------------=== //
+
+class GPUAutoTuner {
+  std::vector<int32_t> rowsPerTB;
+  std::vector<int32_t> rowsPerThread;
+  std::vector<int32_t> numTreeThreads;
+  bool m_shouldTryUnroll = true;
+
+  int32_t m_numFeatures;
+  int32_t m_numTrees;
+  int32_t m_batchSize;
+  bool m_multiClass;
+
+  bool m_shouldPadTrees;
+  GPUAutoScheduleOptions m_bestOptions;
+  std::string m_bestRep;
+  std::string m_model;
+
+  void updateConfig(const GPUAutoScheduleOptions &options,
+                    const std::string &rep, bool shouldPadTrees) {
+    m_bestOptions = options;
+    m_bestRep = rep;
+    m_shouldPadTrees = shouldPadTrees;
+
+    std::cout << "\nUpdating best configuration\n";
+    this->printBestSchedule();
+  }
+
+  void computeScheduleSubset() {
+    // if batchSize < 1k, then focus on larger number of tree threads
+    if (m_batchSize <= 1024) {
+      numTreeThreads = {20, 50};
+      rowsPerTB = {8, 32};
+      rowsPerThread = {1};
+    } else {
+      const int32_t featureThreshold = 100;
+      // if we have a large batch sizes, with a large
+      // feature count, use a large number of tree threads
+      if (m_numFeatures > featureThreshold) {
+        numTreeThreads = {20, 50};
+        rowsPerTB = {8, 32};
+        rowsPerThread = {1};
+      } else {
+        numTreeThreads = {1, 2, 10};
+        rowsPerTB = {32, 64};
+        rowsPerThread = {1};
+      }
+    }
+  }
+
+  void initParameters(const std::string &modelName, int32_t batchSize) {
+    std::vector<std::string> benchmarks{"abalone", "airline", "airline-ohe",
+                                        // "bosch",
+                                        "covtype", "epsilon", "higgs",
+                                        "letters", "year_prediction_msd"};
+
+    std::vector<bool> isMultiClass{false, false, false, // false,
+                                   true,  false, false, true, false};
+
+    std::vector<int32_t> numFeatures{8, 13, 692, 54, 2000, 28, 16, 90};
+
+    std::vector<int32_t> numTrees{1000, 100, 1000, 800, 100, 100, 26000, 100};
+
+    auto it = std::find(benchmarks.begin(), benchmarks.end(), modelName);
+    assert(it != benchmarks.end());
+    auto index = std::distance(benchmarks.begin(), it);
+
+    m_numFeatures = numFeatures[index];
+    m_numTrees = numTrees[index];
+    m_multiClass = isMultiClass[index];
+
+    computeScheduleSubset();
+  }
+
+public:
+  GPUAutoTuner(const std::string &modelName, int32_t batchSize)
+      : m_batchSize(batchSize), m_model(modelName) {
+    initParameters(modelName, batchSize);
+  }
+
+  void exploreSchedules() {
+
+    const auto numKernelRuns = mlir::decisionforest::numberOfKernelRuns;
+    mlir::decisionforest::numberOfKernelRuns = NUM_RUNS;
+
+    const bool cacheTrees = false;
+    double bestKernelTime = std::numeric_limits<double>::max();
+    // Caching rows seems generally better than not. So we will
+    // first explore schedules with row caching and then disable
+    // if needed if we want to enable shared reduction.
+    for (auto numRowsPerTB : rowsPerTB) {
+      for (auto numRowsPerThread : rowsPerThread) {
+        if (numRowsPerThread >= numRowsPerTB)
+          break;
+        for (auto treeThreads : numTreeThreads) {
+          auto tbSize = numRowsPerTB / numRowsPerThread * treeThreads;
+          if (tbSize > MAX_TB_SIZE)
+            continue;
+          if (tbSize < MIN_TB_SIZE)
+            continue;
+          for (auto rep : {"gpu_array", "gpu_sparse", "gpu_reorg"}) {
+
+            {
+              constexpr bool cacheRows = true;
+              constexpr bool unrollTreeWalks = false;
+              constexpr bool sharedMemoryReduce = false;
+              GPUAutoScheduleOptions options{numRowsPerTB,
+                                             numRowsPerThread,
+                                             1,
+                                             treeThreads,
+                                             1,
+                                             cacheRows,
+                                             cacheTrees,
+                                             unrollTreeWalks,
+                                             -1,
+                                             sharedMemoryReduce};
+
+              auto time =
+                  BenchmarkIfNoSharedMemOverflow<float, float, cacheRows, false,
+                                                 unrollTreeWalks>(
+                      m_model, rep, m_batchSize, numRowsPerTB, numRowsPerThread,
+                      treeThreads, -1);
+              if (time.kernelTimePerSample != -1 &&
+                  time.kernelTimePerSample < bestKernelTime)
+                updateConfig(options, rep, false);
+            }
+
+            // TODO we need to check if we need to check unrolling for the
+            // current model and config
+            {
+              constexpr bool cacheRows = true;
+              constexpr bool unrollTreeWalks = true;
+              constexpr bool sharedMemoryReduce = false;
+              constexpr int32_t interleaveDepth = 2;
+
+              GPUAutoScheduleOptions options{numRowsPerTB,
+                                             numRowsPerThread,
+                                             1,
+                                             treeThreads,
+                                             1,
+                                             cacheRows,
+                                             cacheTrees,
+                                             unrollTreeWalks,
+                                             interleaveDepth,
+                                             sharedMemoryReduce};
+
+              auto time =
+                  BenchmarkIfNoSharedMemOverflow<float, float, cacheRows, false,
+                                                 unrollTreeWalks>(
+                      m_model, rep, m_batchSize, numRowsPerTB, numRowsPerThread,
+                      treeThreads, interleaveDepth);
+              if (time.kernelTimePerSample != -1 &&
+                  time.kernelTimePerSample < bestKernelTime)
+                updateConfig(options, rep, false);
+            }
+
+            {
+              constexpr bool cacheRows = true;
+              constexpr bool unrollTreeWalks = true;
+              constexpr bool sharedMemoryReduce = false;
+              constexpr int32_t interleaveDepth = 4;
+
+              GPUAutoScheduleOptions options{numRowsPerTB,
+                                             numRowsPerThread,
+                                             1,
+                                             treeThreads,
+                                             1,
+                                             cacheRows,
+                                             cacheTrees,
+                                             unrollTreeWalks,
+                                             interleaveDepth,
+                                             sharedMemoryReduce};
+
+              auto time =
+                  BenchmarkIfNoSharedMemOverflow<float, float, cacheRows, false,
+                                                 unrollTreeWalks>(
+                      m_model, rep, m_batchSize, numRowsPerTB, numRowsPerThread,
+                      treeThreads, interleaveDepth);
+              if (time.kernelTimePerSample != -1 &&
+                  time.kernelTimePerSample < bestKernelTime)
+                updateConfig(options, rep, false);
+            }
+          }
+        }
+      }
+    }
+
+    // TODO now check if we need to do a shared reduction.
+
+    mlir::decisionforest::numberOfKernelRuns = numKernelRuns;
+  }
+
+  void printBestSchedule() {
+    std::cout << "Best schedule for " << m_model << " is: " << std::endl;
+    std::cout << "\tnumRowsPerTB: " << m_bestOptions.numRowsPerTB << std::endl;
+    std::cout << "\tnumRowsPerThread: " << m_bestOptions.numRowsPerThread
+              << std::endl;
+    std::cout << "\tnumTreeThreads: " << m_bestOptions.numTreeThreads
+              << std::endl;
+    std::cout << "\tcacheRows: " << m_bestOptions.cacheRows << std::endl;
+    std::cout << "\tcacheTrees: " << m_bestOptions.cacheTrees << std::endl;
+    std::cout << "\tunrollTreeWalks: " << m_bestOptions.unrollTreeWalks
+              << std::endl;
+    std::cout << "\tinterleaveDepth: " << m_bestOptions.treeWalkInterleaveFactor
+              << std::endl;
+    std::cout << "\tsharedMemoryReduce: " << m_bestOptions.sharedMemoryReduce
+              << std::endl;
+    std::cout << "\tRepresentation: " << m_bestRep << std::endl;
+    std::cout << "\tPadTrees: " << m_shouldPadTrees << std::endl;
+  }
+};
+
+void findBestGPUSchedule(const std::string &benchmark, int32_t batchSize) {
+  GPUAutoTuner tuner(benchmark, batchSize);
+  tuner.exploreSchedules();
+  tuner.printBestSchedule();
+}
+
 void RunAllCustomScheduleBenchmarks() {
   RunAllSimpleGPUScheduleBenchmarks();
   RunAllSimpleGPUScheduleWithRowCacheBenchmarks();
@@ -1217,8 +1439,9 @@ void RunAllCustomScheduleBenchmarks() {
 void RunXGBoostGPUBenchmarks() {
   mlir::decisionforest::measureGpuKernelTime = true;
   // mlir::decisionforest::numberOfKernelRuns = NUM_RUNS;
-  RunAllAutoScheduleXGBoostGPUBenchmarks();
+  // RunAllAutoScheduleXGBoostGPUBenchmarks();
   // RunAllCustomScheduleBenchmarks();
+  findBestGPUSchedule("abalone", 1024);
 }
 
 } // namespace test
