@@ -167,6 +167,35 @@ def RunSingleGPUTestAutoSchedule(modelJSONPath,
   print("Passed (", end - start, "s )")
   return True
 
+def RunSingleGPUTestAutoTuneHeuristic(modelJSONPath, 
+                                      csvPath,
+                                      options,
+                                      returnType,
+                                      inputType) -> bool:
+  data_df = pandas.read_csv(csvPath, header=None)
+  data = numpy.array(data_df, order='C') # numpy.genfromtxt(csvPath, ',')
+  inputs = numpy.array(data[:, :-1], numpy.float32, order='C')
+  expectedOutputs = data[:, data.shape[1]-1]
+  
+  globalsPath = modelJSONPath + ".treebeard-globals.json"
+  tbContext = treebeard.TreebeardContext(modelJSONPath, globalsPath, options)
+  tbContext.SetInputFiletype(inputType)
+
+  inferenceRunner = treebeard.TreebeardInferenceRunner.AutoScheduleGPUInferenceRunnerFromTBContext(tbContext)
+  
+  batch_size = 256
+  start = time.time()
+  for i in range(batch_size, data.shape[0], batch_size):
+    batch = inputs[i-batch_size:i, :]
+    results = inferenceRunner.RunInference(batch, returnType)
+    if not CheckArraysEqual(results, expectedOutputs[i - batch_size : i]):
+      print("Failed")
+      return False
+  end = time.time()
+  
+  print("Passed (", end - start, "s )")
+  return True
+
 def RunTestOnSingleModelTestInputsJIT(modelName : str, options, testName : str, returnType=numpy.float32, testFunc=RunSingleTestJIT) -> bool:
   print("JIT ", testName, modelName, "...", end=" ")
   modelJSONPath = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), modelName + "_xgb_model_save.json")

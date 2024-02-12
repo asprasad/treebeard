@@ -234,6 +234,10 @@ public:
   void SetRepresentationAndSerializer(const std::string &repName);
 
   bool shouldUseGPUAutoSchedule() { return m_gpuScheduleOptionsSet; }
+  void setGPUAutoScheduleOptions(GPUAutoScheduleOptions &gpuScheduleOptions) {
+    this->gpuScheduleOptions = gpuScheduleOptions;
+    m_gpuScheduleOptionsSet = true;
+  }
 };
 
 } // namespace TreeBeard

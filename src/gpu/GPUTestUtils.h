@@ -1,6 +1,8 @@
 #ifndef GPU_TEST_UTILS_H
 #define GPU_TEST_UTILS_H
 
+#include "dlfcn.h"
+
 #include "ForestTestUtils.h"
 #include "GPUExecutionHelper.h"
 #include "GPUModelSerializers.h"

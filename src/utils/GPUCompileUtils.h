@@ -18,6 +18,15 @@ ConstructGPUModuleFromTreebeardContext(TreebeardContext &tbContext);
 void DoGPUAutoSchedule(mlir::MLIRContext &context, mlir::ModuleOp module,
                        const TreeBeard::GPUAutoScheduleOptions &options);
 
+struct GPUAutoSchedulerResults {
+  TreeBeard::GPUAutoScheduleOptions gpuAutoSchedulingOptions;
+  bool unrollTreeWalks;
+  std::string representation;
+};
+
+GPUAutoSchedulerResults findBestGPUSchedule(const std::string &benchmark,
+                                            int32_t batchSize);
+
 } // namespace TreeBeard
 
 #endif // _GPUCOMPILEUTILS_H_

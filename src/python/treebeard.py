@@ -287,6 +287,13 @@ class TreebeardContext:
     inferenceRunner.rowSize = treebeardAPI.GetRowSize(inferenceRunner.inferenceRunner)
     inferenceRunner.batchSize = treebeardAPI.GetBatchSize(inferenceRunner.inferenceRunner)
     return inferenceRunner
+  
+  def ConstructGPUInferenceRunnerAutoSchedule(self):
+    inferenceRunner = TreebeardInferenceRunner()
+    inferenceRunner.inferenceRunner = int(treebeardAPI.runtime_lib.findBestGPUScheduleAndCompileModel(self.tbcontextPtr))
+    inferenceRunner.rowSize = treebeardAPI.GetRowSize(inferenceRunner.inferenceRunner)
+    inferenceRunner.batchSize = treebeardAPI.GetBatchSize(inferenceRunner.inferenceRunner)
+    return inferenceRunner
 
 #### ---------------------------------------------------------------- ####
 #### Inference Runner
@@ -343,6 +350,11 @@ class TreebeardInferenceRunner:
     inferenceRunner.inferenceRunner = int(inferenceRunnerPtr)
     inferenceRunner.rowSize = treebeardAPI.GetRowSize(inferenceRunner.inferenceRunner)
     inferenceRunner.batchSize = treebeardAPI.GetBatchSize(inferenceRunner.inferenceRunner)
+    return inferenceRunner
+  
+  @classmethod
+  def AutoScheduleGPUInferenceRunnerFromTBContext(self, tbContext):
+    inferenceRunner = tbContext.ConstructGPUInferenceRunnerAutoSchedule()
     return inferenceRunner
 
   def __del__(self):

@@ -2,7 +2,7 @@ import os
 import numpy
 import treebeard
 from functools import partial
-from test_utils import RunSingleGPUTestJIT, RunAllTests, RunSelectedTests, RunSingleGPUTestAutoSchedule
+from test_utils import RunSingleGPUTestJIT, RunAllTests, RunSelectedTests, RunSingleGPUTestAutoSchedule, RunSingleGPUTestAutoTuneHeuristic
 
 def SimpleGPUSchedule(schedule: treebeard.Schedule, rows_per_threadblock: int):
   batchIndex = schedule.GetBatchIndex()
@@ -170,6 +170,19 @@ def run_auto_schedule_test(test_name, rep, gpuAutoScheduleOptions, tile_size=1, 
 
   RunAllTests(test_name, defaultTileSize8Options, defaultTileSize8MulticlassOptions, arrayRepSingleTestRunner_TileBatch)
 
+def run_auto_tune_heuristic_test(test_name, tile_size=1, batch_size=256):
+  defaultTileSize8Options = treebeard.CompilerOptions(batch_size, tile_size)
+  defaultTileSize8Options.SetMakeAllLeavesSameDepth(1)
+  defaultTileSize8MulticlassOptions = treebeard.CompilerOptions(batch_size, tile_size)
+  defaultTileSize8MulticlassOptions.SetReturnTypeWidth(8)
+  defaultTileSize8MulticlassOptions.SetReturnTypeIsFloatType(False)
+  defaultTileSize8MulticlassOptions.SetMakeAllLeavesSameDepth(1)
+
+  arrayRepSingleTestRunner_TileBatch = partial(RunSingleGPUTestAutoTuneHeuristic,
+                                               inputType="xgboost_json")
+
+  RunAllTests(test_name, defaultTileSize8Options, defaultTileSize8MulticlassOptions, arrayRepSingleTestRunner_TileBatch)
+
 def RunSimpleGPUScheduleTests():
   gpu_schedule_20rows = partial(SimpleGPUSchedule, rows_per_threadblock=20)
   run_custom_schedule("simple_gpu_schedule-array", "gpu_array", gpu_schedule_20rows)
@@ -309,6 +322,9 @@ def RunGPUAutoScheduleTestsUnrollAndInterleaveParallelTrees():
   run_auto_schedule_test("no-cache-autoschedule-unroll-interleave-treepar-sparse", "gpu_sparse", gpuAutoScheduleOptions, batch_size=batchSize)
   run_auto_schedule_test("no-cache-autoschedule-unroll-interleave-treepar-reorg", "gpu_reorg", gpuAutoScheduleOptions, batch_size=batchSize)
 
+def RunGPUAutoTuneHeuristicTests():
+  run_auto_tune_heuristic_test("auto-tune-heuristic")
+
 def run_all_tests():
   RunSimpleGPUScheduleTests()
   RunOneRowAtATimeGPUScheduleTests()
@@ -323,6 +339,7 @@ def run_all_tests():
   RunGPUAutoScheduleTestsNoCacheUnroll()
   RunGPUAutoScheduleTestsNoCacheUnrollParallelTrees()
   RunGPUAutoScheduleTestsUnrollAndInterleaveParallelTrees()
+  RunGPUAutoTuneHeuristicTests()
 
 if __name__ == "__main__":
   run_all_tests()

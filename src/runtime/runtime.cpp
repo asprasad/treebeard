@@ -733,3 +733,38 @@ int64_t GetGPUKernelExecutionTime(intptr_t inferenceRunnerInt) {
 }
 
 } // extern "C"
+
+// ===-------------------------------------------------------------=== //
+// Auto-scheduling heuristic API
+// ===-------------------------------------------------------------=== //
+
+extern "C" void *findBestGPUScheduleAndCompileModel(void *tbContext) {
+  bool oldMeasureKernelTimeValue = mlir::decisionforest::measureGpuKernelTime;
+  mlir::decisionforest::measureGpuKernelTime = true;
+
+  TreeBeard::TreebeardContext *tbContextPtr =
+      reinterpret_cast<TreeBeard::TreebeardContext *>(tbContext);
+  auto modelName = tbContextPtr->modelPath;
+
+  auto autoscheduleResults = TreeBeard::findBestGPUSchedule(
+      modelName, tbContextPtr->options.batchSize);
+
+  tbContextPtr->setGPUAutoScheduleOptions(
+      autoscheduleResults.gpuAutoSchedulingOptions);
+  tbContextPtr->options.makeAllLeavesSameDepth =
+      autoscheduleResults.unrollTreeWalks;
+  assert(tbContextPtr->representation == nullptr);
+  assert(tbContextPtr->serializer == nullptr);
+  tbContextPtr->SetRepresentationAndSerializer(
+      autoscheduleResults.representation);
+
+  auto module =
+      TreeBeard::ConstructGPUModuleFromTreebeardContext(*tbContextPtr);
+  auto *inferenceRunner = new TreeBeard::test::GPUInferenceRunnerForTest(
+      tbContextPtr->serializer, module, tbContextPtr->options.tileSize,
+      tbContextPtr->options.thresholdTypeWidth,
+      tbContextPtr->options.featureIndexTypeWidth);
+
+  mlir::decisionforest::measureGpuKernelTime = oldMeasureKernelTimeValue;
+  return reinterpret_cast<void *>(inferenceRunner);
+}

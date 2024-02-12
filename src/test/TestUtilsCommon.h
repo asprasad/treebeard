@@ -10,6 +10,9 @@
 #include <random>
 #include <stdexcept>
 
+#include "GPUExecutionHelper.h"
+#include "GPUSupportUtils.h"
+
 namespace mlir {
 class MLIRContext;
 }

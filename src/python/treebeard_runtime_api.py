@@ -244,6 +244,10 @@ class TreebeardAPI:
       self.runtime_lib.DeleteGPUAutoScheduleOptions.restype = None
       self.runtime_lib.DeleteGPUAutoScheduleOptions.argtypes = [ctypes.c_int64]
 
+      # extern "C" void *findBestGPUScheduleAndCompileModel(void *tbContext)
+      self.runtime_lib.findBestGPUScheduleAndCompileModel.restype = ctypes.c_int64
+      self.runtime_lib.findBestGPUScheduleAndCompileModel.argtypes = [ctypes.c_int64]
+
       self.runtime_lib.Set_numRowsPerTB.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
       self.runtime_lib.Set_numRowsPerThread.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
       self.runtime_lib.Set_rowTileSize.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
