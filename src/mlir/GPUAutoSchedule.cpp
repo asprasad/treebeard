@@ -548,7 +548,7 @@ class GPUAutoTuner {
   }
 
   void initParameters(const std::string &modelName, int32_t batchSize) {
-    std::vector<std::string> benchmarks{"abalone", "airline", "airline-ohe",
+    std::vector<std::string> benchmarks{"abalone", "airline-ohe", "airline",
                                         // "bosch",
                                         "covtype", "epsilon", "higgs",
                                         "letters", "year_prediction_msd"};
@@ -556,7 +556,7 @@ class GPUAutoTuner {
     std::vector<bool> isMultiClass{false, false, false, // false,
                                    true,  false, false, true, false};
 
-    std::vector<int32_t> numFeatures{8, 13, 692, 54, 2000, 28, 16, 90};
+    std::vector<int32_t> numFeatures{8, 692, 13, 54, 2000, 28, 16, 90};
 
     std::vector<int32_t> numTrees{1000, 100, 1000, 800, 100, 100, 26000, 100};
 
@@ -570,6 +570,9 @@ class GPUAutoTuner {
     m_numFeatures = numFeatures[index];
     m_numTrees = numTrees[index];
     m_multiClass = isMultiClass[index];
+
+    std::cerr << *it << " " << m_numFeatures << " " << m_numTrees << " "
+              << m_multiClass << std::endl;
 
     computeScheduleSubset();
 

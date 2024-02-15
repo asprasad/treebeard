@@ -19,7 +19,7 @@
 namespace TreeBeard {
 namespace test {
 
-constexpr int32_t NUM_RUNS = 200;
+constexpr int32_t NUM_RUNS = 50;
 constexpr bool VERIFY_RESULT = false;
 
 constexpr int32_t MIN_TB_SIZE = 32;
@@ -323,14 +323,12 @@ GPUTimes BenchmarkIfNoSharedMemOverflow(const std::string &modelName,
         BenchmarkGPUCodeGeneration<ThresholdType, IndexType, ReturnType>(
             execInfo.module, *execInfo.tbContext);
 
-    // std::cout << modelName << "," << representationName << "," << batchSize
-    //           << "," << numRowsPerTB << "," << numRowsPerThread << ","
-    //           << numTreeThreads << "," << treeInterleaveDepth <<
-    //           std::boolalpha
-    //           << "," << cacheRows << "," << cacheTrees << "," <<
-    //           unrollTreeWalk
-    //           << "," << times.totalTimePerSample << ","
-    //           << times.kernelTimePerSample << std::endl;
+    std::cerr << modelName << "," << representationName << "," << batchSize
+              << "," << numRowsPerTB << "," << numRowsPerThread << ","
+              << numTreeThreads << "," << treeInterleaveDepth << std::boolalpha
+              << "," << cacheRows << "," << cacheTrees << "," << unrollTreeWalk
+              << "," << times.totalTimePerSample << ","
+              << times.kernelTimePerSample << std::endl;
     return times;
   }
   return GPUTimes{-1, -1};
