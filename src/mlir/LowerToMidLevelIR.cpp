@@ -693,9 +693,19 @@ struct PredictForestOpLowering : public ConversionPattern {
       // auto printResult = rewriter.create<gpu::PrintfOp>(location, "Result
       // [%d]: %lf\t", ValueRange{rowIndex, static_cast<Value>(walkOp)});
     }
-    GenerateResultReduction(rewriter, location, state,
-                            static_cast<Value>(walkOp), rowIndex, treeIndex);
-
+    // GenerateResultReduction(rewriter, location, state,
+    //                         static_cast<Value>(walkOp), rowIndex, treeIndex);
+    if (state.isMultiClass) {
+      GenerateMultiClassAccumulate(rewriter, location, walkOp, rowIndex,
+                                   treeIndex, state);
+    } else {
+      // Accumulate the tree prediction
+      assert(forestType.getReductionType() ==
+             decisionforest::ReductionType::kAdd);
+      prevAccumulatorValue = rewriter.create<arith::AddFOp>(
+          location, state.resultMemrefType.getElementType(),
+          prevAccumulatorValue, walkOp);
+    }
     if (mlir::decisionforest::InsertDebugHelpers) {
       Value treePred = walkOp;
       if (!treePred.getType().isF64())
@@ -911,6 +921,12 @@ struct PredictForestOpLowering : public ConversionPattern {
                                       static_cast<Value>(accumulatedValue));
         // rewriter.setInsertionPointAfter(loop);
         loopResult = loop.getResult(0);
+      }
+
+      if (!state.isMultiClass) {
+        Value accumulatedValue = loopResult;
+        GenerateResultReduction(rewriter, location, state, accumulatedValue,
+                                rowIndex, Value{});
       }
 
       // rewriter.create<gpu::PrintfOp>(location, "Writing result[%d] = %lf +
