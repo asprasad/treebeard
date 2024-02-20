@@ -19,7 +19,7 @@
 namespace TreeBeard {
 namespace test {
 
-constexpr int32_t NUM_RUNS = 50;
+constexpr int32_t NUM_RUNS = 200;
 constexpr bool VERIFY_RESULT = false;
 
 constexpr int32_t MIN_TB_SIZE = 32;

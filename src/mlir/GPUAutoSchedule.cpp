@@ -510,6 +510,8 @@ class GPUAutoTuner {
   int32_t m_batchSize;
   bool m_multiClass;
 
+  int32_t m_numRepeats = -1;
+
   TreeBeard::GPUAutoScheduleOptions m_bestOptions;
   std::string m_bestRep;
   std::string m_model;
@@ -526,11 +528,14 @@ class GPUAutoTuner {
   }
 
   void computeScheduleSubset() {
+    const int32_t batchSizeThreshold = 2048;
+    auto isLetters = m_model.find("letters") != std::string::npos;
     // if batchSize < 1k, then focus on larger number of tree threads
-    if (m_batchSize <= 1024) {
+    if (m_batchSize <= batchSizeThreshold) {
       numTreeThreads = {20, 50};
       rowsPerTB = {8, 32};
       rowsPerThread = {1};
+      m_numRepeats = isLetters ? 30 : 100;
     } else {
       const int32_t featureThreshold = 100;
       // if we have a large batch sizes, with a large
@@ -544,6 +549,7 @@ class GPUAutoTuner {
         rowsPerTB = {32, 64};
         rowsPerThread = {1};
       }
+      m_numRepeats = isLetters ? 15 : 50;
     }
   }
 
@@ -582,71 +588,58 @@ class GPUAutoTuner {
       m_shouldCacheRows = false;
   }
 
+  template <typename ResultType, bool unrollTreeWalks>
+  void runSharedReduceBenchmarks(double &bestKernelTime) {
+    TreeBeard::GPUAutoScheduleOptions options = m_bestOptions;
+    options.sharedMemoryReduce = true;
+
+    auto time = BenchmarkIfNoSharedMemOverflow<float, ResultType, true, false,
+                                               unrollTreeWalks, true>(
+        m_model, m_bestRep, m_batchSize, options.numRowsPerTB,
+        options.numRowsPerThread, options.numTreeThreads,
+        options.treeWalkInterleaveFactor, true);
+    std::cerr << time.kernelTimePerSample << std::endl;
+    if (time.kernelTimePerSample != -1 &&
+        time.kernelTimePerSample < bestKernelTime) {
+      updateConfig(options, m_bestRep);
+      bestKernelTime = time.kernelTimePerSample;
+    }
+
+    options.cacheRows = false;
+    time = BenchmarkIfNoSharedMemOverflow<float, ResultType, false, false,
+                                          unrollTreeWalks, true>(
+        m_model, m_bestRep, m_batchSize, options.numRowsPerTB,
+        options.numRowsPerThread, options.numTreeThreads,
+        options.treeWalkInterleaveFactor, true);
+    std::cerr << time.kernelTimePerSample << std::endl;
+
+    if (time.kernelTimePerSample != -1 &&
+        time.kernelTimePerSample < bestKernelTime) {
+      updateConfig(options, m_bestRep);
+      bestKernelTime = time.kernelTimePerSample;
+    }
+  }
+
   void trySharedReduce(double &bestKernelTime) {
-    if (!m_multiClass)
-      return;
+    // if (!m_multiClass)
+    //   return;
     std::cerr << "Checking shared reduce\n";
     printBestSchedule();
     std::cerr << "*************\n";
 
-    if (m_bestOptions.unrollTreeWalks == false) {
-      constexpr bool unrollTreeWalks = false;
-      TreeBeard::GPUAutoScheduleOptions options = m_bestOptions;
-      options.sharedMemoryReduce = true;
-
-      auto time = BenchmarkIfNoSharedMemOverflow<float, int8_t, true, false,
-                                                 unrollTreeWalks, true>(
-          m_model, m_bestRep, m_batchSize, options.numRowsPerTB,
-          options.numRowsPerThread, options.numTreeThreads,
-          options.treeWalkInterleaveFactor, true);
-      std::cerr << time.kernelTimePerSample << std::endl;
-      if (time.kernelTimePerSample != -1 &&
-          time.kernelTimePerSample < bestKernelTime) {
-        updateConfig(options, m_bestRep);
-        bestKernelTime = time.kernelTimePerSample;
+    if (m_multiClass) {
+      using ResultType = int8_t;
+      if (m_bestOptions.unrollTreeWalks) {
+        runSharedReduceBenchmarks<ResultType, true>(bestKernelTime);
+      } else {
+        runSharedReduceBenchmarks<ResultType, false>(bestKernelTime);
       }
-
-      options.cacheRows = false;
-      time = BenchmarkIfNoSharedMemOverflow<float, int8_t, false, false,
-                                            unrollTreeWalks, true>(
-          m_model, m_bestRep, m_batchSize, options.numRowsPerTB,
-          options.numRowsPerThread, options.numTreeThreads,
-          options.treeWalkInterleaveFactor, true);
-      std::cerr << time.kernelTimePerSample << std::endl;
-      if (time.kernelTimePerSample != -1 &&
-          time.kernelTimePerSample < bestKernelTime) {
-        updateConfig(options, m_bestRep);
-        bestKernelTime = time.kernelTimePerSample;
-      }
-
     } else {
-      constexpr bool unrollTreeWalks = true;
-      TreeBeard::GPUAutoScheduleOptions options = m_bestOptions;
-      options.sharedMemoryReduce = true;
-
-      auto time = BenchmarkIfNoSharedMemOverflow<float, int8_t, true, false,
-                                                 unrollTreeWalks, true>(
-          m_model, m_bestRep, m_batchSize, options.numRowsPerTB,
-          options.numRowsPerThread, options.numTreeThreads,
-          options.treeWalkInterleaveFactor, true);
-
-      if (time.kernelTimePerSample != -1 &&
-          time.kernelTimePerSample < bestKernelTime) {
-        updateConfig(options, m_bestRep);
-        bestKernelTime = time.kernelTimePerSample;
-      }
-
-      options.cacheRows = false;
-      time = BenchmarkIfNoSharedMemOverflow<float, int8_t, false, false,
-                                            unrollTreeWalks, true>(
-          m_model, m_bestRep, m_batchSize, options.numRowsPerTB,
-          options.numRowsPerThread, options.numTreeThreads,
-          options.treeWalkInterleaveFactor, true);
-
-      if (time.kernelTimePerSample != -1 &&
-          time.kernelTimePerSample < bestKernelTime) {
-        updateConfig(options, m_bestRep);
-        bestKernelTime = time.kernelTimePerSample;
+      using ResultType = float;
+      if (m_bestOptions.unrollTreeWalks) {
+        runSharedReduceBenchmarks<ResultType, true>(bestKernelTime);
+      } else {
+        runSharedReduceBenchmarks<ResultType, false>(bestKernelTime);
       }
     }
   }
@@ -755,7 +748,8 @@ public:
   void exploreSchedules() {
 
     const auto numKernelRuns = mlir::decisionforest::numberOfKernelRuns;
-    mlir::decisionforest::numberOfKernelRuns = NUM_RUNS;
+    assert(m_numRepeats != -1);
+    mlir::decisionforest::numberOfKernelRuns = m_numRepeats;
 
     double bestKernelTime = std::numeric_limits<double>::max();
     // Caching rows seems generally better than not. So we will
@@ -772,6 +766,9 @@ public:
           if (tbSize < MIN_TB_SIZE)
             continue;
           for (auto rep : {"gpu_array", "gpu_sparse", "gpu_reorg"}) {
+            std::cerr << m_batchSize << " " << numRowsPerTB << " "
+                      << numRowsPerThread << " " << treeThreads << " " << rep
+                      << std::endl;
             if (m_shouldCacheRows)
               runBenchmarks<true>(bestKernelTime, rep, numRowsPerTB,
                                   numRowsPerThread, treeThreads);
