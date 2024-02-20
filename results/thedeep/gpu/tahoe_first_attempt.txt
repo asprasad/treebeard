@@ -1,0 +1,1680 @@
+Running abalone for batch size 512
+
+Model: ./treebeard_models//abalone_xgb_model_save.json.txt , Data: ./treebeard_models//512/abalone_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.6
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.289062 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 1.717969 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 5.930313 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.065664 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.149453 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 4.40214x speedup.
+Running abalone for batch size 1024
+
+Model: ./treebeard_models//abalone_xgb_model_save.json.txt , Data: ./treebeard_models//1024/abalone_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.9
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.253320 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.796230 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 6.425058 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.060684 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.113848 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 4.17444x speedup.
+Running abalone for batch size 2048
+
+Model: ./treebeard_models//abalone_xgb_model_save.json.txt , Data: ./treebeard_models//2048/abalone_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.255469 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.398818 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 4.028672 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.057695 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.096387 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 4.42789x speedup.
+Running abalone for batch size 4096
+
+Model: ./treebeard_models//abalone_xgb_model_save.json.txt , Data: ./treebeard_models//4096/abalone_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.252344 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.199146 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 2.064473 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.056392 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.089487 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 4.47485x speedup.
+Running abalone for batch size 8192
+
+Model: ./treebeard_models//abalone_xgb_model_save.json.txt , Data: ./treebeard_models//8192/abalone_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.259399 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.103242 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.996650 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.055906 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.093521 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 4.63994x speedup.
+Running abalone for batch size 16384
+
+Model: ./treebeard_models//abalone_xgb_model_save.json.txt , Data: ./treebeard_models//16384/abalone_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.279773 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.078180 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.509387 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.055259 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.090809 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 5.06296x speedup.
+Running airline for batch size 512
+
+Model: ./treebeard_models//airline_xgb_model_save.json.txt , Data: ./treebeard_models//512/airline_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.059375 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.332812 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.966680 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.026094 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.064883 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 2.27545x speedup.
+Running airline for batch size 1024
+
+Model: ./treebeard_models//airline_xgb_model_save.json.txt , Data: ./treebeard_models//1024/airline_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.055664 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.152754 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.723301 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.022187 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.045645 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 2.5088x speedup.
+Running airline for batch size 2048
+
+Model: ./treebeard_models//airline_xgb_model_save.json.txt , Data: ./treebeard_models//2048/airline_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.049121 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.076416 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.360029 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.020273 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.036885 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 2.42293x speedup.
+Running airline for batch size 4096
+
+Model: ./treebeard_models//airline_xgb_model_save.json.txt , Data: ./treebeard_models//4096/airline_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.046631 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.039233 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.180479 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.019497 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.032476 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 2.39169x speedup.
+Running airline for batch size 8192
+
+Model: ./treebeard_models//airline_xgb_model_save.json.txt , Data: ./treebeard_models//8192/airline_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.045532 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.022876 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.089832 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.018733 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.030945 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 2.4306x speedup.
+Running airline for batch size 16384
+
+Model: ./treebeard_models//airline_xgb_model_save.json.txt , Data: ./treebeard_models//16384/airline_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.045911 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.013563 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.044933 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.018525 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.033325 us
+Results are correct
+Performance model predicts incorrectly
+Tahoe brings 3.38493x speedup.
+Running airline-ohe for batch size 512
+
+Model: ./treebeard_models//airline-ohe_xgb_model_save.json.txt , Data: ./treebeard_models//512/airline-ohe_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.471094 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 3.566445 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 2.403984 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.103320 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.426758 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 4.55955x speedup.
+Running airline-ohe for batch size 1024
+
+Model: ./treebeard_models//airline-ohe_xgb_model_save.json.txt , Data: ./treebeard_models//1024/airline-ohe_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.635938 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 1.787109 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 2.262851 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.096406 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.408457 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 6.59643x speedup.
+Running airline-ohe for batch size 2048
+
+Model: ./treebeard_models//airline-ohe_xgb_model_save.json.txt , Data: ./treebeard_models//2048/airline-ohe_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.896875 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.890312 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 2.122178 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.089609 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.324521 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 10.0087x speedup.
+Running airline-ohe for batch size 4096
+
+Model: ./treebeard_models//airline-ohe_xgb_model_save.json.txt , Data: ./treebeard_models//4096/airline-ohe_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.967725 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.448062 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 1.899063 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.087798 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.295264 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 11.0222x speedup.
+Running airline-ohe for batch size 8192
+
+Model: ./treebeard_models//airline-ohe_xgb_model_save.json.txt , Data: ./treebeard_models//8192/airline-ohe_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 1.011084 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.252891 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 1.777773 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.088479 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.293677 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 11.4274x speedup.
+Running airline-ohe for batch size 16384
+
+Model: ./treebeard_models//airline-ohe_xgb_model_save.json.txt , Data: ./treebeard_models//16384/airline-ohe_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 1.044824 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.431624 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 1.760878 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.092085 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.303939 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 11.3463x speedup.
+Running covtype for batch size 512
+
+Model: ./treebeard_models//covtype_xgb_model_save.json.txt , Data: ./treebeard_models//512/covtype_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.266797 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 2.050469 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 2.476055 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.095742 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.305313 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 2.78662x speedup.
+Running covtype for batch size 1024
+
+Model: ./treebeard_models//covtype_xgb_model_save.json.txt , Data: ./treebeard_models//1024/covtype_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.249414 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 1.033105 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 1.231758 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.088711 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.293145 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 2.81154x speedup.
+Running covtype for batch size 2048
+
+Model: ./treebeard_models//covtype_xgb_model_save.json.txt , Data: ./treebeard_models//2048/covtype_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.235742 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.521445 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.618652 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.083438 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.224609 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 2.82537x speedup.
+Running covtype for batch size 4096
+
+Model: ./treebeard_models//covtype_xgb_model_save.json.txt , Data: ./treebeard_models//4096/covtype_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.227686 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.262354 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.317529 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.080352 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.204224 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 2.83362x speedup.
+Running covtype for batch size 8192
+
+Model: ./treebeard_models//covtype_xgb_model_save.json.txt , Data: ./treebeard_models//8192/covtype_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.225171 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.179978 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.161477 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.079321 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.188806 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 2.83872x speedup.
+Running covtype for batch size 16384
+
+Model: ./treebeard_models//covtype_xgb_model_save.json.txt , Data: ./treebeard_models//16384/covtype_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.232739 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.102263 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.154438 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.079047 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.181176 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 2.94433x speedup.
+Running epsilon for batch size 512
+
+Model: ./treebeard_models//epsilon_xgb_model_save.json.txt , Data: ./treebeard_models//512/epsilon_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.103516 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.540000 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.840430 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.043398 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.084609 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 2.38524x speedup.
+Running epsilon for batch size 1024
+
+Model: ./treebeard_models//epsilon_xgb_model_save.json.txt , Data: ./treebeard_models//1024/epsilon_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.091992 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.269531 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.820684 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.037754 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.064453 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 2.43663x speedup.
+Running epsilon for batch size 2048
+
+Model: ./treebeard_models//epsilon_xgb_model_save.json.txt , Data: ./treebeard_models//2048/epsilon_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.082520 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.135186 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.771514 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.035020 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.053994 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 2.35639x speedup.
+Running epsilon for batch size 4096
+
+Model: ./treebeard_models//epsilon_xgb_model_save.json.txt , Data: ./treebeard_models//4096/epsilon_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.091797 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.086021 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.849888 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.045146 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.078838 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 2.03331x speedup.
+Running epsilon for batch size 8192
+
+Model: ./treebeard_models//epsilon_xgb_model_save.json.txt , Data: ./treebeard_models//8192/epsilon_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.084888 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.167739 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.830522 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.043481 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.078779 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 1.95227x speedup.
+Running epsilon for batch size 16384
+
+Model: ./treebeard_models//epsilon_xgb_model_save.json.txt , Data: ./treebeard_models//16384/epsilon_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.089600 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.274993 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.826785 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.042706 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.077610 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 2.09804x speedup.
+Running higgs for batch size 512
+
+Model: ./treebeard_models//higgs_xgb_model_save.json.txt , Data: ./treebeard_models//512/higgs_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.065625 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.356641 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.933086 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.026328 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.082539 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 2.49258x speedup.
+Running higgs for batch size 1024
+
+Model: ./treebeard_models//higgs_xgb_model_save.json.txt , Data: ./treebeard_models//1024/higgs_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.056445 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.179434 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.463125 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.023789 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.062383 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 2.37274x speedup.
+Running higgs for batch size 2048
+
+Model: ./treebeard_models//higgs_xgb_model_save.json.txt , Data: ./treebeard_models//2048/higgs_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.050000 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.092656 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.231680 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.022021 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.052227 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 2.27051x speedup.
+Running higgs for batch size 4096
+
+Model: ./treebeard_models//higgs_xgb_model_save.json.txt , Data: ./treebeard_models//4096/higgs_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.047021 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.044580 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.115757 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.020928 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.047637 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 2.24685x speedup.
+Running higgs for batch size 8192
+
+Model: ./treebeard_models//higgs_xgb_model_save.json.txt , Data: ./treebeard_models//8192/higgs_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.046606 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.027468 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.058748 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.019844 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.045146 us
+Results are correct
+Performance model predicts correctly
+Tahoe brings 2.34867x speedup.
+Running higgs for batch size 16384
+
+Model: ./treebeard_models//higgs_xgb_model_save.json.txt , Data: ./treebeard_models//16384/higgs_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.045813 us
+Results are correct
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.016359 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.029768 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.019805 us
+Results are correct
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.044111 us
+Results are correct
+Performance model predicts incorrectly
+Tahoe brings 2.80054x speedup.
+Running letters for batch size 512
+
+Model: ./treebeard_models//letters_xgb_model_save.json.txt , Data: ./treebeard_models//512/letters_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 5.847266 us
+Results are incorrect
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 46.938908 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 104.595352 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 1.672812 us
+Results are incorrect
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 3.485742 us
+Results are incorrect
+Performance model predicts correctly
+Tahoe brings 3.49547x speedup.
+Running letters for batch size 1024
+
+Model: ./treebeard_models//letters_xgb_model_save.json.txt , Data: ./treebeard_models//1024/letters_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 7.966797 us
+Results are incorrect
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 23.521290 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 78.756721 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 1.625195 us
+Results are incorrect
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 3.122324 us
+Results are incorrect
+Performance model predicts correctly
+Tahoe brings 4.90206x speedup.
+Running letters for batch size 2048
+
+Model: ./treebeard_models//letters_xgb_model_save.json.txt , Data: ./treebeard_models//2048/letters_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 16.382812 us
+Results are incorrect
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 11.642841 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 40.361561 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 1.601377 us
+Results are incorrect
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 2.956357 us
+Results are incorrect
+Performance model predicts correctly
+Tahoe brings 10.2305x speedup.
+Running letters for batch size 4096
+
+Model: ./treebeard_models//letters_xgb_model_save.json.txt , Data: ./treebeard_models//4096/letters_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 17.822851 us
+Results are incorrect
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 5.821177 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 20.451841 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 1.594878 us
+Results are incorrect
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 2.935576 us
+Results are incorrect
+Performance model predicts correctly
+Tahoe brings 11.1751x speedup.
+Running letters for batch size 8192
+
+Model: ./treebeard_models//letters_xgb_model_save.json.txt , Data: ./treebeard_models//8192/letters_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 19.078907 us
+Results are incorrect
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 4.077854 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 10.187869 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 1.580801 us
+Results are incorrect
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 2.931851 us
+Results are incorrect
+Performance model predicts correctly
+Tahoe brings 12.0691x speedup.
+Running letters for batch size 16384
+
+Model: ./treebeard_models//letters_xgb_model_save.json.txt , Data: ./treebeard_models//16384/letters_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 19.884594 us
+Results are incorrect
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 2.804410 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 5.616579 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 1.608545 us
+Results are incorrect
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 2.925293 us
+Results are incorrect
+Performance model predicts correctly
+Tahoe brings 12.3619x speedup.
+Running year_prediction_msd for batch size 512
+
+Model: ./treebeard_models//year_prediction_msd_xgb_model_save.json.txt , Data: ./treebeard_models//512/year_prediction_msd_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.054688 us
+Results are incorrect
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.410508 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.381367 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.027109 us
+Results are incorrect
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.081836 us
+Results are incorrect
+Performance model predicts correctly
+Tahoe brings 2.01729x speedup.
+Running year_prediction_msd for batch size 1024
+
+Model: ./treebeard_models//year_prediction_msd_xgb_model_save.json.txt , Data: ./treebeard_models//1024/year_prediction_msd_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.049219 us
+Results are incorrect
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.206191 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.189609 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.024180 us
+Results are incorrect
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.061348 us
+Results are incorrect
+Performance model predicts correctly
+Tahoe brings 2.03554x speedup.
+Running year_prediction_msd for batch size 2048
+
+Model: ./treebeard_models//year_prediction_msd_xgb_model_save.json.txt , Data: ./treebeard_models//2048/year_prediction_msd_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.044824 us
+Results are incorrect
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.104258 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.095469 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.022373 us
+Results are incorrect
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.051094 us
+Results are incorrect
+Performance model predicts correctly
+Tahoe brings 2.00349x speedup.
+Running year_prediction_msd for batch size 4096
+
+Model: ./treebeard_models//year_prediction_msd_xgb_model_save.json.txt , Data: ./treebeard_models//4096/year_prediction_msd_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.043311 us
+Results are incorrect
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.052124 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.048921 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.021567 us
+Results are incorrect
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.064380 us
+Results are incorrect
+Performance model predicts correctly
+Tahoe brings 2.00815x speedup.
+Running year_prediction_msd for batch size 8192
+
+Model: ./treebeard_models//year_prediction_msd_xgb_model_save.json.txt , Data: ./treebeard_models//8192/year_prediction_msd_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.041553 us
+Results are incorrect
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.029382 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.046157 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.021206 us
+Results are incorrect
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.045020 us
+Results are incorrect
+Performance model predicts correctly
+Tahoe brings 1.95947x speedup.
+Running year_prediction_msd for batch size 16384
+
+Model: ./treebeard_models//year_prediction_msd_xgb_model_save.json.txt , Data: ./treebeard_models//16384/year_prediction_msd_xgb_model_save.json.txt.test.sampled.txt
+Running on...
+
+ Device 0: NVIDIA GeForce RTX 4060
+ Quick Mode
+
+ Device to Device Bandwidth, 1 Device(s)
+ PINNED Memory Transfers
+   Transfer Size (Bytes)	Bandwidth(GB/s)
+   32000000			249.8
+
+Performance model choose #3 strategy.
+Loading model...
+Loading data...
+Predict on CPU to get standard results...
+Test on GPU...
+Exec.Time/Sample on FIL (baseline) is 0.041125 us
+Results are incorrect
+Using strategy 1
+Exec.Time/Sample on strategy 1 is 0.026173 us
+Results are correct
+Using strategy 2
+Exec.Time/Sample on strategy 2 is 0.042959 us
+Results are correct
+Using strategy 3
+Exec.Time/Sample on strategy 3 is 0.020936 us
+Results are incorrect
+Strategy 4 is not suitable for this case.
+Using strategy 5
+Exec.Time/Sample on strategy 5 is 0.042546 us
+Results are incorrect
+Performance model predicts correctly
+Tahoe brings 1.96432x speedup.

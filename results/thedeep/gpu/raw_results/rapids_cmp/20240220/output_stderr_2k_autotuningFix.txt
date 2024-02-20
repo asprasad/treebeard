@@ -1,0 +1,761 @@
+abalone 8 1000 0
+2048 32 1 1 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,2048,32,1,1,-1,true,false,false,0.515518,0.463271
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,2048,32,1,1,2,true,false,true,0.262822,0.238408
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,2048,32,1,1,4,true,false,true,0.166133,0.14123
+2048 32 1 1 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_sparse,2048,32,1,1,-1,true,false,false,0.504785,0.480859
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_sparse,2048,32,1,1,2,true,false,true,0.279131,0.254717
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_sparse,2048,32,1,1,4,true,false,true,0.18041,0.155996
+2048 32 1 1 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_reorg,2048,32,1,1,-1,true,false,false,0.487783,0.445303
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_reorg,2048,32,1,1,2,true,false,true,0.220205,0.177236
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_reorg,2048,32,1,1,4,true,false,true,0.178994,0.135537
+2048 32 1 2 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,2048,32,1,2,-1,true,false,false,0.286826,0.261436
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,2048,32,1,2,2,true,false,true,0.197793,0.171426
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,2048,32,1,2,4,true,false,true,0.140586,0.119102
+2048 32 1 2 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_sparse,2048,32,1,2,-1,true,false,false,0.282354,0.256963
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_sparse,2048,32,1,2,2,true,false,true,0.159727,0.134336
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_sparse,2048,32,1,2,4,true,false,true,0.173398,0.148008
+2048 32 1 2 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_reorg,2048,32,1,2,-1,true,false,false,0.287402,0.240039
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_reorg,2048,32,1,2,2,true,false,true,0.166494,0.122549
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_reorg,2048,32,1,2,4,true,false,true,0.145771,0.101338
+2048 32 1 10 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,2048,32,1,10,-1,true,false,false,0.117949,0.060332
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,2048,32,1,10,2,true,false,true,0.100693,0.0425879
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,2048,32,1,10,4,true,false,true,0.102676,0.0396875
+2048 32 1 10 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_sparse,2048,32,1,10,-1,true,false,false,0.0906445,0.0618359
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_sparse,2048,32,1,10,2,true,false,true,0.105293,0.0447461
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_sparse,2048,32,1,10,4,true,false,true,0.105859,0.0448242
+2048 32 1 10 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_reorg,2048,32,1,10,-1,true,false,false,0.109199,0.0647656
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_reorg,2048,32,1,10,2,true,false,true,0.0919238,0.0484668
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_reorg,2048,32,1,10,4,true,false,true,0.0999414,0.0520898
+2048 64 1 1 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,2048,64,1,1,-1,true,false,false,0.526699,0.498867
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,2048,64,1,1,2,true,false,true,0.287178,0.258369
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,2048,64,1,1,4,true,false,true,0.185938,0.157129
+2048 64 1 1 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_sparse,2048,64,1,1,-1,true,false,false,0.509199,0.480879
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_sparse,2048,64,1,1,2,true,false,true,0.286709,0.258389
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_sparse,2048,64,1,1,4,true,false,true,0.186826,0.159482
+2048 64 1 1 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_reorg,2048,64,1,1,-1,true,false,false,0.628496,0.586016
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_reorg,2048,64,1,1,2,true,false,true,0.267891,0.224434
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_reorg,2048,64,1,1,4,true,false,true,0.200615,0.158135
+2048 64 1 2 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,2048,64,1,2,-1,true,false,false,0.2871,0.261709
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,2048,64,1,2,2,true,false,true,0.198848,0.17248
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,2048,64,1,2,4,true,false,true,0.148506,0.122139
+2048 64 1 2 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_sparse,2048,64,1,2,-1,true,false,false,0.282939,0.257549
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_sparse,2048,64,1,2,2,true,false,true,0.162988,0.137109
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_sparse,2048,64,1,2,4,true,false,true,0.175234,0.150332
+2048 64 1 2 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_reorg,2048,64,1,2,-1,true,false,false,0.283496,0.240039
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_reorg,2048,64,1,2,2,true,false,true,0.168438,0.124004
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_reorg,2048,64,1,2,4,true,false,true,0.150566,0.104668
+2048 64 1 10 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,2048,64,1,10,-1,true,false,false,0.122949,0.0648438
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,2048,64,1,10,2,true,false,true,0.110049,0.0509668
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,2048,64,1,10,4,true,false,true,0.110762,0.052168
+2048 64 1 10 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_sparse,2048,64,1,10,-1,true,false,false,0.0929883,0.0671094
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_sparse,2048,64,1,10,2,true,false,true,0.117266,0.0581836
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_sparse,2048,64,1,10,4,true,false,true,0.120439,0.0594043
+2048 64 1 10 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_reorg,2048,64,1,10,-1,true,false,false,0.114551,0.0696289
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_reorg,2048,64,1,10,2,true,false,true,0.107979,0.0630566
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_reorg,2048,64,1,10,4,true,false,true,0.109961,0.0655273
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: false
+	Representation: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,2048,32,1,10,4,true,false,true,0.0658301,0.0419043
+0.0419043
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,2048,32,1,10,4,false,false,true,0.0667187,0.0423047
+0.0423047
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json	2048
+Best kernel execution time: 0.0396875
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: false
+	Representation: gpu_array
+airline 13 1000 false
+2048 32 1 1 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,2048,32,1,1,-1,true,false,false,0.102881,0.0687012
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,2048,32,1,1,2,true,false,true,0.0706738,0.0360059
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,2048,32,1,1,4,true,false,true,0.0532813,0.0225195
+2048 32 1 1 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_sparse,2048,32,1,1,-1,true,false,false,0.101328,0.0666602
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_sparse,2048,32,1,1,2,true,false,true,0.0706445,0.0354883
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_sparse,2048,32,1,1,4,true,false,true,0.0552344,0.0230078
+2048 32 1 1 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_reorg,2048,32,1,1,-1,true,false,false,0.139854,0.0866309
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_reorg,2048,32,1,1,2,true,false,true,0.081416,0.0330762
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_reorg,2048,32,1,1,4,true,false,true,0.0845117,0.0351953
+2048 32 1 2 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,2048,32,1,2,-1,true,false,false,0.072627,0.0369824
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,2048,32,1,2,2,true,false,true,0.0679102,0.0298242
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,2048,32,1,2,4,true,false,true,0.0642383,0.0281055
+2048 32 1 2 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_sparse,2048,32,1,2,-1,true,false,false,0.069873,0.0366699
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_sparse,2048,32,1,2,2,true,false,true,0.0547754,0.0205957
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_sparse,2048,32,1,2,4,true,false,true,0.0575098,0.0252832
+2048 32 1 2 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_reorg,2048,32,1,2,-1,true,false,false,0.101621,0.0503516
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_reorg,2048,32,1,2,2,true,false,true,0.0836035,0.0274512
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_reorg,2048,32,1,2,4,true,false,true,0.0781641,0.025918
+2048 32 1 10 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,2048,32,1,10,-1,true,false,false,0.0475684,0.0114355
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,2048,32,1,10,2,true,false,true,0.0460449,0.00991211
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,2048,32,1,10,4,true,false,true,0.0449609,0.00931641
+2048 32 1 10 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_sparse,2048,32,1,10,-1,true,false,false,0.0446289,0.0114258
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_sparse,2048,32,1,10,2,true,false,true,0.0425391,0.00982422
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_sparse,2048,32,1,10,4,true,false,true,0.0433887,0.00969727
+2048 32 1 10 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_reorg,2048,32,1,10,-1,true,false,false,0.070625,0.0149609
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_reorg,2048,32,1,10,2,true,false,true,0.0661914,0.0105273
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_reorg,2048,32,1,10,4,true,false,true,0.0667773,0.010625
+2048 64 1 1 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,2048,64,1,1,-1,true,false,false,0.102773,0.0685937
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,2048,64,1,1,2,true,false,true,0.0713867,0.0362305
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,2048,64,1,1,4,true,false,true,0.0530469,0.0227734
+2048 64 1 1 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_sparse,2048,64,1,1,-1,true,false,false,0.0981543,0.0669043
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_sparse,2048,64,1,1,2,true,false,true,0.0711328,0.0359766
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_sparse,2048,64,1,1,4,true,false,true,0.0548535,0.0236035
+2048 64 1 1 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_reorg,2048,64,1,1,-1,true,false,false,0.165195,0.112461
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_reorg,2048,64,1,1,2,true,false,true,0.0855957,0.0367676
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_reorg,2048,64,1,1,4,true,false,true,0.0922656,0.0385547
+2048 64 1 2 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,2048,64,1,2,-1,true,false,false,0.0733008,0.037168
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,2048,64,1,2,2,true,false,true,0.0665625,0.0299414
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,2048,64,1,2,4,true,false,true,0.0642285,0.0280957
+2048 64 1 2 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_sparse,2048,64,1,2,-1,true,false,false,0.0733789,0.0367578
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_sparse,2048,64,1,2,2,true,false,true,0.0549707,0.020791
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_sparse,2048,64,1,2,4,true,false,true,0.0576465,0.0254199
+2048 64 1 2 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_reorg,2048,64,1,2,-1,true,false,false,0.106689,0.0510254
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_reorg,2048,64,1,2,2,true,false,true,0.0833984,0.0277344
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_reorg,2048,64,1,2,4,true,false,true,0.0828125,0.0261719
+2048 64 1 10 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,2048,64,1,10,-1,true,false,false,0.0478125,0.0116797
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,2048,64,1,10,2,true,false,true,0.0467285,0.0101074
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,2048,64,1,10,4,true,false,true,0.0417871,0.0100488
+2048 64 1 10 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_sparse,2048,64,1,10,-1,true,false,false,0.0448242,0.0121094
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_sparse,2048,64,1,10,2,true,false,true,0.0471387,0.0110059
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_sparse,2048,64,1,10,4,true,false,true,0.0437598,0.0110449
+2048 64 1 10 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_reorg,2048,64,1,10,-1,true,false,false,0.0710059,0.0158301
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_reorg,2048,64,1,10,2,true,false,true,0.0679687,0.0118164
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_reorg,2048,64,1,10,4,true,false,true,0.0671875,0.0144531
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: false
+	Representation: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,2048,32,1,10,4,true,false,true,0.0409961,0.00974609
+0.00974609
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,2048,32,1,10,4,false,false,true,0.0377734,0.00994141
+0.00994141
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json	2048
+Best kernel execution time: 0.00931641
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: false
+	Representation: gpu_array
+airline-ohe 692 100 false
+2048 8 1 20 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_array,2048,8,1,20,-1,true,false,false,0.43502,0.107383
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_array,2048,8,1,20,2,true,false,true,0.41541,0.0809375
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_array,2048,8,1,20,4,true,false,true,0.421914,0.081582
+2048 8 1 20 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_sparse,2048,8,1,20,-1,true,false,false,0.494668,0.114785
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_sparse,2048,8,1,20,2,true,false,true,0.412158,0.0630371
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_sparse,2048,8,1,20,4,true,false,true,0.408848,0.0748633
+2048 8 1 20 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_reorg,2048,8,1,20,-1,true,false,false,0.475977,0.12832
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_reorg,2048,8,1,20,2,true,false,true,0.42918,0.0741992
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_reorg,2048,8,1,20,4,true,false,true,0.424902,0.0713867
+2048 8 1 50 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_array,2048,8,1,50,-1,true,false,false,0.418408,0.0824707
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_array,2048,8,1,50,2,true,false,true,0.397822,0.0589551
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_array,2048,8,1,50,4,true,false,true,0.400342,0.0624512
+2048 8 1 50 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_sparse,2048,8,1,50,-1,true,false,false,0.456533,0.0849512
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_sparse,2048,8,1,50,2,true,false,true,0.404561,0.0695996
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_sparse,2048,8,1,50,4,true,false,true,0.407041,0.0720801
+2048 8 1 50 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_reorg,2048,8,1,50,-1,true,false,false,0.435205,0.0909668
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_reorg,2048,8,1,50,2,true,false,true,0.413662,0.0591699
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_reorg,2048,8,1,50,4,true,false,true,0.418359,0.0682617
+2048 32 1 20 gpu_array
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+2048 32 1 20 gpu_sparse
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+2048 32 1 20 gpu_reorg
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json is: 
+	numRowsPerTB: 8
+	numRowsPerThread: 1
+	numTreeThreads: 50
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 2
+	sharedMemoryReduce: false
+	Representation: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_array,2048,8,1,50,2,true,false,true,0.379375,0.0551562
+0.0551562
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_array,2048,8,1,50,2,false,false,true,0.407793,0.0835742
+0.0835742
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json	2048
+Best kernel execution time: 0.0551562
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json is: 
+	numRowsPerTB: 8
+	numRowsPerThread: 1
+	numTreeThreads: 50
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 2
+	sharedMemoryReduce: true
+	Representation: gpu_array
+covtype 54 800 true
+2048 32 1 1 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,2048,32,1,1,-1,true,false,false,0.452227,0.400469
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,2048,32,1,1,2,true,false,true,0.284316,0.233047
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,2048,32,1,1,4,true,false,true,0.213506,0.163213
+2048 32 1 1 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_sparse,2048,32,1,1,-1,true,false,false,0.462471,0.412178
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_sparse,2048,32,1,1,2,true,false,true,0.301016,0.249258
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_sparse,2048,32,1,1,4,true,false,true,0.206807,0.156514
+2048 32 1 1 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_reorg,2048,32,1,1,-1,true,false,false,0.642773,0.589063
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_reorg,2048,32,1,1,2,true,false,true,0.292715,0.239004
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_reorg,2048,32,1,1,4,true,false,true,0.274238,0.220039
+2048 32 1 2 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,2048,32,1,2,-1,true,false,false,0.280322,0.229541
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,2048,32,1,2,2,true,false,true,0.188633,0.139316
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,2048,32,1,2,4,true,false,true,0.139121,0.0898047
+2048 32 1 2 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_sparse,2048,32,1,2,-1,true,false,false,0.269609,0.216875
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_sparse,2048,32,1,2,2,true,false,true,0.1854,0.137061
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_sparse,2048,32,1,2,4,true,false,true,0.160488,0.110684
+2048 32 1 2 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_reorg,2048,32,1,2,-1,true,false,false,0.416387,0.361699
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_reorg,2048,32,1,2,2,true,false,true,0.245742,0.190566
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_reorg,2048,32,1,2,4,true,false,true,0.242939,0.187764
+2048 32 1 10 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,2048,32,1,10,-1,true,false,false,0.121035,0.0697656
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,2048,32,1,10,2,true,false,true,0.117256,0.0640332
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,2048,32,1,10,4,true,false,true,0.122217,0.0685059
+2048 32 1 10 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_sparse,2048,32,1,10,-1,true,false,false,0.120234,0.0679883
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_sparse,2048,32,1,10,2,true,false,true,0.118887,0.0671289
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_sparse,2048,32,1,10,4,true,false,true,0.12124,0.0714355
+2048 32 1 10 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_reorg,2048,32,1,10,-1,true,false,false,0.151572,0.0963965
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_reorg,2048,32,1,10,2,true,false,true,0.132559,0.0788477
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_reorg,2048,32,1,10,4,true,false,true,0.136387,0.0807227
+2048 64 1 1 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,2048,64,1,1,-1,true,false,false,0.499277,0.448496
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,2048,64,1,1,2,true,false,true,0.304033,0.25374
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,2048,64,1,1,4,true,false,true,0.217852,0.166582
+2048 64 1 1 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_sparse,2048,64,1,1,-1,true,false,false,0.480713,0.429932
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_sparse,2048,64,1,1,2,true,false,true,0.302227,0.252422
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_sparse,2048,64,1,1,4,true,false,true,0.215723,0.161035
+2048 64 1 1 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_reorg,2048,64,1,1,-1,true,false,false,0.664463,0.609775
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_reorg,2048,64,1,1,2,true,false,true,0.304473,0.24832
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_reorg,2048,64,1,1,4,true,false,true,0.283008,0.229297
+2048 64 1 2 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,2048,64,1,2,-1,true,false,false,0.289883,0.23959
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,2048,64,1,2,2,true,false,true,0.193818,0.14499
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,2048,64,1,2,4,true,false,true,0.145527,0.0952344
+2048 64 1 2 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_sparse,2048,64,1,2,-1,true,false,false,0.278848,0.227578
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_sparse,2048,64,1,2,2,true,false,true,0.194463,0.143682
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_sparse,2048,64,1,2,4,true,false,true,0.166201,0.116885
+2048 64 1 2 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_reorg,2048,64,1,2,-1,true,false,false,0.419248,0.364072
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_reorg,2048,64,1,2,2,true,false,true,0.253311,0.200088
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_reorg,2048,64,1,2,4,true,false,true,0.24957,0.198789
+2048 64 1 10 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,2048,64,1,10,-1,true,false,false,0.125664,0.0748828
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,2048,64,1,10,2,true,false,true,0.116807,0.067002
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,2048,64,1,10,4,true,false,true,0.129561,0.0719434
+2048 64 1 10 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_sparse,2048,64,1,10,-1,true,false,false,0.123936,0.072666
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_sparse,2048,64,1,10,2,true,false,true,0.122031,0.0722266
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_sparse,2048,64,1,10,4,true,false,true,0.127471,0.0766895
+2048 64 1 10 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_reorg,2048,64,1,10,-1,true,false,false,0.155566,0.101855
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_reorg,2048,64,1,10,2,true,false,true,0.141826,0.0866504
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_reorg,2048,64,1,10,4,true,false,true,0.151455,0.0967676
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 2
+	sharedMemoryReduce: false
+	Representation: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,2048,32,1,10,2,true,false,true,0.0893945,0.0395898
+0.0395898
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,2048,32,1,10,2,false,false,true,0.118027,0.0648047
+0.0648047
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json	2048
+Best kernel execution time: 0.0395898
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 2
+	sharedMemoryReduce: true
+	Representation: gpu_array
+epsilon 2000 100 false
+2048 8 1 20 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_array,2048,8,1,20,-1,false,false,false,0.828691,0.0479297
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_array,2048,8,1,20,2,false,false,true,0.831318,0.0446973
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_array,2048,8,1,20,4,false,false,true,0.834521,0.0469238
+2048 8 1 20 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_sparse,2048,8,1,20,-1,false,false,false,0.842119,0.0476855
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_sparse,2048,8,1,20,2,false,false,true,0.829756,0.0441113
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_sparse,2048,8,1,20,4,false,false,true,0.832637,0.0479687
+2048 8 1 20 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_reorg,2048,8,1,20,-1,false,false,false,0.860703,0.0550391
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_reorg,2048,8,1,20,2,false,false,true,0.855791,0.0520801
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_reorg,2048,8,1,20,4,false,false,true,0.864932,0.0597559
+2048 8 1 50 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_array,2048,8,1,50,-1,false,false,false,0.824678,0.0346387
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_array,2048,8,1,50,2,false,false,true,0.824121,0.0360352
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_array,2048,8,1,50,4,false,false,true,0.826094,0.036543
+2048 8 1 50 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_sparse,2048,8,1,50,-1,false,false,false,0.829404,0.0364355
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_sparse,2048,8,1,50,2,false,false,true,0.832842,0.0418262
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_sparse,2048,8,1,50,4,false,false,true,0.827686,0.0425293
+2048 8 1 50 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_reorg,2048,8,1,50,-1,false,false,false,1.00323,0.0398535
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_reorg,2048,8,1,50,2,false,false,true,0.872764,0.0421973
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_reorg,2048,8,1,50,4,false,false,true,1.00511,0.0417285
+2048 32 1 20 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_array,2048,32,1,20,-1,false,false,false,0.829111,0.0439551
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_array,2048,32,1,20,2,false,false,true,0.830264,0.042666
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_array,2048,32,1,20,4,false,false,true,0.836816,0.034082
+2048 32 1 20 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_sparse,2048,32,1,20,-1,false,false,false,0.837002,0.0440332
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_sparse,2048,32,1,20,2,false,false,true,0.826602,0.0429102
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_sparse,2048,32,1,20,4,false,false,true,0.825937,0.0354102
+2048 32 1 20 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_reorg,2048,32,1,20,-1,false,false,false,0.853906,0.0516602
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_reorg,2048,32,1,20,2,false,false,true,0.84877,0.0494531
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_reorg,2048,32,1,20,4,false,false,true,0.836211,0.0403125
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 20
+	cacheRows: false
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: false
+	Representation: gpu_array
+*************
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+-1
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_array,2048,32,1,20,4,false,false,true,0.813906,0.0341211
+0.0341211
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json	2048
+Best kernel execution time: 0.034082
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 20
+	cacheRows: false
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: false
+	Representation: gpu_array
+higgs 28 100 false
+2048 32 1 1 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,2048,32,1,1,-1,true,false,false,0.113115,0.071123
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,2048,32,1,1,2,true,false,true,0.0776563,0.0371289
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,2048,32,1,1,4,true,false,true,0.064043,0.0240039
+2048 32 1 1 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_sparse,2048,32,1,1,-1,true,false,false,0.110645,0.0686523
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_sparse,2048,32,1,1,2,true,false,true,0.0785156,0.0365234
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_sparse,2048,32,1,1,4,true,false,true,0.0657812,0.0242773
+2048 32 1 1 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_reorg,2048,32,1,1,-1,true,false,false,0.171279,0.116104
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_reorg,2048,32,1,1,2,true,false,true,0.0938965,0.0382324
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_reorg,2048,32,1,1,4,true,false,true,0.0974902,0.0403613
+2048 32 1 2 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,2048,32,1,2,-1,true,false,false,0.0843262,0.0379395
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,2048,32,1,2,2,true,false,true,0.0751367,0.0307031
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,2048,32,1,2,4,true,false,true,0.0720801,0.028623
+2048 32 1 2 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_sparse,2048,32,1,2,-1,true,false,false,0.0783008,0.0372852
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_sparse,2048,32,1,2,2,true,false,true,0.0630273,0.0210352
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_sparse,2048,32,1,2,4,true,false,true,0.0723145,0.0259277
+2048 32 1 2 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_reorg,2048,32,1,2,-1,true,false,false,0.127158,0.0617285
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_reorg,2048,32,1,2,2,true,false,true,0.0919629,0.031416
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_reorg,2048,32,1,2,4,true,false,true,0.0930859,0.0305859
+2048 32 1 10 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,2048,32,1,10,-1,true,false,false,0.0580371,0.0116504
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,2048,32,1,10,2,true,false,true,0.0519141,0.0104102
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,2048,32,1,10,4,true,false,true,0.0505859,0.0100586
+2048 32 1 10 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_sparse,2048,32,1,10,-1,true,false,false,0.0582715,0.0118848
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_sparse,2048,32,1,10,2,true,false,true,0.054082,0.0101367
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_sparse,2048,32,1,10,4,true,false,true,0.0523047,0.0103125
+2048 32 1 10 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_reorg,2048,32,1,10,-1,true,false,false,0.0738281,0.0171875
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_reorg,2048,32,1,10,2,true,false,true,0.0693457,0.0122168
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_reorg,2048,32,1,10,4,true,false,true,0.0779395,0.0120215
+2048 64 1 1 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,2048,64,1,1,-1,true,false,false,0.116191,0.0712695
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,2048,64,1,1,2,true,false,true,0.081084,0.0371387
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,2048,64,1,1,4,true,false,true,0.0697949,0.0238965
+2048 64 1 1 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_sparse,2048,64,1,1,-1,true,false,false,0.112637,0.0686914
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_sparse,2048,64,1,1,2,true,false,true,0.0801367,0.0361914
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_sparse,2048,64,1,1,4,true,false,true,0.0697266,0.0243164
+2048 64 1 1 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_reorg,2048,64,1,1,-1,true,false,false,0.170723,0.116523
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_reorg,2048,64,1,1,2,true,false,true,0.0946289,0.0384766
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_reorg,2048,64,1,1,4,true,false,true,0.0955762,0.0404004
+2048 64 1 2 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,2048,64,1,2,-1,true,false,false,0.0838867,0.0379883
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,2048,64,1,2,2,true,false,true,0.075498,0.0300879
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,2048,64,1,2,4,true,false,true,0.0751172,0.0287305
+2048 64 1 2 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_sparse,2048,64,1,2,-1,true,false,false,0.0825391,0.0371289
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_sparse,2048,64,1,2,2,true,false,true,0.0668457,0.0209473
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_sparse,2048,64,1,2,4,true,false,true,0.0715039,0.0256055
+2048 64 1 2 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_reorg,2048,64,1,2,-1,true,false,false,0.119307,0.0616895
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_reorg,2048,64,1,2,2,true,false,true,0.0889258,0.0317969
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_reorg,2048,64,1,2,4,true,false,true,0.087627,0.0309863
+2048 64 1 10 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,2048,64,1,10,-1,true,false,false,0.0541992,0.012207
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,2048,64,1,10,2,true,false,true,0.0567773,0.0108789
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,2048,64,1,10,4,true,false,true,0.0573633,0.0109766
+2048 64 1 10 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_sparse,2048,64,1,10,-1,true,false,false,0.0552832,0.0128027
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_sparse,2048,64,1,10,2,true,false,true,0.0543066,0.0118262
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_sparse,2048,64,1,10,4,true,false,true,0.0582715,0.0118848
+2048 64 1 10 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_reorg,2048,64,1,10,-1,true,false,false,0.0764355,0.0178418
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_reorg,2048,64,1,10,2,true,false,true,0.0712207,0.0140918
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_reorg,2048,64,1,10,4,true,false,true,0.0751172,0.0160352
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: false
+	Representation: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,2048,32,1,10,4,true,false,true,0.0511914,0.0101758
+0.0101758
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,2048,32,1,10,4,false,false,true,0.0510254,0.0109863
+0.0109863
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json	2048
+Best kernel execution time: 0.0100586
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: false
+	Representation: gpu_array
+letters 16 26000 true
+2048 32 1 1 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_array,2048,32,1,1,-1,true,false,false,13.4807,13.447
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_array,2048,32,1,1,2,true,false,true,8.75905,8.71852
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_array,2048,32,1,1,4,true,false,true,5.85599,5.81986
+2048 32 1 1 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,2048,32,1,1,-1,true,false,false,12.3771,12.3458
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,2048,32,1,1,2,true,false,true,8.74538,8.70973
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,2048,32,1,1,4,true,false,true,5.98473,5.94421
+2048 32 1 1 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_reorg,2048,32,1,1,-1,true,false,false,16.625,16.5859
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_reorg,2048,32,1,1,2,true,false,true,7.69049,7.65241
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_reorg,2048,32,1,1,4,true,false,true,8.10511,8.068
+2048 32 1 2 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_array,2048,32,1,2,-1,true,false,false,7.4984,7.42712
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_array,2048,32,1,2,2,true,false,true,5.34632,5.27552
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_array,2048,32,1,2,4,true,false,true,5.1901,5.11784
+2048 32 1 2 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,2048,32,1,2,-1,true,false,false,6.95716,6.88831
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,2048,32,1,2,2,true,false,true,5.45381,5.38252
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,2048,32,1,2,4,true,false,true,3.68271,3.61143
+2048 32 1 2 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_reorg,2048,32,1,2,-1,true,false,false,11.2237,11.1319
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_reorg,2048,32,1,2,2,true,false,true,3.70335,3.61351
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_reorg,2048,32,1,2,4,true,false,true,3.44352,3.35173
+2048 32 1 10 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_array,2048,32,1,10,-1,true,false,false,2.91169,2.83893
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_array,2048,32,1,10,2,true,false,true,3.06191,2.99111
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_array,2048,32,1,10,4,true,false,true,2.91488,2.84066
+2048 32 1 10 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,2048,32,1,10,-1,true,false,false,2.85944,2.7862
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,2048,32,1,10,2,true,false,true,3.09137,3.01862
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,2048,32,1,10,4,true,false,true,3.14427,3.06908
+2048 32 1 10 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_reorg,2048,32,1,10,-1,true,false,false,3.67181,3.58441
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_reorg,2048,32,1,10,2,true,false,true,4.28913,4.19684
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_reorg,2048,32,1,10,4,true,false,true,3.38066,3.28936
+2048 64 1 1 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_array,2048,64,1,1,-1,true,false,false,13.395,13.3213
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_array,2048,64,1,1,2,true,false,true,8.84235,8.80231
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_array,2048,64,1,1,4,true,false,true,5.79902,5.75947
+2048 64 1 1 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,2048,64,1,1,-1,true,false,false,12.4284,12.3912
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,2048,64,1,1,2,true,false,true,8.53447,8.49883
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,2048,64,1,1,4,true,false,true,5.99974,5.9597
+2048 64 1 1 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_reorg,2048,64,1,1,-1,true,false,false,18.5891,18.5515
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_reorg,2048,64,1,1,2,true,false,true,7.8362,7.79469
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_reorg,2048,64,1,1,4,true,false,true,8.74229,8.70176
+2048 64 1 2 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_array,2048,64,1,2,-1,true,false,false,7.52139,7.44766
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_array,2048,64,1,2,2,true,false,true,5.31133,5.23955
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_array,2048,64,1,2,4,true,false,true,5.25443,5.18021
+2048 64 1 2 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,2048,64,1,2,-1,true,false,false,6.98285,6.90667
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,2048,64,1,2,2,true,false,true,5.43535,5.36406
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,2048,64,1,2,4,true,false,true,3.72295,3.65166
+2048 64 1 2 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_reorg,2048,64,1,2,-1,true,false,false,6.79525,6.70638
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_reorg,2048,64,1,2,2,true,false,true,4.16029,4.06507
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_reorg,2048,64,1,2,4,true,false,true,3.98304,3.8932
+2048 64 1 10 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_array,2048,64,1,10,-1,true,false,false,3.24808,3.14847
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_array,2048,64,1,10,2,true,false,true,3.26077,3.18753
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_array,2048,64,1,10,4,true,false,true,3.85501,3.76908
+2048 64 1 10 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,2048,64,1,10,-1,true,false,false,3.27868,3.20788
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,2048,64,1,10,2,true,false,true,3.32279,3.2515
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,2048,64,1,10,4,true,false,true,3.6401,3.56784
+2048 64 1 10 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_reorg,2048,64,1,10,-1,true,false,false,4.33835,4.24753
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_reorg,2048,64,1,10,2,true,false,true,4.30905,4.21921
+'cuLaunchKernel(function, gridX, gridY, gridZ, blockX, blockY, blockZ, smem, stream, params, extra)' failed with 'CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES'
+'cuLaunchKernel(function, gridX, gridY, gridZ, blockX, blockY, blockZ, smem, stream, params, extra)' failed with 'CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES'
+'cuLaunchKernel(function, gridX, gridY, gridZ, blockX, blockY, blockZ, smem, stream, params, extra)' failed with 'CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES'
+'cuLaunchKernel(function, gridX, gridY, gridZ, blockX, blockY, blockZ, smem, stream, params, extra)' failed with 'CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES'
+'cuLaunchKernel(function, gridX, gridY, gridZ, blockX, blockY, blockZ, smem, stream, params, extra)' failed with 'CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES'
+'cuLaunchKernel(function, gridX, gridY, gridZ, blockX, blockY, blockZ, smem, stream, params, extra)' failed with 'CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES'
+'cuLaunchKernel(function, gridX, gridY, gridZ, blockX, blockY, blockZ, smem, stream, params, extra)' failed with 'CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES'
+'cuLaunchKernel(function, gridX, gridY, gridZ, blockX, blockY, blockZ, smem, stream, params, extra)' failed with 'CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES'
+'cuLaunchKernel(function, gridX, gridY, gridZ, blockX, blockY, blockZ, smem, stream, params, extra)' failed with 'CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES'
+'cuLaunchKernel(function, gridX, gridY, gridZ, blockX, blockY, blockZ, smem, stream, params, extra)' failed with 'CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES'
+'cuLaunchKernel(function, gridX, gridY, gridZ, blockX, blockY, blockZ, smem, stream, params, extra)' failed with 'CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES'
+'cuLaunchKernel(function, gridX, gridY, gridZ, blockX, blockY, blockZ, smem, stream, params, extra)' failed with 'CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES'
+'cuLaunchKernel(function, gridX, gridY, gridZ, blockX, blockY, blockZ, smem, stream, params, extra)' failed with 'CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES'
+'cuLaunchKernel(function, gridX, gridY, gridZ, blockX, blockY, blockZ, smem, stream, params, extra)' failed with 'CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES'
+'cuLaunchKernel(function, gridX, gridY, gridZ, blockX, blockY, blockZ, smem, stream, params, extra)' failed with 'CUDA_ERROR_LAUNCH_OUT_OF_RESOURCES'
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_reorg,2048,64,1,10,4,true,false,true,-1,-1
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: false
+	interleaveDepth: -1
+	sharedMemoryReduce: false
+	Representation: gpu_sparse
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,2048,32,1,10,-1,true,false,false,2.70251,2.66784
+2.66784
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,2048,32,1,10,-1,false,false,false,2.81211,2.77988
+2.77988
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json	2048
+Best kernel execution time: 2.66784
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: false
+	interleaveDepth: -1
+	sharedMemoryReduce: true
+	Representation: gpu_sparse
+year_prediction_msd 90 100 false
+2048 32 1 1 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,2048,32,1,1,-1,true,false,false,0.201826,0.0582715
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,2048,32,1,1,2,true,false,true,0.171709,0.0349902
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,2048,32,1,1,4,true,false,true,0.172959,0.0235449
+2048 32 1 1 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_sparse,2048,32,1,1,-1,true,false,false,0.198906,0.0607227
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_sparse,2048,32,1,1,2,true,false,true,0.187559,0.0347266
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_sparse,2048,32,1,1,4,true,false,true,0.163203,0.024043
+2048 32 1 1 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_reorg,2048,32,1,1,-1,true,false,false,0.238496,0.0978711
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_reorg,2048,32,1,1,2,true,false,true,0.180117,0.0355859
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_reorg,2048,32,1,1,4,true,false,true,0.193291,0.0321582
+2048 32 1 2 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,2048,32,1,2,-1,true,false,false,0.176689,0.0341113
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,2048,32,1,2,2,true,false,true,0.178545,0.0271777
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,2048,32,1,2,4,true,false,true,0.178291,0.0264355
+2048 32 1 2 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_sparse,2048,32,1,2,-1,true,false,false,0.176572,0.0335059
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_sparse,2048,32,1,2,2,true,false,true,0.163721,0.0206543
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_sparse,2048,32,1,2,4,true,false,true,0.172021,0.0230957
+2048 32 1 2 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_reorg,2048,32,1,2,-1,true,false,false,0.202793,0.0524023
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_reorg,2048,32,1,2,2,true,false,true,0.173779,0.0302246
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_reorg,2048,32,1,2,4,true,false,true,0.192012,0.0269727
+2048 32 1 10 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,2048,32,1,10,-1,true,false,false,0.151953,0.0113281
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,2048,32,1,10,2,true,false,true,0.159961,0.0105469
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,2048,32,1,10,4,true,false,true,0.164053,0.0102441
+2048 32 1 10 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_sparse,2048,32,1,10,-1,true,false,false,0.167412,0.0111621
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_sparse,2048,32,1,10,2,true,false,true,0.153672,0.0110937
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_sparse,2048,32,1,10,4,true,false,true,0.15373,0.0101758
+2048 32 1 10 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_reorg,2048,32,1,10,-1,true,false,false,0.164766,0.0153516
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_reorg,2048,32,1,10,2,true,false,true,0.165566,0.0127344
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_reorg,2048,32,1,10,4,true,false,true,0.179385,0.0143457
+2048 64 1 1 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,2048,64,1,1,-1,true,false,false,0.194609,0.0627734
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,2048,64,1,1,2,true,false,true,0.174551,0.0349023
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,2048,64,1,1,4,true,false,true,0.163242,0.0235938
+2048 64 1 1 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_sparse,2048,64,1,1,-1,true,false,false,0.203408,0.0603418
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_sparse,2048,64,1,1,2,true,false,true,0.17127,0.0345508
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_sparse,2048,64,1,1,4,true,false,true,0.161133,0.0244141
+2048 64 1 1 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_reorg,2048,64,1,1,-1,true,false,false,0.25459,0.0978516
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_reorg,2048,64,1,1,2,true,false,true,0.195908,0.035752
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_reorg,2048,64,1,1,4,true,false,true,0.195645,0.0325586
+2048 64 1 2 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,2048,64,1,2,-1,true,false,false,0.173232,0.0340723
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,2048,64,1,2,2,true,false,true,0.182314,0.0275293
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,2048,64,1,2,4,true,false,true,0.166406,0.0267578
+2048 64 1 2 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_sparse,2048,64,1,2,-1,true,false,false,0.181631,0.0336816
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_sparse,2048,64,1,2,2,true,false,true,0.169395,0.020957
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_sparse,2048,64,1,2,4,true,false,true,0.170986,0.0235254
+2048 64 1 2 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_reorg,2048,64,1,2,-1,true,false,false,0.212314,0.0526465
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_reorg,2048,64,1,2,2,true,false,true,0.17959,0.0306641
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_reorg,2048,64,1,2,4,true,false,true,0.189355,0.0277344
+2048 64 1 10 gpu_array
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,2048,64,1,10,-1,true,false,false,0.160566,0.0116406
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,2048,64,1,10,2,true,false,true,0.154307,0.0112402
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,2048,64,1,10,4,true,false,true,0.163682,0.0108496
+2048 64 1 10 gpu_sparse
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_sparse,2048,64,1,10,-1,true,false,false,0.162676,0.0117969
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_sparse,2048,64,1,10,2,true,false,true,0.150322,0.0121387
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_sparse,2048,64,1,10,4,true,false,true,0.15752,0.0120117
+2048 64 1 10 gpu_reorg
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_reorg,2048,64,1,10,-1,true,false,false,0.16415,0.0157129
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_reorg,2048,64,1,10,2,true,false,true,0.166328,0.0139844
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_reorg,2048,64,1,10,4,true,false,true,0.181621,0.0175586
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: false
+	Representation: gpu_sparse
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_sparse,2048,32,1,10,4,true,false,true,0.136064,0.0100879
+0.0100879
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_sparse,2048,32,1,10,4,false,false,true,0.154795,0.0131934
+0.0131934
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json	2048
+Best kernel execution time: 0.0100879
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: true
+	Representation: gpu_sparse
