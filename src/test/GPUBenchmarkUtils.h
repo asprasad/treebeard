@@ -334,6 +334,72 @@ GPUTimes BenchmarkIfNoSharedMemOverflow(const std::string &modelName,
   return GPUTimes{-1, -1};
 }
 
+// ===---------------------------------------------------=== //
+//  GPU Auto-tuning Heuristic Benchmark Helpers
+// ===---------------------------------------------------=== //
+template <typename ThresholdType, typename IndexType, typename ReturnType>
+GPUBenchmarkExecState CompileAutoScheduleBenchmark(
+    ForestCreator &forestCreator, const std::string &modelGlobalsJSONPath,
+    MLIRContext &context,
+    TreeBeard::GPUAutoScheduleOptions &gpuAutoScheduleOptions,
+    const std::string &representationName, int32_t batchSize,
+    const std::string &modelPath) {
+  auto serializer = forestCreator.GetSerializer();
+  auto representation =
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          representationName);
+
+  return CompileAutoScheduleBenchmark<ThresholdType, IndexType, ReturnType>(
+      batchSize, forestCreator, modelPath, modelGlobalsJSONPath, serializer,
+      representation,
+      1,                     // Tile size
+      16,                    // Tile shape width
+      sizeof(IndexType) * 8, // child index width
+      gpuAutoScheduleOptions);
+}
+
+template <typename ThresholdType, typename ReturnType, bool cacheRows,
+          bool cacheTrees, bool unrollTreeWalk,
+          bool sharedMemoryReduce = SH_MEM_REDUCE>
+GPUTimes BenchmarkIfNoSharedMemOverflow(ForestCreator &forestCreator,
+                                        const std::string &representationName,
+                                        int32_t batchSize, int32_t numRowsPerTB,
+                                        int32_t numRowsPerThread,
+                                        int32_t numTreeThreads,
+                                        int32_t treeInterleaveDepth,
+                                        const std::string &modelPath) {
+  using IndexType = int16_t;
+
+  TreeBeard::GPUAutoScheduleOptions gpuAutoScheduleOptions{
+      numRowsPerTB,          numRowsPerThread,  -1,         numTreeThreads,
+      1 /*numTreesAtATime*/, cacheRows,         cacheTrees, unrollTreeWalk,
+      treeInterleaveDepth,   sharedMemoryReduce};
+
+  auto &context = forestCreator.GetContext();
+  TreeBeard::InitializeMLIRContext(context);
+  auto execInfo =
+      CompileAutoScheduleBenchmark<ThresholdType, IndexType, ReturnType>(
+          forestCreator, forestCreator.GetModelGlobalsJSONFilePath(), context,
+          gpuAutoScheduleOptions, representationName, batchSize, modelPath);
+
+  if (execInfo.tbContext->gpuCompileInfo.sharedMemoryInBytes <=
+      MAX_SHMEM_SIZE) {
+
+    auto times =
+        BenchmarkGPUCodeGeneration<ThresholdType, IndexType, ReturnType>(
+            execInfo.module, *execInfo.tbContext);
+
+    std::cerr << representationName << "," << batchSize << "," << numRowsPerTB
+              << "," << numRowsPerThread << "," << numTreeThreads << ","
+              << treeInterleaveDepth << std::boolalpha << "," << cacheRows
+              << "," << cacheTrees << "," << unrollTreeWalk << ","
+              << times.totalTimePerSample << "," << times.kernelTimePerSample
+              << std::endl;
+    return times;
+  }
+  return GPUTimes{-1, -1};
+}
+
 } // namespace test
 } // namespace TreeBeard
 

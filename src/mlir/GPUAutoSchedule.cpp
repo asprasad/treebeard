@@ -516,6 +516,27 @@ class GPUAutoTuner {
   std::string m_bestRep;
   std::string m_model;
 
+  struct SingleConfig {
+    TreeBeard::GPUAutoScheduleOptions options;
+    std::string rep;
+    GPUTimes time;
+  };
+
+  double m_totalKernelExecTime = 0.0;
+
+  std::list<SingleConfig> m_results;
+
+  void addResultEntry(const TreeBeard::GPUAutoScheduleOptions &options,
+                      const std::string &rep, GPUTimes &time) {
+    // m_results is a sorted list. Insert the new entry in the correct position
+    auto iter = m_results.begin();
+    for (; iter != m_results.end(); ++iter) {
+      if (iter->time.kernelTimePerSample > time.kernelTimePerSample)
+        break;
+    }
+    m_results.insert(iter, SingleConfig{options, rep, time});
+  }
+
   void updateConfig(const TreeBeard::GPUAutoScheduleOptions &options,
                     const std::string &rep) {
     m_bestOptions = options;
@@ -527,6 +548,21 @@ class GPUAutoTuner {
     }
   }
 
+  void updateConfigIfBetter(const TreeBeard::GPUAutoScheduleOptions &options,
+                            const std::string &rep, GPUTimes &currentTime,
+                            double &bestKernelTime) {
+    if (currentTime.kernelTimePerSample != -1 &&
+        currentTime.kernelTimePerSample < bestKernelTime) {
+      updateConfig(options, rep);
+      bestKernelTime = currentTime.kernelTimePerSample;
+    }
+    m_totalKernelExecTime +=
+        (currentTime.kernelTimePerSample != -1)
+            ? (currentTime.kernelTimePerSample * m_numRepeats * m_batchSize) /
+                  1.0e6
+            : 0.0;
+  }
+
   void computeScheduleSubset() {
     const int32_t batchSizeThreshold = 2048;
     auto isLetters = m_model.find("letters") != std::string::npos;
@@ -535,7 +571,7 @@ class GPUAutoTuner {
       numTreeThreads = {20, 50};
       rowsPerTB = {8, 32};
       rowsPerThread = {1};
-      m_numRepeats = isLetters ? 30 : 100;
+      m_numRepeats = isLetters ? 100 : 200;
     } else {
       const int32_t featureThreshold = 100;
       // if we have a large batch sizes, with a large
@@ -545,11 +581,12 @@ class GPUAutoTuner {
         rowsPerTB = {8, 32};
         rowsPerThread = {1};
       } else {
+        // TODO_Ashwin Remove the "1"? Does anything pick this?
         numTreeThreads = {1, 2, 10};
         rowsPerTB = {32, 64};
         rowsPerThread = {1};
       }
-      m_numRepeats = isLetters ? 15 : 50;
+      m_numRepeats = isLetters ? 25 : 100;
     }
   }
 
@@ -588,6 +625,50 @@ class GPUAutoTuner {
       m_shouldCacheRows = false;
   }
 
+  template <bool cacheRows, bool cacheTrees, bool unrollTreeWalks,
+            bool sharedMemoryReduce>
+  GPUTimes runBenchmark(const std::string &rep, int32_t numRowsPerTB,
+                        int32_t numRowsPerThread, int32_t treeThreads,
+                        int32_t interleaveFactor) {
+    MLIRContext context;
+    TreeBeard::InitializeMLIRContext(context);
+
+    auto modelGlobalsJSONPath =
+        TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+            m_model);
+    auto serializer =
+        decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+            rep, modelGlobalsJSONPath);
+
+    if (m_multiClass) {
+      using ThresholdType = float;
+      using ReturnType = int8_t;
+      using IndexType = int16_t;
+      TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, IndexType,
+                                   IndexType, ThresholdType>
+          xgBoostParser(context, m_model, serializer, m_batchSize);
+
+      auto time = BenchmarkIfNoSharedMemOverflow<float, float, cacheRows, false,
+                                                 unrollTreeWalks>(
+          xgBoostParser, rep, m_batchSize, numRowsPerTB, numRowsPerThread,
+          treeThreads, interleaveFactor, m_model);
+      return time;
+    } else {
+      using ThresholdType = float;
+      using ReturnType = float;
+      using IndexType = int16_t;
+      TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, IndexType,
+                                   IndexType, ThresholdType>
+          xgBoostParser(context, m_model, serializer, m_batchSize);
+
+      auto time = BenchmarkIfNoSharedMemOverflow<float, float, cacheRows, false,
+                                                 unrollTreeWalks>(
+          xgBoostParser, rep, m_batchSize, numRowsPerTB, numRowsPerThread,
+          treeThreads, interleaveFactor, m_model);
+      return time;
+    }
+  }
+
   template <typename ResultType, bool unrollTreeWalks>
   void runSharedReduceBenchmarks(double &bestKernelTime) {
     TreeBeard::GPUAutoScheduleOptions options = m_bestOptions;
@@ -599,11 +680,8 @@ class GPUAutoTuner {
         options.numRowsPerThread, options.numTreeThreads,
         options.treeWalkInterleaveFactor, true);
     std::cerr << time.kernelTimePerSample << std::endl;
-    if (time.kernelTimePerSample != -1 &&
-        time.kernelTimePerSample < bestKernelTime) {
-      updateConfig(options, m_bestRep);
-      bestKernelTime = time.kernelTimePerSample;
-    }
+
+    updateConfigIfBetter(options, m_bestRep, time, bestKernelTime);
 
     options.cacheRows = false;
     time = BenchmarkIfNoSharedMemOverflow<float, ResultType, false, false,
@@ -613,11 +691,7 @@ class GPUAutoTuner {
         options.treeWalkInterleaveFactor, true);
     std::cerr << time.kernelTimePerSample << std::endl;
 
-    if (time.kernelTimePerSample != -1 &&
-        time.kernelTimePerSample < bestKernelTime) {
-      updateConfig(options, m_bestRep);
-      bestKernelTime = time.kernelTimePerSample;
-    }
+    updateConfigIfBetter(options, m_bestRep, time, bestKernelTime);
   }
 
   void trySharedReduce(double &bestKernelTime) {
@@ -656,20 +730,9 @@ class GPUAutoTuner {
           numRowsPerTB, numRowsPerThread, 1,  treeThreads,       1, cacheRows,
           cacheTrees,   unrollTreeWalks,  -1, sharedMemoryReduce};
 
-      auto time = m_multiClass
-                      ? BenchmarkIfNoSharedMemOverflow<float, int8_t, cacheRows,
-                                                       false, unrollTreeWalks>(
-                            m_model, rep, m_batchSize, numRowsPerTB,
-                            numRowsPerThread, treeThreads, -1, true)
-                      : BenchmarkIfNoSharedMemOverflow<float, float, cacheRows,
-                                                       false, unrollTreeWalks>(
-                            m_model, rep, m_batchSize, numRowsPerTB,
-                            numRowsPerThread, treeThreads, -1, true);
-      if (time.kernelTimePerSample != -1 &&
-          time.kernelTimePerSample < bestKernelTime) {
-        updateConfig(options, rep);
-        bestKernelTime = time.kernelTimePerSample;
-      }
+      auto time = runBenchmark<cacheRows, false, unrollTreeWalks, false>(
+          rep, numRowsPerTB, numRowsPerThread, treeThreads, -1);
+      updateConfigIfBetter(options, rep, time, bestKernelTime);
     }
 
     // TODO we need to check if we need to check unrolling for the
@@ -689,21 +752,9 @@ class GPUAutoTuner {
                                                 interleaveDepth,
                                                 sharedMemoryReduce};
 
-      auto time =
-          m_multiClass
-              ? BenchmarkIfNoSharedMemOverflow<float, int8_t, cacheRows, false,
-                                               unrollTreeWalks>(
-                    m_model, rep, m_batchSize, numRowsPerTB, numRowsPerThread,
-                    treeThreads, interleaveDepth, true)
-              : BenchmarkIfNoSharedMemOverflow<float, float, cacheRows, false,
-                                               unrollTreeWalks>(
-                    m_model, rep, m_batchSize, numRowsPerTB, numRowsPerThread,
-                    treeThreads, interleaveDepth, true);
-      if (time.kernelTimePerSample != -1 &&
-          time.kernelTimePerSample < bestKernelTime) {
-        bestKernelTime = time.kernelTimePerSample;
-        updateConfig(options, rep);
-      }
+      auto time = runBenchmark<cacheRows, false, unrollTreeWalks, false>(
+          rep, numRowsPerTB, numRowsPerThread, treeThreads, interleaveDepth);
+      updateConfigIfBetter(options, rep, time, bestKernelTime);
     }
 
     {
@@ -721,21 +772,9 @@ class GPUAutoTuner {
                                                 interleaveDepth,
                                                 sharedMemoryReduce};
 
-      auto time =
-          m_multiClass
-              ? BenchmarkIfNoSharedMemOverflow<float, int8_t, cacheRows, false,
-                                               unrollTreeWalks>(
-                    m_model, rep, m_batchSize, numRowsPerTB, numRowsPerThread,
-                    treeThreads, interleaveDepth, true)
-              : BenchmarkIfNoSharedMemOverflow<float, float, cacheRows, false,
-                                               unrollTreeWalks>(
-                    m_model, rep, m_batchSize, numRowsPerTB, numRowsPerThread,
-                    treeThreads, interleaveDepth, true);
-      if (time.kernelTimePerSample != -1 &&
-          time.kernelTimePerSample < bestKernelTime) {
-        bestKernelTime = time.kernelTimePerSample;
-        updateConfig(options, rep);
-      }
+      auto time = runBenchmark<cacheRows, false, unrollTreeWalks, false>(
+          rep, numRowsPerTB, numRowsPerThread, treeThreads, interleaveDepth);
+      updateConfigIfBetter(options, rep, time, bestKernelTime);
     }
   }
 
@@ -746,6 +785,9 @@ public:
   }
 
   void exploreSchedules() {
+
+    // Get the start time
+    auto start = std::chrono::high_resolution_clock::now();
 
     const auto numKernelRuns = mlir::decisionforest::numberOfKernelRuns;
     assert(m_numRepeats != -1);
@@ -787,6 +829,15 @@ public:
 
     std::cerr << m_model << "\t" << m_batchSize << std::endl;
     std::cerr << "Best kernel execution time: " << bestKernelTime << std::endl;
+
+    // Get the end time
+    auto end = std::chrono::high_resolution_clock::now();
+    // Get the duration. Substart time from end time
+    auto duration =
+        std::chrono::duration_cast<std::chrono::seconds>(end - start);
+    std::cerr << "Time taken for auto-tuning " << m_model << " "
+              << duration.count() << " seconds of which "
+              << m_totalKernelExecTime << " is kernel execution" << std::endl;
   }
 
   void printBestSchedule() {
