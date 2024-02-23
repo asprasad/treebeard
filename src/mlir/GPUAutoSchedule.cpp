@@ -494,10 +494,40 @@ struct SplitTreeLoopByDepth
 };
 
 // ===---------------------------------------------------=== //
+// Cache Forest Creator
+// ===---------------------------------------------------=== //
+
+template <typename ThresholdType = double, typename ReturnType = double,
+          typename FeatureIndexType = int32_t, typename NodeIndexType = int32_t,
+          typename InputElementType = double>
+class CachedForestCreator : public TreeBeard::ForestCreator {
+  decisionforest::DecisionForest &m_cachedForest;
+
+public:
+  CachedForestCreator(
+      mlir::MLIRContext &context, decisionforest::DecisionForest &forest,
+      std::shared_ptr<mlir::decisionforest::IModelSerializer> serializer,
+      int32_t batchSize)
+      : ForestCreator(serializer, context, batchSize, 0,
+                      TreeBeard::GetMLIRType(ThresholdType(), context),
+                      TreeBeard::GetMLIRType(FeatureIndexType(), context),
+                      TreeBeard::GetMLIRType(NodeIndexType(), context),
+                      TreeBeard::GetMLIRType(ReturnType(), context),
+                      TreeBeard::GetMLIRType(InputElementType(), context)),
+        m_cachedForest(forest) {}
+
+  void ConstructForest() override { *(this->m_forest) = m_cachedForest; }
+};
+
+// ===---------------------------------------------------=== //
 // GPU Auto-tuning Heuristic
 // ===---------------------------------------------------=== //
 
 class GPUAutoTuner {
+  mlir::MLIRContext m_context;
+  TreeBeard::XGBoostJSONParser<float, float, int16_t, int16_t, float>
+      *m_xgBoostParser = nullptr;
+
   std::vector<int32_t> rowsPerTB;
   std::vector<int32_t> rowsPerThread;
   std::vector<int32_t> numTreeThreads;
@@ -644,13 +674,17 @@ class GPUAutoTuner {
       using ThresholdType = float;
       using ReturnType = int8_t;
       using IndexType = int16_t;
-      TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, IndexType,
-                                   IndexType, ThresholdType>
-          xgBoostParser(context, m_model, serializer, m_batchSize);
+      // TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, IndexType,
+      //                              IndexType, ThresholdType>
+      //     forestConstructor(context, m_model, serializer, m_batchSize);
 
+      auto forest = m_xgBoostParser->GetForest()->copy();
+      CachedForestCreator<ThresholdType, ReturnType, IndexType, IndexType,
+                          ThresholdType>
+          forestConstructor(context, forest, serializer, m_batchSize);
       auto time = BenchmarkIfNoSharedMemOverflow<float, float, cacheRows, false,
                                                  unrollTreeWalks>(
-          xgBoostParser, rep, m_batchSize, numRowsPerTB, numRowsPerThread,
+          forestConstructor, rep, m_batchSize, numRowsPerTB, numRowsPerThread,
           treeThreads, interleaveFactor, m_model);
       return time;
     } else {
@@ -778,10 +812,25 @@ class GPUAutoTuner {
     }
   }
 
+  void initXGBoostParser() {
+    TreeBeard::InitializeMLIRContext(m_context);
+    auto modelGlobalsJSONPath =
+        TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+            m_model);
+    auto serializer =
+        decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+            "gpu_array", modelGlobalsJSONPath);
+    m_xgBoostParser =
+        new TreeBeard::XGBoostJSONParser<float, float, int16_t, int16_t, float>(
+            m_context, m_model, serializer, m_batchSize);
+    m_xgBoostParser->ConstructForest();
+  }
+
 public:
   GPUAutoTuner(const std::string &modelName, int32_t batchSize)
       : m_batchSize(batchSize), m_model(modelName) {
     initParameters(modelName, batchSize);
+    initXGBoostParser();
   }
 
   void exploreSchedules() {

@@ -21,12 +21,15 @@ namespace mlir {
 namespace decisionforest {
 
 class TiledTree;
+class DecisionForest;
 
 enum class PredictionTransformation { kIdentity, kSigmoid, kSoftMax, kUnknown };
 enum class ReductionType { kAdd, kVoting };
 enum class FeatureType { kNumerical, kCategorical };
 
 class DecisionTree {
+  friend class DecisionForest;
+
 public:
   static constexpr int64_t INVALID_NODE_INDEX = -1;
   struct Node {
@@ -57,6 +60,7 @@ public:
     Node node{threshold,          featureIndex,       INVALID_NODE_INDEX,
               INVALID_NODE_INDEX, INVALID_NODE_INDEX, FeatureType::kNumerical};
     m_nodes.push_back(node);
+    m_depth = -1;
     return m_nodes.size() - 1;
   }
   // Create a new node in the current tree, and add it to a specified tile
@@ -99,7 +103,11 @@ public:
     m_tilingDescriptor = descriptor;
   }
 
-  int32_t GetTreeDepth() { return GetTreeDepthHelper(0); }
+  int32_t GetTreeDepth() {
+    if (this->m_depth == -1)
+      this->m_depth = GetTreeDepthHelper(0);
+    return this->m_depth;
+  }
 
   int32_t GetDepth(Node &node) {
     int32_t parentNodeIdx = node.parent;
@@ -155,6 +163,7 @@ private:
   // Adding an initialization to make sure we aren't accessing unitialized
   // memory
   int32_t m_classId = 0;
+  int32_t m_depth = -1;
 
   std::shared_ptr<TiledTree> m_tiledTree = nullptr;
 
@@ -174,6 +183,20 @@ public:
         m_predictionTransform(PredictionTransformation::kUnknown),
         m_numClasses(0) {}
   DecisionForest() : DecisionForest(0.0) {}
+
+  DecisionForest copy() const {
+    DecisionForest newForest;
+    newForest.m_initialValue = m_initialValue;
+    newForest.m_predictionTransform = m_predictionTransform;
+    newForest.m_numClasses = m_numClasses;
+    newForest.m_features = m_features;
+    newForest.m_reductionType = m_reductionType;
+    for (auto tree : m_trees) {
+      assert(tree->m_depth == -1);
+      newForest.m_trees.push_back(std::make_shared<DecisionTree>(*tree));
+    }
+    return newForest;
+  }
 
   struct Feature {
     std::string name;
