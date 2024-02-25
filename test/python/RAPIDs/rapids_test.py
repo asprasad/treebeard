@@ -23,17 +23,19 @@ batchSize = 4096 * 2
 
 def get_model_config(model_name : str, batch_size: int):
   abalone_best_configs = {
-    256: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, True, 2), "gpu_array"),
-    512: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, True, 2), "gpu_reorg"),
-    1024: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 20, True, False, True, 2), "gpu_reorg"),
+    256: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, True, 2, True), "gpu_array"),
+    512: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, True, 2, True), "gpu_reorg"),
+    1024: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 20, True, False, True, 2, True), "gpu_reorg"),
+    2048: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 20, True, False, True, 2), "gpu_reorg"),
     4096: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 20, True, False, True, 2), "gpu_array"),
     8192: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 10, True, False, True, 4), "gpu_array"),
     16384: (treebeard.GPUAutoScheduleOptions.Construct(64, 1, 2, False, False, True, 2), "gpu_array"),
   }
   airline_best_configs = {
-    256: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, False, False, True, -1), "gpu_array"),
-    512: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, False, False, False, -1), "gpu_array"),
-    1024: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 20, True, False, True, -1), "gpu_reorg"),
+    256: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, False, False, True, -1, True), "gpu_array"),
+    512: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, False, False, False, -1, True), "gpu_array"),
+    1024: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 20, True, False, True, -1, True), "gpu_reorg"),
+    2048: (treebeard.GPUAutoScheduleOptions.Construct(32, 2, 10, True, False, True, -1), "gpu_array"),
     4096: (treebeard.GPUAutoScheduleOptions.Construct(32, 2, 10, True, False, True, -1), "gpu_array"),
     8192: (treebeard.GPUAutoScheduleOptions.Construct(64, 1, 10, True, False, True, 2), "gpu_array"),
     16384: (treebeard.GPUAutoScheduleOptions.Construct(64, 1, 2, True, False, True, 2), "gpu_array"),
@@ -42,14 +44,16 @@ def get_model_config(model_name : str, batch_size: int):
     256: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, True, 4), "gpu_array"),
     512: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, True, 2), "gpu_array"),
     1024: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, True, 2), "gpu_reorg"),
+    2048: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, True, 2), "gpu_array"),
     4096: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, True, 2), "gpu_array"),
     8192: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, True, 2), "gpu_array"),
     16384: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, True, 2), "gpu_array"),
   }
   covtype_best_configs = {
-    256: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, True, -1), "gpu_sparse"),
-    512: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, True, -1), "gpu_sparse"),
-    1024: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 20, True, False, True, 2), "gpu_array"),
+    256: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, True, -1, True), "gpu_sparse"),
+    512: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, True, -1, True), "gpu_sparse"),
+    1024: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 20, True, False, True, 2, True), "gpu_array"),
+    2048: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 2, True, False, True, 4), "gpu_array"),
     4096: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 2, True, False, True, 4), "gpu_array"),
     8192: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 1, True, False, True, 4), "gpu_array"),
     16384: (treebeard.GPUAutoScheduleOptions.Construct(64, 1, 2, True, False, True, 4), "gpu_array"),
@@ -58,6 +62,7 @@ def get_model_config(model_name : str, batch_size: int):
     256: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, False, False, True, 2), "gpu_sparse"),
     512: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, False, False, True, -1), "gpu_sparse"),
     1024: (treebeard.GPUAutoScheduleOptions.Construct(32, 2, 50, False, False, True, 4), "gpu_array"),
+    2048: (treebeard.GPUAutoScheduleOptions.Construct(32, 2, 50, False, False, True, 2), "gpu_array"),
     4096: (treebeard.GPUAutoScheduleOptions.Construct(32, 2, 50, False, False, True, 2), "gpu_array"),
     8192: (treebeard.GPUAutoScheduleOptions.Construct(32, 2, 50, False, False, True, 2), "gpu_sparse"),
     16384: (treebeard.GPUAutoScheduleOptions.Construct(32, 2, 50, False, False, True, 4), "gpu_sparse"),
@@ -66,6 +71,7 @@ def get_model_config(model_name : str, batch_size: int):
     256: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, True, -1), "gpu_array"),
     512: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, False, False, False, -1), "gpu_array"),
     1024: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 20, True, False, True, -1), "gpu_array"),
+    2048: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 20, True, False, True, -1), "gpu_array"),
     4096: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 20, True, False, True, -1), "gpu_array"),
     8192: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 1, True, False, True, 4), "gpu_sparse"),
     16384: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 1, True, False, True, 2), "gpu_array"),
@@ -74,6 +80,7 @@ def get_model_config(model_name : str, batch_size: int):
     256: (treebeard.GPUAutoScheduleOptions.Construct(2, 1, 20, True, False, False, -1), "gpu_array"),
     512: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, False, False, False, -1), "gpu_sparse"),
     1024: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 20, False, False, False, -1), "gpu_array"),
+    2048: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 10, True, False, False, -1), "gpu_array"),
     4096: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 10, True, False, False, -1), "gpu_array"),
     8192: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 10, True, False, False, -1), "gpu_array"),
     16384: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 10, True, False, False, -1), "gpu_array"),
@@ -82,6 +89,8 @@ def get_model_config(model_name : str, batch_size: int):
     256: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, False, -1, True), "gpu_sparse"),
     512: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, False, -1, True), "gpu_sparse"),
     1024: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, False, -1, True), "gpu_sparse"),
+    2048: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, False, -1, True), "gpu_sparse"),
+    # 2048: (treebeard.GPUAutoScheduleOptions.Construct(64, 1, 2, True, False, True, 4), "gpu_sparse"),
     4096: (treebeard.GPUAutoScheduleOptions.Construct(64, 1, 2, True, False, True, 4), "gpu_sparse"),
     8192: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 2, True, False, True, 4), "gpu_sparse"),
     16384: (treebeard.GPUAutoScheduleOptions.Construct(64, 1, 10, True, False, True, 4), "gpu_sparse"),
@@ -285,24 +294,63 @@ def RunTestOnSingleModelTestInputs_Treebeard_KernelTime(modelName : str) -> None
   csvPath = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), modelName + "_xgb_model_save.json.test.sampled.csv")
   return RunSingleTest_Treebeard_KernelTime(modelName, modelJSON, csvPath)
 
+#############################################################
+### Treebeard Auto-Tune Heuristic Benchmarking Utils
+#############################################################
+
+def RunSingleTest_Treebeard_AutoTuningHeuristic(modelName, modelJSONPath, csvPath, num_repeats) -> float:
+  inputFileType = "xgboost_json"
+  
+  options, returnType = get_compiler_options_and_result_type(modelName, batchSize)
+  globalsPath = modelJSONPath + ".treebeard-globals.json"
+  tbContext = treebeard.TreebeardContext(modelJSONPath, globalsPath, options)
+  tbContext.SetInputFiletype(inputFileType)
+
+  inferenceRunner = treebeard.TreebeardInferenceRunner.AutoScheduleGPUInferenceRunnerFromTBContext(tbContext)
+  
+  num_batches, inputs = construct_inputs(csvPath, batchSize)
+
+  start = time.time()
+  for i in range(num_repeats):
+    for j in range(0, num_batches):
+      start_index = j*batchSize
+      stop_index = start_index + batchSize
+      batch = inputs[start_index:stop_index, :]
+      results = inferenceRunner.RunInference(batch, returnType)
+
+  end = time.time()
+  return (end-start)/(batchSize * num_batches * num_repeats)
+
+def RunTestOnSingleModelTestInputs_Treebeard_AutoTuneHeuristic(modelName : str) -> None:
+  modelJSON = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), modelName + "_xgb_model_save.json")
+  csvPath = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), modelName + "_xgb_model_save.json.test.sampled.csv")
+  num_repeats = get_num_repeats(modelName)
+  return RunSingleTest_Treebeard_AutoTuningHeuristic(modelName, modelJSON, csvPath, num_repeats)
 
 if __name__ == "__main__":
   num_trials = 5
   # benchmarks = ["abalone", "airline", "airline-ohe", "covtype", "higgs", "letters", "year_prediction_msd"]
-  # benchmarks = ["higgs", "letters"]
-  batch_sizes = [16384]
+  # benchmarks = ["letters"]
+  # batch_sizes = [16384]
 
   benchmarks = ["abalone", "airline", "airline-ohe", "covtype", "epsilon", "higgs", "letters", "year_prediction_msd"]
-  # batch_sizes = [4096, 8192] #, 16384]
-  # batch_sizes = [256, 512, 1024]
+  batch_sizes = [4096, 8192] #, 16384]
+  # batch_sizes = [256, 512, 1024, 2048]
   # batch_sizes = [256, 512, 1024, 4096, 8192] #, 16384]
   
   rapids_total_times = []
   rapids_kernel_times = []
   treebeard_total_times = []
   treebeard_kernel_times = []
+  treebeard_auto_tune_heuristic_total_times = []
+  treebeard_auto_tune_heuristic_kernel_times = []
+  
   total_time_speedups = []
   kernel_time_speedups = []
+
+  autotune_total_time_speedups = []
+  autotune_kernel_time_speedups = []
+
   for batchSize in batch_sizes:
     for benchmark in benchmarks:
       rapids_total_func = partial(RunTestOnSingleModelTestInputs_RAPIDs, modelName=benchmark)
@@ -329,10 +377,22 @@ if __name__ == "__main__":
       treebeard_kernel_time = run_benchmark_function_and_return_median_time(treebeard_kernel_time_func, num_trials)
       treebeard_kernel_times.append(treebeard_kernel_time)
 
+      treebeard_auto_tune_heuristic_total_func = partial(RunTestOnSingleModelTestInputs_Treebeard_AutoTuneHeuristic, modelName=benchmark)
+      treebeard_auto_tune_heuristic_total_time = run_benchmark_function_and_return_median_time(treebeard_auto_tune_heuristic_total_func, 1)
+      treebeard_auto_tune_heuristic_total_times.append(treebeard_auto_tune_heuristic_total_time)
+
       total_time_speedups.append(rapids_total_time/treebeard_total_time)
       kernel_time_speedups.append(rapids_kernel_time/treebeard_kernel_time)
+
+      autotune_total_time_speedups.append(rapids_total_time/treebeard_auto_tune_heuristic_total_time)
       
-      print(benchmark, batchSize, rapids_total_time, treebeard_total_time, rapids_total_time/treebeard_total_time, rapids_kernel_time, treebeard_kernel_time, rapids_kernel_time/treebeard_kernel_time)
+      print(benchmark, batchSize, 
+            rapids_total_time, treebeard_total_time, 
+            treebeard_auto_tune_heuristic_total_time, 
+            rapids_total_time/treebeard_total_time, 
+            rapids_total_time/treebeard_auto_tune_heuristic_total_time, 
+            rapids_kernel_time, treebeard_kernel_time, rapids_kernel_time/treebeard_kernel_time, flush=True)
     # print the geometric mean of the speedups for this batch size
     print("Geomean speedup (Total):", batchSize, numpy.prod(total_time_speedups)**(1/len(total_time_speedups)))
     print("Geomean speedup (Kernel):", batchSize, numpy.prod(kernel_time_speedups)**(1/len(kernel_time_speedups)))
+    print("Geomean speedup (AutoTune Total):", batchSize, numpy.prod(autotune_total_time_speedups)**(1/len(autotune_total_time_speedups)))
