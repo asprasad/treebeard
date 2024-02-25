@@ -531,6 +531,7 @@ class GPUAutoTuner {
   std::vector<int32_t> rowsPerTB;
   std::vector<int32_t> rowsPerThread;
   std::vector<int32_t> numTreeThreads;
+  std::vector<std::string> repsToEvaluate;
   bool m_shouldTryUnroll = true;
   bool m_shouldCacheRows = true;
   const bool m_verboseLogs = false;
@@ -586,11 +587,12 @@ class GPUAutoTuner {
       updateConfig(options, rep);
       bestKernelTime = currentTime.kernelTimePerSample;
     }
-    m_totalKernelExecTime +=
-        (currentTime.kernelTimePerSample != -1)
-            ? (currentTime.kernelTimePerSample * m_numRepeats * m_batchSize) /
-                  1.0e6
-            : 0.0;
+    if (currentTime.kernelTimePerSample != -1) {
+      m_totalKernelExecTime +=
+          (currentTime.kernelTimePerSample * m_numRepeats * m_batchSize) /
+          1.0e6;
+      addResultEntry(options, rep, currentTime);
+    }
   }
 
   void computeScheduleSubset() {
@@ -601,7 +603,8 @@ class GPUAutoTuner {
       numTreeThreads = {20, 50};
       rowsPerTB = {8, 32};
       rowsPerThread = {1};
-      m_numRepeats = isLetters ? 100 : 200;
+      m_numRepeats = isLetters ? 50 : 200;
+      repsToEvaluate = {"gpu_array", "gpu_sparse", "gpu_reorg"};
     } else {
       const int32_t featureThreshold = 100;
       // if we have a large batch sizes, with a large
@@ -612,11 +615,12 @@ class GPUAutoTuner {
         rowsPerThread = {1};
       } else {
         // TODO_Ashwin Remove the "1"? Does anything pick this?
-        numTreeThreads = {1, 2, 10};
+        numTreeThreads = {2, 10};
         rowsPerTB = {32, 64};
         rowsPerThread = {1};
       }
       m_numRepeats = isLetters ? 25 : 100;
+      repsToEvaluate = {"gpu_array", "gpu_sparse"};
     }
   }
 
@@ -704,23 +708,24 @@ class GPUAutoTuner {
   }
 
   template <typename ResultType, bool unrollTreeWalks>
-  void runSharedReduceBenchmarks(double &bestKernelTime) {
-    TreeBeard::GPUAutoScheduleOptions options = m_bestOptions;
+  void runSharedReduceBenchmarks(double &bestKernelTime,
+                                 TreeBeard::GPUAutoScheduleOptions options,
+                                 const std::string &rep) {
     options.sharedMemoryReduce = true;
 
     auto time = BenchmarkIfNoSharedMemOverflow<float, ResultType, true, false,
                                                unrollTreeWalks, true>(
-        m_model, m_bestRep, m_batchSize, options.numRowsPerTB,
+        m_model, rep, m_batchSize, options.numRowsPerTB,
         options.numRowsPerThread, options.numTreeThreads,
         options.treeWalkInterleaveFactor, true);
     std::cerr << time.kernelTimePerSample << std::endl;
 
-    updateConfigIfBetter(options, m_bestRep, time, bestKernelTime);
+    updateConfigIfBetter(options, rep, time, bestKernelTime);
 
     options.cacheRows = false;
     time = BenchmarkIfNoSharedMemOverflow<float, ResultType, false, false,
                                           unrollTreeWalks, true>(
-        m_model, m_bestRep, m_batchSize, options.numRowsPerTB,
+        m_model, rep, m_batchSize, options.numRowsPerTB,
         options.numRowsPerThread, options.numTreeThreads,
         options.treeWalkInterleaveFactor, true);
     std::cerr << time.kernelTimePerSample << std::endl;
@@ -734,21 +739,56 @@ class GPUAutoTuner {
     std::cerr << "Checking shared reduce\n";
     printBestSchedule();
     std::cerr << "*************\n";
+    auto configList = this->m_results;
 
-    if (m_multiClass) {
-      using ResultType = int8_t;
-      if (m_bestOptions.unrollTreeWalks) {
-        runSharedReduceBenchmarks<ResultType, true>(bestKernelTime);
+    const int32_t MAX_CONFIG_TO_TRY = 3;
+    int32_t numConfigsTried = 0;
+    std::list<SingleConfig> triedConfigs;
+    for (auto config : configList) {
+      if (config.rep != m_bestRep)
+        continue;
+
+      // If we've tried a similar config, then don't try it again
+      auto iter = std::find_if(triedConfigs.begin(), triedConfigs.end(),
+                               [&](const SingleConfig &arg) {
+                                 return arg.options.numRowsPerTB ==
+                                            config.options.numRowsPerTB &&
+                                        arg.options.numTreeThreads ==
+                                            config.options.numTreeThreads &&
+                                        arg.options.numRowsPerThread ==
+                                            config.options.numRowsPerThread;
+                               });
+      if (iter != triedConfigs.end())
+        continue;
+
+      std::cerr << "Trying shared reduce for config\n";
+      printGPUOptions(config.options);
+      std::cerr << "Rep: " << config.rep << "\n";
+      std::cerr << "*************\n";
+
+      if (m_multiClass) {
+        using ResultType = int8_t;
+        if (config.options.unrollTreeWalks) {
+          runSharedReduceBenchmarks<ResultType, true>(
+              bestKernelTime, config.options, config.rep);
+        } else {
+          runSharedReduceBenchmarks<ResultType, false>(
+              bestKernelTime, config.options, config.rep);
+        }
       } else {
-        runSharedReduceBenchmarks<ResultType, false>(bestKernelTime);
+        using ResultType = float;
+        if (config.options.unrollTreeWalks) {
+          runSharedReduceBenchmarks<ResultType, true>(
+              bestKernelTime, config.options, config.rep);
+        } else {
+          runSharedReduceBenchmarks<ResultType, false>(
+              bestKernelTime, config.options, config.rep);
+        }
       }
-    } else {
-      using ResultType = float;
-      if (m_bestOptions.unrollTreeWalks) {
-        runSharedReduceBenchmarks<ResultType, true>(bestKernelTime);
-      } else {
-        runSharedReduceBenchmarks<ResultType, false>(bestKernelTime);
-      }
+      triedConfigs.push_back(config);
+      numConfigsTried++;
+      if (numConfigsTried >= MAX_CONFIG_TO_TRY)
+        break;
     }
   }
 
@@ -856,7 +896,7 @@ public:
             continue;
           if (tbSize < MIN_TB_SIZE)
             continue;
-          for (auto rep : {"gpu_array", "gpu_sparse", "gpu_reorg"}) {
+          for (auto rep : repsToEvaluate) {
             std::cerr << m_batchSize << " " << numRowsPerTB << " "
                       << numRowsPerThread << " " << treeThreads << " " << rep
                       << std::endl;
@@ -887,6 +927,19 @@ public:
     std::cerr << "Time taken for auto-tuning " << m_model << " "
               << duration.count() << " seconds of which "
               << m_totalKernelExecTime << " is kernel execution" << std::endl;
+  }
+
+  void printGPUOptions(TreeBeard::GPUAutoScheduleOptions &options) {
+    std::cerr << "numRowsPerTB: " << options.numRowsPerTB << std::endl;
+    std::cerr << "numRowsPerThread: " << options.numRowsPerThread << std::endl;
+    std::cerr << "numTreeThreads: " << options.numTreeThreads << std::endl;
+    std::cerr << "cacheRows: " << options.cacheRows << std::endl;
+    std::cerr << "cacheTrees: " << options.cacheTrees << std::endl;
+    std::cerr << "unrollTreeWalks: " << options.unrollTreeWalks << std::endl;
+    std::cerr << "interleaveDepth: " << options.treeWalkInterleaveFactor
+              << std::endl;
+    std::cerr << "sharedMemoryReduce: " << options.sharedMemoryReduce
+              << std::endl;
   }
 
   void printBestSchedule() {
