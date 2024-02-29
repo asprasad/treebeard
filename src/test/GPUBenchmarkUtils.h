@@ -327,8 +327,8 @@ GPUTimes BenchmarkIfNoSharedMemOverflow(const std::string &modelName,
               << "," << numRowsPerTB << "," << numRowsPerThread << ","
               << numTreeThreads << "," << treeInterleaveDepth << std::boolalpha
               << "," << cacheRows << "," << cacheTrees << "," << unrollTreeWalk
-              << "," << times.totalTimePerSample << ","
-              << times.kernelTimePerSample << std::endl;
+              << "," << sharedMemoryReduce << "," << times.totalTimePerSample
+              << "," << times.kernelTimePerSample << std::endl;
     return times;
   }
   return GPUTimes{-1, -1};
@@ -392,7 +392,7 @@ GPUTimes BenchmarkIfNoSharedMemOverflow(ForestCreator &forestCreator,
     std::cerr << representationName << "," << batchSize << "," << numRowsPerTB
               << "," << numRowsPerThread << "," << numTreeThreads << ","
               << treeInterleaveDepth << std::boolalpha << "," << cacheRows
-              << "," << cacheTrees << "," << unrollTreeWalk << ","
+              << "," << cacheTrees << "," << unrollTreeWalk << "," << sharedMemoryReduce << ","
               << times.totalTimePerSample << "," << times.kernelTimePerSample
               << std::endl;
     return times;
