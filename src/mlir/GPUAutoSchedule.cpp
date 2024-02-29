@@ -635,7 +635,7 @@ class GPUAutoTuner {
 
     std::vector<int32_t> numFeatures{8, 692, 13, 54, 2000, 28, 16, 90};
 
-    std::vector<int32_t> numTrees{1000, 100, 1000, 800, 100, 100, 26000, 100};
+    std::vector<int32_t> numTrees{1000, 1000, 100, 800, 100, 100, 26000, 100};
 
     auto it = std::find_if(benchmarks.begin(), benchmarks.end(),
                            [&](const std::string &arg) {

@@ -889,6 +889,9 @@ bool Test_TileSize8_Letters_TestInputs_CPUAutoSchedule_TreeParallel_f32i16(
 bool Test_TileSize8_Year_TestInputs_CPUAutoSchedule_TreeParallel_f32i16(
     TestArgs_t &args);
 
+bool Test_GPUCodeGeneration_Abalone_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache_SharedReduce(
+    TestArgs_t &args);
+
 void InitializeVectorWithRandValues(std::vector<double> &vec) {
   for (size_t i = 0; i < vec.size(); ++i)
     vec[i] = (double)rand() / RAND_MAX;
@@ -2479,6 +2482,8 @@ TestDescriptor testList[] = {
         Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B512_AutoSched_SharedReduce),
     TEST_LIST_ENTRY(
         Test_GPUCodeGeneration_Letters_SparseRep_f32i16_B512_AutoSched_SharedReduce),
+    TEST_LIST_ENTRY(
+        Test_GPUCodeGeneration_Abalone_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache_SharedReduce),
 #endif // TREEBEARD_GPU_SUPPORT
     TEST_LIST_ENTRY(
         Test_TileSize8_Abalone_TestInputs_CPUAutoSchedule_TreeParallel_f32i16),

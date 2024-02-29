@@ -2707,6 +2707,51 @@ bool Test_GPUCodeGeneration_Letters_SparseRep_f32i16_B512_AutoSched_SharedReduce
       gpuAutoScheduleOptions, csvPath);
 }
 
+// ===------------------------------------------------------------=== //
+// GPU Shared Reduce Tests - Non-Multiclass
+// ===------------------------------------------------------------=== //
+bool Test_GPUCodeGeneration_Abalone_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache_SharedReduce(
+    TestArgs_t &args) {
+  using ThresholdType = float;
+  using IndexType = int16_t;
+  using ReturnType = float;
+
+  int32_t batchSize = 64;
+  int32_t numRowsPerBlock = 4, numTreesPerIter = 10;
+  const std::string xgboostModelFile = "abalone_xgb_model_save.json";
+  auto representation =
+      decisionforest::RepresentationFactory::Get().GetRepresentation(
+          "gpu_sparse");
+
+  auto xgboostModelPath = GetXGBoostModelPath(xgboostModelFile);
+  auto modelGlobalsJSONPath =
+      TreeBeard::ForestCreator::ModelGlobalJSONFilePathFromJSONFilePath(
+          xgboostModelPath);
+  auto csvPath = xgboostModelPath + ".csv";
+
+  auto serializer =
+      decisionforest::ModelSerializerFactory::Get().GetModelSerializer(
+          "gpu_sparse", modelGlobalsJSONPath);
+
+  MLIRContext context;
+  TreeBeard::InitializeMLIRContext(context);
+
+  TreeBeard::XGBoostJSONParser<ThresholdType, ReturnType, IndexType, IndexType,
+                               ThresholdType>
+      xgBoostParser(context, xgboostModelPath, serializer, batchSize);
+
+  std::function<void(decisionforest::Schedule &)> scheduleManipulator =
+      std::bind(decisionforest::
+                    iterativeCachedPartialForestStrategy_NoCache_SharedReduce,
+                std::placeholders::_1, numTreesPerIter, numRowsPerBlock);
+  return VerifyGPUCodeGeneration<ThresholdType, IndexType, ReturnType>(
+      args, batchSize, xgBoostParser, serializer, representation,
+      1,  // Tile size
+      16, // Tile shape width
+      16, // child index width
+      scheduleManipulator, csvPath);
+}
+
 } // namespace test
 } // namespace TreeBeard
 
