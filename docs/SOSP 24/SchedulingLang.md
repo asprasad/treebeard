@@ -4,7 +4,8 @@ The goal of the scheduling language is to express the following
 * Intra or inter tree optimizations that are to be performed on a tree or set of trees (tree walk unrolling, pipelining, SIMDize etc).
 
 The reasons to use a scheduling language rather than a hard-coded lowering are as follows
-* Making the 
+* Making the scheduling specification external to the compiler allows us to 
+more easily build auto-schedulers and auto-tuners.
 * It is very hard to come up with a template loop nest that works for all models (for example, tree sizes may vary across the model making it necessary to iterate different number of trees at different times). 
 * A scheduling language will make writing newer locality optimizations faster since no changes to the compiler infrastructure will be needed.
 * Adding support for additional hardware targets (GPUs, FPGAs), will be much easier with a scheduling language.
