@@ -3,9 +3,7 @@
 Treebeard takes a serialized decision tree ensemble as input (For example
 XGBoost JSON, ONNX etc.) and generates an optimized inference function. 
 Treebeard automatically generates an optimized inference function from 
-the serialized model and can either target CPUs or GPUs. The infrastructure 
-that is used in the CPU and GPU compilation flows is mostly shared. 
-
+the serialized model and can either target CPUs or GPUs. 
 Figure \ref{Fig:Overview} shows the structure of the Treebeard compiler. 
 The inference computation is lowered through three intermediate representations
 -- high-level IR (HIR), mid-level IR (MIR) and low-level IR (LIR). The LIR is
