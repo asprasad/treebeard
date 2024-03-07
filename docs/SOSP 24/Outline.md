@@ -22,7 +22,7 @@
     * loop structure, caching, parallelism
     * Works across targets
     * Support for optimizations on reductions
-2. Unified abstractions and optimisations that allow compiler reuse across targets
+2. Unified abstractions and optimizations that allow compiler reuse across targets
     * The same loop and tree-walk optimizations work on both CPU and GPU.
     * Lowering is also shared until LIR lowering.
     * Able to reuse the same walk interleaving optimization and reduction abstractions on both CPU and GPU
@@ -38,6 +38,21 @@
 6. [Doubtful] Tiling on the GPU
     1. Doesn't seem like we'll get much performance from tiling on GPU  
 
+# Paper Outline
+1. Introduction and Motivation
+2. Background -- CUDA, MLIR, decision trees
+3. Treebeard Overview
+4. IR Specifications and Optimizations
+5. Scheduling language
+6. Reductions
+7. Caching implementation
+8. Representations
+    * Sparse, array and reorg
+    * Compiler plugins
+9. Putting it all together
+    * Finding a good schedule
+    * Heuristics
+
 # Evaluation
 1. [Established] Different models needing different schedules
 2. [Established] Different batch sizes needing different schedules
@@ -46,16 +61,19 @@
     * About 2X faster on average
 5. Comparison with Tahoe
 6. Can we also do more stuff for CPU? Parallelize across trees for small batch sizes for example?
+7. Evaluate by comparing with RAPIDs on a set of randomly generated models with varying parameters. (Compare with Tahoe too?)
+8. Plot the distribution of times for different schedules on 4060 and T400 
+9. Compare auto-tuning heuristic and the full exploration.
 
 # Some Surprising Things
 1. Reading trees into shared memory degrades performance
 2. In a majority of cases, the reorg representation is slower than our simpler representations.
 
 # Holes
-1. Shared memory usage exceeds max allowed. Currently, compiler just returns an error.
+1. [Fixed] Shared memory usage exceeds max allowed. Currently, compiler just returns an error.
 2. Can we do anything with the branch probabilities for GPU compilation?
 3. Overlap of transfers and computation.
-4. No heuristic to narrow down on optimal schedules.
+4. [Fixed] No heuristic to narrow down on optimal schedules.
 
 # Auto-Scheduling Variables
 1. Number of rows Per thread block: Integer
