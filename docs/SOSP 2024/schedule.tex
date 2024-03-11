@@ -1,21 +1,37 @@
 \section{Scheduling Language}
 The goal of the scheduling language is to express the following
-* The order in which the iteration space over the batch of inputs (batch) and trees in the forest (tree) is to be traversed. Note that there is a reduction over the tree dimension.
-* Intra or inter tree optimizations that are to be performed on a tree or set of trees (tree walk unrolling, pipelining, SIMDize etc).
+\begin{itemize}
+  \item The order in which the iteration space over the batch of inputs (batch) and trees in the forest (tree) is to be traversed. Note that there is a reduction over the tree dimension.
+  \item Intra or inter tree optimizations that are to be performed on a tree or set of trees (tree walk unrolling, pipelining, SIMDize etc).
+\end{itemize}
 
 The reasons to use a scheduling language rather than a hard-coded lowering are as follows
-* Making the scheduling specification external to the compiler allows us to 
-more easily build auto-schedulers and auto-tuners.
-* It is very hard to come up with a template loop nest that works for all models (for example, tree sizes may vary across the model making it necessary to iterate different number of trees at different times). 
-* A scheduling language will make writing newer locality optimizations faster since no changes to the compiler infrastructure will be needed.
-* Adding support for additional hardware targets (GPUs, FPGAs), will be much easier with a scheduling language.
+\begin{itemize}
+  \item Making the scheduling specification external to the compiler allows us to 
+  more easily build auto-schedulers and auto-tuners.
+  \item It is very hard to come up with a template loop nest that works for all models 
+  (for example, tree sizes may vary across the model making it necessary to iterate 
+  different number of trees at different times).
+  \item A scheduling language will make writing newer locality optimizations faster since 
+  no changes to the compiler infrastructure will be needed.
+  \item Adding support for additional hardware targets (GPUs, FPGAs), will be much easier
+  with a scheduling language.
+\end{itemize}
 
 There are some simplifying assumptions and limitations in the current design
-* Tree traversals are considered atomic. There is no way to express partial tree traversals or schedule individual node/level computations. 
-* Accumulation of tree predictions is done immediately (as opposed to, for example, collecting all predictions and performing a reduction later).
+\begin{itemize}
+  \item Tree traversals are considered atomic. There is no way to express partial
+   tree traversals or schedule individual node/level computations. 
+  \item Accumulation of tree predictions is done immediately (as opposed to, 
+  for example, collecting all predictions and performing a reduction later).
+\end{itemize}
 
 \subsection{Language Definition}
-We broadly have three classes of directives in the language. The first is a set of loop nest modifiers that are used to specify the structure of the loop nest to walk the iteration space. The second is a set of clauses that specify intra and inter tree optimizations. Finally, we have a class of attributes that control how reductions are performed.
+We broadly have three classes of directives in the language. The first is a set 
+of loop nest modifiers that are used to specify the structure of the loop nest to
+walk the iteration space. The second is a set of clauses that specify intra and 
+inter tree optimizations. Finally, we have a class of attributes that control how 
+reductions are performed.
 
 \subsubsection{Loop Modifiers}
 There are two special index variables -- \op{batch} and \op{tree}. The clauses modify these index variables or 
@@ -82,3 +98,75 @@ The following clauses provide ways to optimize the inference routine being gener
 \end{itemize}
 
 \TODO{Add examples for RAPIDS, Tahoe (Maybe show some strategies can be encoded?)}
+
+\subsection{The XBoost Schedule}
+XGBoost\cite{XGBoost} is a very popular gradient boosting library. 
+It implements inference on the CPU by going over a fixed number of rows (64 in the previous version)
+for every tree and then moving to the next tree. When all trees have been walked for this 
+set of rows, the next set of rows is taken up. Also, different sets of rows are 
+processed in parallel.
+
+The schedule used by XGBoost can be represented in \Treebeard{}'s scheduling 
+language as follows.
+\begin{lstlisting}[style=c++]
+  tile(batch, b0, b1, CHUNK_SIZE)
+  reorder(b0, tree, b1)
+  parallel(b0)
+\end{lstlisting}
+
+\subsection{Tahoe Schedules}
+Tahoe\cite{Tahoe} has four strategies that it picks from for a given model. 
+Each of these strategies can be encoded using \Treebeard{}'s scheduling language
+as we show below. 
+\begin{itemize}
+  \item \textbf{Direct Method}: In this strategy, a single GPU thread walks all trees
+  for a given input row. The schedule for this strategy is as follows.
+\begin{lstlisting}[style=c++]
+  tile(batch, b0, b1, ROWS_PER_TB)
+  reorder(b0, b1, tree)
+  gpuDimension(b0, grid.x)
+  gpuDimension(b1, block.x)
+\end{lstlisting}
+  Here, \op{ROWS\_PER\_TB} is the number of rows that are processed by a single thread block.
+  \item \textbf{Shared Data}: In this strategy, a thread block walks all the trees 
+  for a given row in parallel. If threads walk multiple trees, each thread accumulates
+  partial results. Finally, a thread block wide reduction is performed to compute 
+  the prediction. The schedule for this strategy is as follows.
+\begin{lstlisting}[style=c++]
+  reorder(batch, tree)
+  gpuDimension(batch, grid.x)
+  gpuDimension(tree, block.x)
+  cache(batch)
+\end{lstlisting}
+  \item \textbf{Shared Forest}: In this strategy, the whole model is loaded into 
+  shared memory and subsequently, a single thread walks all trees for a particular
+  row. The schedule for this strategy is as follows.
+\begin{lstlisting}[style=c++]
+  tile(batch, b0, b1, ROWS_PER_TB)
+  tile(tree, t0, t1, N_TREES)
+  reorder(b0, b1, t0, t1)
+  cache(t0)
+  gpuDimension(b0, grid.x)
+  gpuDimension(b1, block.x)
+\end{lstlisting}
+  Here, we create a placeholder single iteration loop \op{t0} so that we can 
+  specify that all trees are to be cached.
+  \item \textbf{Shared Partial Forest}: In case the model is too large to fit into
+  shared memory, the model is split into chunks and each chunk is loaded into shared
+  memory. Again, as in the previous strategy, one thread walks all trees assigned to
+  a thread block for a row. The schedule for this strategy is as follows.
+\begin{lstlisting}[style=c++]
+  tile(batch, b0, b1, ROWS_PER_TB)
+  
+  tile(tree, t0, t0Inner, TREES_PER_TB)
+  tile(t0Inner, t1, t2, TREES_PER_TB)
+  cache(t1)
+  reorder(b0, t0, b1, t1, t2)
+
+  gpuDimension(b0, grid.x)
+  gpuDimension(t0, grid.y)
+  gpuDimension(b1, block.x)
+\end{lstlisting}
+\end{itemize}
+
+
