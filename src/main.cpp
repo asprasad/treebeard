@@ -13,7 +13,8 @@
 namespace TreeBeard {
 namespace test {
 void TestTileStringGen();
-}
+void generateRandomXGBoostModels(const std::string &dirName);
+} // namespace test
 } // namespace TreeBeard
 
 bool EqualsString(char *arg, const std::string &str) {
@@ -369,6 +370,22 @@ bool ComputeProbabilityProfileIfNeeded(int argc, char *argv[]) {
   return true;
 }
 
+bool GenerateRandomXGBoostBenchmarksIfNeeded(int argc, char *argv[]) {
+  bool generateBenchmarks = false;
+  for (int32_t i = 0; i < argc; ++i)
+    if (std::string(argv[i]).find(std::string("--generateBenchmarks")) !=
+        std::string::npos) {
+      generateBenchmarks = true;
+      break;
+    }
+  if (!generateBenchmarks)
+    return false;
+  std::string dirName = "/home/ashwin/mlir-build/llvm-project/mlir/examples/"
+                        "treebeard/xgb_models/test/GPUBenchmarks";
+  TreeBeard::test::generateRandomXGBoostModels(dirName);
+  return true;
+}
+
 int main(int argc, char *argv[]) {
   SetInsertDebugHelpers(argc, argv);
   SetInsertPrintVectors(argc, argv);
@@ -386,6 +403,8 @@ int main(int argc, char *argv[]) {
   else if (ComputeInferenceStatsIfNeeded(argc, argv))
     return 0;
   else if (ComputeProbabilityProfileIfNeeded(argc, argv))
+    return 0;
+  else if (GenerateRandomXGBoostBenchmarksIfNeeded(argc, argv))
     return 0;
   else {
     std::cout
