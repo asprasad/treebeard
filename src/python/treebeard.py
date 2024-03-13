@@ -11,6 +11,7 @@ treebeardAPI = TreebeardAPI()
 class GPUAutoScheduleOptions:
   def __init__(self) -> None:
       self.optionsPtr = treebeardAPI.runtime_lib.CreateGPUAutoScheduleOptions()
+      self.unrollTreeWalks = False
   
   def __del__(self):
       treebeardAPI.runtime_lib.DeleteGPUAutoScheduleOptions(self.optionsPtr)
@@ -37,6 +38,7 @@ class GPUAutoScheduleOptions:
     treebeardAPI.runtime_lib.Set_cacheTrees(self.optionsPtr, ctypes.c_int32(1 if val else 0))
 
   def UnrollTreeWalks(self, val : bool):
+    self.unrollTreeWalks = val
     treebeardAPI.runtime_lib.Set_unrollTreeWalks(self.optionsPtr, ctypes.c_int32(1 if val else 0))
 
   def TreeWalkInterleaveFactor(self, val : int):
