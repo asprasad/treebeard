@@ -34,15 +34,15 @@ def get_model_config(model_name : str, batch_size: int):
   }
   airline_best_configs = {
     256: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, False, False, True, -1, True), "gpu_array"),
-    512: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, False, False, False, -1, True), "gpu_array"),
-    1024: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 20, True, False, True, -1, True), "gpu_reorg"),
+    512: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 20, True, False, True, 4, True), "gpu_array"),
+    1024: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 20, True, False, True, 4, True), "gpu_array"),
     2048: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 20, True, False, True, 4, True), "gpu_array"),
-    4096: (treebeard.GPUAutoScheduleOptions.Construct(32, 2, 10, True, False, True, 2, True), "gpu_sparse"),
-    8192: (treebeard.GPUAutoScheduleOptions.Construct(64, 1, 10, True, False, True, 2), "gpu_array"),
+    4096: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 10, True, False, True, 2, True), "gpu_sparse"),
+    8192: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 10, True, False, True, 4), "gpu_array"),
     16384: (treebeard.GPUAutoScheduleOptions.Construct(64, 1, 2, True, False, True, 2), "gpu_array"),
   }
   airline_ohe_best_configs = {
-    256: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, True, 4), "gpu_array"),
+    256: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, True, 4, True), "gpu_array"),
     512: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, True, 2), "gpu_array"),
     1024: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, True, 2), "gpu_reorg"),
     2048: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, True, 2), "gpu_array"),
@@ -56,30 +56,30 @@ def get_model_config(model_name : str, batch_size: int):
     1024: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 20, True, False, True, 2, True), "gpu_array"),
     2048: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 20, True, False, False, -1, True), "gpu_sparse"),
     4096: (treebeard.GPUAutoScheduleOptions.Construct(64, 1, 10, True, False, True, 4, True), "gpu_array"),
-    8192: (treebeard.GPUAutoScheduleOptions.Construct(64, 1, 10, True, False, True, 4), "gpu_array"),
-    16384: (treebeard.GPUAutoScheduleOptions.Construct(64, 1, 10, True, False, True, 2), "gpu_array"),
+    8192: (treebeard.GPUAutoScheduleOptions.Construct(64, 1, 10, True, False, True, 4, True), "gpu_array"),
+    16384: (treebeard.GPUAutoScheduleOptions.Construct(64, 1, 10, True, False, True, 2, True), "gpu_array"),
   }
   epsilon_best_configs = {
     256: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, False, False, True, 4, True), "gpu_array"),
-    512: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, False, False, True, -1), "gpu_sparse"),
-    1024: (treebeard.GPUAutoScheduleOptions.Construct(32, 2, 50, False, False, True, 4), "gpu_array"),
+    512: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 20, False, False, True, 4), "gpu_array"),
+    1024: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 20, False, False, True, 2, True), "gpu_array"),
     2048: (treebeard.GPUAutoScheduleOptions.Construct(32, 2, 50, False, False, True, 2), "gpu_array"),
     4096: (treebeard.GPUAutoScheduleOptions.Construct(32, 2, 50, False, False, True, 2), "gpu_array"),
     8192: (treebeard.GPUAutoScheduleOptions.Construct(32, 2, 50, False, False, True, 2), "gpu_sparse"),
     16384: (treebeard.GPUAutoScheduleOptions.Construct(32, 2, 50, False, False, True, 4), "gpu_sparse"),
   }
   higgs_best_configs = {
-    256: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, False, False, True, 2, True), "gpu_array"),
+    256: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, True, 4, True), "gpu_array"),
     512: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 20, True, False, True, 4, True), "gpu_array"),
     1024: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 20, True, False, True, 4, True), "gpu_array"),
     2048: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 20, True, False, True, 2, True), "gpu_array"),
     4096: (treebeard.GPUAutoScheduleOptions.Construct(64, 1, 10, True, False, True, 2, True), "gpu_sparse"),
     8192: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 10, True, False, True, 4, True), "gpu_array"),
-    16384: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 1, True, False, True, 2), "gpu_array"),
+    16384: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 2, True, False, True, 2), "gpu_array"),
   }
   year_prediction_msd_best_configs = {
     256: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, False, -1, True), "gpu_sparse"),
-    512: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, False, True), "gpu_sparse"),
+    512: (treebeard.GPUAutoScheduleOptions.Construct(8, 1, 50, True, False, False, -1, True), "gpu_sparse"),
     1024: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 20, True, False, False, -1, True), "gpu_sparse"),
     2048: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 20, True, False, True, 2, True), "gpu_array"),
     4096: (treebeard.GPUAutoScheduleOptions.Construct(32, 1, 10, True, False, True, 4), "gpu_sparse"),
@@ -392,12 +392,12 @@ if __name__ == "__main__":
   num_trials = 5
   # benchmarks = ["abalone", "airline", "airline-ohe", "covtype", "higgs", "letters", "year_prediction_msd"]
   # benchmarks = ["letters"]
-  # batch_sizes = [16384]
+  batch_sizes = [16384]
 
   benchmarks = ["abalone", "airline", "airline-ohe", "covtype", "epsilon", "higgs", "letters", "year_prediction_msd"]
   # batch_sizes = [4096, 8192] #, 16384]
   # batch_sizes = [256, 512, 1024, 2048]
-  batch_sizes = [256, 512, 1024, 4096, 8192] #, 16384]
+  # batch_sizes = [256, 512, 1024, 2048, 4096, 8192] #, 16384]
   
   rapids_total_times = []
   rapids_kernel_times = []

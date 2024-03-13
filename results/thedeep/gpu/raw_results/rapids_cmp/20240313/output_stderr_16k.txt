@@ -1,0 +1,1608 @@
+abalone 8 1000 0
+16384 32 1 2 gpu_array
+gpu_array,16384,32,1,2,-1,true,false,false,false,0.0572498,0.0371082
+gpu_array,16384,32,1,2,2,true,false,true,false,0.0473022,0.0366211
+gpu_array,16384,32,1,2,4,true,false,true,false,0.0457281,0.0327887
+16384 32 1 2 gpu_sparse
+gpu_sparse,16384,32,1,2,-1,true,false,false,false,0.0492426,0.041369
+gpu_sparse,16384,32,1,2,2,true,false,true,false,0.0527087,0.0419666
+gpu_sparse,16384,32,1,2,4,true,false,true,false,0.0561517,0.0432123
+16384 32 1 10 gpu_array
+gpu_array,16384,32,1,10,-1,true,false,false,false,0.0545276,0.0437854
+gpu_array,16384,32,1,10,2,true,false,true,false,0.0478876,0.0348871
+gpu_array,16384,32,1,10,4,true,false,true,false,0.0439172,0.0328699
+16384 32 1 10 gpu_sparse
+gpu_sparse,16384,32,1,10,-1,true,false,false,false,0.0599634,0.0456201
+gpu_sparse,16384,32,1,10,2,true,false,true,false,0.0477795,0.0368542
+gpu_sparse,16384,32,1,10,4,true,false,true,false,0.0510077,0.0383734
+16384 64 1 2 gpu_array
+gpu_array,16384,64,1,2,-1,true,false,false,false,0.0511481,0.0402228
+gpu_array,16384,64,1,2,2,true,false,true,false,0.0508911,0.0399658
+gpu_array,16384,64,1,2,4,true,false,true,false,0.0491968,0.0363794
+16384 64 1 2 gpu_sparse
+gpu_sparse,16384,64,1,2,-1,true,false,false,false,0.0499591,0.0415973
+gpu_sparse,16384,64,1,2,2,true,false,true,false,0.0542725,0.041272
+gpu_sparse,16384,64,1,2,4,true,false,true,false,0.0550043,0.0437738
+16384 64 1 10 gpu_array
+gpu_array,16384,64,1,10,-1,true,false,false,false,0.0549146,0.0438672
+gpu_array,16384,64,1,10,2,true,false,true,false,0.048103,0.0350415
+gpu_array,16384,64,1,10,4,true,false,true,false,0.0452985,0.0325421
+16384 64 1 10 gpu_sparse
+gpu_sparse,16384,64,1,10,-1,true,false,false,false,0.0599182,0.0458191
+gpu_sparse,16384,64,1,10,2,true,false,true,false,0.0488538,0.0361584
+gpu_sparse,16384,64,1,10,4,true,false,true,false,0.0475458,0.0366815
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json is: 
+	numRowsPerTB: 64
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: false
+	Representation: gpu_array
+*************
+Trying shared reduce for config
+numRowsPerTB: 64
+numRowsPerThread: 1
+numTreeThreads: 10
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,16384,64,1,10,4,true,false,true,true,0.042356,0.0316748
+0.0316748
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,16384,64,1,10,4,false,false,true,true,0.0448621,0.034425
+0.034425
+Trying shared reduce for config
+numRowsPerTB: 32
+numRowsPerThread: 1
+numTreeThreads: 2
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,16384,32,1,2,4,true,false,true,true,0.0445227,0.0337805
+0.0337805
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,16384,32,1,2,4,false,false,true,true,0.0511823,0.0404401
+0.0404401
+Trying shared reduce for config
+numRowsPerTB: 32
+numRowsPerThread: 1
+numTreeThreads: 10
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,16384,32,1,10,4,true,false,true,true,0.043186,0.0322607
+0.0322607
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,16384,32,1,10,4,false,false,true,true,0.046377,0.0336816
+0.0336816
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json	16384
+Best kernel execution time: 0.0316748
+Time taken for auto-tuning /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json 12 seconds of which 1.87603 is kernel execution
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json is: 
+	numRowsPerTB: 64
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: true
+	Representation: gpu_array
+abalone 8 1000 false
+16384 32 1 2 gpu_array
+gpu_array,16384,32,1,2,-1,true,false,false,false,0.0496936,0.0370593
+gpu_array,16384,32,1,2,2,true,false,true,false,0.0491852,0.0366119
+gpu_array,16384,32,1,2,4,true,false,true,false,0.0452136,0.0327625
+16384 32 1 2 gpu_sparse
+gpu_sparse,16384,32,1,2,-1,true,false,false,false,0.0464276,0.0383099
+gpu_sparse,16384,32,1,2,2,true,false,true,false,0.0546289,0.0419336
+gpu_sparse,16384,32,1,2,4,true,false,true,false,0.0557758,0.0431415
+16384 32 1 10 gpu_array
+gpu_array,16384,32,1,10,-1,true,false,false,false,0.0545819,0.0437787
+gpu_array,16384,32,1,10,2,true,false,true,false,0.0473785,0.0348663
+gpu_array,16384,32,1,10,4,true,false,true,false,0.0457886,0.0329712
+16384 32 1 10 gpu_sparse
+gpu_sparse,16384,32,1,10,-1,true,false,false,false,0.0594543,0.0455994
+gpu_sparse,16384,32,1,10,2,true,false,true,false,0.0476068,0.0368646
+gpu_sparse,16384,32,1,10,4,true,false,true,false,0.0510992,0.0383429
+16384 64 1 2 gpu_array
+gpu_array,16384,64,1,2,-1,true,false,false,false,0.0529321,0.0402368
+gpu_array,16384,64,1,2,2,true,false,true,false,0.0527008,0.0399445
+gpu_array,16384,64,1,2,4,true,false,true,false,0.0487286,0.0363995
+16384 64 1 2 gpu_sparse
+gpu_sparse,16384,64,1,2,-1,true,false,false,false,0.0496375,0.0415808
+gpu_sparse,16384,64,1,2,2,true,false,true,false,0.0535974,0.0412683
+gpu_sparse,16384,64,1,2,4,true,false,true,false,0.0543909,0.0437708
+16384 64 1 10 gpu_array
+gpu_array,16384,64,1,10,-1,true,false,false,false,0.0567175,0.0438391
+gpu_array,16384,64,1,10,2,true,false,true,false,0.0477875,0.0350311
+gpu_array,16384,64,1,10,4,true,false,true,false,0.0453607,0.0325433
+16384 64 1 10 gpu_sparse
+gpu_sparse,16384,64,1,10,-1,true,false,false,false,0.0600031,0.0457819
+gpu_sparse,16384,64,1,10,2,true,false,true,false,0.0474164,0.0367963
+gpu_sparse,16384,64,1,10,4,true,false,true,false,0.0500006,0.0373053
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json is: 
+	numRowsPerTB: 64
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: false
+	Representation: gpu_array
+*************
+Trying shared reduce for config
+numRowsPerTB: 64
+numRowsPerThread: 1
+numTreeThreads: 10
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,16384,64,1,10,4,true,false,true,true,0.0430475,0.0322443
+0.0322443
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,16384,64,1,10,4,false,false,true,true,0.0474384,0.0350482
+0.0350482
+Trying shared reduce for config
+numRowsPerTB: 32
+numRowsPerThread: 1
+numTreeThreads: 2
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,16384,32,1,2,4,true,false,true,true,0.0461908,0.0337396
+0.0337396
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,16384,32,1,2,4,false,false,true,true,0.0511548,0.0404126
+0.0404126
+Trying shared reduce for config
+numRowsPerTB: 32
+numRowsPerThread: 1
+numTreeThreads: 10
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,16384,32,1,10,4,true,false,true,true,0.044682,0.0322308
+0.0322308
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json,gpu_array,16384,32,1,10,4,false,false,true,true,0.0459106,0.0337036
+0.0337036
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json	16384
+Best kernel execution time: 0.0322308
+Time taken for auto-tuning /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json 12 seconds of which 1.87452 is kernel execution
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/abalone_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: true
+	Representation: gpu_array
+airline 13 100 false
+16384 32 1 2 gpu_array
+gpu_array,16384,32,1,2,-1,true,false,false,false,0.0304974,0.0047406
+gpu_array,16384,32,1,2,2,true,false,true,false,0.0283441,0.00417419
+gpu_array,16384,32,1,2,4,true,false,true,false,0.0286279,0.00403076
+16384 32 1 2 gpu_sparse
+gpu_sparse,16384,32,1,2,-1,true,false,false,false,0.0297394,0.00538635
+gpu_sparse,16384,32,1,2,2,true,false,true,false,0.0295129,0.00509888
+gpu_sparse,16384,32,1,2,4,true,false,true,false,0.0300659,0.00577393
+16384 32 1 10 gpu_array
+gpu_array,16384,32,1,10,-1,true,false,false,false,0.0313983,0.00582458
+gpu_array,16384,32,1,10,2,true,false,true,false,0.0294196,0.00476135
+gpu_array,16384,32,1,10,4,true,false,true,false,0.028717,0.00460815
+16384 32 1 10 gpu_sparse
+gpu_sparse,16384,32,1,10,-1,true,false,false,false,0.031004,0.00616272
+gpu_sparse,16384,32,1,10,2,true,false,true,false,0.0295325,0.0047522
+gpu_sparse,16384,32,1,10,4,true,false,true,false,0.0297876,0.00500732
+16384 64 1 2 gpu_array
+gpu_array,16384,64,1,2,-1,true,false,false,false,0.0310663,0.00512634
+gpu_array,16384,64,1,2,2,true,false,true,false,0.0277808,0.00416016
+gpu_array,16384,64,1,2,4,true,false,true,false,0.027016,0.00406677
+16384 64 1 2 gpu_sparse
+gpu_sparse,16384,64,1,2,-1,true,false,false,false,0.0296625,0.00543152
+gpu_sparse,16384,64,1,2,2,true,false,true,false,0.0299811,0.00513977
+gpu_sparse,16384,64,1,2,4,true,false,true,false,0.0314899,0.00579407
+16384 64 1 10 gpu_array
+gpu_array,16384,64,1,10,-1,true,false,false,false,0.0301184,0.00588745
+gpu_array,16384,64,1,10,2,true,false,true,false,0.0291669,0.00481384
+gpu_array,16384,64,1,10,4,true,false,true,false,0.0293976,0.00467834
+16384 64 1 10 gpu_sparse
+gpu_sparse,16384,64,1,10,-1,true,false,false,false,0.0312976,0.00621216
+gpu_sparse,16384,64,1,10,2,true,false,true,false,0.0299066,0.00494324
+gpu_sparse,16384,64,1,10,4,true,false,true,false,0.0301123,0.00508789
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 2
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: false
+	Representation: gpu_array
+*************
+Trying shared reduce for config
+numRowsPerTB: 32
+numRowsPerThread: 1
+numTreeThreads: 2
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,16384,32,1,2,4,true,false,true,true,0.0243225,0.00418091
+0.00418091
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,16384,32,1,2,4,false,false,true,true,0.0252704,0.00555603
+0.00555603
+Trying shared reduce for config
+numRowsPerTB: 64
+numRowsPerThread: 1
+numTreeThreads: 2
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,16384,64,1,2,4,true,false,true,true,0.0257465,0.00420105
+0.00420105
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,16384,64,1,2,4,false,false,true,true,0.026684,0.00544373
+0.00544373
+Trying shared reduce for config
+numRowsPerTB: 32
+numRowsPerThread: 1
+numTreeThreads: 10
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,16384,32,1,10,4,true,false,true,true,0.0243872,0.00467285
+0.00467285
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,16384,32,1,10,4,false,false,true,true,0.02474,0.00490356
+0.00490356
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json	16384
+Best kernel execution time: 0.00403076
+Time taken for auto-tuning /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json 7 seconds of which 0.246777 is kernel execution
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 2
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: false
+	Representation: gpu_array
+airline 13 100 false
+16384 32 1 2 gpu_array
+gpu_array,16384,32,1,2,-1,true,false,false,false,0.0308698,0.0047467
+gpu_array,16384,32,1,2,2,true,false,true,false,0.0280133,0.00384338
+gpu_array,16384,32,1,2,4,true,false,true,false,0.0274127,0.00373108
+16384 32 1 2 gpu_sparse
+gpu_sparse,16384,32,1,2,-1,true,false,false,false,0.0305444,0.0049707
+gpu_sparse,16384,32,1,2,2,true,false,true,false,0.0285809,0.00471619
+gpu_sparse,16384,32,1,2,4,true,false,true,false,0.0288428,0.00534424
+16384 32 1 10 gpu_array
+gpu_array,16384,32,1,10,-1,true,false,false,false,0.0312122,0.00539429
+gpu_array,16384,32,1,10,2,true,false,true,false,0.029845,0.00475952
+gpu_array,16384,32,1,10,4,true,false,true,false,0.0305432,0.00460327
+16384 32 1 10 gpu_sparse
+gpu_sparse,16384,32,1,10,-1,true,false,false,false,0.0301489,0.00616211
+gpu_sparse,16384,32,1,10,2,true,false,true,false,0.0303851,0.00475037
+gpu_sparse,16384,32,1,10,4,true,false,true,false,0.0285876,0.00496704
+16384 64 1 2 gpu_array
+gpu_array,16384,64,1,2,-1,true,false,false,false,0.0292657,0.00509583
+gpu_array,16384,64,1,2,2,true,false,true,false,0.0305273,0.00416016
+gpu_array,16384,64,1,2,4,true,false,true,false,0.0292517,0.00404419
+16384 64 1 2 gpu_sparse
+gpu_sparse,16384,64,1,2,-1,true,false,false,false,0.0308966,0.00544495
+gpu_sparse,16384,64,1,2,2,true,false,true,false,0.03026,0.00511353
+gpu_sparse,16384,64,1,2,4,true,false,true,false,0.0292285,0.00579102
+16384 64 1 10 gpu_array
+gpu_array,16384,64,1,10,-1,true,false,false,false,0.0299133,0.00586548
+gpu_array,16384,64,1,10,2,true,false,true,false,0.0296039,0.00482361
+gpu_array,16384,64,1,10,4,true,false,true,false,0.0280249,0.00464844
+16384 64 1 10 gpu_sparse
+gpu_sparse,16384,64,1,10,-1,true,false,false,false,0.0296899,0.00619141
+gpu_sparse,16384,64,1,10,2,true,false,true,false,0.029101,0.00493103
+gpu_sparse,16384,64,1,10,4,true,false,true,false,0.0281909,0.00505859
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 2
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: false
+	Representation: gpu_array
+*************
+Trying shared reduce for config
+numRowsPerTB: 32
+numRowsPerThread: 1
+numTreeThreads: 2
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,16384,32,1,2,4,true,false,true,true,0.0248547,0.00416382
+0.00416382
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,16384,32,1,2,4,false,false,true,true,0.0264679,0.00553284
+0.00553284
+Trying shared reduce for config
+numRowsPerTB: 64
+numRowsPerThread: 1
+numTreeThreads: 2
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,16384,64,1,2,4,true,false,true,true,0.0243933,0.00419067
+0.00419067
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,16384,64,1,2,4,false,false,true,true,0.0261713,0.00541931
+0.00541931
+Trying shared reduce for config
+numRowsPerTB: 32
+numRowsPerThread: 1
+numTreeThreads: 10
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,16384,32,1,10,4,true,false,true,true,0.0252441,0.00467529
+0.00467529
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json,gpu_array,16384,32,1,10,4,false,false,true,true,0.0248322,0.00487366
+0.00487366
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json	16384
+Best kernel execution time: 0.00373108
+Time taken for auto-tuning /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json 7 seconds of which 0.242504 is kernel execution
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 2
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: false
+	Representation: gpu_array
+airline-ohe 692 1000 false
+16384 8 1 20 gpu_array
+gpu_array,16384,8,1,20,-1,true,false,false,false,0.341412,0.0963556
+gpu_array,16384,8,1,20,2,true,false,true,false,0.362999,0.0704572
+gpu_array,16384,8,1,20,4,true,false,true,false,0.357499,0.0655682
+16384 8 1 20 gpu_sparse
+gpu_sparse,16384,8,1,20,-1,true,false,false,false,0.34232,0.0950665
+gpu_sparse,16384,8,1,20,2,true,false,true,false,0.346341,0.0527008
+gpu_sparse,16384,8,1,20,4,true,false,true,false,0.352366,0.0608014
+16384 8 1 50 gpu_array
+gpu_array,16384,8,1,50,-1,true,false,false,false,0.366479,0.0702142
+gpu_array,16384,8,1,50,2,true,false,true,false,0.299769,0.0505621
+gpu_array,16384,8,1,50,4,true,false,true,false,0.346617,0.0496808
+16384 8 1 50 gpu_sparse
+gpu_sparse,16384,8,1,50,-1,true,false,false,false,0.318353,0.0698792
+gpu_sparse,16384,8,1,50,2,true,false,true,false,0.315314,0.064826
+gpu_sparse,16384,8,1,50,4,true,false,true,false,0.3089,0.0599988
+16384 32 1 20 gpu_array
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+16384 32 1 20 gpu_sparse
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json is: 
+	numRowsPerTB: 8
+	numRowsPerThread: 1
+	numTreeThreads: 50
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: false
+	Representation: gpu_array
+*************
+Trying shared reduce for config
+numRowsPerTB: 8
+numRowsPerThread: 1
+numTreeThreads: 50
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_array,16384,8,1,50,4,true,false,true,true,0.296687,0.0598096
+0.0598096
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_array,16384,8,1,50,4,false,false,true,true,0.308499,0.0705841
+0.0705841
+Trying shared reduce for config
+numRowsPerTB: 8
+numRowsPerThread: 1
+numTreeThreads: 20
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_array,16384,8,1,20,4,true,false,true,true,0.30697,0.0692993
+0.0692993
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_array,16384,8,1,20,4,false,false,true,true,0.509039,0.271063
+0.271063
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json	16384
+Best kernel execution time: 0.0496808
+Time taken for auto-tuning /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json 18 seconds of which 2.09202 is kernel execution
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json is: 
+	numRowsPerTB: 8
+	numRowsPerThread: 1
+	numTreeThreads: 50
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: false
+	Representation: gpu_array
+airline-ohe 692 1000 false
+16384 8 1 20 gpu_array
+gpu_array,16384,8,1,20,-1,true,false,false,false,0.342294,0.0963226
+gpu_array,16384,8,1,20,2,true,false,true,false,0.316107,0.0704401
+gpu_array,16384,8,1,20,4,true,false,true,false,0.35776,0.0655847
+16384 8 1 20 gpu_sparse
+gpu_sparse,16384,8,1,20,-1,true,false,false,false,0.387642,0.0951611
+gpu_sparse,16384,8,1,20,2,true,false,true,false,0.298781,0.0527484
+gpu_sparse,16384,8,1,20,4,true,false,true,false,0.352468,0.0607806
+16384 8 1 50 gpu_array
+gpu_array,16384,8,1,50,-1,true,false,false,false,0.31685,0.0691083
+gpu_array,16384,8,1,50,2,true,false,true,false,0.341804,0.0476758
+gpu_array,16384,8,1,50,4,true,false,true,false,0.349938,0.0513544
+16384 8 1 50 gpu_sparse
+gpu_sparse,16384,8,1,50,-1,true,false,false,false,0.361758,0.0698273
+gpu_sparse,16384,8,1,50,2,true,false,true,false,0.312066,0.0643243
+gpu_sparse,16384,8,1,50,4,true,false,true,false,0.354865,0.0581732
+16384 32 1 20 gpu_array
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+16384 32 1 20 gpu_sparse
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json is: 
+	numRowsPerTB: 8
+	numRowsPerThread: 1
+	numTreeThreads: 50
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 2
+	sharedMemoryReduce: false
+	Representation: gpu_array
+*************
+Trying shared reduce for config
+numRowsPerTB: 8
+numRowsPerThread: 1
+numTreeThreads: 50
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 2
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_array,16384,8,1,50,2,true,false,true,true,0.295453,0.0564398
+0.0564398
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_array,16384,8,1,50,2,false,false,true,true,0.310737,0.0730048
+0.0730048
+Trying shared reduce for config
+numRowsPerTB: 8
+numRowsPerThread: 1
+numTreeThreads: 20
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_array,16384,8,1,20,4,true,false,true,true,0.307236,0.0692596
+0.0692596
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json,gpu_array,16384,8,1,20,4,false,false,true,true,0.509512,0.271109
+0.271109
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json	16384
+Best kernel execution time: 0.0476758
+Time taken for auto-tuning /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json 18 seconds of which 2.08292 is kernel execution
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/airline-ohe_xgb_model_save.json is: 
+	numRowsPerTB: 8
+	numRowsPerThread: 1
+	numTreeThreads: 50
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 2
+	sharedMemoryReduce: false
+	Representation: gpu_array
+covtype 54 800 true
+16384 32 1 2 gpu_array
+gpu_array,16384,32,1,2,-1,true,false,false,false,0.104362,0.0707312
+gpu_array,16384,32,1,2,2,true,false,true,false,0.0886774,0.0554742
+gpu_array,16384,32,1,2,4,true,false,true,false,0.0870258,0.0522357
+16384 32 1 2 gpu_sparse
+gpu_sparse,16384,32,1,2,-1,true,false,false,false,0.103435,0.0682178
+gpu_sparse,16384,32,1,2,2,true,false,true,false,0.0920648,0.0562982
+gpu_sparse,16384,32,1,2,4,true,false,true,false,0.0884094,0.0538635
+16384 32 1 10 gpu_array
+gpu_array,16384,32,1,10,-1,true,false,false,false,0.0929846,0.0541052
+gpu_array,16384,32,1,10,2,true,false,true,false,0.0912689,0.0529999
+gpu_array,16384,32,1,10,4,true,false,true,false,0.09034,0.0549396
+16384 32 1 10 gpu_sparse
+gpu_sparse,16384,32,1,10,-1,true,false,false,false,0.0893982,0.0523499
+gpu_sparse,16384,32,1,10,2,true,false,true,false,0.0919391,0.05367
+gpu_sparse,16384,32,1,10,4,true,false,true,false,0.0953833,0.0597998
+16384 64 1 2 gpu_array
+gpu_array,16384,64,1,2,-1,true,false,false,false,0.110448,0.0776721
+gpu_array,16384,64,1,2,2,true,false,true,false,0.0903741,0.0555231
+gpu_array,16384,64,1,2,4,true,false,true,false,0.0850818,0.0520007
+16384 64 1 2 gpu_sparse
+gpu_sparse,16384,64,1,2,-1,true,false,false,false,0.105062,0.0696008
+gpu_sparse,16384,64,1,2,2,true,false,true,false,0.0914148,0.0568079
+gpu_sparse,16384,64,1,2,4,true,false,true,false,0.0879083,0.0535455
+16384 64 1 10 gpu_array
+gpu_array,16384,64,1,10,-1,true,false,false,false,0.0914697,0.0534448
+gpu_array,16384,64,1,10,2,true,false,true,false,0.0869379,0.0511713
+gpu_array,16384,64,1,10,4,true,false,true,false,0.0862512,0.0514612
+16384 64 1 10 gpu_sparse
+gpu_sparse,16384,64,1,10,-1,true,false,false,false,0.0905554,0.0514319
+gpu_sparse,16384,64,1,10,2,true,false,true,false,0.0890912,0.052226
+gpu_sparse,16384,64,1,10,4,true,false,true,false,0.0870166,0.0524707
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json is: 
+	numRowsPerTB: 64
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 2
+	sharedMemoryReduce: false
+	Representation: gpu_array
+*************
+Trying shared reduce for config
+numRowsPerTB: 64
+numRowsPerThread: 1
+numTreeThreads: 10
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 2
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,16384,64,1,10,2,true,false,true,true,0.0547614,0.0265021
+0.0265021
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,16384,64,1,10,2,false,false,true,true,0.0762817,0.0474731
+0.0474731
+Trying shared reduce for config
+numRowsPerTB: 64
+numRowsPerThread: 1
+numTreeThreads: 2
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,16384,64,1,2,4,true,false,true,true,0.0830072,0.0544427
+0.0544427
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,16384,64,1,2,4,false,false,true,true,0.151104,0.122539
+0.122539
+Trying shared reduce for config
+numRowsPerTB: 32
+numRowsPerThread: 1
+numTreeThreads: 2
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,16384,32,1,2,4,true,false,true,true,0.078847,0.0496722
+0.0496722
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,16384,32,1,2,4,false,false,true,true,0.151537,0.122606
+0.122606
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json	16384
+Best kernel execution time: 0.0265021
+Time taken for auto-tuning /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json 19 seconds of which 2.925 is kernel execution
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json is: 
+	numRowsPerTB: 64
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 2
+	sharedMemoryReduce: true
+	Representation: gpu_array
+covtype 54 800 true
+16384 32 1 2 gpu_array
+gpu_array,16384,32,1,2,-1,true,false,false,false,0.103903,0.0708826
+gpu_array,16384,32,1,2,2,true,false,true,false,0.0907446,0.0554663
+gpu_array,16384,32,1,2,4,true,false,true,false,0.0852533,0.0521722
+16384 32 1 2 gpu_sparse
+gpu_sparse,16384,32,1,2,-1,true,false,false,false,0.105454,0.0682837
+gpu_sparse,16384,32,1,2,2,true,false,true,false,0.0909576,0.0562286
+gpu_sparse,16384,32,1,2,4,true,false,true,false,0.086886,0.0538049
+16384 32 1 10 gpu_array
+gpu_array,16384,32,1,10,-1,true,false,false,false,0.0892444,0.0541492
+gpu_array,16384,32,1,10,2,true,false,true,false,0.0915576,0.0528613
+gpu_array,16384,32,1,10,4,true,false,true,false,0.0909357,0.0549249
+16384 32 1 10 gpu_sparse
+gpu_sparse,16384,32,1,10,-1,true,false,false,false,0.0966638,0.0565027
+gpu_sparse,16384,32,1,10,2,true,false,true,false,0.0895123,0.0548444
+gpu_sparse,16384,32,1,10,4,true,false,true,false,0.0940399,0.0563812
+16384 64 1 2 gpu_array
+gpu_array,16384,64,1,2,-1,true,false,false,false,0.107209,0.0717474
+gpu_array,16384,64,1,2,2,true,false,true,false,0.0886047,0.0553406
+gpu_array,16384,64,1,2,4,true,false,true,false,0.0864612,0.0519153
+16384 64 1 2 gpu_sparse
+gpu_sparse,16384,64,1,2,-1,true,false,false,false,0.106553,0.069566
+gpu_sparse,16384,64,1,2,2,true,false,true,false,0.094176,0.0616443
+gpu_sparse,16384,64,1,2,4,true,false,true,false,0.0911456,0.0580646
+16384 64 1 10 gpu_array
+gpu_array,16384,64,1,10,-1,true,false,false,false,0.0883881,0.0534149
+gpu_array,16384,64,1,10,2,true,false,true,false,0.0893591,0.0510901
+gpu_array,16384,64,1,10,4,true,false,true,false,0.0875537,0.0514819
+16384 64 1 10 gpu_sparse
+gpu_sparse,16384,64,1,10,-1,true,false,false,false,0.0885809,0.0513495
+gpu_sparse,16384,64,1,10,2,true,false,true,false,0.0882977,0.0524091
+gpu_sparse,16384,64,1,10,4,true,false,true,false,0.0896082,0.0524988
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json is: 
+	numRowsPerTB: 64
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 2
+	sharedMemoryReduce: false
+	Representation: gpu_array
+*************
+Trying shared reduce for config
+numRowsPerTB: 64
+numRowsPerThread: 1
+numTreeThreads: 10
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 2
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,16384,64,1,10,2,true,false,true,true,0.0557495,0.0265747
+0.0265747
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,16384,64,1,10,2,false,false,true,true,0.0767511,0.0475153
+0.0475153
+Trying shared reduce for config
+numRowsPerTB: 64
+numRowsPerThread: 1
+numTreeThreads: 2
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,16384,64,1,2,4,true,false,true,true,0.0830206,0.0544562
+0.0544562
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,16384,64,1,2,4,false,false,true,true,0.15817,0.129423
+0.129423
+Trying shared reduce for config
+numRowsPerTB: 32
+numRowsPerThread: 1
+numTreeThreads: 2
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,16384,32,1,2,4,true,false,true,true,0.0783093,0.0497449
+0.0497449
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json,gpu_array,16384,32,1,2,4,false,false,true,true,0.150735,0.122293
+0.122293
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json	16384
+Best kernel execution time: 0.0265747
+Time taken for auto-tuning /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json 18 seconds of which 2.94426 is kernel execution
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/covtype_xgb_model_save.json is: 
+	numRowsPerTB: 64
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 2
+	sharedMemoryReduce: true
+	Representation: gpu_array
+epsilon 2000 100 false
+16384 8 1 20 gpu_array
+gpu_array,16384,8,1,20,-1,false,false,false,false,0.68407,0.0423468
+gpu_array,16384,8,1,20,2,false,false,true,false,0.75012,0.0451636
+gpu_array,16384,8,1,20,4,false,false,true,false,0.750498,0.0459692
+16384 8 1 20 gpu_sparse
+gpu_sparse,16384,8,1,20,-1,false,false,false,false,0.693812,0.0464734
+gpu_sparse,16384,8,1,20,2,false,false,true,false,0.755192,0.046391
+gpu_sparse,16384,8,1,20,4,false,false,true,false,0.749955,0.046037
+16384 8 1 50 gpu_array
+gpu_array,16384,8,1,50,-1,false,false,false,false,0.741941,0.0341162
+gpu_array,16384,8,1,50,2,false,false,true,false,0.683834,0.0388141
+gpu_array,16384,8,1,50,4,false,false,true,false,0.747113,0.0400208
+16384 8 1 50 gpu_sparse
+gpu_sparse,16384,8,1,50,-1,false,false,false,false,0.684414,0.0346338
+gpu_sparse,16384,8,1,50,2,false,false,true,false,0.749863,0.0419769
+gpu_sparse,16384,8,1,50,4,false,false,true,false,0.747126,0.0419867
+16384 32 1 20 gpu_array
+gpu_array,16384,32,1,20,-1,false,false,false,false,0.746667,0.0387811
+gpu_array,16384,32,1,20,2,false,false,true,false,0.685389,0.0390271
+gpu_array,16384,32,1,20,4,false,false,true,false,0.680736,0.0363879
+16384 32 1 20 gpu_sparse
+gpu_sparse,16384,32,1,20,-1,false,false,false,false,0.746775,0.0390723
+gpu_sparse,16384,32,1,20,2,false,false,true,false,0.746841,0.0390771
+gpu_sparse,16384,32,1,20,4,false,false,true,false,0.683696,0.0358081
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json is: 
+	numRowsPerTB: 8
+	numRowsPerThread: 1
+	numTreeThreads: 50
+	cacheRows: false
+	cacheTrees: false
+	unrollTreeWalks: false
+	interleaveDepth: -1
+	sharedMemoryReduce: false
+	Representation: gpu_array
+*************
+Trying shared reduce for config
+numRowsPerTB: 8
+numRowsPerThread: 1
+numTreeThreads: 50
+cacheRows: false
+cacheTrees: false
+unrollTreeWalks: false
+interleaveDepth: -1
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+-1
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_array,16384,8,1,50,-1,false,false,false,true,0.669766,0.030484
+0.030484
+Trying shared reduce for config
+numRowsPerTB: 32
+numRowsPerThread: 1
+numTreeThreads: 20
+cacheRows: false
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+-1
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_array,16384,32,1,20,4,false,false,true,true,0.675651,0.0359412
+0.0359412
+Trying shared reduce for config
+numRowsPerTB: 8
+numRowsPerThread: 1
+numTreeThreads: 20
+cacheRows: false
+cacheTrees: false
+unrollTreeWalks: false
+interleaveDepth: -1
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+-1
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_array,16384,8,1,20,-1,false,false,false,true,0.683276,0.0437494
+0.0437494
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json	16384
+Best kernel execution time: 0.030484
+Time taken for auto-tuning /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json 11 seconds of which 1.37996 is kernel execution
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json is: 
+	numRowsPerTB: 8
+	numRowsPerThread: 1
+	numTreeThreads: 50
+	cacheRows: false
+	cacheTrees: false
+	unrollTreeWalks: false
+	interleaveDepth: -1
+	sharedMemoryReduce: true
+	Representation: gpu_array
+epsilon 2000 100 false
+16384 8 1 20 gpu_array
+gpu_array,16384,8,1,20,-1,false,false,false,false,0.746519,0.0423566
+gpu_array,16384,8,1,20,2,false,false,true,false,0.752227,0.0451349
+gpu_array,16384,8,1,20,4,false,false,true,false,0.691649,0.0459583
+16384 8 1 20 gpu_sparse
+gpu_sparse,16384,8,1,20,-1,false,false,false,false,0.753638,0.046424
+gpu_sparse,16384,8,1,20,2,false,false,true,false,0.753015,0.0464111
+gpu_sparse,16384,8,1,20,4,false,false,true,false,0.753151,0.0459979
+16384 8 1 50 gpu_array
+gpu_array,16384,8,1,50,-1,false,false,false,false,0.682126,0.0341156
+gpu_array,16384,8,1,50,2,false,false,true,false,0.688568,0.0387268
+gpu_array,16384,8,1,50,4,false,false,true,false,0.744368,0.0387402
+16384 8 1 50 gpu_sparse
+gpu_sparse,16384,8,1,50,-1,false,false,false,false,0.683093,0.0345941
+gpu_sparse,16384,8,1,50,2,false,false,true,false,0.746971,0.0420154
+gpu_sparse,16384,8,1,50,4,false,false,true,false,0.687916,0.0420422
+16384 32 1 20 gpu_array
+gpu_array,16384,32,1,20,-1,false,false,false,false,0.744736,0.0388037
+gpu_array,16384,32,1,20,2,false,false,true,false,0.685827,0.0390375
+gpu_array,16384,32,1,20,4,false,false,true,false,0.740414,0.0363739
+16384 32 1 20 gpu_sparse
+gpu_sparse,16384,32,1,20,-1,false,false,false,false,0.742632,0.0390802
+gpu_sparse,16384,32,1,20,2,false,false,true,false,0.74829,0.0390619
+gpu_sparse,16384,32,1,20,4,false,false,true,false,0.682616,0.0358264
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json is: 
+	numRowsPerTB: 8
+	numRowsPerThread: 1
+	numTreeThreads: 50
+	cacheRows: false
+	cacheTrees: false
+	unrollTreeWalks: false
+	interleaveDepth: -1
+	sharedMemoryReduce: false
+	Representation: gpu_array
+*************
+Trying shared reduce for config
+numRowsPerTB: 8
+numRowsPerThread: 1
+numTreeThreads: 50
+cacheRows: false
+cacheTrees: false
+unrollTreeWalks: false
+interleaveDepth: -1
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+-1
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_array,16384,8,1,50,-1,false,false,false,true,0.669995,0.0304071
+0.0304071
+Trying shared reduce for config
+numRowsPerTB: 32
+numRowsPerThread: 1
+numTreeThreads: 20
+cacheRows: false
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+-1
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_array,16384,32,1,20,4,false,false,true,true,0.671223,0.0359686
+0.0359686
+Trying shared reduce for config
+numRowsPerTB: 8
+numRowsPerThread: 1
+numTreeThreads: 20
+cacheRows: false
+cacheTrees: false
+unrollTreeWalks: false
+interleaveDepth: -1
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+-1
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json,gpu_array,16384,8,1,20,-1,false,false,false,true,0.682797,0.0437592
+0.0437592
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json	16384
+Best kernel execution time: 0.0304071
+Time taken for auto-tuning /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json 10 seconds of which 1.37762 is kernel execution
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/epsilon_xgb_model_save.json is: 
+	numRowsPerTB: 8
+	numRowsPerThread: 1
+	numTreeThreads: 50
+	cacheRows: false
+	cacheTrees: false
+	unrollTreeWalks: false
+	interleaveDepth: -1
+	sharedMemoryReduce: true
+	Representation: gpu_array
+higgs 28 100 false
+16384 32 1 2 gpu_array
+gpu_array,16384,32,1,2,-1,true,false,false,false,0.0392267,0.00559631
+gpu_array,16384,32,1,2,2,true,false,true,false,0.0369885,0.00470093
+gpu_array,16384,32,1,2,4,true,false,true,false,0.0406073,0.00532898
+16384 32 1 2 gpu_sparse
+gpu_sparse,16384,32,1,2,-1,true,false,false,false,0.0397546,0.00661255
+gpu_sparse,16384,32,1,2,2,true,false,true,false,0.0470367,0.00577698
+gpu_sparse,16384,32,1,2,4,true,false,true,false,0.0479633,0.0060321
+16384 32 1 10 gpu_array
+gpu_array,16384,32,1,10,-1,true,false,false,false,0.0498309,0.00625183
+gpu_array,16384,32,1,10,2,true,false,true,false,0.0469342,0.00536926
+gpu_array,16384,32,1,10,4,true,false,true,false,0.0416248,0.00530884
+16384 32 1 10 gpu_sparse
+gpu_sparse,16384,32,1,10,-1,true,false,false,false,0.0450824,0.00675232
+gpu_sparse,16384,32,1,10,2,true,false,true,false,0.0505243,0.00554138
+gpu_sparse,16384,32,1,10,4,true,false,true,false,0.0508972,0.0057312
+16384 64 1 2 gpu_array
+gpu_array,16384,64,1,2,-1,true,false,false,false,0.0456158,0.00557678
+gpu_array,16384,64,1,2,2,true,false,true,false,0.0449994,0.00465515
+gpu_array,16384,64,1,2,4,true,false,true,false,0.0396033,0.00517944
+16384 64 1 2 gpu_sparse
+gpu_sparse,16384,64,1,2,-1,true,false,false,false,0.0477728,0.00669617
+gpu_sparse,16384,64,1,2,2,true,false,true,false,0.039245,0.00579773
+gpu_sparse,16384,64,1,2,4,true,false,true,false,0.0465723,0.00610596
+16384 64 1 10 gpu_array
+gpu_array,16384,64,1,10,-1,true,false,false,false,0.0446802,0.00628906
+gpu_array,16384,64,1,10,2,true,false,true,false,0.0476221,0.00538574
+gpu_array,16384,64,1,10,4,true,false,true,false,0.0500128,0.00533508
+16384 64 1 10 gpu_sparse
+gpu_sparse,16384,64,1,10,-1,true,false,false,false,0.0444202,0.00676147
+gpu_sparse,16384,64,1,10,2,true,false,true,false,0.0486517,0.00549988
+gpu_sparse,16384,64,1,10,4,true,false,true,false,0.0486707,0.00576294
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json is: 
+	numRowsPerTB: 64
+	numRowsPerThread: 1
+	numTreeThreads: 2
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 2
+	sharedMemoryReduce: false
+	Representation: gpu_array
+*************
+Trying shared reduce for config
+numRowsPerTB: 64
+numRowsPerThread: 1
+numTreeThreads: 2
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 2
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,16384,64,1,2,2,true,false,true,true,0.0326306,0.00516479
+0.00516479
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,16384,64,1,2,2,false,false,true,true,0.0383954,0.00690125
+0.00690125
+Trying shared reduce for config
+numRowsPerTB: 32
+numRowsPerThread: 1
+numTreeThreads: 2
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 2
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,16384,32,1,2,2,true,false,true,true,0.0329944,0.00601685
+0.00601685
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,16384,32,1,2,2,false,false,true,true,0.0416876,0.00988831
+0.00988831
+Trying shared reduce for config
+numRowsPerTB: 32
+numRowsPerThread: 1
+numTreeThreads: 10
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,16384,32,1,10,4,true,false,true,true,0.032251,0.00527344
+0.00527344
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,16384,32,1,10,4,false,false,true,true,0.0331647,0.0061261
+0.0061261
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json	16384
+Best kernel execution time: 0.00465515
+Time taken for auto-tuning /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json 7 seconds of which 0.290683 is kernel execution
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json is: 
+	numRowsPerTB: 64
+	numRowsPerThread: 1
+	numTreeThreads: 2
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 2
+	sharedMemoryReduce: false
+	Representation: gpu_array
+higgs 28 100 false
+16384 32 1 2 gpu_array
+gpu_array,16384,32,1,2,-1,true,false,false,false,0.0463898,0.00519104
+gpu_array,16384,32,1,2,2,true,false,true,false,0.0445258,0.00436462
+gpu_array,16384,32,1,2,4,true,false,true,false,0.0456537,0.00494324
+16384 32 1 2 gpu_sparse
+gpu_sparse,16384,32,1,2,-1,true,false,false,false,0.0393634,0.00609924
+gpu_sparse,16384,32,1,2,2,true,false,true,false,0.0397321,0.00536926
+gpu_sparse,16384,32,1,2,4,true,false,true,false,0.0407208,0.00562561
+16384 32 1 10 gpu_array
+gpu_array,16384,32,1,10,-1,true,false,false,false,0.0447607,0.00624756
+gpu_array,16384,32,1,10,2,true,false,true,false,0.0486871,0.00535217
+gpu_array,16384,32,1,10,4,true,false,true,false,0.0492249,0.00527954
+16384 32 1 10 gpu_sparse
+gpu_sparse,16384,32,1,10,-1,true,false,false,false,0.0506171,0.00673279
+gpu_sparse,16384,32,1,10,2,true,false,true,false,0.0428497,0.00555725
+gpu_sparse,16384,32,1,10,4,true,false,true,false,0.0465314,0.00575989
+16384 64 1 2 gpu_array
+gpu_array,16384,64,1,2,-1,true,false,false,false,0.0458203,0.00559814
+gpu_array,16384,64,1,2,2,true,false,true,false,0.0368597,0.00469421
+gpu_array,16384,64,1,2,4,true,false,true,false,0.0381177,0.00515869
+16384 64 1 2 gpu_sparse
+gpu_sparse,16384,64,1,2,-1,true,false,false,false,0.03948,0.0067041
+gpu_sparse,16384,64,1,2,2,true,false,true,false,0.0394952,0.00580383
+gpu_sparse,16384,64,1,2,4,true,false,true,false,0.040072,0.00607544
+16384 64 1 10 gpu_array
+gpu_array,16384,64,1,10,-1,true,false,false,false,0.0433984,0.00628906
+gpu_array,16384,64,1,10,2,true,false,true,false,0.0438983,0.00538513
+gpu_array,16384,64,1,10,4,true,false,true,false,0.042226,0.00536072
+16384 64 1 10 gpu_sparse
+gpu_sparse,16384,64,1,10,-1,true,false,false,false,0.050976,0.0067865
+gpu_sparse,16384,64,1,10,2,true,false,true,false,0.0436517,0.00550476
+gpu_sparse,16384,64,1,10,4,true,false,true,false,0.0429553,0.00578491
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 2
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 2
+	sharedMemoryReduce: false
+	Representation: gpu_array
+*************
+Trying shared reduce for config
+numRowsPerTB: 32
+numRowsPerThread: 1
+numTreeThreads: 2
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 2
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,16384,32,1,2,2,true,false,true,true,0.0328094,0.00601501
+0.00601501
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,16384,32,1,2,2,false,false,true,true,0.0424652,0.00987244
+0.00987244
+Trying shared reduce for config
+numRowsPerTB: 64
+numRowsPerThread: 1
+numTreeThreads: 2
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 2
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,16384,64,1,2,2,true,false,true,true,0.0324213,0.00513855
+0.00513855
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,16384,64,1,2,2,false,false,true,true,0.03422,0.00687622
+0.00687622
+Trying shared reduce for config
+numRowsPerTB: 32
+numRowsPerThread: 1
+numTreeThreads: 10
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,16384,32,1,10,4,true,false,true,true,0.0395715,0.00526978
+0.00526978
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json,gpu_array,16384,32,1,10,4,false,false,true,true,0.0326697,0.00611938
+0.00611938
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json	16384
+Best kernel execution time: 0.00436462
+Time taken for auto-tuning /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json 7 seconds of which 0.286653 is kernel execution
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/higgs_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 2
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 2
+	sharedMemoryReduce: false
+	Representation: gpu_array
+letters 16 26000 true
+16384 32 1 2 gpu_array
+gpu_array,16384,32,1,2,-1,true,false,false,false,2.87176,2.85632
+gpu_array,16384,32,1,2,2,true,false,true,false,2.98245,2.96634
+gpu_array,16384,32,1,2,4,true,false,true,false,2.93835,2.92346
+16384 32 1 2 gpu_sparse
+gpu_sparse,16384,32,1,2,-1,true,false,false,false,2.77006,2.75438
+gpu_sparse,16384,32,1,2,2,true,false,true,false,2.9568,2.94069
+gpu_sparse,16384,32,1,2,4,true,false,true,false,2.62374,2.60915
+16384 32 1 10 gpu_array
+gpu_array,16384,32,1,10,-1,true,false,false,false,2.68282,2.66518
+gpu_array,16384,32,1,10,2,true,false,true,false,2.76984,2.74995
+gpu_array,16384,32,1,10,4,true,false,true,false,2.70173,2.68482
+16384 32 1 10 gpu_sparse
+gpu_sparse,16384,32,1,10,-1,true,false,false,false,2.59606,2.57805
+gpu_sparse,16384,32,1,10,2,true,false,true,false,2.78482,2.76516
+gpu_sparse,16384,32,1,10,4,true,false,true,false,2.66337,2.64414
+16384 64 1 2 gpu_array
+gpu_array,16384,64,1,2,-1,true,false,false,false,2.66999,2.6543
+gpu_array,16384,64,1,2,2,true,false,true,false,2.95879,2.94286
+gpu_array,16384,64,1,2,4,true,false,true,false,2.93689,2.9223
+16384 64 1 2 gpu_sparse
+gpu_sparse,16384,64,1,2,-1,true,false,false,false,2.61861,2.60427
+gpu_sparse,16384,64,1,2,2,true,false,true,false,2.95784,2.9421
+gpu_sparse,16384,64,1,2,4,true,false,true,false,2.60406,2.58825
+16384 64 1 10 gpu_array
+gpu_array,16384,64,1,10,-1,true,false,false,false,2.70686,2.68568
+gpu_array,16384,64,1,10,2,true,false,true,false,2.60073,2.57901
+gpu_array,16384,64,1,10,4,true,false,true,false,2.81864,2.79868
+16384 64 1 10 gpu_sparse
+gpu_sparse,16384,64,1,10,-1,true,false,false,false,2.52107,2.50319
+gpu_sparse,16384,64,1,10,2,true,false,true,false,2.62547,2.60747
+gpu_sparse,16384,64,1,10,4,true,false,true,false,2.43216,2.41397
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json is: 
+	numRowsPerTB: 64
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: false
+	Representation: gpu_sparse
+*************
+Trying shared reduce for config
+numRowsPerTB: 64
+numRowsPerThread: 1
+numTreeThreads: 10
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_sparse
+*************
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+-1
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+-1
+Trying shared reduce for config
+numRowsPerTB: 32
+numRowsPerThread: 1
+numTreeThreads: 10
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: false
+interleaveDepth: -1
+sharedMemoryReduce: false
+Rep: gpu_sparse
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,16384,32,1,10,-1,true,false,false,true,1.76689,1.75554
+1.75554
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,16384,32,1,10,-1,false,false,false,true,1.86593,1.85476
+1.85476
+Trying shared reduce for config
+numRowsPerTB: 64
+numRowsPerThread: 1
+numTreeThreads: 2
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_sparse
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,16384,64,1,2,4,true,false,true,true,1.71098,1.69987
+1.69987
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,16384,64,1,2,4,false,false,true,true,2.34003,2.32758
+2.32758
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json	16384
+Best kernel execution time: 1.69987
+Time taken for auto-tuning /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json 147 seconds of which 29.908 is kernel execution
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json is: 
+	numRowsPerTB: 64
+	numRowsPerThread: 1
+	numTreeThreads: 2
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: true
+	Representation: gpu_sparse
+letters 16 26000 true
+16384 32 1 2 gpu_array
+gpu_array,16384,32,1,2,-1,true,false,false,false,2.84434,2.82731
+gpu_array,16384,32,1,2,2,true,false,true,false,3.03033,3.01324
+gpu_array,16384,32,1,2,4,true,false,true,false,2.92452,2.90951
+16384 32 1 2 gpu_sparse
+gpu_sparse,16384,32,1,2,-1,true,false,false,false,2.80913,2.79387
+gpu_sparse,16384,32,1,2,2,true,false,true,false,2.92423,2.90965
+gpu_sparse,16384,32,1,2,4,true,false,true,false,2.61284,2.59715
+16384 32 1 10 gpu_array
+gpu_array,16384,32,1,10,-1,true,false,false,false,2.65986,2.64247
+gpu_array,16384,32,1,10,2,true,false,true,false,2.75549,2.73511
+gpu_array,16384,32,1,10,4,true,false,true,false,2.71317,2.69449
+16384 32 1 10 gpu_sparse
+gpu_sparse,16384,32,1,10,-1,true,false,false,false,2.59429,2.57726
+gpu_sparse,16384,32,1,10,2,true,false,true,false,2.76951,2.75034
+gpu_sparse,16384,32,1,10,4,true,false,true,false,2.68154,2.66372
+16384 64 1 2 gpu_array
+gpu_array,16384,64,1,2,-1,true,false,false,false,2.68516,2.67051
+gpu_array,16384,64,1,2,2,true,false,true,false,2.99342,2.97792
+gpu_array,16384,64,1,2,4,true,false,true,false,2.91925,2.90363
+16384 64 1 2 gpu_sparse
+gpu_sparse,16384,64,1,2,-1,true,false,false,false,2.6217,2.60565
+gpu_sparse,16384,64,1,2,2,true,false,true,false,2.94063,2.92617
+gpu_sparse,16384,64,1,2,4,true,false,true,false,2.62705,2.61148
+16384 64 1 10 gpu_array
+gpu_array,16384,64,1,10,-1,true,false,false,false,2.7109,2.69332
+gpu_array,16384,64,1,10,2,true,false,true,false,2.60312,2.58121
+gpu_array,16384,64,1,10,4,true,false,true,false,2.83596,2.81466
+16384 64 1 10 gpu_sparse
+gpu_sparse,16384,64,1,10,-1,true,false,false,false,2.52165,2.50462
+gpu_sparse,16384,64,1,10,2,true,false,true,false,2.62849,2.61042
+gpu_sparse,16384,64,1,10,4,true,false,true,false,2.43389,2.41497
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json is: 
+	numRowsPerTB: 64
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: false
+	Representation: gpu_sparse
+*************
+Trying shared reduce for config
+numRowsPerTB: 64
+numRowsPerThread: 1
+numTreeThreads: 10
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_sparse
+*************
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+-1
+Shared memory size exceeds maximum allowed size.
+Lowering to LLVM failed.
+-1
+Trying shared reduce for config
+numRowsPerTB: 32
+numRowsPerThread: 1
+numTreeThreads: 10
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: false
+interleaveDepth: -1
+sharedMemoryReduce: false
+Rep: gpu_sparse
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,16384,32,1,10,-1,true,false,false,true,1.76336,1.75158
+1.75158
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,16384,32,1,10,-1,false,false,false,true,1.86045,1.84904
+1.84904
+Trying shared reduce for config
+numRowsPerTB: 32
+numRowsPerThread: 1
+numTreeThreads: 2
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_sparse
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,16384,32,1,2,4,true,false,true,true,1.64628,1.63505
+1.63505
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json,gpu_sparse,16384,32,1,2,4,false,false,true,true,2.35607,2.34441
+2.34441
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json	16384
+Best kernel execution time: 1.63505
+Time taken for auto-tuning /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json 147 seconds of which 29.9044 is kernel execution
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/letters_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 2
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: true
+	Representation: gpu_sparse
+year_prediction_msd 90 100 false
+16384 32 1 2 gpu_array
+gpu_array,16384,32,1,2,-1,true,false,false,false,0.05776,0.0114343
+gpu_array,16384,32,1,2,2,true,false,true,false,0.0558173,0.00894226
+gpu_array,16384,32,1,2,4,true,false,true,false,0.0560278,0.00860352
+16384 32 1 2 gpu_sparse
+gpu_sparse,16384,32,1,2,-1,true,false,false,false,0.0584259,0.0114899
+gpu_sparse,16384,32,1,2,2,true,false,true,false,0.0532361,0.0069104
+gpu_sparse,16384,32,1,2,4,true,false,true,false,0.0548932,0.00759094
+16384 32 1 10 gpu_array
+gpu_array,16384,32,1,10,-1,true,false,false,false,0.0522083,0.00557739
+gpu_array,16384,32,1,10,2,true,false,true,false,0.052475,0.00517273
+gpu_array,16384,32,1,10,4,true,false,true,false,0.0521906,0.00494934
+16384 32 1 10 gpu_sparse
+gpu_sparse,16384,32,1,10,-1,true,false,false,false,0.0523334,0.00582458
+gpu_sparse,16384,32,1,10,2,true,false,true,false,0.0526135,0.00555542
+gpu_sparse,16384,32,1,10,4,true,false,true,false,0.0514075,0.00508179
+16384 64 1 2 gpu_array
+gpu_array,16384,64,1,2,-1,true,false,false,false,0.0581097,0.0114178
+gpu_array,16384,64,1,2,2,true,false,true,false,0.0551038,0.00896118
+gpu_array,16384,64,1,2,4,true,false,true,false,0.0547174,0.00857483
+16384 64 1 2 gpu_sparse
+gpu_sparse,16384,64,1,2,-1,true,false,false,false,0.0579089,0.0115222
+gpu_sparse,16384,64,1,2,2,true,false,true,false,0.0531689,0.0069043
+gpu_sparse,16384,64,1,2,4,true,false,true,false,0.0535754,0.00761597
+16384 64 1 10 gpu_array
+gpu_array,16384,64,1,10,-1,true,false,false,false,0.052135,0.00562622
+gpu_array,16384,64,1,10,2,true,false,true,false,0.0512482,0.00522766
+gpu_array,16384,64,1,10,4,true,false,true,false,0.0516406,0.00500977
+16384 64 1 10 gpu_sparse
+gpu_sparse,16384,64,1,10,-1,true,false,false,false,0.0534509,0.00590454
+gpu_sparse,16384,64,1,10,2,true,false,true,false,0.0532886,0.00580322
+gpu_sparse,16384,64,1,10,4,true,false,true,false,0.0530493,0.00513672
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: false
+	Representation: gpu_array
+*************
+Trying shared reduce for config
+numRowsPerTB: 32
+numRowsPerThread: 1
+numTreeThreads: 10
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,16384,32,1,10,4,true,false,true,true,0.0514465,0.0046936
+0.0046936
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,16384,32,1,10,4,false,false,true,true,0.0546021,0.0071167
+0.0071167
+Trying shared reduce for config
+numRowsPerTB: 64
+numRowsPerThread: 1
+numTreeThreads: 10
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,16384,64,1,10,4,true,false,true,true,0.0500995,0.0048114
+0.0048114
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,16384,64,1,10,4,false,false,true,true,0.0522931,0.00731018
+0.00731018
+Trying shared reduce for config
+numRowsPerTB: 64
+numRowsPerThread: 1
+numTreeThreads: 2
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,16384,64,1,2,4,true,false,true,true,0.050932,0.00747498
+0.00747498
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,16384,64,1,2,4,false,false,true,true,0.0731024,0.0267767
+0.0267767
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json	16384
+Best kernel execution time: 0.0046936
+Time taken for auto-tuning /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json 11 seconds of which 0.381781 is kernel execution
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: true
+	Representation: gpu_array
+year_prediction_msd 90 100 false
+16384 32 1 2 gpu_array
+gpu_array,16384,32,1,2,-1,true,false,false,false,0.0560858,0.0106146
+gpu_array,16384,32,1,2,2,true,false,true,false,0.0538879,0.00829468
+gpu_array,16384,32,1,2,4,true,false,true,false,0.0552094,0.00796814
+16384 32 1 2 gpu_sparse
+gpu_sparse,16384,32,1,2,-1,true,false,false,false,0.0566467,0.0106262
+gpu_sparse,16384,32,1,2,2,true,false,true,false,0.0523523,0.00639282
+gpu_sparse,16384,32,1,2,4,true,false,true,false,0.0542499,0.00700867
+16384 32 1 10 gpu_array
+gpu_array,16384,32,1,10,-1,true,false,false,false,0.0518475,0.00558289
+gpu_array,16384,32,1,10,2,true,false,true,false,0.0526544,0.00516907
+gpu_array,16384,32,1,10,4,true,false,true,false,0.0524347,0.00494934
+16384 32 1 10 gpu_sparse
+gpu_sparse,16384,32,1,10,-1,true,false,false,false,0.0530292,0.005849
+gpu_sparse,16384,32,1,10,2,true,false,true,false,0.053725,0.00556824
+gpu_sparse,16384,32,1,10,4,true,false,true,false,0.0531329,0.00509827
+16384 64 1 2 gpu_array
+gpu_array,16384,64,1,2,-1,true,false,false,false,0.05797,0.0114001
+gpu_array,16384,64,1,2,2,true,false,true,false,0.055827,0.00895203
+gpu_array,16384,64,1,2,4,true,false,true,false,0.0542633,0.00854797
+16384 64 1 2 gpu_sparse
+gpu_sparse,16384,64,1,2,-1,true,false,false,false,0.0574658,0.0115063
+gpu_sparse,16384,64,1,2,2,true,false,true,false,0.0530988,0.00689514
+gpu_sparse,16384,64,1,2,4,true,false,true,false,0.0553448,0.00761536
+16384 64 1 10 gpu_array
+gpu_array,16384,64,1,10,-1,true,false,false,false,0.0524713,0.00565735
+gpu_array,16384,64,1,10,2,true,false,true,false,0.051474,0.00527039
+gpu_array,16384,64,1,10,4,true,false,true,false,0.0528497,0.00499817
+16384 64 1 10 gpu_sparse
+gpu_sparse,16384,64,1,10,-1,true,false,false,false,0.0531256,0.0058844
+gpu_sparse,16384,64,1,10,2,true,false,true,false,0.0520746,0.00580994
+gpu_sparse,16384,64,1,10,4,true,false,true,false,0.0522211,0.00510193
+Checking shared reduce
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: false
+	Representation: gpu_array
+*************
+Trying shared reduce for config
+numRowsPerTB: 32
+numRowsPerThread: 1
+numTreeThreads: 10
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,16384,32,1,10,4,true,false,true,true,0.0518304,0.00465027
+0.00465027
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,16384,32,1,10,4,false,false,true,true,0.0522327,0.00712769
+0.00712769
+Trying shared reduce for config
+numRowsPerTB: 64
+numRowsPerThread: 1
+numTreeThreads: 10
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,16384,64,1,10,4,true,false,true,true,0.0482812,0.00482422
+0.00482422
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,16384,64,1,10,4,false,false,true,true,0.0542603,0.00732422
+0.00732422
+Trying shared reduce for config
+numRowsPerTB: 32
+numRowsPerThread: 1
+numTreeThreads: 2
+cacheRows: true
+cacheTrees: false
+unrollTreeWalks: true
+interleaveDepth: 4
+sharedMemoryReduce: false
+Rep: gpu_array
+*************
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,16384,32,1,2,4,true,false,true,true,0.0516364,0.00750793
+0.00750793
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json,gpu_array,16384,32,1,2,4,false,false,true,true,0.0740363,0.0269781
+0.0269781
+/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json	16384
+Best kernel execution time: 0.00465027
+Time taken for auto-tuning /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json 10 seconds of which 0.375478 is kernel execution
+Best schedule for /home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/xgb_models/year_prediction_msd_xgb_model_save.json is: 
+	numRowsPerTB: 32
+	numRowsPerThread: 1
+	numTreeThreads: 10
+	cacheRows: true
+	cacheTrees: false
+	unrollTreeWalks: true
+	interleaveDepth: 4
+	sharedMemoryReduce: true
+	Representation: gpu_array
