@@ -1,0 +1,29 @@
+\section{Motivation}
+
+Our main aim while designing \Treebeard{} was to unify the diverse set of implementation
+strategies that have been used in existing systems for decision tree inference. Some 
+differences in these systems are as follows:
+\begin{itemize}
+  \item Decision tree inference is run on several platforms including CPUs and GPUs. The 
+  implementations used on each of these platforms are different and the techniques used
+  to optimize them are also different.
+  \item A diverse set techniques have been proposed for optimization of decision tree 
+  inference on CPUs and GPUs \cite{VPred, Tahoe, Treelite, XGBoost, Hummingbird, QuickScorer, FIL}. 
+  No system exists that unifies the disparate optimizations implemented in these systems.
+  \item A very extensive design space of optimizations exists for decision tree inference
+  outside the few that have been proposed in the literature. However, currently no 
+  system exists that is capable of exploring this space and identifying the best set 
+  of parameters to use for a given model and platform.
+  \item Different systems use different in-memory representations for the model. For example,
+  XGBoost uses a sparse representation, RAPIDs FIL uses what is called the reorg representation 
+  and Tahoe uses a variation of the reorg representation. Currently, systems implement 
+  inference kernels that are tied to a single representation of the model. Again, this means
+  that no current system can explore different combinations of in-memory representations 
+  and optimizations.
+\end{itemize}
+At high-level, to make \Treebeard{} capable of unifying these differences, we design 1)  
+expressive intermediate representations that can represent and compose several proposed 
+optimizations 2) a scheduling language that specifies the structure of the
+generated code and 3) a plugin mechanism with which different in-memory representations
+can be composed with different optimizations. Finally, we develop a heuristic to
+explore the extensive optimization space that \Treebeard{}'s design enables.
