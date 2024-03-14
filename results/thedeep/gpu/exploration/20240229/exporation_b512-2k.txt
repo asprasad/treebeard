@@ -1,0 +1,28 @@
+model,representation,batch_size,rowsPerTB,rowsPerT,numTreeThreads,treeInterleaveDepth,cache_rows,cache_trees,unroll,sharedReduce,total,kernel
+************** Exploration Time Map Start **************
+abalone : 1235286
+airline : 603627
+airline-ohe : 2178098
+covtype : 1805874
+epsilon : 456276
+higgs : 611836
+year_prediction_msd : 881603
+************** Exploration Time Map End **************
+************** Exploration Time Map Start **************
+abalone : 904368
+airline : 513976
+airline-ohe : 1653161
+covtype : 1426523
+epsilon : 394123
+higgs : 519981
+year_prediction_msd : 807713
+************** Exploration Time Map End **************
+************** Exploration Time Map Start **************
+abalone : 954985
+airline : 529122
+airline-ohe : 1748934
+covtype : 1482130
+epsilon : 434261
+higgs : 536604
+year_prediction_msd : 833277
+************** Exploration Time Map End **************
