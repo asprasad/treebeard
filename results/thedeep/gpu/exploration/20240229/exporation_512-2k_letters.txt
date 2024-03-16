@@ -1,0 +1,10 @@
+model,representation,batch_size,rowsPerTB,rowsPerT,numTreeThreads,treeInterleaveDepth,cache_rows,cache_trees,unroll,sharedReduce,total,kernel
+************** Exploration Time Map Start **************
+letters : 15638457
+************** Exploration Time Map End **************
+************** Exploration Time Map Start **************
+letters : 13146840
+************** Exploration Time Map End **************
+************** Exploration Time Map Start **************
+letters : 14674840
+************** Exploration Time Map End **************
