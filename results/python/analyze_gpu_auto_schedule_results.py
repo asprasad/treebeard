@@ -41,7 +41,7 @@ def plot_normalized_time_histogram(df_sorted, df_best, col_name):
     plt.savefig(f'normalized_{col_name}_histogram.png')
 
     # plot a histogram of values with normalized times < 5
-    df_sorted[df_sorted['normalized_'+col_name] < 5].hist(column='normalized_'+col_name, bins=100)
+    df_sorted[df_sorted['normalized_'+col_name] < 5].hist(column='normalized_'+col_name, bins=500)
     plt.savefig(f'normalized_{col_name}_histogram_lt5.png')
 
 def write_best_config_maps_to_file(df_best_total_time, benchmark_names, batch_sizes, file_name):
@@ -82,11 +82,24 @@ def write_best_config_maps_to_file(df_best_total_time, benchmark_names, batch_si
 # results_file = "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/gpu_auto-schedule-results_thedeep_200reps_tree-pipelining_letters_plus1TreeThread.txt"
 # results_file = "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/gpu_auto-schedule-results_thedeep_600reps_tree-pipelining_smallBatch_plus1TreeThread.txt"
 
-result_files = ["/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/gpu_auto-schedule-results_thedeep_600reps_tree-pipelining_noletters_plus1TreeThread.txt",
-"/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/gpu_auto-schedule-results_thedeep_200reps_tree-pipelining_letters_plus1TreeThread.txt",
-"/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/gpu_auto-schedule-results_thedeep_600reps_tree-pipelining_smallBatch_plus1TreeThread.txt"]
+# result_files = ["/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/gpu_auto-schedule-results_thedeep_600reps_tree-pipelining_noletters_plus1TreeThread.txt",
+# "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/gpu_auto-schedule-results_thedeep_200reps_tree-pipelining_letters_plus1TreeThread.txt",
+# "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/gpu_auto-schedule-results_thedeep_600reps_tree-pipelining_smallBatch_plus1TreeThread.txt"]
 
-dataframes = [pd.read_csv(f) for f in result_files]
+result_files = [
+   "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/20240229/exploration_b4k-16k_stderr_filtered.txt",
+   "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/20240229/exploration_b4k-16k_stderr_letters_filtered.txt",
+   "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/20240229/exploration_b256_stderr_filtered.txt",
+   "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/20240229/exploration_b512-2k_stderr_filtered.txt",
+   "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/20240229/exploration_b512-2k_stderr_letters_filtered.txt"
+]
+
+col_names=["model", "representation", "batch_size", "rowsPerTB", 
+           "rowsPerT", "numTreeThreads", "treeInterleaveDepth", 
+           "cache_rows", "cache_trees", "unroll", "sharedReduce",
+           "total", "kernel"]
+
+dataframes = [pd.read_csv(f, names=col_names) for f in result_files]
 
 # results_file = "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/gpu_auto-sched_thedeep_600reps_tree-pipelining_transferOpt.txt"
 # results_file = "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/gpu_auto-schedule-results_thedeep_200reps_tree-pipelining_lettersOnly.txt"
@@ -94,7 +107,6 @@ dataframes = [pd.read_csv(f) for f in result_files]
 
 # results_file = "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/holmes/gpu/exploration/gpu_results_holmes.txt"
 # read results file into pandas dataframe
-col_names=["model", "representation", "batch_size", "rowsPerTB", "rowsPerT", "numTreeThreads", "treeInterleaveDepth", "cache_rows", "cache_trees", "unroll", "total", "kernel"]
 df = pd.concat(dataframes, ignore_index=True)
 # print(df)
 
@@ -166,5 +178,5 @@ for benchmark in benchmark_names:
         df_best_total_time.loc[(df_best_total_time['model'] == benchmark) & (df_best_total_time['batch_size'] == batch_size), 'twentyfive_diff_kernel'] = bencmark_batch_diffs.loc['twentyfive_diff']
 
 print(df_best_total_time)
-# plot_normalized_time_histogram(df_sorted_by_kernel_time, df_best_kernel_time, 'kernel')
+plot_normalized_time_histogram(df_sorted_by_kernel_time, df_best_kernel_time, 'kernel')
 # write_best_config_maps_to_file(df_best_total_time, benchmark_names, batch_sizes, "best_configs.txt")
