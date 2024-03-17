@@ -19,7 +19,7 @@
 namespace TreeBeard {
 namespace test {
 
-constexpr int32_t NUM_RUNS = 200;
+extern int32_t NUM_RUNS;
 constexpr bool VERIFY_RESULT = false;
 
 constexpr int32_t MIN_TB_SIZE = 32;
@@ -392,9 +392,9 @@ GPUTimes BenchmarkIfNoSharedMemOverflow(ForestCreator &forestCreator,
     std::cerr << representationName << "," << batchSize << "," << numRowsPerTB
               << "," << numRowsPerThread << "," << numTreeThreads << ","
               << treeInterleaveDepth << std::boolalpha << "," << cacheRows
-              << "," << cacheTrees << "," << unrollTreeWalk << "," << sharedMemoryReduce << ","
-              << times.totalTimePerSample << "," << times.kernelTimePerSample
-              << std::endl;
+              << "," << cacheTrees << "," << unrollTreeWalk << ","
+              << sharedMemoryReduce << "," << times.totalTimePerSample << ","
+              << times.kernelTimePerSample << std::endl;
     return times;
   }
   return GPUTimes{-1, -1};

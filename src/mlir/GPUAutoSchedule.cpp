@@ -970,6 +970,12 @@ public:
 
 namespace TreeBeard {
 
+namespace test {
+
+int32_t NUM_RUNS = 200;
+
+} // namespace test
+
 void DoGPUAutoSchedule(mlir::MLIRContext &context, mlir::ModuleOp module,
                        const TreeBeard::GPUAutoScheduleOptions &options) {
   mlir::PassManager pm(&context);
