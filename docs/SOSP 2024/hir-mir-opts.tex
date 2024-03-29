@@ -1,0 +1,10 @@
+\section{HIR and MIR Optimizations}
+
+\begin{itemize}
+  \item The compiler performs a number of optimizations on the HIR and MIR to improve the performance of the generated code.
+  \item Optimizations in HIR mainly transform the model itself. Tiling, tree reordering and padding are some of the 
+  optimizations that are performed on the HIR. \TODO{Should we use the MICRO paper overview for this part?}
+  \item Explain lowering to MIR using the schedule here.
+  \item Optimizations on the MIR include tree walk unrolling, tree walk interleaving, loop tiling, parallelization etc.
+\end{itemize}
+
