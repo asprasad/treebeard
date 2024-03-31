@@ -1,0 +1,18 @@
+\section{Introduction}
+\label{sec:intro}
+
+\subsection{Contributions}
+\begin{itemize}
+  \item We present the design for a multi-target decision tree compiler infrastructure and implement several optimizations within this framework.
+   We are also the first to implement an optimizing compiler for decision tree inference on GPUs.
+  \item We identify that an extensive optimization space exists for the problem of decision tree inference. We design a scheduling language that 
+  allows us to effectively represent this solution space abstractly. This scheduling language is expressive enough to represent a wide range of  
+  implementation strategies proposed by prior work.
+  \item To the best of our knowledge, we perform the first extensive characterization of the optimization space for decision tree inference 
+  on GPUs. Using some of the characteristics we identify, we design and implement a heuristic that is able to quickly find high-performance 
+  schedules for the model being compiled. 
+  \item We design and implement a general framework for expressing and optimizing reductions within MLIR. To the best of our knowledge, this is the first
+  such framework.
+  \item We evaluate our implementation by comparing it against RAPIDs and Tahoe, the state-of-the-art decision tree inference frameworks for GPU and 
+  report significant speedups. We also show that our compiler can effectively target different GPUs, including both NVIDIA and AMD GPUs.
+\end{itemize}
