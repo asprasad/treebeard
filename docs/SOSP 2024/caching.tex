@@ -1,0 +1,113 @@
+\section{Representations}
+\TODO{Talk about array, sparse and reorg representations here.}
+
+
+\section{Caching Implementation}
+\label{sec:caching}
+
+% \begin{itemize}
+%   \item The compiler exposes caching of both trees and input rows in a unified manner.
+%   \item This is independent of the final target on which the inference is to be run.
+%   \item The caching is done at the granularity of a tree or a row.
+%   \item Caching is encoded in the mid-level IR using the \op{cacheTrees} and \op{cacheRows} operations. 
+%   These operations are generated when the HIR lowered to MIR and \op{Cache()} is specified on an 
+%   index variable in the schedule. While the HIR is being lowered and a cached index variable is 
+%   encountered, the compiler generates a \op{cacheTrees} or \op{cacheRows} operation depending on 
+%   whether the index variable is a tree or a batch index variable.
+%   \TODO{Should we talk about how the lowering from HIR to MIR is actually implemented as a tree walk?}
+%   \item The lowering of these ops is done by the target-specific code generator.
+%   \item For the \op{cacheRows} operation, \Treebeard{} uses pre-implemented lowerings for both
+%   CPU and GPU. This is possible because the input is currently assumed to be a dense 
+%   array format. 
+%   \item For the \op{cacheTrees} operation, the lowering is representation-specific.
+%   Each representation provides a lowering to the target-specific code generator
+%   to lower the \op{cacheTrees} op when that representation is used.
+%   \item The cache operations are lowered to reads into shared memory while compiling to GPU 
+%   and to prefetches while compiling to CPU.
+% \end{itemize}
+
+\Treebeard{} provides mechanisms to cache both trees and input rows 
+on both the CPU and GPU. As described in Section \ref{sec:schedule}, 
+the user can specify that the working set of an iteration of an index
+variable needs to be cached using the \op{Cache()} directive. This 
+provides a unified way to specify caching of both trees and input rows.
+
+\Treebeard{} implements caching at the granularity of a tree or a row.
+Also, the semantics of caching depends on the target processor. For the CPU,
+caching is implemented as prefetching, while for the GPU, caching is implemented
+using shared memory.
+
+\subsection{IR Representation of Caching}
+Caching is encoded in the mid-level IR using the \op{cacheTrees} and \op{cacheRows} operations. 
+These operations are generated when the HIR lowered to MIR and \op{Cache()} is specified on an 
+index variable in the schedule. While the HIR is being lowered and a cached index variable is 
+encountered, the compiler generates a \op{cacheTrees} or \op{cacheRows} operation depending on 
+whether the index variable is a tree or a batch index variable. Additionally, as a part of the 
+lowering process, \Treebeard{} determines the working set of the loop with caching enabled 
+and generates a caching operation with the appropriate limits.
+
+Each of the caching operations take parameters that specify the set of trees or rows that need 
+to be cached. The caching operations are defined as follows. 
+\begin{itemize}
+  \item \textbf{\op{cacheTrees(forest, start, end)}:} This operation caches the trees in ensemble
+  \op{forest} from \op{start} to \op{end}. The trees are cached in the order in which they are
+  specified in the ensemble. 
+  \item \textbf{\op{cacheRows(data, start, end)}:} This operation caches the rows in the input 
+  array \op{data} from \op{start} to \op{end}. The rows are cached in the same order as in the
+  input array.
+\end{itemize} 
+
+\subsection{Lowering of Caching Operations}
+When the MIR is lowered to LIR, the cache ops are lowered to target-specific code. Each of 
+the two caching operations is lowered differently for the CPU and the GPU.
+
+For the \op{cacheRows} operation, \Treebeard{} uses pre-implemented lowerings for both
+CPU and GPU. This is possible because the input is currently assumed to be a dense
+array format. Therefore, regardless of any other configuration choices (like what representation 
+is used for the model itself), the lowering of the \op{cacheRows} operation is the same. 
+For the CPU, the \op{cacheRows} operation is lowered to prefetches. For the GPU, a 
+series of coalesced loads read the rows into shared memory.
+
+For the \op{cacheTrees} operation, the lowering is representation-specific. Each representation
+provides a lowering to the target-specific code generator to lower the \op{cacheTrees} op when
+that representation is used. However, the \Treebeard{} infrastructure does provide helpers 
+to generate caching code to cache contiguous regions of memory. These helpers are reused 
+as required across different representations. 
+
+\section{Exploring the Schedule Space}
+\label{sec:exploring}
+
+\begin{itemize}
+  \item The scheduling language described in Section \ref{sec:schedule} allows for numerous possible schedules for a given model. 
+  Finding a schedule with good performance is a non-trivial task.
+  \item We identify a reasonable template schedule for GPUs which encompasses all strategies published in prior work.
+  \item Describe the template schedule.
+  \item Even within the variants of this template schedule, there is a significant amount of variation in performance. Show the histogram. 
+  \item Extensively exploring all possible parameter values for the template schedule is infeasible due to the large number of parameters.
+  Cite some numbers on how long it takes to explore the schedule space.
+  \item List the observations we make and the heuristic we design based on these.
+\end{itemize}
+
+The set of schedules that can be constructed using the scheduling language described in 
+Section \ref{sec:schedule} is vast. Searching this schedule space to find a schedule that
+provides good performance is a non-trivial task. To simplify this process, we identify a
+reasonable template schedule for GPUs that encompasses all strategies published in prior work.
+The template schedule exposes many parameters that can be tuned to find a 
+high-performance schedule.
+\begin{itemize}
+  \item \textbf{Number of rows per thread block (Integer):} The number of rows that are processed by each thread block.
+  \item \textbf{Number of rows per thread (Integer):} The number of rows processed by each thread.
+  \item \textbf{Number of tree threads (Integer):} The number of threads across which the trees are distributed.
+  \item \textbf{Cache rows (Boolean):} Whether the input rows are cached in shared memory.
+  \item \textbf{Cache trees (Boolean):} Whether the trees are cached in shared memory.
+  \item \textbf{Unroll walks (Boolean):} Whether the tree walks are unrolled.
+  \item \textbf{Tree walk interleave factor:} The number of tree walks that are interleaved.
+  \item \textbf{Shared memory reduction:} Whether the reduction across tree threads is done in shared memory.
+\end{itemize}
+
+While the template schedule simplifies optimization of generated inference code, it is 
+important to note that the \Treebeard{} compiler itself does not place any 
+restrictions on the schedule. The user is free to specify any schedule they wish.
+The auto-scheduler that implements the template schedule is implemented as a 
+module outside the core \Treebeard{} compiler. Users are also free to implement 
+other auto-schedulers that generate schedules different from the template schedule.

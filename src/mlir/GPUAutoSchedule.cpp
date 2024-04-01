@@ -641,15 +641,20 @@ class GPUAutoTuner {
                            [&](const std::string &arg) {
                              return modelName.find(arg) != std::string::npos;
                            });
-    assert(it != benchmarks.end());
-    auto index = std::distance(benchmarks.begin(), it);
 
-    m_numFeatures = numFeatures[index];
-    m_numTrees = numTrees[index];
-    m_multiClass = isMultiClass[index];
+    m_numFeatures = m_xgBoostParser->GetForest()->GetFeatures().size();
+    m_numTrees = m_xgBoostParser->GetForest()->NumTrees();
+    m_multiClass = m_xgBoostParser->GetForest()->GetNumClasses() > 1;
 
-    std::cerr << *it << " " << m_numFeatures << " " << m_numTrees << " "
-              << m_multiClass << std::endl;
+    if (it != benchmarks.end()) {
+      auto index = std::distance(benchmarks.begin(), it);
+
+      std::cerr << *it << " " << m_numFeatures << " " << m_numTrees << " "
+                << m_multiClass << std::endl;
+      assert(m_numFeatures == numFeatures[index]);
+      assert(m_numTrees == numTrees[index]);
+      assert(m_multiClass == isMultiClass[index]);
+    }
 
     computeScheduleSubset();
 
@@ -869,8 +874,8 @@ class GPUAutoTuner {
 public:
   GPUAutoTuner(const std::string &modelName, int32_t batchSize)
       : m_batchSize(batchSize), m_model(modelName) {
-    initParameters(modelName, batchSize);
     initXGBoostParser();
+    initParameters(modelName, batchSize);
   }
 
   void exploreSchedules() {
@@ -969,6 +974,12 @@ public:
 } // anonymous namespace
 
 namespace TreeBeard {
+
+namespace test {
+
+int32_t NUM_RUNS = 200;
+
+} // namespace test
 
 void DoGPUAutoSchedule(mlir::MLIRContext &context, mlir::ModuleOp module,
                        const TreeBeard::GPUAutoScheduleOptions &options) {
