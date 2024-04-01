@@ -1,0 +1,14 @@
+Change to number of repeats:
+def get_num_repeats(model_name : str):
+  if model_name == "letters":
+    return 200
+  else:
+    return 800
+
+Change to numRepeats in auto-tuner
+m_numRepeats = isLetters ? 50 : 600; (small batch)
+m_numRepeats = isLetters ? 50 : 600; (large batch)
+
+Kernel call optimization
+
+Warm-up run in GPUBenchmarkUtil.h (repeat the inference run and pick second time)
