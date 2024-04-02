@@ -196,8 +196,8 @@ def RunSingleTest_RAPIDs_KernelTime(modelJSONPath, csvPath, output_class, num_re
   gpu_array = cp.array(inputs, dtype=numpy.float32)
 
   start = time.time()
-  for i in range(num_repeats):
-    for j in range(0, num_batches):
+  for j in range(0, num_batches):
+    for i in range(num_repeats):
       start_index = j*batchSize
       stop_index = start_index + batchSize
       batch = gpu_array[start_index:stop_index, :]
@@ -465,3 +465,4 @@ if __name__ == "__main__":
     print("Geomean speedup (Total):", batchSize, numpy.prod(total_time_speedups)**(1/len(total_time_speedups)))
     print("Geomean speedup (Kernel):", batchSize, numpy.prod(kernel_time_speedups)**(1/len(kernel_time_speedups)))
     print("Geomean speedup (AutoTune Total):", batchSize, numpy.prod(autotune_total_time_speedups)**(1/len(autotune_total_time_speedups)))
+    print("Geomean speedup (AutoTune Kernel):", batchSize, numpy.prod(autotune_kernel_time_speedups)**(1/len(autotune_kernel_time_speedups)))

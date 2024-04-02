@@ -12,7 +12,8 @@
 namespace TreeBeard {
 namespace test {
 
-std::vector<double> getNextLineAndSplitIntoTokens(std::istream &str) {
+std::vector<double> getNextLineAndSplitIntoTokens(std::istream &str,
+                                                  char delimiter) {
   std::vector<double> result;
   std::string line;
   std::getline(str, line);
@@ -20,7 +21,7 @@ std::vector<double> getNextLineAndSplitIntoTokens(std::istream &str) {
   std::stringstream lineStream(line);
   std::string cell;
 
-  while (std::getline(lineStream, cell, ',')) {
+  while (std::getline(lineStream, cell, delimiter)) {
     result.push_back(std::stof(cell));
   }
   // This checks for a trailing comma with no data after it.
@@ -31,12 +32,16 @@ std::vector<double> getNextLineAndSplitIntoTokens(std::istream &str) {
   return result;
 }
 
-TestCSVReader::TestCSVReader(const std::string &filename, int32_t numRows) {
+TestCSVReader::TestCSVReader(const std::string &filename, int32_t numRows,
+                             bool hasNumRows, char delimiter) {
   std::ifstream fin(filename);
   assert(fin);
+  if (hasNumRows) {
+    fin >> numRows;
+  }
   int numRowsRead = 0;
   while (!fin.eof() && (numRows == -1 || numRowsRead < numRows)) {
-    auto row = getNextLineAndSplitIntoTokens(fin);
+    auto row = getNextLineAndSplitIntoTokens(fin, delimiter);
     m_data.push_back(row);
     ++numRowsRead;
   }

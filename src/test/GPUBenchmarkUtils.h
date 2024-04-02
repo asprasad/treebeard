@@ -44,7 +44,13 @@ struct GPUTimes {
 
 class TestDataReader {
   const bool useSameRowForAllInputs = false;
+  struct InputData {
+    std::vector<double> data;
+    int32_t rowSize;
+    int32_t numRows;
+  };
   std::map<std::string, std::vector<double>> m_benchmarkToDataMap;
+  std::map<std::string, InputData> m_modelPathToDataMap;
 
   std::vector<double> readDataForBenchmark(const std::string &benchmarkName) {
 
@@ -58,15 +64,44 @@ class TestDataReader {
     for (size_t i = 0; i < csvReader.NumberOfRows(); ++i) {
       if (useSameRowForAllInputs) {
         auto row = csvReader.GetRowOfType<double>(0);
+        row.pop_back();
         data.insert(data.end(), row.begin(), row.end());
       } else {
         auto row = csvReader.GetRowOfType<double>(i);
+        row.pop_back();
         data.insert(data.end(), row.begin(), row.end());
       }
     }
 
     m_benchmarkToDataMap[benchmarkName] = data;
     m_benchmarkToDataMap[csvFilename] = data;
+
+    return data;
+  }
+
+  std::vector<double>
+  readDataForNonBenchmarkModel(const std::string &csvFilename) {
+    TestCSVReader csvReader(csvFilename, -1 /*num lines*/, true /*hasNumRows*/,
+                            ' ');
+
+    std::vector<double> data;
+    int32_t rowSize = -1;
+    for (size_t i = 0; i < csvReader.NumberOfRows(); ++i) {
+      if (useSameRowForAllInputs) {
+        auto row = csvReader.GetRowOfType<double>(0);
+        row.pop_back();
+        data.insert(data.end(), row.begin(), row.end());
+        rowSize = row.size();
+      } else {
+        auto row = csvReader.GetRowOfType<double>(i);
+        row.pop_back();
+        data.insert(data.end(), row.begin(), row.end());
+        rowSize = row.size();
+      }
+    }
+
+    m_modelPathToDataMap[csvFilename] = InputData{
+        data, rowSize, static_cast<int32_t>(csvReader.NumberOfRows())};
 
     return data;
   }
@@ -90,19 +125,45 @@ public:
 
   int32_t getRowSize(const std::string &benchmarkName) {
     auto iter = m_benchmarkToDataMap.find(benchmarkName);
-    assert(iter != m_benchmarkToDataMap.end());
-    return iter->second.size() / 2000;
+    if (iter != m_benchmarkToDataMap.end())
+      return iter->second.size() / 2000;
+    else {
+      auto iter = m_modelPathToDataMap.find(benchmarkName);
+      assert(iter != m_modelPathToDataMap.end());
+      return iter->second.rowSize;
+    }
+  }
+
+  int32_t getNumRows(const std::string &benchmarkName) {
+    auto iter = m_modelPathToDataMap.find(benchmarkName);
+    if (iter != m_modelPathToDataMap.end()) {
+      return iter->second.numRows;
+    } else {
+      return 2000;
+    }
   }
 
   template <typename T>
   std::vector<T> getData(const std::string &benchmarkName, int32_t batchNum,
                          int32_t batchSize) {
     auto iter = m_benchmarkToDataMap.find(benchmarkName);
-    assert(iter != m_benchmarkToDataMap.end());
-    auto rowSize = iter->second.size() / 2000;
-    auto start = iter->second.begin() + (batchNum * batchSize * rowSize);
-    std::vector<T> batch(start, start + batchSize * rowSize);
-    return batch;
+    if (iter != m_benchmarkToDataMap.end()) {
+      auto rowSize = iter->second.size() / 2000;
+      auto start = iter->second.begin() + (batchNum * batchSize * rowSize);
+      std::vector<T> batch(start, start + batchSize * rowSize);
+      return batch;
+    } else {
+      auto iter = m_modelPathToDataMap.find(benchmarkName);
+      if (iter == m_modelPathToDataMap.end()) {
+        readDataForNonBenchmarkModel(benchmarkName);
+        iter = m_modelPathToDataMap.find(benchmarkName);
+        assert(iter != m_modelPathToDataMap.end());
+      }
+      auto start = iter->second.data.begin() +
+                   (batchNum * batchSize * iter->second.rowSize);
+      std::vector<T> batch(start, start + batchSize * iter->second.rowSize);
+      return batch;
+    }
   }
 };
 
@@ -111,10 +172,10 @@ void populateInputdata(int32_t batchSize,
                        std::vector<std::vector<T>> &inputData,
                        const std::string &csvFileName) {
   static TestDataReader dataReader;
-  const int32_t numRows = 2000;
+  const auto numRows = dataReader.getNumRows(csvFileName);
 
   if (batchSize < numRows) {
-    for (size_t i = batchSize; i <= numRows; i += batchSize) {
+    for (auto i = batchSize; i <= numRows; i += batchSize) {
       auto batchNum = (i / batchSize) - 1;
       std::vector<T> batch =
           dataReader.getData<T>(csvFileName, batchNum, batchSize);
@@ -161,6 +222,11 @@ GPUTimes BenchmarkGPUCodeGeneration(mlir::ModuleOp module,
   }
 
   auto csvFilename = tbContext.modelPath + ".test.sampled.csv";
+  {
+    std::ifstream fin(csvFilename);
+    if (!fin)
+      csvFilename = tbContext.modelPath + ".csv";
+  }
 
   std::vector<std::vector<ThresholdType>> inputData;
   populateInputdata<ThresholdType>(batchSize, inputData, csvFilename);

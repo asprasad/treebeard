@@ -116,7 +116,8 @@ class TestCSVReader {
   std::string m_filename;
 
 public:
-  TestCSVReader(const std::string &filename, int32_t numLines = -1);
+  TestCSVReader(const std::string &filename, int32_t numLines = -1,
+                bool hasNumLines = false, char delimiter = ',');
   std::vector<double> &GetRow(size_t index) { return m_data[index]; }
 
   template <typename T> std::vector<T> GetRowOfType(size_t index) {
