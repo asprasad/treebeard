@@ -167,26 +167,56 @@ observations on high-performance schedules.
 \end{itemize}
 
 \Treebeard{} uses these observations to narrow down the set of schedules to explore. 
-The pseudo-code for the current heurisitic is shown in Algorithm \ref{alg:heuristic}.
+The pseudo-code for the current heuristic is shown in Algorithm \ref{alg:heuristic}.
+The algorithm first computes a subset of thread block configurations in the function 
+\op{TBConfigs}. A set of schedules based on these thread block configurations 
+is then computed (\op{schedules}). The model is compiled with each of these schedules 
+and then the resulting inference code is profiled. The three best performing schedules 
+are collected and shared reduction is enabled on them and the resulting schedules evaluated.
+The best schedule among all the evaluated schedules is selected as the schedule to use.
 We find that this heuristic is able to find schedules that are close to the best schedules
 but improves the search time by two orders of magnitude as we show in Section \ref{sec:HeuristicResults}.
 
-% \begin{algorithm}
-%   \caption{Heuristic to guide the search for a good schedule}
-%   \label{alg:heuristic}
-%   \begin{algorithmic}
-%     \State $bestSchedules \gets \emptyset$
-%     \For{$rowsPerBlock \in \{32, 64, 128\}$}
-%       \For{$rowsPerThread \in \{1, 2, 4\}$}
-%         \For{$treeThreads \in \{32, 64, 128\}$}
-%           \If{$rowsPerBlock \times rowsPerThread \times treeThreads \leq 1024$}
-%             \State $schedule \gets \{rowsPerBlock, rowsPerThread, treeThreads, \text{True}, \text{False}, \text{False}, 1, \text{False}\}$
-%             \State $bestSchedules \gets bestSchedules \cup \{schedule\}$
-%           \EndIf
-%         \EndFor
-%       \EndFor
-%     \EndFor
-%     \State $bestSchedules \gets \text{SortByPerformance}(bestSchedules)$
-%     \State $bestSchedules \gets \text{EvaluateSharedReduction}(bestSchedules)$
-%     \State \Return $bestSchedules$
-%   \end{algorithmic} 
+\begin{algorithm}
+  \caption{Heuristic to guide the search for a good schedule}
+  \label{alg:heuristic}
+  \begin{algorithmic}[1]
+  \Procedure{TBConfigs}{$N_{batch}$, $N_f$}
+    \State $T_{batch} \gets 2048, T_f \gets 128$
+    \If {$N_{batch} \leq T_{batch}$}
+      \State $rowsPerBlock \gets \{8, 32\}$
+      \State $treeThreads \gets \{20, 50\}$
+    \Else
+      \If {$N_{f} \leq T_{f}$}
+        \State $rowsPerBlock \gets \{32, 64\}$
+        \State $treeThreads \gets \{2, 10\}$
+      \Else
+        \State $rowsPerBlock \gets \{8, 32\}$
+        \State $treeThreads \gets \{20, 50\}$
+      \EndIf
+    \EndIf
+    \State \Return $rowsPerBlock, treeThreads$
+  \EndProcedure
+  \\
+  \State $bestSchedules \gets PriorityQueue(3)$
+  \State $rowsPerTB, treeThreads \gets TBConfigs(N_{batch}, N_f)$
+  \State $cacheRows \gets \text{True}$
+  \State $cacheTrees \gets \text{False}$
+  \State $interleaveFactors \gets \{1, 2, 4\}$
+  \State $reps \gets \{array, sparse, reorg\}$
+  \State $schedules \gets (rowsPerTB, treeThreads,$ \\
+                          \hspace{1.5cm}$cacheRows, cacheTrees,$\\ 
+                          \hspace{1.5cm}$interleaveFactors)$
+  \For{$(sched, rep) \in schedules \times reps$}
+    \State $time \gets EvaluateSchedule(sched, rep)$
+    \State $bestSchedules.insert(time, sched, rep)$
+  \EndFor
+  \State $shMemSchedules \gets \emptyset$
+  \For{$sched, rep \in bestSchedules$}
+    \State $EnableSharedReduction(sched)$
+    \State $time \gets EvaluateSchedule(sched, rep)$
+    \State $shMemSchedules.insert(time, sched, rep)$
+  \EndFor
+  \State \Return $min(shMemSchedules \cup bestSchedules)$
+  \end{algorithmic} 
+\end{algorithm}
