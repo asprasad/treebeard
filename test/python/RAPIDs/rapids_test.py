@@ -7,6 +7,7 @@ import pandas
 import xgboost as xgb
 import treebeard
 import matplotlib.pyplot as plt
+import warnings
 from cuml import ForestInference
 from functools import partial
 
@@ -150,6 +151,36 @@ def get_num_repeats(model_name : str):
     return 200
   else:
     return 600
+
+#############################################################
+### XGBoost Total Time Benchmarking Utils
+#############################################################
+
+def RunSingleTest_XGB(modelJSONPath, csvPath, num_repeats) -> float:
+  params = {"predictor": "gpu_predictor"}
+  booster = xgb.Booster(model_file=modelJSONPath, params=params)
+  # booster.set_param({"predictor": "gpu_predictor", "device":"cuda:0"})
+
+  num_batches, inputs = construct_inputs(csvPath, batchSize)
+
+  start = time.time()
+  for i in range(num_repeats):
+    for j in range(0, num_batches):
+      start_index = j*batchSize
+      stop_index = start_index + batchSize
+      batch = inputs[start_index:stop_index, :]
+      batchDMatrix = xgb.DMatrix(batch)
+      pred = booster.predict(batchDMatrix, validate_features=False)
+
+  end = time.time()
+  return (end-start)/(batchSize * num_batches * num_repeats)
+
+
+def RunTestOnSingleModelTestInputs_XGB(modelName : str) -> None:
+  modelJSON = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), modelName + "_xgb_model_save.json")
+  csvPath = os.path.join(os.path.join(treebeard_repo_dir, "xgb_models"), modelName + "_xgb_model_save.json.test.sampled.csv")
+  num_repeats = get_num_repeats(modelName)
+  return RunSingleTest_XGB(modelJSON, csvPath, num_repeats)
 
 #############################################################
 ### RAPIDs Total Time Benchmarking Utils
@@ -398,7 +429,7 @@ if __name__ == "__main__":
   # batch_sizes = [4096, 8192] #, 16384]
   # batch_sizes = [256, 512, 1024, 2048]
   # batch_sizes = [256, 512, 1024, 2048, 4096, 8192] #, 16384]
-  
+  xgb_total_times = []
   rapids_total_times = []
   rapids_kernel_times = []
   treebeard_total_times = []
@@ -406,6 +437,8 @@ if __name__ == "__main__":
   treebeard_auto_tune_heuristic_total_times = []
   treebeard_auto_tune_heuristic_kernel_times = []
   
+  xgb_total_time_speedups = []
+  xgb_autotune_total_time_speedups = []
   total_time_speedups = []
   kernel_time_speedups = []
 
@@ -414,6 +447,10 @@ if __name__ == "__main__":
 
   for batchSize in batch_sizes:
     for benchmark in benchmarks:
+      xgb_total_func = partial(RunTestOnSingleModelTestInputs_XGB, modelName=benchmark)
+      xgb_total_time = run_benchmark_function_and_return_median_time(xgb_total_func, num_trials)
+      xgb_total_times.append(xgb_total_time)
+
       rapids_total_func = partial(RunTestOnSingleModelTestInputs_RAPIDs, modelName=benchmark)
       rapids_total_time = run_benchmark_function_and_return_median_time(rapids_total_func, num_trials)
       rapids_total_times.append(rapids_total_time)
@@ -446,6 +483,8 @@ if __name__ == "__main__":
       treebeard_auto_tune_heuristic_kernel_time = run_benchmark_function_and_return_median_time(treebeard_auto_tune_heuristic_kernel_func, 1)
       treebeard_auto_tune_heuristic_kernel_times.append(treebeard_auto_tune_heuristic_kernel_time)
 
+      xgb_total_time_speedups.append(xgb_total_time/treebeard_total_time)
+      xgb_autotune_total_time_speedups.append(xgb_total_time/treebeard_auto_tune_heuristic_total_time)
       total_time_speedups.append(rapids_total_time/treebeard_total_time)
       kernel_time_speedups.append(rapids_kernel_time/treebeard_kernel_time)
 
@@ -453,8 +492,10 @@ if __name__ == "__main__":
       autotune_kernel_time_speedups.append(rapids_kernel_time/treebeard_auto_tune_heuristic_kernel_time)
       
       print(benchmark, batchSize, 
-            rapids_total_time, treebeard_total_time, 
-            treebeard_auto_tune_heuristic_total_time, 
+            xgb_total_time, rapids_total_time, treebeard_total_time, 
+            treebeard_auto_tune_heuristic_total_time,
+            xgb_total_time/treebeard_total_time,
+            xgb_total_time/treebeard_auto_tune_heuristic_total_time, 
             rapids_total_time/treebeard_total_time, 
             rapids_total_time/treebeard_auto_tune_heuristic_total_time, 
             rapids_kernel_time, treebeard_kernel_time, treebeard_auto_tune_heuristic_kernel_time,
@@ -466,3 +507,5 @@ if __name__ == "__main__":
     print("Geomean speedup (Kernel):", batchSize, numpy.prod(kernel_time_speedups)**(1/len(kernel_time_speedups)))
     print("Geomean speedup (AutoTune Total):", batchSize, numpy.prod(autotune_total_time_speedups)**(1/len(autotune_total_time_speedups)))
     print("Geomean speedup (AutoTune Kernel):", batchSize, numpy.prod(autotune_kernel_time_speedups)**(1/len(autotune_kernel_time_speedups)))
+    print("Geomean speedup (XGB Total):", batchSize, numpy.prod(xgb_total_time_speedups)**(1/len(xgb_total_time_speedups)))
+    print("Geomean speedup (XGB AutoTune Total):", batchSize, numpy.prod(xgb_autotune_total_time_speedups)**(1/len(xgb_autotune_total_time_speedups)))
