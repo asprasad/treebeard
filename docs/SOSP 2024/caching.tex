@@ -1,6 +1,52 @@
 \section{Representations}
-\TODO{Talk about array, sparse and reorg representations here.}
+\label{sec:representations}
 
+The design of the \Treebeard{} compiler allows the implementation of different strategies for 
+the in-memory representation of the model. The compiler currently has implementations for 
+the three representations shown in Figure \ref{Fig:Representations}. The array and sparse 
+representations are the ones described in the \Treebeard{} paper\cite{Treebeard}. The reorg 
+representation is the representation used by the RAPIDs library\cite{RAPIDs}. 
+The \textbf{array representation} is the simplest representation where the trees are stored in an array
+in level order. The \textbf{sparse representation} stores the trees in a sparse format where only the
+non-zero nodes are stored and nodes contain pointers to their children. The \textbf{reorg representation}
+interleaves the array representation of each tree in the model: all root nodes are stored first, then 
+the left children of all the roots and so on.
+\begin{figure}[htb]
+  \centering
+  \includegraphics[width=\linewidth]{figures/representations.png}
+  \caption{The three representations supported by \Treebeard{}.}
+  \label{Fig:Representations}
+\end{figure}
+
+One of the major changes we make to the original design of \Treebeard{} \cite{Treebeard} is to
+separate the implementation of representations from the rest of the compiler. This allows
+us to implement representations as plugins to the compiler. We do this by defining an interface 
+that each representation needs to implement. The code generator is implemented using methods 
+on the representation interface thus hiding details of the actual representation from the core 
+compiler. The interface abstracts the following details. 
+\begin{itemize}
+  \item \textbf{Buffer allocation:} The representation object exposes methods that generate 
+  buffer allocations in the IR. 
+  \item \textbf{Moving to child nodes:} Given the value of the predicate at a node (or tile),
+  generate code to move to the appropriate child node of the current node.
+  \item \textbf{Details of leaves:} The interface abstracts determining whether the current
+  node is a leaf (which is needed to terminate walks) and how to get the value of the leaf
+  (which is needed to get a tree's prediction).
+  \item \textbf{Caching trees:} Since reading the trees into shared memory on GPU (or prefetching)
+  them on CPU require knowledge of the buffer layout, the task of generating caching code for trees
+  is delegated to the representation object. 
+  \item \textbf{Loading thresholds and feature indices:} The representation object provides MLIR 
+  rewrite patterns to lower operations that load thresholds and feature indices to LLVM IR. This
+  is necessary because the details of how to load the thresholds and feature indices from the model 
+  buffers is representation-specific.
+\end{itemize}
+
+In summary, the representation interface abstracts the details of how the model is stored in memory
+and allows the compiler to generate code without having to explicitly know the details of the
+representation. This design allows us to implement new representations without changing the core
+compiler infrastructure. Implementing the representations as plugins also allows us to reuse
+the implementations across different lowering pipelines. For example, the code for the array 
+and sparse representations is almost fully shared between the CPU and GPU lowering pipelines.   
 
 \section{Caching Implementation}
 \label{sec:caching}
@@ -77,20 +123,20 @@ as required across different representations.
 \section{Exploring the Schedule Space}
 \label{sec:exploring}
 
-\begin{itemize}
-  \item The scheduling language described in Section \ref{sec:schedule} allows
-  for numerous possible schedules for a given model. 
-  Finding a schedule with good performance is a non-trivial task.
-  \item We identify a reasonable template schedule for GPUs which encompasses
-  all strategies published in prior work.
-  \item Describe the template schedule.
-  \item Even within the variants of this template schedule, there is a significant 
-  amount of variation in performance. Show the histogram. 
-  \item Extensively exploring all possible parameter values for the template schedule 
-  is infeasible due to the large number of parameters.
-  Cite some numbers on how long it takes to explore the schedule space.
-  \item List the observations we make and the heuristic we design based on these.
-\end{itemize}
+% \begin{itemize}
+%   \item The scheduling language described in Section \ref{sec:schedule} allows
+%   for numerous possible schedules for a given model. 
+%   Finding a schedule with good performance is a non-trivial task.
+%   \item We identify a reasonable template schedule for GPUs which encompasses
+%   all strategies published in prior work.
+%   \item Describe the template schedule.
+%   \item Even within the variants of this template schedule, there is a significant 
+%   amount of variation in performance. Show the histogram. 
+%   \item Extensively exploring all possible parameter values for the template schedule 
+%   is infeasible due to the large number of parameters.
+%   Cite some numbers on how long it takes to explore the schedule space.
+%   \item List the observations we make and the heuristic we design based on these.
+% \end{itemize}
 
 The set of schedules that can be constructed using the scheduling language described in 
 Section \ref{sec:schedule} is vast. Searching this schedule space to find a schedule that
