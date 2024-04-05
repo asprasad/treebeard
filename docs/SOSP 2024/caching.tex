@@ -29,7 +29,7 @@ compiler. The interface abstracts the following details.
   buffer allocations in the IR. 
   \item \textbf{Moving to child nodes:} Given the value of the predicate at a node (or tile),
   generate code to move to the appropriate child node of the current node.
-  \item \textbf{Details of leaves:} The interface abstracts determining whether the current
+  \item \textbf{Leaf representation:} The interface abstracts determining whether the current
   node is a leaf (which is needed to terminate walks) and how to get the value of the leaf
   (which is needed to get a tree's prediction).
   \item \textbf{Caching trees:} Since reading the trees into shared memory on GPU (or prefetching)
