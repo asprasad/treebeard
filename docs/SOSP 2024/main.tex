@@ -74,8 +74,9 @@
 
 \lstdefinestyle{c++}{language=C++,
     morekeywords={ensemble, getTree, getRoot, isLeaf, isLeafTile, traverseTreeTile, getLeafValue, loadThresholds,
-                  loadFeatureIndices, loadTileShape, getChildTile, parallel, InterleavedWalk, evaluateTilePredicates,
-                  getChildTile, WalkDecisionTree, moveToChildTile, to, step, tile, split, unroll, reorder, specialize},
+                  loadFeatureIndices, loadTileShape, getChildTile, parallel, par, InterleavedWalk, evaluateTilePredicates,
+                  getChildTile, WalkDecisionTree, walkDecisionTree, moveToChildTile, to, step, tile, split, unroll,
+                  reorder, specialize, unrollDepth, unrollWalk, reduce, gpuDimension},
     backgroundcolor=\color{backcolour},
     commentstyle=\color{codegreen},
     keywordstyle=\color{blue},
