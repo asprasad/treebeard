@@ -1,5 +1,13 @@
 \section{Experimental Evaluation}
 
+\TODO{
+  \begin{itemize}
+    \item CPU numbers for tree parallelization 
+    \item Tahoe on T400
+    \item Sensitivity analysis for schedules. But for what specifically? Models, batch sizes?
+  \end{itemize}
+}
+
 \begin{figure}[htb]
   \centering
   \includegraphics[width=\linewidth]{figures/TBvsRAPIDs_4060_Speedup.png}
@@ -33,6 +41,13 @@
   \includegraphics[width=\linewidth]{figures/HeuristicVsFullExplore_Speedup.png}
   \caption{Autotuning heuristic compile time speedup vs full schedule exploration.}
   \label{Fig:HeuristicVsFullExplore_Speedup}
+\end{figure}
+
+\begin{figure}[htb]
+  \centering
+  \includegraphics[width=\linewidth]{figures/TBvsXGB_TotalTime.png}
+  \caption{\Treebeard{} vs XGBoost Speedup on RTX 4060.}
+  \label{Fig:TBvsXGBoost_Speedup}
 \end{figure}
 
 \begin{figure}[htb]
