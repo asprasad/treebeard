@@ -19,19 +19,19 @@ This is because, in production settings, each model is trained once and often us
 %
 
 This paper is motivated by the need to accelerate decision tree inference to achieve portable performance on a variety of client hardware.
-In particular, we focus on portable performance across a range of commodity CPUs and low-to-mid-range GPUs, a class of hardware that has seen widespread adoption across client/edge devices used for inference.
+In particular, we focus on a range of commodity CPUs and low-to-mid-range GPUs, a class of hardware that has seen widespread adoption across client/edge devices used for inference.
 
 Decision forest models are composed of a large collection of decision trees (100-1000), and inference involves traversing down each tree in the forest and aggregating the predictions. Inference is typically done in a batched setting, where multiple inputs are processed simultaneously.
 
 %Despite the simplicity of the model, decision tree inference is computationally expensive, and is surprisingly hard to scale to a large number of threads
 Despite the simplicity of the model and the availability of multiple sources of coarse grain parallelism (parallelism across inputs in a batch and parallelism across trees), existing systems do not consistently scale well across different models. 
-This is because existing systems exploit a limited set of optimizations and often specialize the implementation to a specific hardware platform, which limits their portability. 
+This is because existing systems exploit a limited set of optimizations and often specialize the implementation to a specific hardware platform, and this limits their portability. 
 
 %\TODO{cover Rapids, Tahoe, XGBoost and Treebeard}.  
-Evaluation on a diverse set of models highlights that the best implementation often requires a careful combination of many optimization strategies. For example, managing the working set of nodes across a set of trees is critical to get scalable performance. This requires a combination of techniques like data layout optimizations, loop transformations, and memory access optimizations. Existing systems each use specific data layouts for the underlying tree (XGBoost uses a sparse representation, RAPIDs FIL uses what is called the reorg representation 
-and Tahoe uses a variation of the reorg representation) and propose simple loop transformations (XGBoost uses \dots()) that together determine the accesses patterns and the working set. They do not perform consistently well across different models and hardware platforms.
+Evaluation on a diverse set of models highlights that the best implementation often requires a careful combination of many optimization strategies. For example, as we simultaneously traverse multiple trees, managing the working set of nodes is critical to get scalable performance. This requires a combination of techniques like data layout optimizations, loop transformations, and memory access optimizations. Existing systems each use specific data layouts for the underlying tree (XGBoost~\cite{XGBoost} uses a sparse representation, RAPIDs~\cite{Rapids} FIL~\cite{FTL} uses what is called the reorg representation 
+and Tahoe~\cite{Tahoe} uses a variation of the reorg representation) and propose simple loop transformations (XGBoost uses \dots() \TODO{complete}) that together determine the accesses patterns and the working set. They do not perform consistently well across different models and hardware platforms.
 Managing the working set is just one of several optimizations that are critical for high-performance decision tree inference.
- \TODO{Improve the next line}
+ \TODO{Improve/drop the next line}
  Others include tree ordering,  incremental reduction of predicted values, interleaving across multiple trees, and so on.
 
 This paper presents \Treebeard{}, a novel schedule guided compilation infrastructure for decision tree inference on multiple target hardware. \Treebeard{} is able to generate high-performance code for decision tree inference by exploring a large optimization space. The code generation is guided by a \emph{schedule} object that allows us to effectively represent this solution space abstractly. The schedule object is written in \Treebeard{} custom scheduling language that is expressive enough to represent a wide range of implementation strategies. We demonstrate that the language is sufficient to express the various optimizations proposed by prior work, and further generalizes them and incorporates several new optimizations. We also design and implement a heuristic that is able to quickly find high-performance schedules for the model being compiled.
