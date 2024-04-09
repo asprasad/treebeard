@@ -729,3 +729,119 @@
   archiveprefix = {arXiv},
   primaryclass  = {cs.LG}
 }
+
+@inproceedings{TaoOfParallelism,
+  author    = {Pingali, Keshav and Nguyen, Donald and Kulkarni, Milind and Burtscher, Martin and Hassaan, M. Amber and Kaleem, Rashid and Lee, Tsung-Hsien and Lenharth, Andrew and Manevich, Roman and M\'{e}ndez-Lojo, Mario and Prountzos, Dimitrios and Sui, Xin},
+  title     = {The Tao of Parallelism in Algorithms},
+  year      = {2011},
+  isbn      = {9781450306638},
+  publisher = {Association for Computing Machinery},
+  address   = {New York, NY, USA},
+  url       = {https://doi.org/10.1145/1993498.1993501},
+  doi       = {10.1145/1993498.1993501},
+  abstract  = {For more than thirty years, the parallel programming community has used the dependence graph as the main abstraction for reasoning about and exploiting parallelism in "regular" algorithms that use dense arrays, such as finite-differences and FFTs. In this paper, we argue that the dependence graph is not a suitable abstraction for algorithms in new application areas like machine learning and network analysis in which the key data structures are "irregular" data structures like graphs, trees, and sets.To address the need for better abstractions, we introduce a data-centric formulation of algorithms called the operator formulation in which an algorithm is expressed in terms of its action on data structures. This formulation is the basis for a structural analysis of algorithms that we call tao-analysis. Tao-analysis can be viewed as an abstraction of algorithms that distills out algorithmic properties important for parallelization. It reveals that a generalized form of data-parallelism called amorphous data-parallelism is ubiquitous in algorithms, and that, depending on the tao-structure of the algorithm, this parallelism may be exploited by compile-time, inspector-executor or optimistic parallelization, thereby unifying these seemingly unrelated parallelization techniques. Regular algorithms emerge as a special case of irregular algorithms, and many application-specific optimization techniques can be generalized to a broader context.These results suggest that the operator formulation and tao-analysis of algorithms can be the foundation of a systematic approach to parallel programming.},
+  booktitle = {Proceedings of the 32nd ACM SIGPLAN Conference on Programming Language Design and Implementation},
+  pages     = {12–25},
+  numpages  = {14},
+  keywords  = {operator formulation, irregular programs, galois system, tao-analysis, amorphous data-parallelism},
+  location  = {San Jose, California, USA},
+  series    = {PLDI '11}
+}
+
+@inproceedings{HybridCPUGPU,
+  author    = {Liu, Jianqiao and Hegde, Nikhil and Kulkarni, Milind},
+  title     = {Hybrid CPU-GPU Scheduling and Execution of Tree Traversals},
+  year      = {2016},
+  isbn      = {9781450343619},
+  publisher = {Association for Computing Machinery},
+  address   = {New York, NY, USA},
+  url       = {https://doi.org/10.1145/2925426.2926261},
+  doi       = {10.1145/2925426.2926261},
+  abstract  = {GPUs offer the promise of massive, power-efficient parallelism. However, exploiting this parallelism requires code to be carefully structured to deal with the limitations of the SIMT execution model. In recent years, there has been much interest in mapping irregular applications to GPUs: applications with unpredictable, data-dependent behaviors. While most of the work in this space has focused on ad hoc implementations of specific algorithms, recent work has looked at generic techniques for mapping a large class of tree traversal algorithms to GPUs, through careful restructuring of the tree traversal algorithms to make them behave more regularly. Unfortunately, even this general approach for GPU execution of tree traversal algorithms is reliant on ad hoc, hand-written, algorithm-specific scheduling (i.e., assignment of threads to warps) to achieve high performance.The key challenge of scheduling is that it is a highly irregular process, that requires the inspection of thread behavior and then careful sorting of those threads into warps. In this paper, we present a novel scheduling and execution technique for tree traversal algorithms that is both general and automatic. The key novelty is a hybrid, inspector-executor approach: the GPU partially executes tasks to inspect thread behavior and transmits information back to the CPU, which uses that information to perform the scheduling itself, before executing the remaining, carefully scheduled, portion of the traversals on the GPU. We applied this framework to six tree traversal algorithms, achieving significant speedups over optimized GPU code that does not perform application-specific scheduling. Further, we show that in many cases, our hybrid approach is able to deliver better performance even than GPU code that uses handtuned, application-specific scheduling.},
+  booktitle = {Proceedings of the 2016 International Conference on Supercomputing},
+  articleno = {2},
+  numpages  = {12},
+  keywords  = {Irregular applications, GPU, Scheduling, Heterogeneous architectures, Tree traversal},
+  location  = {Istanbul, Turkey},
+  series    = {ICS '16}
+}
+
+@article{GraphIt,
+  author     = {Zhang, Yunming and Yang, Mengjiao and Baghdadi, Riyadh and Kamil, Shoaib and Shun, Julian and Amarasinghe, Saman},
+  title      = {GraphIt: a high-performance graph DSL},
+  year       = {2018},
+  issue_date = {November 2018},
+  publisher  = {Association for Computing Machinery},
+  address    = {New York, NY, USA},
+  volume     = {2},
+  number     = {OOPSLA},
+  url        = {https://doi.org/10.1145/3276491},
+  doi        = {10.1145/3276491},
+  abstract   = {The performance bottlenecks of graph applications depend not only on the algorithm and the underlying hardware, but also on the size and structure of the input graph. As a result, programmers must try different combinations of a large set of techniques, which make tradeoffs among locality, work-efficiency, and parallelism, to develop the best implementation for a specific algorithm and type of graph. Existing graph frameworks and domain specific languages (DSLs) lack flexibility, supporting only a limited set of optimizations. This paper introduces GraphIt, a new DSL for graph computations that generates fast implementations for algorithms with different performance characteristics running on graphs with different sizes and structures. GraphIt separates what is computed (algorithm) from how it is computed (schedule). Programmers specify the algorithm using an algorithm language, and performance optimizations are specified using a separate scheduling language. The algorithm language simplifies expressing the algorithms, while exposing opportunities for optimizations. We formulate graph optimizations, including edge traversal direction, data layout, parallelization, cache, NUMA, and kernel fusion optimizations, as tradeoffs among locality, parallelism, and work-efficiency. The scheduling language enables programmers to easily search through this complicated tradeoff space by composing together a large set of edge traversal, vertex data layout, and program structure optimizations. The separation of algorithm and schedule also enables us to build an autotuner on top of GraphIt to automatically find high-performance schedules. The compiler uses a new scheduling representation, the graph iteration space, to model, compose, and ensure the validity of the large number of optimizations. We evaluate GraphIt’s performance with seven algorithms on graphs with different structures and sizes. GraphIt outperforms the next fastest of six state-of-the-art shared-memory frameworks (Ligra, Green-Marl, GraphMat, Galois, Gemini, and Grazelle) on 24 out of 32 experiments by up to 4.8\texttimes{}, and is never more than 43\% slower than the fastest framework on the other experiments. GraphIt also reduces the lines of code by up to an order of magnitude compared to the next fastest framework.},
+  journal    = {Proc. ACM Program. Lang.},
+  month      = {oct},
+  articleno  = {121},
+  numpages   = {30},
+  keywords   = {Big Data, Code Generation, Compiler Optimizations, Domain Specific Languages, Graph Algorithms, Parallel Programming Languages}
+}
+
+@inproceedings{GraphItGPU,
+  author    = {Brahmakshatriya, Ajay and Zhang, Yunming and Hong, Changwan and Kamil, Shoaib and Shun, Julian and Amarasinghe, Saman},
+  title     = {Compiling graph applications for GPUs with graphit},
+  year      = {2021},
+  isbn      = {9781728186139},
+  publisher = {IEEE Press},
+  url       = {https://doi.org/10.1109/CGO51591.2021.9370321},
+  doi       = {10.1109/CGO51591.2021.9370321},
+  abstract  = {The performance of graph programs depends highly on the algorithm, the size and structure of the input graphs, as well as the features of the underlying hardware. No single set of optimizations or one hardware platform works well across all settings. To achieve high performance, the programmer must carefully select which set of optimizations and hardware platforms to use. The GraphIt programming language makes it easy for the programmer to write the algorithm once and optimize it for different inputs using a scheduling language. However, GraphIt currently has no support for generating highperformance code for GPUs. Programmers must resort to re-implementing the entire algorithm from scratch in a low-level language with an entirely different set of abstractions and optimizations in order to achieve high performance on GPUs.We propose G2, an extension to the GraphIt compiler framework, that achieves high performance on both CPUs and GPUs using the same algorithm specification. G2 significantly expands the optimization space of GPU graph processing frameworks with a novel GPU scheduling language and compiler that enables combining load balancing, edge traversal direction, active vertexset creation, active vertexset processing ordering, and kernel fusion optimizations. G2 also introduces two performance optimizations, Edge-based Thread Warps CTAs load balancing (ETWC) and EdgeBlocking, to expand the optimization space for GPUs. ETWC improves load balancing by dynamically partitioning the edges of each vertex into blocks that are assigned to threads, warps, and CTAs for execution. EdgeBlocking improves the locality of the program by reordering the edges and restricting random memory accesses to fit within the L2 cache. We evaluate G2 on 5 algorithms and 9 input graphs on both Pascal and Volta generation NVIDIA GPUs, and show that it achieves up to 5.11\texttimes{} speedup over state-of-the-art GPU graph processing frameworks, and is the fastest on 66 out of the 90 experiments.},
+  booktitle = {Proceedings of the 2021 IEEE/ACM International Symposium on Code Generation and Optimization},
+  pages     = {248–261},
+  numpages  = {14},
+  keywords  = {graph processing, domain-specific languages, compiler optimizations, GPUs},
+  location  = {Virtual Event, Republic of Korea},
+  series    = {CGO '21}
+}
+
+@inproceedings{ChandanReduction,
+  author    = {Reddy, Chandan and Kruse, Michael and Cohen, Albert},
+  title     = {Reduction Drawing: Language Constructs and Polyhedral Compilation for Reductions on GPU},
+  year      = {2016},
+  isbn      = {9781450341219},
+  publisher = {Association for Computing Machinery},
+  address   = {New York, NY, USA},
+  url       = {https://doi.org/10.1145/2967938.2967950},
+  doi       = {10.1145/2967938.2967950},
+  abstract  = {Reductions are common in scientific and data-crunching codes, and a typical source of bottlenecks on massively parallel architectures such as GPUs. Reductions are memory-bound, and achieving peak performance involves sophisticated optimizations. There exist libraries such as CUB and Thrust providing highly tuned implementations of reductions on GPUs. However, library APIs are not flexible enough to express user-defined reductions on arbitrary data types and array indexing schemes. Languages such as OpenACC provide declarative syntax to express reductions. Such approaches support a limited range of reduction operators and do not facilitate the application of complex program transformations in presence of reductions. We present language constructs that let a programmer express arbitrary reductions on user-defined data types matching the performance of tuned library implementations. We also extend a polyhedral compilation flow to process these user-defined reductions, enabling optimizations such as the fusion of multiple reductions, combining reductions with other loop transformations, and optimizing data transfers and storage in the presence of reductions. We implemented these language constructs and compilation methods in the PPCG framework and conducted experiments on multiple GPU targets. For single reductions the generated code performs on par with highly tuned libraries, and for multiple reductions it significantly outperforms both libraries and OpenACC on all platforms.},
+  booktitle = {Proceedings of the 2016 International Conference on Parallel Architectures and Compilation},
+  pages     = {87–97},
+  numpages  = {11},
+  keywords  = {polyhedral compilation, gpu optimizations, compiler transformations, automatic parallelization},
+  location  = {Haifa, Israel},
+  series    = {PACT '16}
+}
+
+@inproceedings{HalideReductions,
+  author    = {Suriana, Patricia and Adams, Andrew and Kamil, Shoaib},
+  title     = {Parallel associative reductions in halide},
+  year      = {2017},
+  isbn      = {9781509049318},
+  publisher = {IEEE Press},
+  abstract  = {Halide is a domain-specific language for fast image processing that separates pipelines into the algorithm, which defines what values are computed, and the schedule, which defines how they are computed. Changes to the schedule are guaranteed to not change the results. While Halide supports parallelizing and vectorizing naturally data-parallel operations, it does not support the same scheduling for reductions. Instead, the programmer must create data parallelism by manually factoring reductions into multiple stages. This manipulation of the algorithm can introduce bugs, impairs readability and portability, and makes it impossible for automatic scheduling methods to parallelize reductions.  We describe a new Halide scheduling primitive rfactor which moves this factoring transformation into the schedule, as well as a novel synthesis-based technique that takes serial Halide reductions and synthesizes an equivalent binary associative reduction operator and its identity. This enables us to automatically replace the original pipeline stage with a pair of stages which first compute partial results over slices of the reduction domain, and then combine them. Our technique permits parallelization and vectorization of Halide algorithms which previously required manipulating both the algorithm and schedule.},
+  booktitle = {Proceedings of the 2017 International Symposium on Code Generation and Optimization},
+  pages     = {281–291},
+  numpages  = {11},
+  location  = {Austin, USA},
+  series    = {CGO '17}
+}
+
+@inproceedings{TangramReduction,
+  author    = {Gonzalo, Simon Garcia De and Huang, Sitao and Gómez-Luna, Juan and Hammond, Simon and Mutlu, Onur and Hwu, Wen-mei},
+  booktitle = {2019 IEEE/ACM International Symposium on Code Generation and Optimization (CGO)},
+  title     = {Automatic Generation of Warp-Level Primitives and Atomic Instructions for Fast and Portable Parallel Reduction on GPUs},
+  year      = {2019},
+  volume    = {},
+  number    = {},
+  pages     = {73-84},
+  keywords  = {Graphics processing units;Programming;Computer architecture;Libraries;Hardware;DSL;Microarchitecture},
+  doi       = {10.1109/CGO.2019.8661187}
+}
