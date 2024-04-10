@@ -1,104 +1,226 @@
 \section{Scheduling Language}
 \label{sec:schedule}
-The goal of the scheduling language is to express the following
-\begin{itemize}
-  \item The order in which the iteration space over the batch of inputs (batch) and trees in the forest (tree) is to be traversed. Note that there is a reduction over the tree dimension.
-  \item Intra or inter tree optimizations that are to be performed on a tree or set of trees (tree walk unrolling, pipelining, SIMDize etc).
-\end{itemize}
+As we articulated in Section \ref{sec:intro}, there are several 
+different configurations and optimizations strategies for decision 
+tree inference. The best ones are significantly different across
+models, batch sizes and hardware platforms. Therefore, designing
+any one hard-coded lowering strategy is not feasible as this would 
+make portable performance impossible. To address this problem, we 
+design a scheduling language for \Treebeard{}. The scheduling 
+language provides an abstract way to specify loop structure and 
+other optimizations as an input to the compiler. Making the 
+scheduling specification external to the compiler allows to build 
+auto-schedulers and auto-tuners (Section \ref{sec:exploring}).
+Using a scheduling language will also significantly simplify 
+adding support for new hardware as this will likely require
+different locality optimizations and loop transformations.
 
-The reasons to use a scheduling language rather than a hard-coded lowering are as follows
-\begin{itemize}
-  \item Making the scheduling specification external to the compiler allows us to 
-  more easily build auto-schedulers and auto-tuners.
-  \item It is very hard to come up with a template loop nest that works for all models 
-  (for example, tree sizes may vary across the model making it necessary to iterate 
-  different number of trees at different times).
-  \item A scheduling language will make writing newer locality optimizations faster since 
-  no changes to the compiler infrastructure will be needed.
-  \item Adding support for additional hardware targets (GPUs, FPGAs), will be much easier
-  with a scheduling language.
-\end{itemize}
-
-There are some simplifying assumptions and limitations in the current design
-\begin{itemize}
-  \item Tree traversals are considered atomic. There is no way to express partial
-   tree traversals or schedule individual node/level computations. 
-  \item Accumulation of tree predictions is done immediately (as opposed to, 
-  for example, collecting all predictions and performing a reduction later).
-\end{itemize}
+The goal of \Treebeard{}'s scheduling language is to declaratively
+express loop structures and the application of other optimizations 
+(tree walk unrolling, tree walk interleaving etc.). 
 
 \subsection{Language Definition}
-We broadly have three classes of directives in the language. The first is a set 
-of loop nest modifiers that are used to specify the structure of the loop nest to
-walk the iteration space. The second is a set of clauses that specify intra and 
-inter tree optimizations. Finally, we have a class of attributes that control how 
-reductions are performed.
+The core construct of \Treebeard{}'s scheduling language is an 
+\textbf{\emph{index variable}} which abstractly represents a loop. 
+The language then provides directives to manipulate these index 
+variables. There are two special index variables -- \op{batch} and
+\op{tree} that are used to represent the batch and tree loops and all 
+other index variables are derived from these. A schedule derives 
+new index variables from these root index variables by applying
+directives. 
 
-\subsubsection{Loop Modifiers}
-There are two special index variables -- \op{batch} and \op{tree}. The clauses modify these index variables or 
-index variables derived from these (through the application of clauses).
-\begin{itemize}
-  \item \textbf{tile}: Tile the passed index variable using a fixed tile size.
-  \item \textbf{split}: Split the range of the passed index variable into two parts. The range of the first part is specified
-  by an argument.
-  \item \textbf{unroll}: Unroll an index completely
-  \item \textbf{reorder}: Reorder the specified indices. The specified indices must be successive indices in the current loop nest.
-  \item \textbf{specialize}: Generate separate code for each iteration of the specified index variable. This is useful 
-  while parallelizing across trees and these trees have different depths.
-  \item \textbf{gpuDimension}: Maps the specified index variable to represent a dimension in either the GPU kernel grid or thread block.
-\end{itemize}
+\Treebeard{}'s scheduling language has three classes of directives. The first is a set 
+of loop modifiers that are used to specify the structure of the loop nest to
+walk the iteration space (Table \ref{Tab:LoopModifiers}). The second is a set of 
+directives that enable optimizations on a loop (Table \ref{Tab:Optimizations}). 
+Finally, we have a class of attributes that enable reduction specific optimizations
+(Table \ref{Tab:ReductionOpts}).
+
+% \subsubsection{Loop Modifiers}
+% The clauses modify these index variables or 
+% index variables derived from these (through the application of clauses).
+% \begin{itemize}
+%   \item \textbf{tile}: Tile the passed index variable using a fixed tile size.
+%   \item \textbf{split}: Split the range of the passed index variable into two parts. The range of the first part is specified
+%   by an argument.
+%   % \item \textbf{unroll}: Unroll an index completely
+%   \item \textbf{reorder}: Reorder the specified indices. The specified indices must be successive indices in the current loop nest.
+%   \item \textbf{specialize}: Generate separate code for each iteration of the specified index variable. This is useful 
+%   while parallelizing across trees and these trees have different depths.
+%   \item \textbf{gpuDimension}: Maps the specified index variable to represent a dimension in either the GPU kernel grid or thread block.
+% \end{itemize}
+
+\begin{table}[htb]
+  \centering
+  \resizebox{\linewidth}{!}{
+  \begin{tabularx}{\linewidth}{c | l | l}
+   \toprule
+   \textbf{Directive} & \textbf{Inputs} & \textbf{Description} \\
+   \midrule
+   \multirow{4}{*}{\texttt{tile}} & \textbf{indexVar}  & \multirow{4}{*}{\parbox{0.55\linewidth}{Tile the loop corresponding to \textbf{indexVar}
+   with the specified tile size. Resulting loops will be represented by \textbf{outer} and \textbf{inner}.}} \\
+                                               &  \textbf{outer} & \\
+                                               &  \textbf{inner} &  \\
+                                               &  \textbf{tileSize} &  \\
+   \midrule
+   \multirow{6}{*}{\texttt{split}} & \textbf{indexVar}  & \multirow{6}{*}{\parbox{0.55\linewidth}{Fiss the loop represented by \textbf{indexVar}
+   at iteration \textbf{splitIter}. Resulting loops will be represented by \textbf{first} and \textbf{second}. Returns a maps from nested 
+   index variables to new ones created by splitting.}} \\
+                                               &  \textbf{first} & \\
+                                               &  \textbf{second} &  \\
+                                               &  \textbf{splitIter} &  \\
+                                               & & \\
+                                               & & \\
+
+   \midrule
+   \multirow{4}{*}{\texttt{reorder}} & \textbf{indices[]}  & \multirow{4}{*}{\parbox{0.55\linewidth}{Permute loops corresponding to the specified index variables.
+   The loops must be perfectly nested in the current loop structure.}} \\
+                                               &   & \\
+                                               &   &  \\
+                                               &   &  \\
+   \midrule
+   \multirow{4}{*}{\texttt{specialize}} & \textbf{indexVar}  & \multirow{4}{*}{\parbox{0.55\linewidth}{Generate specialized code for each iteration of the loop. 
+   Useful when different iterations of a loop need to execute different code.}} \\
+                                               &   & \\
+                                               &   &  \\
+                                               &   &  \\
+   \midrule
+   \multirow{3}{*}{\texttt{gpuDimension}} & \textbf{indexVar}  & \multirow{3}{*}{\parbox{0.55\linewidth}{Map the passed index variable to a dimension of either the grid
+   or thread block.}} \\
+                                               & \textbf{gpuDim}  & \\
+                                               &   &  \\
+
+  \bottomrule
+  \end{tabularx}
+  }
+  \vskip 5pt
+  \caption{\label{Tab:LoopModifiers} List of all the loop modifiers in \Treebeard{}'s scheduling language. We use \emph{index variable}
+  and \emph{loop} interchangeably in descriptions for clarity of exposition.}
+\end{table}
+
+
+% The following are examples of how the loop modifiers can be used.
+% \begin{itemize}
+%   \item The loop order used by XGBoost\cite{XGBoost} is (tree, batch) -- walk one tree for all inputs in the batch before 
+%   moving to the next tree. The corresponding schedule would be
+% \begin{lstlisting}[style=c++]
+%   reorder(tree, batch)
+% \end{lstlisting}
+
+%   \item The below schedule computes 2 trees at a time over the whole batch.
+% \begin{lstlisting}[style=c++]
+%   tile(tree, t0, t1, 2)
+%   reorder(t0, batch, t1)
+% \end{lstlisting}
+
+%   \item If we additionally only want to compute over 4 input rows (rather than the whole batch) for
+%   every 2 tree, and then move onto the next 2 trees for the same set of inputs, then the schedule is as follows. 
+% \begin{lstlisting}[style=c++]
+%   tile(batch, b0, b1, 4) 
+%   tile(tree, t0, t1, 2)
+%   reorder(b0, t0, b1, t1) 
+% \end{lstlisting}
+
+% \end{itemize}
+
+% \subsubsection{Optimizations}
+% The following clauses provide ways to optimize the inference routine being generated.
+% \begin{itemize}
+%   \item \textbf{cache}: Cache the working set of one iteration of the specified loop corresponding
+%   to this index. This can be specified on either batch or tree loops. Specifying it 
+%   on a batch loop leads to all rows accessed in a single iteration of the loop 
+%   being cached. Similarly, specifying it on a tree loop leads to all trees accessed in 
+%   one iteration of that loop being cached.
+%   \item \textbf{parallel}: Execute the loop corresponding to this index in parallel.
+%   \item \textbf{interleave}: Interleave the execution of the tree walks within the current index (must be applied on an inner most index).
+%   \item \textbf{unrollWalk}: Unroll tree walks at the current index. 
+%   \item \textbf{peelWalk}: Peel the first n steps of the specified tree walk and don't check for leaves for that number of steps.
+% \end{itemize}
+
+\begin{table}[htb]
+  \centering
+  \resizebox{\linewidth}{!}{
+  \begin{tabularx}{\linewidth}{c | l | l}
+   \toprule
+   \textbf{Directive} & \textbf{Inputs} & \textbf{Description} \\
+   \midrule
+   \multirow{4}{*}{\texttt{cache}} & \textbf{indexVar}  & \multirow{4}{*}{\parbox{0.55\linewidth}{Cache the working set of one iteration of the specified loop. 
+   Cache rows for a batch loop and trees for a tree loop.}} \\
+                                               &  &  \\
+                                               &  &  \\
+                                               &  &  \\
+   \midrule
+   \multirow{2}{*}{\texttt{parallel}} & \textbf{indexVar}  & \multirow{2}{*}{\parbox{0.55\linewidth}{Execute the iterations of the specified 
+   loop in parallel.}} \\
+                                               &  & \\
+
+   \midrule                                               
+   \multirow{3}{*}{\texttt{interleave}} & \textbf{indexVar}  & \multirow{3}{*}{\parbox{0.55\linewidth}{Interleave tree walks within the specified 
+   loop (must be innermost loop).}} \\
+                                               &  & \\
+                                               &  & \\
+
+   \midrule                                               
+   \multirow{3}{*}{\texttt{unrollWalk}} & \textbf{indexVar}  & \multirow{3}{*}{\parbox{0.55\linewidth}{Unroll tree walks at the specified loop 
+   for \textbf{unrollDepth} hops. Loop must be an innermost loop.}} \\
+                                               & \textbf{unrollDepth} & \\
+                                               &  & \\
+
+  \bottomrule
+  \end{tabularx}
+  }
+  \vskip 5pt
+  \caption{\label{Tab:Optimizations} List of optimization directives in \Treebeard{}'s scheduling language. 
+  We use \emph{index variable} and \emph{loop} interchangeably in descriptions for clarity of exposition.}
+\end{table}
+
+
+% \subsubsection{Reduction Optimization}
+% \begin{itemize}
+%   \item \textbf{atomicReduce}: Use atomic memory operations to accumulate values across 
+%   parallel iterations of the specified loop. 
+%   \item \textbf{sharedReduce}: Only applies to GPU compilation. Specifies that intermediate
+%   results are to be stored in shared memory.
+%   \item \textbf{vectorReduce}: Use vector instructions with the specified vector width 
+%   to reduce intermediate values across parallel iterations of the specified loop.
+% \end{itemize}
+
+\begin{table}[htb]
+  \centering
+  \resizebox{\linewidth}{!}{
+  \begin{tabularx}{\linewidth}{c | l | l}
+   \toprule
+   \textbf{Directive} & \textbf{Inputs} & \textbf{Description} \\
+   \midrule
+   \multirow{3}{*}{\texttt{atomicReduce}} & \textbf{indexVar}  & \multirow{3}{*}{\parbox{0.55\linewidth}{Use atomic memory operations to accumulate values across 
+   parallel iterations of the specified loop.}} \\
+                                               &  &  \\
+                                               &  &  \\
+   \midrule
+   \multirow{3}{*}{\texttt{sharedReduce}} & \textbf{indexVar}  & \multirow{3}{*}{\parbox{0.55\linewidth}{Specifies that intermediate
+   results are to be stored in shared memory (GPU only).}} \\
+                                               &  & \\
+                                               &  & \\
+
+   \midrule                                               
+   \multirow{4}{*}{\texttt{vectorReduce}} & \textbf{indexVar}  & \multirow{4}{*}{\parbox{0.55\linewidth}{Use vector instructions with the specified vector width 
+   to reduce intermediate values across parallel iterations of the specified loop.}} \\
+                                               & \textbf{width} & \\
+                                               &  & \\
+                                               &  & \\
+
+  \bottomrule
+  \end{tabularx}
+  }
+  \vskip 5pt
+  \caption{\label{Tab:ReductionOpts} List of reduction optimization directives in \Treebeard{}'s scheduling language. 
+  We use \emph{index variable} and \emph{loop} interchangeably in descriptions for clarity of exposition.}
+\end{table}
+
+
+%\TODO{Add examples for RAPIDS, Tahoe (Maybe show some strategies can be encoded?)}
 
 The default loop order (as currently generated by the compiler) is (batch, tree), i.e, for each row in the input batch, go over all trees.
-
-The following are examples of how the loop modifiers can be used.
-\begin{itemize}
-  \item The loop order used by XGBoost\cite{XGBoost} is (tree, batch) -- walk one tree for all inputs in the batch before 
-  moving to the next tree. The corresponding schedule would be
-\begin{lstlisting}[style=c++]
-  reorder(tree, batch)
-\end{lstlisting}
-
-  \item The below schedule computes 2 trees at a time over the whole batch.
-\begin{lstlisting}[style=c++]
-  tile(tree, t0, t1, 2)
-  reorder(t0, batch, t1)
-\end{lstlisting}
-
-  \item If we additionally only want to compute over 4 input rows (rather than the whole batch) for
-  every 2 tree, and then move onto the next 2 trees for the same set of inputs, then the schedule is as follows. 
-\begin{lstlisting}[style=c++]
-  tile(batch, b0, b1, 4) 
-  tile(tree, t0, t1, 2)
-  reorder(b0, t0, b1, t1) 
-\end{lstlisting}
-
-\end{itemize}
-
-\subsubsection{Optimizations}
-The following clauses provide ways to optimize the inference routine being generated.
-\begin{itemize}
-  \item \textbf{cache}: Cache the working set of one iteration of the specified loop corresponding
-  to this index. This can be specified on either batch or tree loops. Specifying it 
-  on a batch loop leads to all rows accessed in a single iteration of the loop 
-  being cached. Similarly, specifying it on a tree loop leads to all trees accessed in 
-  one iteration of that loop being cached.
-  \item \textbf{parallel}: Execute the loop corresponding to this index in parallel.
-  \item \textbf{interleave}: Interleave the execution of the tree walks within the current index (must be applied on an inner most index).
-  \item \textbf{unrollWalk}: Unroll tree walks at the current index. 
-  \item \textbf{peelWalk}: Peel the first n steps of the specified tree walk and don't check for leaves for that number of steps.
-\end{itemize}
-
-\subsubsection{Reduction Optimization}
-\begin{itemize}
-  \item \textbf{atomicReduce}: Use atomic memory operations to accumulate values across 
-  parallel iterations of the specified loop. 
-  \item \textbf{sharedReduce}: Only applies to GPU compilation. Specifies that intermediate
-  results are to be stored in shared memory.
-  \item \textbf{vectorReduce}: Use vector instructions with the specified vector width 
-  to reduce intermediate values across parallel iterations of the specified loop.
-\end{itemize}
-
-\TODO{Add examples for RAPIDS, Tahoe (Maybe show some strategies can be encoded?)}
 
 \subsection{The XBoost Schedule}
 XGBoost\cite{XGBoost} is a very popular gradient boosting library. 
@@ -170,4 +292,10 @@ as we show below.
 \end{lstlisting}
 \end{itemize}
 
-
+There are some simplifying assumptions and limitations in the current design
+\begin{itemize}
+  \item Tree traversals are considered atomic. There is no way to express partial
+   tree traversals or schedule individual node/level computations. 
+  \item Accumulation of tree predictions is done immediately (as opposed to, 
+  for example, collecting all predictions and performing a reduction later).
+\end{itemize}
