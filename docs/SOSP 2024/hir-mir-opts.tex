@@ -8,39 +8,46 @@
 %   \item Optimizations on the MIR include tree walk unrolling, tree walk interleaving, loop tiling, parallelization etc.
 % \end{itemize}
 
-The \Treebeard{} infrastructure was originally designed to target CPUs \cite{Treebeard}. 
+The \TreebeardOLD{} infrastructure was originally designed to target CPUs \cite{Treebeard}. 
 However, it implements several optimizations on the HIR and MIR that 
-can be leveraged across target processors and we find that these 
+can be leveraged across target processors and we find that some these 
 are beneficial for GPUs as well. This reuse of optimizations is possible 
 because the intermediate representations on which these optimizations are performed 
-are abstract and are designed to be target-independent. We briefly review theese 
+are abstract and are designed to be target-independent. We briefly review these 
 optimizations below. 
 
 \subsection{Optimizations on High-Level IR}
-We augment the existing \Treebeard{} infrastructure with loop rewrites on 
+We augment the existing \TreebeardOLD{} infrastructure with loop rewrites on 
 the HIR that are implemented through the scheduling language (Section \ref{sec:schedule}).
 We use these to implement the automatic scheduling described in Section \ref{sec:exploring}. 
-Additionally, the \Treebeard{} infrastructure implements HIR transformations to reorder and pad 
+Additionally, the \TreebeardOLD{} infrastructure implements HIR transformations to reorder and pad 
 trees. It also implements tree tiling transformations on the HIR \cite{Treebeard}. We reuse the 
 reordering and padding transformations on the HIR for GPUs. However, we found that 
-tiling trees was not beneficial for GPUs. This is because the tiling transformations
+tiling trees was not beneficial for GPUs. This is because the tiling transformation
 introduces redundant computation inorder to vectorize computation on CPUs where 
 all lanes need to follow the same control flow. However, on SIMT GPUs, we find that 
 the benefits of tiling (coalescing memory accesses) do not outweigh the cost of
 redundant computation. We leave an investigation of this for future work.
 
 \subsection{Optimizations on Mid-Level IR}
-The original \Treebeard{} infrastructure implements optimizations like 
+The original \TreebeardOLD{} infrastructure implements optimizations like 
 tree-walk unrolling, tree-walk interleaving, and parallelization
 on the MIR. These optimizations are beneficial for GPUs as well.
-and the design of \Treebeard{} allows us to reuse the tree-walk 
+and the design of \TreebeardOLD{} allows us to reuse the tree-walk 
 unrolling and tree-walk interleaving optimizations on the MIR for GPUs.
+
+While building \Treebeard{}, we found that one of the performance bottlenecks on the 
+GPU was that warps spent significant time being stalled. Since GPUs 
+implement scoreboarding~\cite{HennesseyPatterson}, we were able to alleviate this bottleneck by
+interleaving tree walks. This significantly improved performance of generated 
+code. We found it surprising that the use of ILP could benefit 
+performance on the GPU.  
 \TODO{Should we talk about how interleaving is implemented as a 
 statemachine and therefore it can be used across representations 
 and tile traversal techniques?}
 
 \subsection{A Note on Low-level IR}
-Some changes to the original \Treebeard{} design were required to get
+Significant changes to the original \TreebeardOLD{} design were required to get
 LIR to correctly lower to GPU code. The most important of these was 
 the change to how the compiler implements support for in-memory 
 representations of models (Section \ref{sec:representations}).
