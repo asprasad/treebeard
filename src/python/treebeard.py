@@ -132,7 +132,10 @@ class CompilerOptions:
 
   def SetBasicGPUSchedule(self, tileSize : int) :
     treebeardAPI.runtime_lib.SetBasicGPUSchedule(self.optionsPtr, tileSize)
-       
+
+  def SetNumberOfParallelTreeBatches(self, val : int) :
+    treebeardAPI.runtime_lib.Set_numParallelTreeBatches(self.optionsPtr, val)
+
 #### ---------------------------------------------------------------- ####
 #### Index Variable
 #### ---------------------------------------------------------------- ####

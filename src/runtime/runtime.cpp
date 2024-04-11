@@ -156,6 +156,7 @@ COMPILER_OPTION_SETTER(statsProfileCSVPath, const char *)
 COMPILER_OPTION_SETTER(pipelineSize, int32_t)
 COMPILER_OPTION_SETTER(numberOfCores, int32_t)
 // COMPILER_OPTION_SETTER(compileToGPU, bool)
+COMPILER_OPTION_SETTER(numParallelTreeBatches, int32_t)
 
 extern "C" void Set_tilingType(intptr_t options, int32_t val) {
   TreeBeard::CompilerOptions *optionsPtr =
