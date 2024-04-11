@@ -173,6 +173,87 @@ void addLoopIfNeededAndUpdateIndices(ConversionPatternRewriter &rewriter,
   }
 }
 
+/*
+Generates the following snippet (roughly)
+
+scf.if %notZeroIndex {
+  %byteTrue = arith.constant 1 : i8
+  scf.while (%arg = %zeroIdxDone) {
+    %c2 = memref.atomic.rmw andi %byteTrue, %arg[0]
+    %c7 = arith.cmpi "ne", %c2, %byteTrue : i1
+    scf.condition(%c7) %arg : memref<1xi8>
+  } do {
+    scf.yield %arg : memref<1xi8>
+  }
+} else {
+  memref.atomic.rmw assign %byteTrue, %zeroIdxDone[0]
+}
+
+%and = memref.atomic.rmw andi %byteTrue, %zeroIdxDone[0]
+arith.cmpi "eq", %and, %byteTrue : i1
+*/
+
+Value genWaitForZeroIdxReduction(Location location,
+                                 ConversionPatternRewriter &rewriter,
+                                 Value zeroIdxDone, Value notZeroIndex) {
+
+  auto zeroIndexConst = rewriter.create<arith::ConstantIndexOp>(location, 0);
+
+  auto i8True = rewriter.create<arith::ConstantIntOp>(
+      location, 1, rewriter.getIntegerType(8));
+  {
+
+    auto ifZeroIdxDone =
+        rewriter.create<scf::IfOp>(location, TypeRange({}), notZeroIndex, true);
+
+    auto thenBuilder = ifZeroIdxDone.getThenBodyBuilder();
+    auto elseBuilder = ifZeroIdxDone.getElseBodyBuilder();
+    // busy wait until threadZero is finished.
+    {
+      auto whileOp = thenBuilder.create<scf::WhileOp>(
+          location, zeroIdxDone.getType(), zeroIdxDone);
+
+      Block *before = thenBuilder.createBlock(&whileOp.getBefore(), {},
+                                              zeroIdxDone.getType(), location);
+      Block *after = thenBuilder.createBlock(&whileOp.getAfter(), {},
+                                             zeroIdxDone.getType(), location);
+      // before, check if threadZero is finished.
+      {
+        thenBuilder.setInsertionPointToStart(&whileOp.getBefore().front());
+
+        auto zeroIdxDoneVal = thenBuilder.create<memref::AtomicRMWOp>(
+            location, mlir::arith::AtomicRMWKind::andi, i8True,
+            before->getArguments()[0], ValueRange{zeroIndexConst.getResult()});
+
+        auto cmp = thenBuilder.create<arith::CmpIOp>(
+            location, arith::CmpIPredicate::ne, zeroIdxDoneVal, i8True);
+        thenBuilder.create<scf::ConditionOp>(location, cmp,
+                                             before->getArguments());
+      }
+      // after, set zeroIdxDone to 1.
+      {
+        thenBuilder.setInsertionPointToStart(&whileOp.getAfter().front());
+        thenBuilder.create<scf::YieldOp>(location, after->getArguments());
+      }
+      thenBuilder.setInsertionPointAfter(whileOp);
+    }
+    // Else, set zeroIdxDone to 1.
+    {
+      elseBuilder.create<memref::AtomicRMWOp>(
+          location, mlir::arith::AtomicRMWKind::assign, i8True, zeroIdxDone,
+          ValueRange{zeroIndexConst.getResult()});
+    }
+    rewriter.setInsertionPointAfter(ifZeroIdxDone);
+  }
+
+  auto zeroIdxDoneAnd = rewriter.create<memref::AtomicRMWOp>(
+      location, mlir::arith::AtomicRMWKind::andi, i8True, zeroIdxDone,
+      ValueRange{zeroIndexConst.getResult()});
+
+  return rewriter.create<arith::CmpIOp>(location, arith::CmpIPredicate::eq,
+                                        zeroIdxDoneAnd, i8True);
+}
+
 LogicalResult generateAtomiceductionLoopNest(
     Location location, ConversionPatternRewriter &rewriter, Value targetMemref,
     Value sourceMemref, std::set<int32_t> &&mappedDimSet,
@@ -181,7 +262,8 @@ LogicalResult generateAtomiceductionLoopNest(
     Value reductionDimIndex,
     mlir::Operation::operand_range &&postReductionDimStart,
     mlir::Operation::operand_range &&postReductionDimEnd,
-    decisionforest::Reduction reduction, Value initialValueConst = Value()) {
+    decisionforest::Reduction reduction, Value zeroIdxReduceDone,
+    Value initialValueConst = Value()) {
 
   decisionforest::helpers::SaveAndRestoreInsertionPoint saveInsertionPoint(
       rewriter);
@@ -226,8 +308,14 @@ LogicalResult generateAtomiceductionLoopNest(
     // Negate currCondVal
     auto notAllZeros = rewriter.create<arith::XOrIOp>(location, currCondVal,
                                                       trueConst.getResult());
+
+    auto zeroIdxDone = genWaitForZeroIdxReduction(
+        location, rewriter, zeroIdxReduceDone, notAllZeros);
+
+    auto andOp = rewriter.create<arith::AndIOp>(
+        location, notAllZeros.getResult(), zeroIdxDone);
     auto ifOp = rewriter.create<scf::IfOp>(location, TypeRange({}),
-                                           notAllZeros.getResult(), false);
+                                           andOp.getResult(), false);
     auto thenBodyBuilder = ifOp.getThenBodyBuilder();
     // auto yieldOp = thenBodyBuilder.create<scf::YieldOp>(location);
     rewriter.setInsertionPointToStart(thenBodyBuilder.getInsertionBlock());
@@ -239,7 +327,6 @@ LogicalResult generateAtomiceductionLoopNest(
 
   for (auto startEndPair :
        llvm::zip(postReductionDimStart, postReductionDimEnd)) {
-
     auto start = std::get<0>(startEndPair);
     auto end = std::get<1>(startEndPair);
 
@@ -537,6 +624,21 @@ struct AtomicReduceDimensionOpLowering : public ConversionPattern {
     auto targetMemref = reduceOp.getTargetMemref();
 
     auto reductionType = reduceOp.getReductionTypeAttr().getReductionType();
+    Value zeroIdxReduceDone;
+    {
+      mlir::OpBuilder::InsertionGuard saveInsertionPoint(rewriter);
+
+      auto parForOp = op->getParentOfType<scf::ParallelOp>();
+      rewriter.setInsertionPoint(parForOp);
+      auto zeroInt = rewriter.create<arith::ConstantIntOp>(
+          location, 0, rewriter.getIntegerType(8));
+      zeroIdxReduceDone = rewriter.create<memref::AllocaOp>(
+          location, MemRefType::get({1}, rewriter.getIntegerType(8)));
+      auto zeroIndex = rewriter.create<arith::ConstantIndexOp>(location, 0);
+      rewriter.create<memref::StoreOp>(location, zeroInt, zeroIdxReduceDone,
+                                       ValueRange{zeroIndex.getResult()});
+    }
+
     // TODO_Ashwin Initial value is currently ignored. It is
     // assumed that the target memref is already initialized with the
     // initial value.
@@ -549,7 +651,8 @@ struct AtomicReduceDimensionOpLowering : public ConversionPattern {
         location, rewriter, targetMemref, sourceMemref, std::move(mappedDimSet),
         std::move(preReducedDimStart), std::move(preReducedDimEnd),
         reductionDimVal, reductionDimIndex, std::move(postReducedDimStart),
-        std::move(postReducedDimEnd), reductionType, initialValue);
+        std::move(postReducedDimEnd), reductionType, zeroIdxReduceDone,
+        initialValue);
 
     if (failed(result)) {
       return result;
@@ -1330,7 +1433,8 @@ struct LowerReductionOps
     : public PassWrapper<LowerReductionOps, OperationPass<mlir::func::FuncOp>> {
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<memref::MemRefDialect, arith::ArithDialect>();
+    registry.insert<memref::MemRefDialect, arith::ArithDialect,
+                    omp::OpenMPDialect>();
   }
 
   void runOnOperation() final {
@@ -1340,7 +1444,7 @@ struct LowerReductionOps
                            decisionforest::DecisionForestDialect,
                            math::MathDialect, arith::ArithDialect,
                            func::FuncDialect, gpu::GPUDialect,
-                           vector::VectorDialect>();
+                           vector::VectorDialect, omp::OpenMPDialect>();
 
     target.addIllegalOp<decisionforest::ReduceOp,
                         decisionforest::ReduceDimensionInplaceOp,
