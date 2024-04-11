@@ -1433,8 +1433,7 @@ struct LowerReductionOps
     : public PassWrapper<LowerReductionOps, OperationPass<mlir::func::FuncOp>> {
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<memref::MemRefDialect, arith::ArithDialect,
-                    omp::OpenMPDialect>();
+    registry.insert<memref::MemRefDialect, arith::ArithDialect>();
   }
 
   void runOnOperation() final {
@@ -1444,7 +1443,7 @@ struct LowerReductionOps
                            decisionforest::DecisionForestDialect,
                            math::MathDialect, arith::ArithDialect,
                            func::FuncDialect, gpu::GPUDialect,
-                           vector::VectorDialect, omp::OpenMPDialect>();
+                           vector::VectorDialect>();
 
     target.addIllegalOp<decisionforest::ReduceOp,
                         decisionforest::ReduceDimensionInplaceOp,
