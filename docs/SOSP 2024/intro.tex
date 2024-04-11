@@ -27,24 +27,25 @@ setting, where multiple inputs are processed simultaneously.
 Despite the simplicity of the model and the availability of multiple sources of coarse grain parallelism (parallelism 
 across inputs in a batch and parallelism across trees), existing systems do not consistently scale well across different
 models even on the limited set of targets they support. 
-This is because existing systems exploit a limited set of optimizations and often specialize the implementation 
-to a specific hardware platform, and this limits their portability. 
+%This is because existing systems exploit a limited set of optimizations and often specialize the implementation to a specific hardware platform, and this limits their portability. 
 
 %\TODO{cover Rapids, Tahoe, XGBoost and Treebeard}.  
-Evaluation on a diverse set of models highlights that the best implementation often requires a careful combination 
-of many optimization strategies. For example, simultaneously traversing multiple trees with many threads, while managing the working set is 
-critical to get scalable performance. This requires a combination of techniques like data layout optimizations, 
-loop transformations, and memory access optimizations. Existing systems each use specific data layouts for the underlying
-tree and use fixed loop structures. 
-Parallelism, loop structure and model representation together determine the accesses patterns and the working set. A fixed configuration 
-as used by existing systems does not perform consistently well across different models and hardware platforms.
+Evaluation on a diverse set of models highlights that the best implementation often requires a careful composition 
+of many optimization strategies like data layout optimizations, 
+loop transformations, parallelization, and memory access optimizations. 
+%For example, simultaneously traversing multiple trees with many threads, while managing the working set is 
+%critical to get scalable performance. 
+%This requires a combination of techniques like data layout optimizations, loop transformations, and memory access optimizations. 
+%Existing systems each use specific data layouts for the underlying tree and use fixed loop structures. 
+%Parallelism, loop structure and model representation together determine the accesses patterns and the working set. 
+Existing systems today are mostly library based, and only support a predefined combination of optimizations. 
 XGBoost~\cite{XGBoost} uses a sparse representation for the model and a loop structure that processes one tree for a block of rows before moving to 
 the next tree. RAPIDS FIL~\cite{FIL} uses a reorg representation and partitions trees across a fixed number of threads. Tahoe~\cite{Tahoe} uses a
 variation of the reorg representation and has four predefined inference strategies from which it picks one based on an analytical model.
-These systems are all library based and are hard to extend. 
-\TreebeardOLD{}, the state-of-the-art model compiler for CPUs, supports two fixed loop structures and does not scale well with increasing number of threads.
+%These systems are all library based and are hard to extend. 
+\TreebeardOLD{}, the state-of-the-art model compiler for CPUs, supports two fixed loop structures and does not scale well with increasing number of threads. Additionally, it lacks GPU specific optimizations that are critical to scale performance to massive number of threads.
 
-This paper presents \Treebeard{}, a novel schedule guided compilation infrastructure for decision tree inference on multiple target hardware. \Treebeard{} is able to generate high-performance code for decision tree inference by exploring a large optimization space. The code generation is guided by a \emph{schedule} object that allows us to effectively represent this solution space abstractly. The schedule object is written in \Treebeard{} custom scheduling language that is expressive enough to represent a wide range of implementation strategies. We demonstrate that the language is sufficient to express the various optimizations proposed by prior work, and further generalizes them and incorporates several new optimizations. We also design and implement a heuristic that is able to quickly find high-performance schedules for the model being compiled.
+This paper presents \Treebeard{}, a novel schedule guided compilation infrastructure for decision tree inference on multiple target hardware. \Treebeard{} is able to generate high-performance code for decision tree inference by exploring a large optimization space. The code generation is guided by a \emph{schedule} written in a custom scheduling language that can represent a wide range of implementation strategies. We demonstrate that the language is sufficient to express the various optimizations proposed by prior work, and further generalizes them and incorporates several new optimizations. We also design and implement a heuristic that is able to quickly find high-performance schedules for the model being compiled.
 \TODO{Performance evaluation summary}
 \TODO{Oganization}
 \subsection{Contributions}
