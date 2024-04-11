@@ -1,171 +1,138 @@
 \section{Reductions : Representation, Optimization and Lowering}
 \label{sec:reduction}
-Currently, existing reduction support in MLIR is insufficient 
-to code generate and optimize the reductions \Treebeard{} needs
-to perform while performing inference (sum up individual 
-tree predictions to compute the prediction of the model). 
-MLIR only supports reductions of value types and cannot 
-directly represent and optimize inplace reductions of 
-several elements of a memory buffer. 
-
-We design a mechanism to specify accumulating values into
-an element of a multi-dimensional array inplace. 
-The accumulation is performed inside an arbitrary 
-loop nest where several surrounding loops maybe parallel and 
-the ultimate target machine maybe a CPU or a GPU. Because this problem 
-is of general interest, we design this as an MLIR dialect. 
+\Treebeard{} needs to sum up individual tree predictions to compute 
+the prediction of the model while performing inference. However,
+generating fused reductions within arbitrary loop nests specified 
+using \Treebeard{}'s scheduling language is non-trivial. We found 
+that existing reduction support in MLIR is insufficient to code
+generate and optimize these reductions. MLIR only supports reductions
+of value types and does not provide ways to lower reductions to GPUs. 
+To address this gap, we design an MLIR dialect that allows us to
+specify accumulating values into an element of a multi-dimensional array
+and can be lowered to CPU or GPU. 
 
 The main abstraction we introduce is the \op{reduce} op. It models 
 atomically accumulating values into an element of a 
-multi-dimensional array (represented by a MLIR \op{memref}).
-The following example sums up the elements of the 1D memref \op{arr}
-into the first element of the memref \op{result}. It does this
-using in two concurrent iterations of a surrounding 
-parallel loop.
+multi-dimensional array (represented by an MLIR \op{memref}).
+The following example shows how the \op{reduce} op can be used to 
+sum up the elements of an array in parallel.
 
 \begin{lstlisting}[style=c++]
-  builtin.func @ReduceVector(%arr: memref<num_elemsxf64>, %result: memref<1xf64>) -> void {
-    par.for i0 in range(0 : num_elems/2 : num_elems) {
-      for i1 in range(0 : num_elems/2) 
-        reduce(%result, 0, arr[i0 + i1]) <"+", 0.0>
-    }
+  float arr[10], result[1]
+  par.for i0 = 0  to 10 step 5 {
+    for i1 = 0 to 5 
+      reduce(result[0], arr[i0 + i1]) <"+", 0.0>
   }
 \end{lstlisting}
 
-The semantics of the \op{reduce} op guarantee that all elements are 
-correctly added and that there is no race between the parallel 
-iterations of the loop.
-
+The semantics of the \op{reduce} op is exactly the semantics of 
+an atomic accumulation, i.e. it guarantees that all accumulations 
+are correctly performed even in the presence of parallel loops. 
 The \op{reduce} op is defined for all associative and commutative
 reduction operations with a well-defined initial value. The 
 reduction operator and the initial value are attributes applied
 on the \op{reduce} op. 
 
-The main differences between our \op{reduce} and the existing 
-reductions in MLIR are the following:
-1. Existing reductions only support scalar, by value reductions. 
-It does not support accumulating inplace into memref elements.
-2. Existing reduction support in MLIR does not provide a unified
-way to handle reductions in GPUs and CPUs. To the best of our 
-knowledge, there is currently no way to model reductions on GPUs
-in MLIR.
-2. Existing reductions have strict rules about where they can be 
-written. For example, \op{scf.reduce} needs to be an immediate 
-child \op{scf.parallel}. However, our \op{reduce} op can be
-generated anywhere in the loop nest. 
-
-Having modeled the reductions with an abstract op, the 
+Having modeled the reductions with an abstract operation, the 
 aim now is to lower this to a correct and optimized 
-implementation on both CPU and GPU. In order to do this,
-we make the following observations. 
-1. The \op{reduce} op has a loop carried dependency on itself
-and loop carried dependences on other \op{reduce} ops that
-accumulate into the same target array. 
-A simple lowering to a sequence of load-add-store instructions is 
-incorrect if any of these dependences are carried by a parallel 
-loop. We call any such surrounding parallel loop a 
-\textbf{conflicting loop} (\TODO{Change the name!}) for the reduction.
-2. There is a race between the parallel iterations of such a loop 
-when naively accumulating values into target memref elements. 
-To avoid this race, the result memref can be \textbf{privatized} wrt each 
-surrounding conflicting loop. Subsequently, each privatized dimension 
-can be reduced at the end of the conflicting loop it was inserted for. 
+implementation on both CPU and GPU. In order to do this, we 
+first determine if any parallel loop iterations can accumulate 
+into the same array element. We call such loops 
+\emph{\textbf{reduction loops}}. If such loops exist, we 
+\textbf{\emph{privatize}} the array for each iteration of the
+loop. We call this process \textbf{\emph{legalization}}.
+Subsequently, each privatized dimension 
+can be reduced at the end of the reduction loop it was inserted for. 
 \TODO{We cannot do better than this in terms of memory usage} \TODO{Need a proof}.
 
 
-\begin{definition}
-A parallel loop surrounding one or more \op{reduce} ops is 
-a \textbf{conflicting loop} for a target multi-dimensional array if this 
-loop has a non-zero dependence distance for the dependence between
-any of the contained \op{reduce} ops.
-\end{definition} 
-
-In the context of \Treebeard{}, this set of loops is exactly the set 
-of surrounding parallel loops that are iterating over trees. The 
-results can be privatized for each conflicting loop iteratively 
-and reductions along each privatized dimension can be inserted  
-immediately following the loop the dimension was inserted due to.
-
-We illustrate this process through the example above. The \op{i0} loop is 
-a conflicting loop for the reduction into the \op{result} array.
-We would therefore privatize the \op{result} memref for each iteration of 
-the \op{i0} loop. 
+In our example above, parallel iterations of the \op{i0} loop accumulate 
+into the same element of the \op{result} array.
+We would therefore privatize the \op{result} array for each iteration of 
+the \op{i0} loop as follows. 
 \begin{lstlisting}[style=c++]
-  builtin.func @ReduceVector(%arr: memref<num_elemsxf64>, %result: memref<1xf64>) -> void {
-    results_1 = memref<2x1xf64>
-    par.for i0 = range(0 : num_elems/2 : num_elems) {
-      for i1 = range(0 : num_elems/2) 
-        reduce(%result_1[i0/(num_elems/2), 0], arr[i0 + i1]) <"+", 0.0>
-    }
-    results = reduce_dimension(results_1, 0) <"+", 0.0>
+  float arr[10], result[1]
+  float resultPriv[2][1]
+  par.for i0 = 0  to 10 step 5 {
+    for i1 = 0 to 5 
+      reduce(resultPriv[i0/5][0], arr[i0 + i1]) <"+", 0.0>
   }
+  result = reduce_dimension(resultPriv, 0)
 \end{lstlisting}
+
 The op \op{reduce\_dimension} reduces values across the specified
-dimension of an n-dimensional memref. In the above example, 
+dimension of an n-dimensional array. In the above example, 
 the \op{reduce\_dimension} op is reducing across all elements 
-of the first dimension (index 0). Therefore, in this case, it 
+of the first dimension (dimension 0). Therefore, in this case, it 
 produces a result memref with a single element (the first dimension
 with size 2 is collapsed). 
 
-\begin{definition}
-  \op{\textbf{reduce\_dimension(targetMemref, memref, dim, [indices], [rangeStart], [rangeEnd])}}:
-   Computes the reduction over the dimension specified by \op{dimension} and stores the 
-   result in \op{targetMemref}. \op{[indices]} must be a vector of \op{dim} elements
-   (or empty if the dimension being reduced is the first dimension). \op{[rangeStart]} 
-   and \op{[rangeEnd]} represent the range of indices following the reduction dimension and 
-   must have the same number of elements. If both are \op{null} (not passed), 
-   all elements of these dimensions are reduced. The computation performed by the op is as follows.
+% \begin{definition}
+%   A parallel loop surrounding one or more \op{reduce} ops is 
+%   a \textbf{conflicting loop} for a target multi-dimensional array if this 
+%   loop has a non-zero dependence distance for the dependence between
+%   any of the contained \op{reduce} ops.
+% \end{definition} 
 
-  $targetMemref[\vec{\boldsymbol{indices}}, \vec{\boldsymbol{k}}] = \sum_{i=0}^{shape[dim]} memref[\vec{\boldsymbol{indices}}, i, \vec{\boldsymbol{k}}]\quad   \forall \vec{\boldsymbol{k}} \in \left[[rangeStart_0, rangeEnd_0), ... , [rangeStart_n, rangeEnd_n)\right]$
-\end{definition}
+% \begin{definition}
+%   \op{\textbf{reduce\_dimension(targetMemref, memref, dim, [indices], [rangeStart], [rangeEnd])}}:
+%    Computes the reduction over the dimension specified by \op{dimension} and stores the 
+%    result in \op{targetMemref}. \op{[indices]} must be a vector of \op{dim} elements
+%    (or empty if the dimension being reduced is the first dimension). \op{[rangeStart]} 
+%    and \op{[rangeEnd]} represent the range of indices following the reduction dimension and 
+%    must have the same number of elements. If both are \op{null} (not passed), 
+%    all elements of these dimensions are reduced. The computation performed by the op is as follows.
 
-Consider the following code with nested parallel loops. 
-(A situation where trees are split across both
-threads and thread blocks could result in such generated 
-code in \Treebeard{}.)
-\begin{lstlisting}[style=c++]
-  builtin.func @ReduceVector(%arr: memref<num_elemsxf64>, %result: memref<1xf64>) -> void {
-    par.for i0 = range(0 : num_elems/2 : num_elems) {
-      par.for i1 = range(0 : num_elems/4 : num_elems/2) {
-        for i2 = range(0 : num_elems/4) 
-          reduce(%result, 0, arr[i0 + i1 + i2]) <"+", 0.0>
-      }
-    }
-  }
-\end{lstlisting}
+%   $targetMemref[\vec{\boldsymbol{indices}}, \vec{\boldsymbol{k}}] = \sum_{i=0}^{shape[dim]} memref[\vec{\boldsymbol{indices}}, i, \vec{\boldsymbol{k}}]\quad   \forall \vec{\boldsymbol{k}} \in \left[[rangeStart_0, rangeEnd_0), ... , [rangeStart_n, rangeEnd_n)\right]$
+% \end{definition}
 
-Here, the \op{i0} and \op{i1} loops are conflicting loops wrt 
-the \op{result} memref. We \textbf{legalize} the reduction 
-by privatizing the \op{result} array wrt the \op{i0} and \op{i1} loops.
-However, there are now two privatized dimensions and therefore, 
-two dimensions need to be reduced to compute the final result.
-This multi-stage reduction is what enables us to model 
-hierarchical reductions.
+% Consider the following code with nested parallel loops. 
+% (A situation where trees are split across both
+% threads and thread blocks could result in such generated 
+% code in \Treebeard{}.)
+% \begin{lstlisting}[style=c++]
+%   builtin.func @ReduceVector(%arr: memref<num_elemsxf64>, %result: memref<1xf64>) -> void {
+%     par.for i0 = range(0 : num_elems/2 : num_elems) {
+%       par.for i1 = range(0 : num_elems/4 : num_elems/2) {
+%         for i2 = range(0 : num_elems/4) 
+%           reduce(%result, 0, arr[i0 + i1 + i2]) <"+", 0.0>
+%       }
+%     }
+%   }
+% \end{lstlisting}
 
-The following code shows how the reduction above is legalized. 
-We introduce a new op, \op{reduce\_dimension\_inplace} which 
-reduces a dimension of the input memref and stores results 
-in the same array. This helps saves memory by removing the 
-need to create multiple intermediate arrays to store results.
-Only the final dimension reduction uses the \op{reduce\_dimension} op.
+% Here, the \op{i0} and \op{i1} loops are conflicting loops wrt 
+% the \op{result} memref. We \textbf{legalize} the reduction 
+% by privatizing the \op{result} array wrt the \op{i0} and \op{i1} loops.
+% However, there are now two privatized dimensions and therefore, 
+% two dimensions need to be reduced to compute the final result.
+% This multi-stage reduction is what enables us to model 
+% hierarchical reductions.
 
-\begin{lstlisting}[style=c++]
-  builtin.func @ReduceVector(%arr: memref<num_elemsxf64>, %result: memref<1xf64>) -> void {
-    results_1 = memref<2x2x1xf64>
-    par.for i0 = range(0 : num_elems/2 : num_elems) {
-      par.for i1 = range(0 : num_elems/4 : num_elems/2) {
-        for i2 = range(0 : num_elems/4) 
-          index0 = i0/(num_elems/2)
-          index1 = i1/(num_elems/4)
-          reduce(%result_1[index0, index1, 0], arr[i0 + i1 + i2]) <"+", 0.0>
-      }
-      // result_1[i0/(num_elems/2), 0] = sum(result_1[i0/(num_elems/2), :])
-      reduce_dimension_inplace(%result_1, 1, i0/(num_elems/2)) 
-    }
-    // result = sum(result[:, 0])
-    %result = reduce_dimension(%result_1, 0)
-  }
-\end{lstlisting}
+% The following code shows how the reduction above is legalized. 
+% We introduce a new op, \op{reduce\_dimension\_inplace} which 
+% reduces a dimension of the input memref and stores results 
+% in the same array. This helps saves memory by removing the 
+% need to create multiple intermediate arrays to store results.
+% Only the final dimension reduction uses the \op{reduce\_dimension} op.
+
+% \begin{lstlisting}[style=c++]
+%   builtin.func @ReduceVector(%arr: memref<num_elemsxf64>, %result: memref<1xf64>) -> void {
+%     results_1 = memref<2x2x1xf64>
+%     par.for i0 = range(0 : num_elems/2 : num_elems) {
+%       par.for i1 = range(0 : num_elems/4 : num_elems/2) {
+%         for i2 = range(0 : num_elems/4) 
+%           index0 = i0/(num_elems/2)
+%           index1 = i1/(num_elems/4)
+%           reduce(%result_1[index0, index1, 0], arr[i0 + i1 + i2]) <"+", 0.0>
+%       }
+%       // result_1[i0/(num_elems/2), 0] = sum(result_1[i0/(num_elems/2), :])
+%       reduce_dimension_inplace(%result_1, 1, i0/(num_elems/2)) 
+%     }
+%     // result = sum(result[:, 0])
+%     %result = reduce_dimension(%result_1, 0)
+%   }
+% \end{lstlisting}
 
 The behavior of the \op{reduce\_dimension\_inplace} op is similar to the 
 \op{reduce\_dimension} op except that it updates the input array inplace
@@ -191,6 +158,12 @@ Since the compilation pipeline diverges after the reductions are legalized,
 we can implement lowering and optimization of our reduction dialect to CPUs and
 GPUs simply using different MLIR rewrite patterns. We now briefly describe 
 how these operations are lowered to the CPU and GPU. 
+
+In the context of \Treebeard{}, the set of reduction loops is exactly the set 
+of surrounding parallel loops that are iterating over trees. The 
+results can be privatized for each loop iteratively 
+and reductions along each privatized dimension can be inserted  
+immediately following the loop the dimension was inserted due to.
 
 \subsubsection{Lowering to CPU}
 The lowering of the reduction operations to CPU is fairly straightforward. We lower the 
