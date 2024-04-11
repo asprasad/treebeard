@@ -1,6 +1,7 @@
 from matplotlib import pyplot as plt
 import pandas as pd
 import numpy as np
+import os
 
 def time_diff_computation(x):
     five_diff = (x.iloc[9] - x.iloc[0])/x.iloc[0]
@@ -80,6 +81,7 @@ def write_best_config_maps_to_file(df_best_total_time, benchmark_names, batch_si
 
 def compare_across_batch_sizes(df_best_kernel_time, df_sorted_by_kernel_time, batch_sizes, benchmarks):
     # for every benchmark and batch size, get the best schedule from df_best_kernel_time 
+    print("benchmark,cur_batch_size,cmp_batch_size,degradation")
     for batch_size in batch_sizes:
         for benchmark in benchmarks:
             best_schedule = df_best_kernel_time[(df_best_kernel_time['model'] == benchmark) & (df_best_kernel_time['batch_size'] == batch_size)]
@@ -101,11 +103,44 @@ def compare_across_batch_sizes(df_best_kernel_time, df_sorted_by_kernel_time, ba
                                                                (df_sorted_by_kernel_time['sharedReduce'] == best_schedule.iloc[0]['sharedReduce'])]
                 # print(entry_at_batch_size)
                 if (entry_at_batch_size.shape[0] != 1):
+                    # print(f'Schedule {best_schedule} not present for {benchmark} at batch size {cmp_batch_size}')
+                    print(f"{benchmark},{batch_size},{cmp_batch_size},NaN")
                     continue
                 cmp_time = entry_at_batch_size.iloc[0]['kernel']
                 best_time_at_cmp_batch_size = df_best_kernel_time[(df_best_kernel_time['model'] == benchmark) & (df_best_kernel_time['batch_size'] == cmp_batch_size)].iloc[0]['kernel']
                 degradation = (cmp_time - best_time_at_cmp_batch_size)/best_time_at_cmp_batch_size
-                print(f"Degradation for {benchmark} at batch size {batch_size} compared to batch size {cmp_batch_size}: {degradation}")
+                print(f"{benchmark},{batch_size},{cmp_batch_size},{degradation}")
+                #print(f"Degradation for {benchmark} at batch size {batch_size} compared to batch size {cmp_batch_size}: {degradation}")
+
+def compare_across_benchmarks(df_best_kernel_time, df_sorted_by_kernel_time, batch_sizes, benchmarks):
+    # for every benchmark and batch size, get the best schedule from df_best_kernel_time
+    print("benchmark,cur_batch_size,cmp_benchmark,degradation")
+    for batch_size in batch_sizes:
+        for benchmark in benchmarks:
+            best_schedule = df_best_kernel_time[(df_best_kernel_time['model'] == benchmark) & (df_best_kernel_time['batch_size'] == batch_size)]
+            assert (best_schedule.shape[0] == 1)
+            best_schedule_rep = best_schedule.iloc[0]['representation']
+            for cmp_benchmark in benchmarks:
+                entry_at_cmp_benchmark = df_sorted_by_kernel_time[(df_sorted_by_kernel_time['model'] == cmp_benchmark) & 
+                                                               (df_sorted_by_kernel_time['batch_size'] == batch_size) &
+                                                               (df_sorted_by_kernel_time['representation'] == best_schedule_rep) &
+                                                               (df_sorted_by_kernel_time['rowsPerTB'] == best_schedule.iloc[0]['rowsPerTB']) &
+                                                               (df_sorted_by_kernel_time['rowsPerT'] == best_schedule.iloc[0]['rowsPerT']) &
+                                                               (df_sorted_by_kernel_time['numTreeThreads'] == best_schedule.iloc[0]['numTreeThreads']) &
+                                                               (df_sorted_by_kernel_time['treeInterleaveDepth'] == best_schedule.iloc[0]['treeInterleaveDepth']) &
+                                                               (df_sorted_by_kernel_time['cache_rows'] == best_schedule.iloc[0]['cache_rows']) &
+                                                               (df_sorted_by_kernel_time['cache_trees'] == best_schedule.iloc[0]['cache_trees']) &
+                                                               (df_sorted_by_kernel_time['unroll'] == best_schedule.iloc[0]['unroll']) &
+                                                               (df_sorted_by_kernel_time['sharedReduce'] == best_schedule.iloc[0]['sharedReduce'])]
+                if (entry_at_cmp_benchmark.shape[0] != 1):
+                    # print(f'Schedule {best_schedule} not present for {cmp_benchmark} at batch size {batch_size}')
+                    print(f"{benchmark},{batch_size},{cmp_benchmark},NaN")
+                    continue
+                cmp_time = entry_at_cmp_benchmark.iloc[0]['kernel']
+                best_time_at_cmp_benchmark = df_best_kernel_time[(df_best_kernel_time['model'] == cmp_benchmark) & (df_best_kernel_time['batch_size'] == batch_size)].iloc[0]['kernel']
+                degradation = (cmp_time - best_time_at_cmp_benchmark)/best_time_at_cmp_benchmark
+                print(f"{benchmark},{batch_size},{cmp_benchmark},{degradation}")
+                
 # results_file = "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/gpu_auto-schedule-results_thedeep_600reps_tree-pipelining_noletters_plus1TreeThread.txt"
 # results_file = "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/gpu_auto-schedule-results_thedeep_200reps_tree-pipelining_letters_plus1TreeThread.txt"
 # results_file = "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/gpu_auto-schedule-results_thedeep_600reps_tree-pipelining_smallBatch_plus1TreeThread.txt"
@@ -113,21 +148,36 @@ def compare_across_batch_sizes(df_best_kernel_time, df_sorted_by_kernel_time, ba
 # result_files = ["/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/gpu_auto-schedule-results_thedeep_600reps_tree-pipelining_noletters_plus1TreeThread.txt",
 # "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/gpu_auto-schedule-results_thedeep_200reps_tree-pipelining_letters_plus1TreeThread.txt",
 # "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/gpu_auto-schedule-results_thedeep_600reps_tree-pipelining_smallBatch_plus1TreeThread.txt"]
-
+results_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 result_files = [
-   "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/20240229/exploration_b4k-16k_stderr_filtered.txt",
-   "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/20240229/exploration_b4k-16k_stderr_letters_filtered.txt",
-   "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/20240229/exploration_b256_stderr_filtered.txt",
-   "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/20240229/exploration_b512-2k_stderr_filtered.txt",
-   "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/20240229/exploration_b512-2k_stderr_letters_filtered.txt"
+    os.path.join(results_dir, "thedeep/gpu/exploration/20240229/exploration_b4k-16k_stderr_filtered.txt"),
+    os.path.join(results_dir, "thedeep/gpu/exploration/20240229/exploration_b4k-16k_stderr_letters_filtered.txt"),
+    os.path.join(results_dir, "thedeep/gpu/exploration/20240229/exploration_b256_stderr_filtered.txt"),
+    os.path.join(results_dir, "thedeep/gpu/exploration/20240229/exploration_b512-2k_stderr_filtered.txt"),
+    os.path.join(results_dir, "thedeep/gpu/exploration/20240229/exploration_b512-2k_stderr_letters_filtered.txt")
 ]
 
 col_names=["model", "representation", "batch_size", "rowsPerTB", 
            "rowsPerT", "numTreeThreads", "treeInterleaveDepth", 
            "cache_rows", "cache_trees", "unroll", "sharedReduce",
            "total", "kernel"]
+dtypes = {
+    "model" : "string",
+    "representation" : "string",
+    "batch_size" : "int64",
+    "rowsPerTB" : "int64",
+    "rowsPerT" : "int64",
+    "numTreeThreads" : "int64",
+    "treeInterleaveDepth" : "int64",
+    "cache_rows" : "bool",
+    "cache_trees" : "bool",
+    "unroll" : "bool",
+    "sharedReduce" : "string",
+    "total" : "float64",
+    "kernel" : "float64"
+}
 
-dataframes = [pd.read_csv(f, names=col_names) for f in result_files]
+dataframes = [pd.read_csv(f, names=col_names, dtype=dtypes) for f in result_files]
 
 # results_file = "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/gpu_auto-sched_thedeep_600reps_tree-pipelining_transferOpt.txt"
 # results_file = "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/gpu_auto-schedule-results_thedeep_200reps_tree-pipelining_lettersOnly.txt"
@@ -145,6 +195,7 @@ df = df[df.total != -1]
 benchmark_names = df.model.unique()
 # print(benchmark_names)
 batch_sizes = df.batch_size.unique()
+batch_sizes.sort()
 
 # Get the best schedule for each benchmark for each batch size in terms of total time. 
 # Also print the schedule name and the kernel
@@ -205,8 +256,13 @@ for benchmark in benchmark_names:
         df_best_kernel_time.loc[(df_best_kernel_time['model'] == benchmark) & (df_best_kernel_time['batch_size'] == batch_size), 'ten_diff_kernel'] = bencmark_batch_diffs.loc['ten_diff']
         df_best_kernel_time.loc[(df_best_kernel_time['model'] == benchmark) & (df_best_kernel_time['batch_size'] == batch_size), 'twentyfive_diff_kernel'] = bencmark_batch_diffs.loc['twentyfive_diff']
 
-print(df_best_kernel_time)
+# print(df_best_kernel_time)
 
+print('Comparison across batch sizes')
 compare_across_batch_sizes(df_best_kernel_time, df_sorted_by_kernel_time, batch_sizes, benchmark_names)
+
+print()
+print('Comparison across benchmarks')
+compare_across_benchmarks(df_best_kernel_time, df_sorted_by_kernel_time, batch_sizes, benchmark_names)
 # plot_normalized_time_histogram(df_sorted_by_kernel_time, df_best_kernel_time, 'kernel')
 # write_best_config_maps_to_file(df_best_total_time, benchmark_names, batch_sizes, "best_configs.txt")
