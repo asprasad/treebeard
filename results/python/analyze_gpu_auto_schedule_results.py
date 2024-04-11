@@ -78,6 +78,34 @@ def write_best_config_maps_to_file(df_best_total_time, benchmark_names, batch_si
     f.write("}\n")
     f.close()
 
+def compare_across_batch_sizes(df_best_kernel_time, df_sorted_by_kernel_time, batch_sizes, benchmarks):
+    # for every benchmark and batch size, get the best schedule from df_best_kernel_time 
+    for batch_size in batch_sizes:
+        for benchmark in benchmarks:
+            best_schedule = df_best_kernel_time[(df_best_kernel_time['model'] == benchmark) & (df_best_kernel_time['batch_size'] == batch_size)]
+            # print(best_schedule)
+            assert (best_schedule.shape[0] == 1)
+            best_schedule_time = best_schedule.iloc[0]['kernel']
+            best_schedule_rep = best_schedule.iloc[0]['representation']
+            for cmp_batch_size in batch_sizes:
+                entry_at_batch_size = df_sorted_by_kernel_time[(df_sorted_by_kernel_time['model'] == benchmark) & 
+                                                               (df_sorted_by_kernel_time['batch_size'] == cmp_batch_size) &
+                                                               (df_sorted_by_kernel_time['representation'] == best_schedule_rep) &
+                                                               (df_sorted_by_kernel_time['rowsPerTB'] == best_schedule.iloc[0]['rowsPerTB']) &
+                                                               (df_sorted_by_kernel_time['rowsPerT'] == best_schedule.iloc[0]['rowsPerT']) &
+                                                               (df_sorted_by_kernel_time['numTreeThreads'] == best_schedule.iloc[0]['numTreeThreads']) &
+                                                               (df_sorted_by_kernel_time['treeInterleaveDepth'] == best_schedule.iloc[0]['treeInterleaveDepth']) &
+                                                               (df_sorted_by_kernel_time['cache_rows'] == best_schedule.iloc[0]['cache_rows']) &
+                                                               (df_sorted_by_kernel_time['cache_trees'] == best_schedule.iloc[0]['cache_trees']) &
+                                                               (df_sorted_by_kernel_time['unroll'] == best_schedule.iloc[0]['unroll']) &
+                                                               (df_sorted_by_kernel_time['sharedReduce'] == best_schedule.iloc[0]['sharedReduce'])]
+                # print(entry_at_batch_size)
+                if (entry_at_batch_size.shape[0] != 1):
+                    continue
+                cmp_time = entry_at_batch_size.iloc[0]['kernel']
+                best_time_at_cmp_batch_size = df_best_kernel_time[(df_best_kernel_time['model'] == benchmark) & (df_best_kernel_time['batch_size'] == cmp_batch_size)].iloc[0]['kernel']
+                degradation = (cmp_time - best_time_at_cmp_batch_size)/best_time_at_cmp_batch_size
+                print(f"Degradation for {benchmark} at batch size {batch_size} compared to batch size {cmp_batch_size}: {degradation}")
 # results_file = "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/gpu_auto-schedule-results_thedeep_600reps_tree-pipelining_noletters_plus1TreeThread.txt"
 # results_file = "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/gpu_auto-schedule-results_thedeep_200reps_tree-pipelining_letters_plus1TreeThread.txt"
 # results_file = "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/exploration/gpu_auto-schedule-results_thedeep_600reps_tree-pipelining_smallBatch_plus1TreeThread.txt"
@@ -120,7 +148,7 @@ batch_sizes = df.batch_size.unique()
 
 # Get the best schedule for each benchmark for each batch size in terms of total time. 
 # Also print the schedule name and the kernel
-df_best_total_time = df.loc[df.groupby(['model', 'batch_size'])['total'].idxmin()]
+# df_best_total_time = df.loc[df.groupby(['model', 'batch_size'])['total'].idxmin()]
 # print(df_best_total_time)
 
 # do the same for kernel
@@ -128,7 +156,7 @@ df_best_kernel_time = df.loc[df.groupby(['model', 'batch_size'])['kernel'].idxmi
 # print(df_best_kernel_time)
 
 # Group the data by benchmark and batchSize. Sort each group on the total
-df_sorted_by_total_time = df.sort_values(['model', 'batch_size', 'total'])
+# df_sorted_by_total_time = df.sort_values(['model', 'batch_size', 'total'])
 df_sorted_by_kernel_time = df.sort_values(['model', 'batch_size', 'kernel'])
 
 # compute_rank_in_other_table(df_sorted_by_kernel_time, df_best_total_time, benchmark_names, batch_sizes)
@@ -141,22 +169,22 @@ pd.set_option('display.width', 1000)
 # for each benchmark and batchSize, get the percentage difference between the best schedule and the 10th best schedule and the percentage difference 
 # between the best schedule and the 25th best schedule
 # total_time_diff_df = df_sorted_by_total_time.groupby(['model', 'batch_size'])['total'].apply(time_diff_computation)
-total_time_diff_df = df_sorted_by_total_time.groupby(['model', 'batch_size']).agg(five_diff=('total', lambda x: (x.iloc[5] - x.iloc[0])/x.iloc[0]),
-                                                                                     ten_diff=('total', lambda x: (x.iloc[9] - x.iloc[0])/x.iloc[0]),
-                                                                                     twentyfive_diff=('total', lambda x: (x.iloc[25] - x.iloc[0])/x.iloc[0]))
+# total_time_diff_df = df_sorted_by_total_time.groupby(['model', 'batch_size']).agg(five_diff=('total', lambda x: (x.iloc[5] - x.iloc[0])/x.iloc[0]),
+#                                                                                      ten_diff=('total', lambda x: (x.iloc[9] - x.iloc[0])/x.iloc[0]),
+#                                                                                      twentyfive_diff=('total', lambda x: (x.iloc[25] - x.iloc[0])/x.iloc[0]))
 # print the full dataframe
 # print(total_time_diff_df)
 
 # get all the benchmark names from total_time_diff_df
 # print(total_time_diff_df.index.get_level_values(0).unique())
 
-for benchmark in benchmark_names:
-    for batch_size in batch_sizes:
-        benchmark_group = total_time_diff_df.loc[benchmark]
-        bencmark_batch_diffs = benchmark_group.loc[batch_size]
-        df_best_total_time.loc[(df_best_total_time['model'] == benchmark) & (df_best_total_time['batch_size'] == batch_size), 'five_diff'] = bencmark_batch_diffs.loc['five_diff']
-        df_best_total_time.loc[(df_best_total_time['model'] == benchmark) & (df_best_total_time['batch_size'] == batch_size), 'ten_diff'] = bencmark_batch_diffs.loc['ten_diff']
-        df_best_total_time.loc[(df_best_total_time['model'] == benchmark) & (df_best_total_time['batch_size'] == batch_size), 'twentyfive_diff'] = bencmark_batch_diffs.loc['twentyfive_diff']
+# for benchmark in benchmark_names:
+#     for batch_size in batch_sizes:
+#         benchmark_group = total_time_diff_df.loc[benchmark]
+#         bencmark_batch_diffs = benchmark_group.loc[batch_size]
+#         df_best_total_time.loc[(df_best_total_time['model'] == benchmark) & (df_best_total_time['batch_size'] == batch_size), 'five_diff'] = bencmark_batch_diffs.loc['five_diff']
+#         df_best_total_time.loc[(df_best_total_time['model'] == benchmark) & (df_best_total_time['batch_size'] == batch_size), 'ten_diff'] = bencmark_batch_diffs.loc['ten_diff']
+#         df_best_total_time.loc[(df_best_total_time['model'] == benchmark) & (df_best_total_time['batch_size'] == batch_size), 'twentyfive_diff'] = bencmark_batch_diffs.loc['twentyfive_diff']
 
 # print(df_best_kernel_time)
 
@@ -173,10 +201,12 @@ for benchmark in benchmark_names:
     for batch_size in batch_sizes:
         benchmark_group = kernel_time_diff_df.loc[benchmark]
         bencmark_batch_diffs = benchmark_group.loc[batch_size]
-        df_best_total_time.loc[(df_best_total_time['model'] == benchmark) & (df_best_total_time['batch_size'] == batch_size), 'five_diff_kernel'] = bencmark_batch_diffs.loc['five_diff']
-        df_best_total_time.loc[(df_best_total_time['model'] == benchmark) & (df_best_total_time['batch_size'] == batch_size), 'ten_diff_kernel'] = bencmark_batch_diffs.loc['ten_diff']
-        df_best_total_time.loc[(df_best_total_time['model'] == benchmark) & (df_best_total_time['batch_size'] == batch_size), 'twentyfive_diff_kernel'] = bencmark_batch_diffs.loc['twentyfive_diff']
+        df_best_kernel_time.loc[(df_best_kernel_time['model'] == benchmark) & (df_best_kernel_time['batch_size'] == batch_size), 'five_diff_kernel'] = bencmark_batch_diffs.loc['five_diff']
+        df_best_kernel_time.loc[(df_best_kernel_time['model'] == benchmark) & (df_best_kernel_time['batch_size'] == batch_size), 'ten_diff_kernel'] = bencmark_batch_diffs.loc['ten_diff']
+        df_best_kernel_time.loc[(df_best_kernel_time['model'] == benchmark) & (df_best_kernel_time['batch_size'] == batch_size), 'twentyfive_diff_kernel'] = bencmark_batch_diffs.loc['twentyfive_diff']
 
-print(df_best_total_time)
-plot_normalized_time_histogram(df_sorted_by_kernel_time, df_best_kernel_time, 'kernel')
+print(df_best_kernel_time)
+
+compare_across_batch_sizes(df_best_kernel_time, df_sorted_by_kernel_time, batch_sizes, benchmark_names)
+# plot_normalized_time_histogram(df_sorted_by_kernel_time, df_best_kernel_time, 'kernel')
 # write_best_config_maps_to_file(df_best_total_time, benchmark_names, batch_sizes, "best_configs.txt")
