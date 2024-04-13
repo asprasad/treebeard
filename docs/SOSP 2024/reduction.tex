@@ -134,74 +134,64 @@ with size 2 is collapsed).
 %   }
 % \end{lstlisting}
 
-The behavior of the \op{reduce\_dimension\_inplace} op is similar to the 
+To reduce the amount of memory used by arrays introduced for reduction,
+we introduce the \op{reduce\_dimension\_inplace} operation. It is similar to the 
 \op{reduce\_dimension} op except that it updates the input array inplace
-rather than writing results to a target array. The definition of the 
-op is as follows. 
+rather than writing results to a target array. It writes results to the 
+zeroth index of the dimension being reduced.
 
-\begin{definition}
- \textbf{\op{reduce\_dimension\_inplace(memref, dim, [indices], [rangeStart], [rangeEnd])}}:
-  Computes the reduction over the dimension specified by \op{dimension} and stores the 
-  result at index 0 of that dimension. \op{[indices]} must be a vector of \op{dim} elements
-   (or empty if the dimension being reduced is the first dimension). \op{[rangeStart]} 
-   and \op{[rangeEnd]} must have the same number of elements. If both are \op{null} (not passed), 
-   all elements of the corresponding dimension are reduced. 
+% \begin{definition}
+%  \textbf{\op{reduce\_dimension\_inplace(memref, dim, [indices], [rangeStart], [rangeEnd])}}:
+%   Computes the reduction over the dimension specified by \op{dimension} and stores the 
+%   result at index 0 of that dimension. \op{[indices]} must be a vector of \op{dim} elements
+%    (or empty if the dimension being reduced is the first dimension). \op{[rangeStart]} 
+%    and \op{[rangeEnd]} must have the same number of elements. If both are \op{null} (not passed), 
+%    all elements of the corresponding dimension are reduced. 
   
-  The computation performed by the op is defined by the following equation.
+%   The computation performed by the op is defined by the following equation.
   
-  $memref[\vec{\boldsymbol{indices}}, 0, \vec{\boldsymbol{k}}] = \sum_{i=0}^{shape[dim]} memref[\vec{\boldsymbol{indices}}, i, \vec{\boldsymbol{k}}]\quad   \forall \vec{\boldsymbol{k}} \in \left[[rangeStart_0, rangeEnd_0), ... , [rangeStart_n, rangeEnd_n)\right]$  
-\end{definition}
+%   $memref[\vec{\boldsymbol{indices}}, 0, \vec{\boldsymbol{k}}] = \sum_{i=0}^{shape[dim]} memref[\vec{\boldsymbol{indices}}, i, \vec{\boldsymbol{k}}]\quad   \forall \vec{\boldsymbol{k}} \in \left[[rangeStart_0, rangeEnd_0), ... , [rangeStart_n, rangeEnd_n)\right]$  
+% \end{definition}
 
 \subsection{Lowering Reduction Operations}
 We implement lowering of the operations defined above to both the CPU and GPU.
-Since the compilation pipeline diverges after the reductions are legalized, 
-we can implement lowering and optimization of our reduction dialect to CPUs and
-GPUs simply using different MLIR rewrite patterns. We now briefly describe 
+Since the lowering pipeline from MIR to LIR are different for CPU and GPU 
+compilation, we implement lowering and optimization of our reduction dialect to CPUs and
+GPUs simply using different MLIR rewrite patterns. In this section, we briefly describe 
 how these operations are lowered to the CPU and GPU. 
 
-In the context of \Treebeard{}, the set of reduction loops is exactly the set 
-of surrounding parallel loops that are iterating over trees. The 
-results can be privatized for each loop iteratively 
-and reductions along each privatized dimension can be inserted  
-immediately following the loop the dimension was inserted due to.
-
 \subsubsection{Lowering to CPU}
-The lowering of the reduction operations to CPU is fairly straightforward. We lower the 
-two operations listed above, \op{reduce\_dimension\_inplace} and 
+The lowering of the reduction operations to CPU is fairly straightforward. We lower 
+\op{reduce\_dimension\_inplace} and 
 \op{reduce\_dimension} to a simple loop nest that goes over the specified
 subset of the input array, performs the reduction and writes 
 the result into the appropriate location of the target array. 
 If the schedule specifies that the reduction is to be vectorized,
 then as many elements as specified by the vector width are read 
 from the input array as a vector, accumulated as a vector, and 
-finally written back to the target array. In general, this works 
-well because reductions are typically being performed on dimensions
-other than the inner-most dimension and therefore, this strategy
-loads successive elements from memory maximizing memory bandwidth 
-utilization. 
+finally written back to the target array.
 
-\TODO{explain atomic reduction}
+% In general, this works 
+% well because reductions are typically being performed on dimensions
+% other than the inner-most dimension and therefore, this strategy
+% loads successive elements from memory maximizing memory bandwidth 
+% utilization. 
+
+% \TODO{explain atomic reduction}
 
 \subsubsection{Lowering to GPU}
-The lowering on GPU is slightly more involved than the lowering on CPUs.
-However, we can lower the same abstractions to efficient implementations
-and therefore simplify high-level code generation. The lowering for 
+The same abstractions can be lowered to efficient GPU implementations
+and therefore, simplify higher-level code generation. The lowering for 
 the inplace and non-inplace operations are essentially the same, except 
 for the target array and we do not distinguish between them except 
 for finally storing the result. 
 
-The lowering of the \op{reduce\_dimension\_*} ops is distinct from existing 
-work on implementing reductions efficiently on GPUs \cite{NVIDIAReductions}
-because our abstractions potentially represent several independent reductions
-(independent for different output elements).
-Therefore, we can either exploit parallelism across the independent reductions or 
+The lowering of the \op{reduce\_dimension\_*} ops can either exploit
+parallelism across the independent reductions or 
 the inherent parallelism in the reduction by performing a divide and conquer 
-reduction.
-
-The reduction pass for GPU can follow one of two paths. If the lowering pass
-determines that there are enough independent reductions to keep all threads
-in a thread block busy, then it simply generates code that performs one (or 
-multiple) reductions completely in a thread. If however there are not 
+reduction. If there are enough independent reductions to keep all threads
+in a thread block busy, then the lowering pass can generate code that performs one (or 
+multiple) reductions in each thread. If, however, there are not 
 enough independent reductions, then the lowering pass generates a tree 
 style reduction where multiple threads cooperate to perform a single reduction
 using inter-thread shuffles.
@@ -209,84 +199,84 @@ using inter-thread shuffles.
 Another feature specific to GPU reductions is the use of shared memory. 
 If the schedule specifies that the reduction needs to be performed 
 using shared memory, the privatized buffer is allocated in shared memory. 
-Also, the compiler ensures that only as much shared memory is allocated 
-as needed to hold values processed by a single thread-block and 
-index offsets are appropriately rewritten to handle the differences between 
-the indexing of the target memref and the shared memory array.
+The compiler only allocates as much shared memory 
+as needed to hold values processed by a single thread-block.
+%  and 
+% index offsets are appropriately rewritten to handle the differences between 
+% the indexing of the target memref and the shared memory array.
 Our abstractions allow our lowering passes to be written completely 
 independent of whether we use shared memory and therefore allow 
 us to enable or disable shared memory use independently from the other 
 parts of the compiler. 
 
-
 \subsection{Use in \Treebeard{}}
-We now present an example specific to \Treebeard{}. The schedule with
-which code is generated is as below. \op{N\_t} is the number of trees 
+We now show how \Treebeard{} uses the reduction dialect to generate 
+code for decision tree inference using an example. 
+In our example, \op{N\_t} is the number of trees 
 and \op{batch\_size} is the batch size. The schedule tiles both the 
-batch loop and the tree loop and parallelizes the outer batch 
-and tree loops.
+batch and tree loops and parallelizes the outer batch 
+and tree loops. The schedule with which code is generated is as follows.
+% In the context of \Treebeard{} we note that, the set of reduction loops is exactly the set 
+% of surrounding parallel loops that are iterating over trees. The 
+% results can be privatized for each loop iteratively 
+% and reductions along each privatized dimension can be inserted  
+% immediately following the loop the dimension was inserted due to.
 
 \begin{lstlisting}[style=c++]
-IndexVar i0, i1, t0, t1;
-auto& batch = schedule.GetBatchIndex();
-auto& tree = schedule.GetTreeIndex();
-schedule.Tile(batch, i0, i1, batch_size/2);
-schedule.Tile(tree, t0, t1, N_t/2);
-schedule.Reorder({i0, t0, t1, i1});
-schedule.Parallel(t0);
-schedule.Parallel(i0);
+tile(batch, i0, i1, batch_size/2);
+tile(tree, t0, t1, N_t/2);
+reorder({i0, t0, t1, i1});
+parallel(t0);
+parallel(i0);
 \end{lstlisting}
 
-The loop-nest generated by \Treebeard{} for the above schedule is as follows. 
+The MIR generated by \Treebeard{} for the above schedule is as follows. 
 \begin{lstlisting}[style=c++]
-  builtin.func @Prediction_Function(%arg0: memref<batch_sizexnum_featuresxf64>) -> memref<batch_sizexf64> {
-    %result = memref.alloc <batch_sizexf64>
-    %0 = #decisionforest<ReductionType = 0, #Trees = N_t, resultType = memref<batch_sizexf64>> 
-    par.for i0 = range(0 : batch_size/2 : batch_size) {
-      par.for t0 = range(0 : N_t/2 : N_t) {
-        for t1 = range(0 : N_t/2) {
-          for i1 = range(0 : batch_size/2) {
-            %2 = GetTree(%0, t0 + t1) 
-            %3 = WalkDecisionTree(%2, %arg0[i0+i1])
-            reduce(%result, i0+i1, %3)
-          }
+  float result[batch_size]
+  model = ensemble(...) 
+  par.for i0 = 0 to batch_size step batch_size/2 {
+    par.for t0 = 0 to N_t step N_t/2 {
+      for t1 = 0 to N_t/2 {
+        for i1 = 0 to batch_size/2 {
+          t = getTree(model, t0 + t1) 
+          p = walkDecisionTree(t, rows[i0+i1])
+          reduce(result[i0+i1], p)
         }
       }
     }
   }
 \end{lstlisting}
 
-\Treebeard{} determines that the \op{t0} loop is a conflicting loop for the \op{result}
-array and therefore legalizes the reduction by inserting a privatized array 
-\op{result\_1}. The privatized dimension of this array is reduced at the end 
-of the \op{t0} loop.
+\Treebeard{} determines that the \op{t0} loop is a reduction 
+loop w.r.t the \op{result} array and therefore legalizes 
+the reduction by inserting a privatized array 
+\op{partResults}. The privatized dimension of this array 
+is reduced at the end of the \op{t0} loop.
 
 \begin{lstlisting}[style=c++]
-  builtin.func @Prediction_Function(%arg0: memref<batch_sizexnum_featuresxf64>) -> memref<batch_sizexf64> {
-    %result = memref.alloc <batch_sizexf64>
-    %result_1 = memref.alloc <2xbatch_sizexf64>
-    %0 = #decisionforest<ReductionType = 0, #Trees = N_t, resultType = memref<batch_sizexf64>> 
-    par.for i0 = range(0 : batch_size/2 : batch_size) {
-      par.for t0 = range(0 : N_t/2 : N_t) {
-        for t1 = range(0 : N_t/2) {
-          for i1 = range(0 : batch_size/2) {
-            %2 = GetTree(%0, t0 + t1) 
-            %3 = WalkDecisionTree(%2, %arg0[i0+i1])
-            reduce(%result, i0+i1, %3)
-          }
+  float result[batch_size], partResults[2][batch_size]
+  model = ensemble(...) 
+  par.for i0 = 0 to batch_size step batch_size/2 {
+    par.for t0 = 0 to N_t step N_t/2 {
+      for t1 = 0 to N_t/2 {
+        for i1 = 0 to batch_size/2 {
+          t = getTree(model, t0 + t1) 
+          p = walkDecisionTree(t, rows[i0+i1])
+          reduce(result[i0+i1], p)
         }
       }
-      %result[i0 : i0+step] = reduce_dimension(%result_1, 0, i0 : i0+step)
     }
+    results[i0:i0+batch_size/2] = reduce_dimension(partResults[:, i0:i0+batch_size/2], 0)
   }
 \end{lstlisting}
 
 While legalizing the reduction, the compiler determines that the 
-\op{reduce\_dimension} operation must only process a subset of the final 
-result that is computed within the current parallel iteration of the 
-\op{i0} loop. Once this process is complete, the \op{reduce} ops in 
-the result IR can be lowered to a simple ``read-accumulate-write''
-sequence of instructions
+\op{reduce\_dimension} operation can only compute a subset of the final 
+result (the subset that is computed within the current parallel iteration of the 
+\op{i0} loop). 
+% Once this process is complete, the \op{reduce} ops in 
+% the result IR can be lowered to a simple ``read-accumulate-write''
+% sequence of instructions
 
 Finally, we note that in our experiments, we found that our 
 current implementation of lowering the reduction operations 
@@ -298,4 +288,4 @@ automatically lower them to efficient implementation is an
 important area for future work with applicability in several 
 domains. 
 
-\TODO{Should we mention how we handle multi-class models?}
+%\TODO{Should we mention how we handle multi-class models?}
