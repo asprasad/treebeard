@@ -1,31 +1,36 @@
 \begin{abstract}
   
-  The rapid proliferation of machine learning coupled with accelerating evolution of the hardware ecosystem has led to a surge in the demand for model inference on a variety of hardware.
-  %While CPUs have been the mainstay for machine learning inference, the availability of GPUs holds promise to scale to bigger and more powerful models. 
-  This paper is motivated by the problems encountered when targeting inference of decision tree based models, the most popular models on tabular data, to run at peak performance on 
-  diverse CPU and GPU targets. We evaluated existing solutions and found that they do not provide portable performance across different hardware targets.
-  %Decision tree based models are widely used in practice due to their robustness, interpretability, and ability to handle missing data.  
+  This paper is motivated by the growing demand for the increased performance
+  of machine learning applications on different hardware platforms
+  including CPUs and GPUs. We focus on accelerating the inference of decision tree based models, 
+  which are the most popular models for tabular data. Existing solutions do not achieve 
+  the highest possible performance because they do not explore different optimization
+  configurations. And since these systems are hand-written, they are not portable either. 
   
-  To address this we present the design of \Treebeard{}, a schedule guided compiler  
-  for decision tree based models that searches over a large design space 
-  to automatically generate high-performance inference routines.
-  %We re-architect the open-source \TreebeardOLD{} infrastructure and significantly extend it to enable high-performance code generation across target processors. 
-  \Treebeard{} has two core components. A scheduling language 
+  We address these problems by designing \Treebeard{}, a \emph{schedule-guided},
+  \emph{retargetable} compiler infrastructure for decision tree based models.  
+  \Treebeard{} has two core components. The first is a scheduling language 
   that encapsulates the large optimization space for decision tree inference, 
-  and techniques to efficiently explore this space.
-  \TODO{Change large optimization space}.
-  %We also design a set of heuristics that can find near-optimal solutions in quick time.
-  Second, an optimizing multi-level compiler that can generate code based on the schedule. 
-  For the latter, we re-architect the open-source \TreebeardOLD{} CPU compiler to support schedule guided compilation and
-  add support for GPU code generation. GPU code generation required fundamental new optimization interfaces for 
-  caching, parallel reduction, and support for multiple in-memory representations of trees.
+  and techniques to efficiently explore this space. \TODO{Change large optimization space}.
+  The second is an optimizing retargetable multi-level compiler that 
+  can generate code for any specified schedule. \Treebeard{}'s retargetability 
+  is based not only on being able to generate code for different target architectures (CPU vs. GPU),
+  but also on its ability to use different data layouts, caching strategies,
+  parallel reduction schemes etc. To accomplish this level of configurability, we re-architect 
+  and significantly extend the open-source \TreebeardOLD{} CPU compiler
+  to support (i) schedule-guided compilation, (ii) retargetable GPU code
+  generation, and (iii) GPU-specific optimizations. 
+  %The scheduler and retargetable code generator components work hand-in-glove, synergizing and mutually benefiting from each other.
   
-  %The compiler builds on an existing compiler for CPUs, \TreebeardOLD{}, also add support for caching, parallel reduction and a plug-in mechanism to explore different in-memory representations of trees.
-
-  We evaluate \Treebeard{} on over seven hundred diverse models and demonstrate that the best schedule varies drastically with model, batch size, and target hardware. 
-  Our scheduling heuristic is able to quickly find near optimal schedules while searching over a small number (\~50) of schedules.
+  We demonstrate that \Treebeard{} can generate high-performance inference 
+  code, for several hundred decision tree models across different batch sizes
+  and target architectures. Our scheduling heuristic is able to quickly find near-optimal schedules 
+  \TODO{[how do we argue that the schedule is near-optimal? Do we have some 
+  exptl. evidence that we can show in the results section?]}
+  schedule while searching over a small number ($\sim$50) of schedules.
   In terms of performance, \Treebeard{} generated code is an order of magnitude faster than XGBoost and
-  about 2-3$\times$ faster on average than RAPIDs FIL and Tahoe. While these systems only target NVIDIA GPUs, \Treebeard{} achieves competent performance on AMD GPUs as well. 
+  about 2-3$\times$ faster on average than RAPIDs FIL and Tahoe. While these systems only 
+  target NVIDIA GPUs, \Treebeard{} achieves competent performance on AMD GPUs as well. 
   On CPUs, \Treebeard{} achieves better scaling compared to \TreebeardOLD{}.
   For models where \TreebeardOLD{} was only able to achieve diminishing returns with an 
   increasing number of threads, \Treebeard{} is able to scale linearly with the number of threads.
