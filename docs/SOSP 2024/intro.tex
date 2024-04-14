@@ -3,10 +3,15 @@
 We are in the midst of a hardware revolution, a new golden age for computer architecture~\cite{GoldenAge}. The last 
 decade has seen a shift in architectural paradigms, with the rise of GPUs and accelerators. This shift has been driven
 by the necessity to innovate in the post Moore's law and Dennard's scaling era. This transformation has also played 
-a significant role in the success of modern deep learning models, as they enable scaling model training and inference 
-to a massive number of threads. Such scalability would be essential for all performance critical applications, including
+a significant role in the success of modern deep learning models, as they enable scaling 
+%% RG - minor rewording
+%% model training and inference to a massive number of threads. 
+training and inference to models with billions of parameters across a massive number of threads. 
+Such scalability would be essential for all performance critical applications, including
 other machine learning models that need to scale with increasing data sizes and model complexities. 
-%need to accelerate machine learning workloads. The success of modern AI models is due to their ability to scale both training and inference to a massive number of threads. This has been made possible by the rise of GPUs and accelerators.
+%need to accelerate machine learning workloads. The success of modern AI models is due to their 
+%ability to scale both training and inference to a massive number of threads. This has been made
+%possible by the rise of GPUs and accelerators.
 
 %Despite these recent advancements, one dominant family of models, namely decision forest models have not seen the same level of acceleration.
 Decision forest models remain the mainstay for machine learning over tabular data~\cite{DLNotAllYouNeed,TreebasedOutperformDL}. 
@@ -16,15 +21,20 @@ Their robustness, interpretability, and ability to handle missing data make them
 A recent survey~\cite{kaggle}\dots. 
 The survey also finds that, the cost of inference is the most critical factor in the overall cost of deploying a machine learning model.
 This is because, in production settings, each model is trained once and often used for inference millions of times. 
-However, inference is run on a variety of hardware platforms, ranging from low to high-end CPUs and GPUs. 
-This paper is motivated by the need to accelerate decision tree inference to achieve portable performance on a variety of hardware.
+%% RG: Minor reword
+%% However, 
+Further, inference is run on a variety of hardware platforms, ranging from low to high-end CPUs and GPUs. 
+This paper is motivated by the need to accelerate decision tree inference to achieve portable performance on 
+%% RG: reword -- specifically say CPUs and GPUs.
+%% a variety of hardware.
+commodity platforms with CPUs and GPUs. 
 % In particular, we focus on a range of commodity CPUs and GPUs, a class of hardware that has seen widespread 
 % adoption across client/edge devices used for inference.
 
 Decision forest models are composed of a large collection of decision trees (100-1000), and inference involves 
 traversing down each tree in the forest and aggregating the predictions. Inference is typically done in a batched
 setting, where multiple inputs are processed simultaneously.
-Despite the simplicity of the model and the availability of multiple sources of coarse grain parallelism (parallelism 
+Despite the simplicity of the model and the availability of multiple sources of coarse-grain parallelism (parallelism 
 across inputs in a batch and parallelism across trees), existing systems do not consistently scale well across different
 models even on the limited set of targets they support. 
 %This is because existing systems exploit a limited set of optimizations and often specialize the implementation to a specific hardware platform, and this limits their portability. 
@@ -38,28 +48,74 @@ loop transformations, parallelization, and memory access optimizations.
 %This requires a combination of techniques like data layout optimizations, loop transformations, and memory access optimizations. 
 %Existing systems each use specific data layouts for the underlying tree and use fixed loop structures. 
 %Parallelism, loop structure and model representation together determine the accesses patterns and the working set. 
-Existing systems today are mostly library based, and only support a predefined combination of optimizations. 
+Existing systems today are mostly library based, and only support a predefined combination of optimizations
+and typically only target a single platform. 
 XGBoost~\cite{XGBoost} uses a sparse representation for the model and a loop structure that processes one tree for a block of rows before moving to 
-the next tree. RAPIDS FIL~\cite{FIL} uses a reorg representation and partitions trees across a fixed number of threads. Tahoe~\cite{Tahoe} uses a
+the next tree. RAPIDS FIL~\cite{FIL} uses a reorg representation and partitions trees across a fixed number of threads. 
+%% RG: 
+% \TODO{Should we say RAPIDS is only for nVidia GPUs?} 
+%%
+Tahoe~\cite{Tahoe} uses a
 variation of the reorg representation and has four predefined inference strategies from which it picks one based on an analytical model.
+All these systems are CUDA based and only work on NVIDIA based GPUs.
 %These systems are all library based and are hard to extend. 
-\TreebeardOLD{}, the state-of-the-art model compiler for CPUs, supports two fixed loop structures and does not scale well with increasing number of threads. Additionally, it lacks GPU specific optimizations that are critical to scale performance to massive number of threads.
+\TreebeardOLD{}, the state-of-the-art decision tree model compiler for CPUs 
+%% RG
+built using the MLIR infrastructure~\cite{MLIR}, supports two fixed loop structures 
+and does not scale well with increasing number of threads. Additionally, it lacks 
+GPU specific optimizations that are critical to scale performance to massive number of threads.
+\TODO{Shouldn't we reverse this? First say no GPU support and then the scaling issue.}
 
-This paper presents \Treebeard{}, a novel schedule guided compilation infrastructure for decision tree inference on multiple target hardware. \Treebeard{} is able to generate high-performance code for decision tree inference by exploring a large optimization space. The code generation is guided by a \emph{schedule} written in a custom scheduling language that can represent a wide range of implementation strategies. We demonstrate that the language is sufficient to express the various optimizations proposed by prior work, and further generalizes them and incorporates several new optimizations. We also design and implement a heuristic that is able to quickly find high-performance schedules for the model being compiled.
+This paper presents \Treebeard{}, a novel schedule guided compilation infrastructure
+for decision tree inference on multiple target hardware. \Treebeard{} is able to 
+generate high-performance code for decision tree inference by exploring a large optimization space. 
+%% RG - rewording
+%% The code generation is guided by a \emph{schedule} written in a custom scheduling language that can represent a wide range of implementation strategies. 
+This is achieved by a compilation framework consisting of a 
+custom scheduling language that can represent a wide range of 
+implementation strategies and techniques to efficiently explore
+the optimization space. We demonstrate that the language is 
+sufficient to express the various optimizations proposed by prior work
+and that our schedule exploration heuristic can quickly find a near 
+optimal schedule for the model being compiled. 
+%% Further we generalizes them and incorporates several new optimizations. 
+\TODO{RG: it would be good to expand on this and also talk about the retargetable component. 
+We could also say that the schedule framework and the retargetable compiler work in an 
+interwined manner, each benefitting from the other.}  
+The second component of \Treebeard{} is a \emph{retargetable} multi-level compiler that can generate efficient code 
+for any specified schedule for both CPUs and GPUs. For this purpose, we re-architect \TreebeardOLD{} to
+support schedule-guided code generation, and incorporate several new optimizations. These two components 
+of the proposed \Treebeard{} compiler infrastructure are interwined, each benefitting from the other.
+%Last, to address the challenge of selecting a near-optimal schedule from the vast optimization space, 
+%%
+%we design and implement a heuristic that is able to quickly find high-performance schedules for the model being compiled.
 \TODO{Performance evaluation summary}
-\TODO{Oganization}
+%% RG: This may not be needed -- can be removed to save space!
+%% \TODO{Oganization}
 \subsection{Contributions}
 \begin{itemize}
-  \item We present the design for a multi-target decision tree compiler infrastructure and implement several optimizations within this framework.
-   We are also the first to implement an optimizing compiler for decision tree inference on GPUs.
-  \item We identify that an extensive optimization space exists for the problem of decision tree inference. We design a scheduling language that 
-  allows us to effectively represent this solution space abstractly. This scheduling language is expressive enough to represent a wide range of  
-  implementation strategies proposed by prior work.
-  \item To the best of our knowledge, we perform the first extensive characterization of the optimization space for decision tree inference 
-  on GPUs. Using some of the characteristics we identify, we design and implement a heuristic that is able to quickly find high-performance 
+  \item We present the design of a multi-target compiler infrastructure for decision tree 
+   inferencing  and implement several optimizations within this framework.
+   We are also the first to implement an optimizing compiler for decision tree 
+   inference on GPUs. \TODO{AP: Given that there is Hummingbird, can we really say this?}
+  \item We identify that an extensive optimization space exists for the problem of 
+  decision tree inference. We design a scheduling language that 
+  allows us to effectively represent this solution space abstractly. This 
+  scheduling language is expressive enough to represent a wide range of  
+  implementation strategies,  %%.  proposed by prior work.
+%% RG: added CPUs and GPUs. 
+  such as different data layouts, caching strategies, parallel reduction schemes, 
+  that work across CPUs and GPUs. 
+  \item To the best of our knowledge, we perform the first extensive characterization
+  of the optimization space for decision tree inference 
+  on GPUs. Using some of the characteristics we identify, we design and implement 
+  a heuristic that is able to quickly find high-performance 
   schedules for the model being compiled. 
-  \item We design and implement a general framework for expressing and optimizing reductions within MLIR. To the best of our knowledge, this is the first
+  \item We design and implement a general framework for expressing and optimizing
+  reductions within MLIR. To the best of our knowledge, this is the first
   such framework.
-  \item We evaluate our implementation by comparing it against RAPIDs and Tahoe, the state-of-the-art decision tree inference frameworks for GPU and 
-  report significant speedups. We also show that our compiler can effectively target different GPUs, including both NVIDIA and AMD GPUs.
+  \item We evaluate our implementation by comparing it against RAPIDs and Tahoe, 
+  the state-of-the-art decision tree inference frameworks for GPU and 
+  report significant speedups. We also show that our compiler can effectively 
+  target different GPUs, including both NVIDIA and AMD GPUs.
 \end{itemize}
