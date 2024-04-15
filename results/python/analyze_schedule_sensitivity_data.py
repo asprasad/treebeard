@@ -21,11 +21,17 @@ def get_degradation_vals(df_benchmark, X, Y, x_col="cur_batch_size", y_col="cmp_
             df_depth = df_benchmark[(df_benchmark[x_col] == x) & (df_benchmark[y_col] == y)]
             # assert df_depth.shape[0] == 1, f"Expected 1 row for {x}, {y}, got {df_depth.shape[0]}"
             if df_depth.shape[0] == 0:
-                degradation_vals[i, j] = 5
+                degradation_vals[i, j] = -1
                 continue
             degradation_vals[i, j] = df_depth["degradation"].values[0]
             # if x < y:
             #     degradation_vals[i, j] = 10 * degradation_vals[i, j]
+
+    max_val = np.max(degradation_vals)
+    for deg_row in degradation_vals:
+        for i in range(len(deg_row)):
+            if deg_row[i] == -1:
+                deg_row[i] = max_val
     return degradation_vals
 
 def plot_batch_sensitivity_for_single_benchmark(df_depth, benchmark_name):
@@ -62,20 +68,34 @@ def plot_model_sensitivity_for_single_benchmark(df_depth, model_name):
     # get a numpy array for the x, y and z axis
     x = df_depth["benchmark"].unique()
     y = df_depth["cmp_benchmark"].unique()
+
     x.sort()
     y.sort()
     Z = get_degradation_vals(df_depth, x, y, "benchmark", "cmp_benchmark") # df_depth['degradation'].values.reshape(len(y), len(x))
     # print(Z)
 
+    x_positions = [(i+1) * 10 for i in range(len(x))]
+    y_positions = [(i+1) * 10 for i in range(len(y))]
+    
     da = xr.DataArray(
         Z,
-        coords={"Model": x, "Comparison Model": y},
+        coords={"Model": x_positions, "Comparison Model": y_positions},
         dims=("Model", "Comparison Model"),
     )
+    da.plot(aspect=1.5, size=10)
+    plt.axis('off')
 
-    # da.plot(xscale="log", yscale="log")
+    for name, x_pos in zip(x, x_positions):
+        name = name if name != "year_prediction_msd" else "year" 
+        plt.text(x_pos, -1.5, name, rotation=90, fontsize=10, wrap=True)
+    
+    for name, y_pos in zip(y, y_positions):
+        name = name if name != "year_prediction_msd" else "year"
+        plt.text(-1, y_pos, name, fontsize=10, wrap=True)
+    
     # plt.show()
     plt.title(f"Batch Size {batch_size} Model Sensitivity")
+    plt.tight_layout()
     # plt.colorbar(im, label='tb_kernel_speedup')
     plt.savefig(f'model_sensitivity_{batch_size}.png')
     plt.close('all')
