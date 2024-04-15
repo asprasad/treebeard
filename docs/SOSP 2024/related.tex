@@ -2,10 +2,10 @@
 \label{Sec:Related}
 While several optimization strategies for decision tree based models have been 
 studied in the literature, to the best of our knowledge, no systems that are 
-capable of exploring the extensive optimization space exist. We describe related work 
+capable of exploring the full optimization space exist. We describe related work 
 and compare these systems to \Treebeard{} in this section.
 
-\emph{Decision Tree Inference Systems for GPUs:} 
+\emph{Decision Tree Inference Systems:} 
 Tahoe\cite{Tahoe} is a system that implements high-performance library routines and a 
 performance model for tree inference on GPUs. Tahoe is a library-based system that picks 
 between four predefined strategies to implement decision tree inference on GPUs.
@@ -14,18 +14,19 @@ because it is a compiler. \Treebeard{} can also explore different in-memory
 representations for models. Also, \Treebeard{} generates code that is specific to 
 a particular model, specializing both the parallelism (by deciding the thread block 
 structure on a per model basis) and the kernel code itself by 
-performing optimizations like tree walk unrolling and interleaving. In contrast, Tahoe 
-uses a library-based approach, and cannot generate code tailored to a model 
-like \Treebeard{} does.
+performing optimizations like tree walk unrolling and interleaving.
+% In contrast, Tahoe 
+% uses a library-based approach, and cannot generate code tailored to a model 
+% like \Treebeard{} does.
 
 RAPIDS FIL\cite{FIL} is a library that implements decision tree inference on GPUs
 and is the most widely used production system for decision tree inference. While 
 FIL does implement some heuristics to pick a good configuration for every model, 
 these techniques are limited and the library essentially uses a single strategy 
 and in-memory representation for all models. XGBoost \cite{XGBoost} also implements GPU 
-support\cite{XGBGPU}. Again, XGBoost uses a single strategy and in-memory representation
-for all models. In contrast, \Treebeard{} is a compiler that can explore a much larger
-optimization space and can generate code that is tailored to a specific model.
+support\cite{XGBGPU} but uses a single strategy and in-memory representation. 
+% In contrast, \Treebeard{} is a compiler that can explore a much larger
+% optimization space and can generate code that is tailored to a specific model.
 
 % Finally, all of Tahoe's optimizations are designed to address GPU specific problems. 
 % For example, it uses an elaborate and opaque heuristic based on locality sensitive hashing 
@@ -39,35 +40,49 @@ optimization space and can generate code that is tailored to a specific model.
 % optimizations described in this paper will carry over directly while LIR 
 % optimizations and in-memory representations will need to be retargeted.
 % This can be the subject of a separate future work.
+On CPUs, XGBoost\cite{XGBoost}, LightGBM\cite{LightGBM} and
+scikit-learn\cite{Sklearn} are extremely popular. However, 
+as mentioned in Section \ref{sec:intro}, none of these systems
+provide portable performance across different target machines.
+\TODO{Write about the PACT paper and whether our scheduling language can represent 
+all the schedules they propose.}
+Other systems that hide dependency stalls by interleaving tree walks\cite{VPred},
+implement optimized algorithms for tree inference\cite{QuickScorer, QuickScorer1}
+and improve cache performance of decision tree ensembles on CPUs\cite{CacheConscious1, CacheConscious2}
+have been proposed in prior work. However, these systems are limited to CPUs.
+Some systems have been proposed to parallelize decision tree training 
+on CPUs and GPUs\cite{Jansson2014gpuRFAG, Nasridinov2013DecisionTC}.
+
 
 \emph{Decision Tree Ensemble Compilers:}
 Several compilers for decision tree ensembles have been proposed in the 
 literature \cite{Treelite, Treebeard, Hummingbird}. \TreebeardOLD{} and Treelite
 exclusively target CPUs and all their optimizations are designed purely for 
 performance on CPUs. 
-Treelite\cite{Treelite} is a model compiler that only supports 
-generation of simple \op{if-else} style code. Its code generator is hard-coded 
-to expand trees in an ensemble into a series of \op{if-else} statements (one for 
-each node in a tree). Due to this, extending Treelite and reusing it to 
-target GPUs is not possible.
+Treelite\cite{Treelite} is a model compiler that only  
+generates \op{if-else} code for each tree in the model. 
+% Its code generator is hard-coded 
+% to expand trees in an ensemble into a series of \op{if-else} statements (one for 
+% each node in a tree). Due to this, extending Treelite and reusing it to 
+% target GPUs is not possible.
 
 \TreebeardOLD{} is the work most closely related to \Treebeard{}. While we 
 build on top of \TreebeardOLD{}, \Treebeard{} is a significant enhancement 
-over \TreebeardOLD{}. Most importantly, we re-architect \TreebeardOLD{} in 
-order to generate code for multiple target processors. Specifically, we 
-introduce the scheduling language and schedule exploration 
-while also enhancing the intermediate representations and support for parallelizing 
+over \TreebeardOLD{}. 
+% Most importantly, we re-architect \TreebeardOLD{} in 
+% order to generate code for multiple target processors.
+Specifically, we introduce the scheduling language and schedule exploration 
+while also enhancing the IRs and support for parallelizing 
 across trees through the implementation of a novel MLIR reduction dialect.
 % It cannot perform any of the optimizations \Treebeard{} is designed to perform. 
 
 Hummingbird\cite{Hummingbird} is a compiler that compiles traditional ML models
-to tensor operations thereby enabling them to be run on tensor-based frameworks like
-TensorFlow. Hummingbird can target both CPUs
-and GPUs. Its stated aim is to allow traditional ML based applications to easily 
-leverage progress in tensor compilers. However, as was shown earlier~\cite{Treebeard},
+to tensor operations, thereby enabling them to be run on tensor-based frameworks like
+TensorFlow\cite{TensorFlow}. Hummingbird can target both CPUs
+and GPUs, but, as was shown earlier~\cite{Treebeard},
 tensor operations are not the most efficient way to implement decision tree inference
-and the performance of code generated by Hummingbird is significantly lower than 
-the code generated by other frameworks.
+and the performance of Hummingbird is significantly lower than 
+that of other frameworks.
 
 % Hummingbird\cite{Hummingbird} compiles traditional ML models to make use of tensor primitives so that
 % they can be integrated into tensor-based frameworks like TensorFlow \cite{TensorFlow}.
@@ -75,21 +90,6 @@ the code generated by other frameworks.
 % the system is to leverage progress in tensor compilers by representing ML models as tensor operations. 
 % Consequently, Hummingbird does not perform any optimizations tailored to decision trees. It 
 % also does not perform model specific optimizations that are enabled by \Treebeard{}'s abstractions. 
-
-\emph{Libraries:} The most popular systems for decision tree-based models 
-are libraries. On CPUs, XGBoost\cite{XGBoost}, LightGBM\cite{LightGBM} and
-scikit-learn\cite{Sklearn} are extremely popular. These libraries implement both 
-training and inference. On GPUs, RAPIDs FIL\cite{FIL} is the most commonly used 
-library. However, as mentioned in Section \ref{sec:intro}, none of these systems
-provide portable performance across different target machines.
-\TODO{Write about the PACT paper and whether our scheduling language can represent 
-all the schedules they propose.}
-Other systems that hide dependency stalls by interleaving tree walks\cite{VPred},
-implement optimized algorithms for tree inference\cite{QuickScorer, QuickScorer1}
-and predict cache performance of decision tree ensembles on CPUs\cite{CacheConscious1, CacheConscious2}
-have been proposed in prior work. However, these systems are limited to CPUs.
-Some systems have been proposed 
-to parallelize decision tree training on CPUs and GPUs\cite{Jansson2014gpuRFAG, Nasridinov2013DecisionTC}.
 
 % Asadi et. al.\cite{VPred} optimize tree walks by hiding dependency stalls 
 % by interleaving tree walks. In contrast, \Treebeard{} is an extensible 
@@ -111,10 +111,9 @@ to parallelize decision tree training on CPUs and GPUs\cite{Jansson2014gpuRFAG, 
 
 \emph{Other Systems and Techniques:} Ren et. al.~\cite{PortableVM} design an
 intermediate language and a virtual machine to enable vector execution of decision tree
-inference. In contrast with \Treebeard{}, the virtual machine that performs the SIMD 
-execution is itself implemented by hand on different target processors. This is clearly 
-more expensive than \Treebeard{}'s approach since the VM
-needs to be reimplemented for every supported target architecture.
+inference. However, this virtual machine is itself implemented by 
+hand on different target processors. This is clearly 
+more expensive than \Treebeard{}'s approach.
 % Additionally, even though they perform layout optimizations, their system does
 % not perform any model specific optimizations.
 Jo et. al.\cite{MilindTreeVectorization} describe code transformations and runtime 
@@ -136,8 +135,8 @@ study optimizations specific to decision trees.
 % FAST are hand coded using intrinsics on the CPU and CUDA on the GPU and
 % therefore need repeated effort to implement on each target. 
 Inspector-executor systems \cite{TaoOfParallelism,HybridCPUGPU} have been 
-developed to parallelize tree walks. However, these techniques are not a good fit 
-for decision tree inference. In decision trees, the individual node predicates are very 
+developed to parallelize tree walks but are not a good fit 
+for decision tree inference as the individual node predicates are 
 simple and the overhead of an inspector-executor system would be prohibitive.
 
 \emph{Code Generation Systems from Other Domains:}
@@ -162,9 +161,9 @@ across different processors.
 % by the input value and not by the structure of the tree. This makes the 
 % problems addressed by \Treebeard{} very different from the ones handled
 % by {\sc {Cortex}}.
-
 Libraries that compose or generate optimized implementations  
-for BLAS\cite{BLIS, atlas_sc98, CUTLASS} and signal processing\cite{FFTW, SPIRAL}.
+for BLAS\cite{BLIS, atlas_sc98, CUTLASS} and signal processing\cite{FFTW, SPIRAL}
+have also been developed.
 % BLIS\cite{BLIS} and ATLAS\cite{atlas_sc98}
 % are systems to instantiate high performance BLAS routines on multiple 
 % target architectures. CUTLASS\cite{CUTLASS} provides building blocks 
