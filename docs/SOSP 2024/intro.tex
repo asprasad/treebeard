@@ -15,11 +15,14 @@ other machine learning models that need to scale with increasing data sizes and 
 
 %Despite these recent advancements, one dominant family of models, namely decision forest models have not seen the same level of acceleration.
 Decision forest models remain the mainstay for machine learning over tabular data~\cite{DLNotAllYouNeed,TreebasedOutperformDL}. 
-Their robustness, interpretability, and ability to handle missing data make them a popular choice for a wide range of applications. 
-\TODO{a few more lines, classification, regression, etc.}
-%We observe that while scalable performance on neural network models has received significant attention, decision tree inference has not seen the same level of acceleration.
-A recent survey~\cite{kaggle}\dots. 
-The survey also finds that, the cost of inference is the most critical factor in the overall cost of deploying a machine learning model.
+Their robustness, interpretability, and ability to handle missing data make them a popular choice for a wide 
+range of applications\cite{DecisionTreesOverview, Med1, Med2, Facebook, LHCModel, Finance}. 
+% \TODO{a few more lines, classification, regression, etc.}
+% We observe that while scalable performance on neural network models has received significant attention, decision tree inference has not seen the same level of acceleration.
+A recent survey~\cite{KaggleSurvey} found that about three quarters of data scientists use decision tree
+based models. An analysis of ML workloads at a large scale web company found that these models are most widely used~\cite{LookingGlass}. 
+Recent work has noted that the cost of inference is the most critical factor in the overall cost of 
+deploying a machine learning model~\cite{Hummingbird, SageMaker}.
 This is because, in production settings, each model is trained once and often used for inference millions of times. 
 %% RG: Minor reword
 %% However, 
