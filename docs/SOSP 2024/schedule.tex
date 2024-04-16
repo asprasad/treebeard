@@ -1,25 +1,26 @@
 \section{Scheduling Language}
 \label{sec:schedule}
-As we articulated in Section \ref{sec:intro}, there are several 
+As established in Section \ref{sec:motivation}, there are several 
 different configurations and optimizations strategies for decision 
-tree inference. The best ones are significantly different across
+tree inference. The best ones vary significantly across
 models, batch sizes and hardware platforms. Therefore, designing
-any one hard-coded lowering strategy is not feasible as this would 
-make portable performance impossible. To address this problem, we 
+any one hard-coded strategy is not feasible as this would 
+make portable performance impossible. To address this, we 
 design a scheduling language for \Treebeard{}. The scheduling 
 language provides an abstract way to specify loop structure and 
-other optimizations as an input to the compiler. Making the 
-scheduling specification external to the compiler allows to build 
-auto-schedulers and auto-tuners (Section \ref{sec:exploring}).
-Using a scheduling language will also significantly simplify 
-adding support for new hardware as this will likely require
-different locality optimizations and loop transformations.
+other optimizations as an input to the compiler. The specified 
+schedule controls the lowering of model inference to a set of 
+loop nests. This configurability provided by the schedule allows us 
+to build auto-schedulers and auto-tuners (Section \ref{sec:exploring}).
+% Using a scheduling language will also significantly simplify 
+% adding support for new hardware as this will likely require
+% different locality optimizations and loop transformations.
 
-The goal of \Treebeard{}'s scheduling language is to declaratively
-express loop structures and the application of other optimizations 
-(tree walk unrolling, tree walk interleaving etc.). 
+% The goal of \Treebeard{}'s scheduling language is to declaratively
+% express loop structures and the application of other optimizations 
+% (tree walk unrolling, tree walk interleaving etc.). 
 
-\subsection{Language Definition}
+% \subsection{Language Definition}
 The core construct of \Treebeard{}'s scheduling language is an 
 \textbf{\emph{index variable}} which abstractly represents a loop. 
 The language then provides directives to manipulate these index 
@@ -29,18 +30,18 @@ other index variables are derived from these. A schedule derives
 new index variables from these root index variables by applying
 directives. 
 
-\Treebeard{} represents loops (index variables) as nodes in a tree where the children
-of a node represent immediately contained loops. Each schedule 
-primitive modifies this tree in some way. The compiler tracks 
-the lineage of each of the loops. This allows the compiler to 
-automatically infer the ranges for all loops.
-
 \Treebeard{}'s scheduling language has three classes of directives. The first is a set 
 of loop modifiers that are used to specify the structure of the loop nest to
 walk the iteration space (Table \ref{Tab:LoopModifiers}). The second is a set of 
 directives that enable optimizations on a loop (Table \ref{Tab:Optimizations}). 
 Finally, we have a class of attributes that enable reduction specific optimizations
 (Table \ref{Tab:ReductionOpts}).
+
+The set of loops (index variables) are internally represented as nodes in a tree where the children
+of a node represent immediately contained loops. Each schedule 
+primitive modifies this tree in some way. The compiler tracks 
+the lineage of each of the loops. This allows the compiler to 
+automatically infer the ranges for all loops.
 
 % \subsubsection{Loop Modifiers}
 % The clauses modify these index variables or 
@@ -84,12 +85,12 @@ Finally, we have a class of attributes that enable reduction specific optimizati
                                                &   & \\
                                                &   &  \\
                                                &   &  \\
-   \midrule
-   \multirow{4}{*}{\texttt{specialize}} & \textbf{indexVar}  & \multirow{4}{*}{\parbox{0.55\linewidth}{Generate specialized code for each iteration of the loop. 
-   Useful when different iterations of a loop need to execute different code.}} \\
-                                               &   & \\
-                                               &   &  \\
-                                               &   &  \\
+  %  \midrule
+  %  \multirow{4}{*}{\texttt{specialize}} & \textbf{indexVar}  & \multirow{4}{*}{\parbox{0.55\linewidth}{Generate specialized code for each iteration of the loop. 
+  %  Useful when different iterations of a loop need to execute different code.}} \\
+  %                                              &   & \\
+  %                                              &   &  \\
+  %                                              &   &  \\
    \midrule
    \multirow{3}{*}{\texttt{gpuDimension}} & \textbf{indexVar}  & \multirow{3}{*}{\parbox{0.55\linewidth}{Map the passed index variable to a dimension of either the grid
    or thread block.}} \\
@@ -226,8 +227,9 @@ Finally, we have a class of attributes that enable reduction specific optimizati
 
 %\TODO{Add examples for RAPIDS, Tahoe (Maybe show some strategies can be encoded?)}
 
-We now show how the implementation strategies of several existing systems can 
-be encoded in \Treebeard{}'s scheduling language. First, we note that the 
+\Treebeard{}'s scheduling language is expressive enough to represent a wide range of
+strategies used in existing systems. We show examples of how it can be used to 
+represent XGBoost and Tahoe's strategies. Before presenting the examples, we note that \Treebeard{}'s 
 default loop order is [\op{batch}, \op{tree}], i.e, for each row in the input
 batch, go over all trees.
 
@@ -236,9 +238,8 @@ XGBoost\cite{XGBoost} implements inference on the CPU by going
 over a fixed number of rows (64 in the previous version)
 for every tree and then moving to the next tree. When all trees 
 have been walked for this set of rows, the next set of rows is 
-taken up. Also, different sets of rows are processed in parallel.
-This schedule can be implemented in \Treebeard{}'s scheduling language 
-as follows.
+taken up. Different sets of rows are processed in parallel.
+The following schedule expresses XGBoost's strategy.
 \begin{lstlisting}[style=c++]
   tile(batch, b0, b1, CHUNK_SIZE)
   reorder(b0, tree, b1)
@@ -247,9 +248,9 @@ as follows.
 
 Tahoe\cite{Tahoe} has four strategies for inference on the GPU that it picks from for a given model. 
 We show how two of these strategies can be encoded using \Treebeard{}'s scheduling language.
-The rest can be encoded similarly. 
+%The rest can be encoded similarly. 
 \begin{itemize}
-  \item \textbf{Direct Method}: In this strategy, a single GPU thread walks all trees
+  \item In the \emph{direct method}, a single GPU thread walks all trees
   for a given input row. The schedule for this strategy is as follows.
 \begin{lstlisting}[style=c++]
   tile(batch, b0, b1, ROWS_PER_TB)
@@ -258,9 +259,10 @@ The rest can be encoded similarly.
   gpuDimension(b1, block.x)
 \end{lstlisting}
   Here, \op{ROWS\_PER\_TB} is the number of rows that are processed by a single thread block.
-  \item \textbf{Shared Data}: In this strategy, a thread block walks all the trees 
-  for a given row in parallel. If threads walk multiple trees, each thread accumulates
-  partial results. Finally, a thread block wide reduction is performed to compute 
+  \item In the \emph{shared data} strategy, a thread block walks all the trees 
+  for a given row in parallel. 
+  % If threads walk multiple trees, each thread accumulates partial results. 
+  Then, a thread block wide reduction is performed to compute 
   the prediction. The schedule for this strategy is as follows.
 \begin{lstlisting}[style=c++]
   reorder(batch, tree)
@@ -299,9 +301,9 @@ The rest can be encoded similarly.
 % \end{lstlisting}
 \end{itemize}
 
-There are some simplifying assumptions and limitations in the current design
-of the scheduling language. Mainly, tree traversals are considered atomic and
-accumulation of tree predictions is done immediately (as opposed to, 
-for example, collecting all predictions and performing a reduction later).
-However, we find that these are not significant limitations in practice as
-the current design is able to express most strategies of interest.
+% There are some simplifying assumptions and limitations in the current design
+% of the scheduling language. Mainly, tree traversals are considered atomic and
+% accumulation of tree predictions is done immediately (as opposed to, 
+% for example, collecting all predictions and performing a reduction later).
+% However, we find that these are not significant limitations in practice as
+% the current design is able to express most strategies of interest.

@@ -1,9 +1,17 @@
 \section{Motivation}
-
+\label{sec:motivation}
 In this section, we first motivate the need for a scheduling language 
 by showing how a model can be compiled in different ways
 and subsequently, we show how drastically 
 performance can vary across these variants for real benchmarks.
+
+\begin{figure}[htb]
+  \centering
+  \includegraphics[width=\linewidth]{figures/HIR.PNG}
+  \caption{The representation of a model in high-level IR and the model 
+  after trees are padded and reordered. }
+  \label{Fig:HIRExample}
+\end{figure}
 
 As an example, consider a model with four trees, two complete
 trees of depth 1 and two of depth 2 (Figure \ref{Fig:HIRExample}).
