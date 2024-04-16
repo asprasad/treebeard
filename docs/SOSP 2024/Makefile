@@ -2,7 +2,7 @@ PAPER=main
 
 default: $(PAPER).pdf
 
-$(PAPER).pdf: $(PAPER).tex *.tex figures/*.png figures/*.PNG figures/*.pdf figures/*.pptx
+$(PAPER).pdf: $(PAPER).tex *.tex figures/*.png figures/*.PNG figures/*.pdf
 	pdflatex $(PAPER).tex </dev/null
 	bibtex $(PAPER)
 	pdflatex $(PAPER).tex </dev/null >/dev/null
