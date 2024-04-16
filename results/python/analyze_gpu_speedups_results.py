@@ -121,6 +121,7 @@ def plot_bar_graph_speedups_for_batch_size(df, batch_size, kwargs=None):
 
 def plot_line_graph_geomean_speedups_over_batch_size(df, tb_time_col, compare_time_cols, line_labels, gpu_name, time_measured):
     batch_sizes = df['Batch size'].unique()
+    batch_sizes = [batch_size for batch_size in batch_sizes if batch_size != 256]
     speedups = []
 
     assert(len(compare_time_cols) == len(line_labels))
