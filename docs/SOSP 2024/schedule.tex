@@ -29,6 +29,12 @@ other index variables are derived from these. A schedule derives
 new index variables from these root index variables by applying
 directives. 
 
+\Treebeard{} represents loops (index variables) as nodes in a tree where the children
+of a node represent immediately contained loops. Each schedule 
+primitive modifies this tree in some way. The compiler tracks 
+the lineage of each of the loops. This allows the compiler to 
+automatically infer the ranges for all loops.
+
 \Treebeard{}'s scheduling language has three classes of directives. The first is a set 
 of loop modifiers that are used to specify the structure of the loop nest to
 walk the iteration space (Table \ref{Tab:LoopModifiers}). The second is a set of 
