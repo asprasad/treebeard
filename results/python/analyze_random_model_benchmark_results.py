@@ -1,9 +1,9 @@
 import os
 
-batch_size = 4096
+batch_size = 512
 # file_path = "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/random_models/20240320/random_cmp_output_mp.txt"
-# file_path = "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/random_models/20240320/random_cmp_output_mp_b512.txt"
-file_path = "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/random_models/20240320/random_cmp_output_mp_b4k_ft500.txt"
+file_path = "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/random_models/20240320/random_cmp_output_mp_b512.txt"
+# file_path = "/home/ashwin/mlir-build/llvm-project/mlir/examples/treebeard/results/thedeep/gpu/random_models/20240320/random_cmp_output_mp_b4k_ft500.txt"
 
 # read the file line by line and filter out lines that don't start with "/"
 with open(file_path, "r") as file:
@@ -42,20 +42,20 @@ def get_tree_depth(model_path):
 
 df["tree_depth"] = df["model_path"].apply(get_tree_depth)
 
-print(df.shape)
+# print(df.shape)
 # print the min, max and geomean of the tb_kernel_speedup column
-print(df["tb_kernel_speedup"].min())
-print(df["tb_kernel_speedup"].max())
+# print(df["tb_kernel_speedup"].min())
+# print(df["tb_kernel_speedup"].max())
 # print the geometric mean of the tb_kernel_speedup column
 # compute geomean using scipy.stats.gmean
 import scipy.stats as stats
-print(stats.gmean(df["tb_kernel_speedup"]))
+# print(stats.gmean(df["tb_kernel_speedup"]))
 #print(df["tb_kernel_speedup"].prod() ** (1.0 / df.shape[0]))
 
 for depth in range(6, 9):
     # get entries with tree_depth == depth
     df_depth = df[df["tree_depth"] == depth]
-    print(df_depth.shape)
+    # print(df_depth.shape)
 
     # plot a 3-d graph of num_trees, num_features and tb_kernel_speedup
     import matplotlib.pyplot as plt
@@ -68,11 +68,14 @@ for depth in range(6, 9):
     # ax.scatter3D(df_depth["num_trees"], df_depth["num_features"], df_depth["tb_kernel_speedup"], c='red')
     surf = ax.plot_trisurf(df_depth["num_trees"], df_depth["num_features"], df_depth["tb_kernel_speedup"], cmap='viridis')
 
-    ax.set_xlabel('num_trees')
-    ax.set_ylabel('num_features')
-    ax.set_zlabel('tb_kernel_speedup')
-
-    plt.title(f"Batch Size: {batch_size}, Tree Depth: {depth}")
-    plt.colorbar(surf, label='tb_kernel_speedup')
-    plt.savefig(f'kernel_speedup_b{batch_size}_depth{depth}_ft500.png')
+    ax.set_xlabel('Number of Trees')
+    ax.set_ylabel('Number of Features')
+    ax.set_zlabel('Speedup')
+    min_speedup = df_depth["tb_kernel_speedup"].min()
+    max_speedup = df_depth["tb_kernel_speedup"].max()
+    geomean_speedup = stats.gmean(df_depth["tb_kernel_speedup"])
+    # limit the speedup values to 1 decimal digit
+    plt.title(f"Min:{min_speedup:.2f}x    Max:{max_speedup:.2f}x    Geomean:{geomean_speedup:.2f}x")
+    plt.colorbar(surf, label='Speedup')
+    plt.savefig(f'kernel_speedup_b{batch_size}_depth{depth}.png')
     # plt.show()
