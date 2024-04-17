@@ -1,12 +1,13 @@
 \section{Scheduling Language}
 \label{sec:schedule}
-As established in Section \ref{sec:motivation}, there are several 
-configurations and optimizations strategies for decision 
-tree inference. The best one to use varies significantly across
-models, batch sizes and hardware platforms. Therefore, designing
-any one hard-coded strategy is not feasible as this would 
-make portable performance impossible. To address this, we 
-design a scheduling language for \Treebeard{}. The scheduling 
+% As established in Section \ref{sec:motivation}, there are several 
+% configurations and optimizations strategies for decision 
+% tree inference. The best one to use varies significantly across
+% models, batch sizes and hardware platforms. Therefore, designing
+% any one hard-coded strategy is not feasible as this would 
+% make portable performance impossible. 
+We design a scheduling language for \Treebeard{}
+to address the problems discussed in Section \ref{sec:motivation}. The scheduling 
 language provides an abstract way to specify loop structure and 
 other optimizations as an input to the compiler. The specified 
 \textbf{\emph{schedule}} controls the lowering of model inference to a set of 
@@ -20,7 +21,7 @@ to build auto-schedulers and auto-tuners (Section \ref{sec:exploring}).
 % express loop structures and the application of other optimizations 
 % (tree walk unrolling, tree walk interleaving etc.). 
 
-% \subsection{Language Definition}
+\subsection{Language Definition}
 The core construct of \Treebeard{}'s scheduling language is an 
 \textbf{\emph{index variable}} which abstractly represents a loop. 
 Each index variable has a range of values that it can take along 
@@ -229,20 +230,20 @@ automatically infer the ranges for all loops.
 
 %\TODO{Add examples for RAPIDS, Tahoe (Maybe show some strategies can be encoded?)}
 
+\subsection{Expressiveness of the Scheduling Language}
 \Treebeard{}'s scheduling language is expressive enough to represent a wide range of
 strategies used in existing systems. We show examples of how it can be used to 
-represent XGBoost and Tahoe's strategies. 
+represent XGBoost~\cite{XGBoost} and Tahoe's strategies~\cite{Tahoe}. 
 % Before presenting the examples, we note that \Treebeard{}'s 
 % default loop order is [\op{batch}, \op{tree}], i.e, for each row in the input
 % batch, go over all trees.
 
-% \subsection{The XBoost Schedule}
 XGBoost\cite{XGBoost} implements inference on the CPU by going 
 over a fixed number of rows (64 in the previous version)
 for every tree and then moving to the next tree. It moves to the 
 next set of rows when all trees have been walked for the current 
 set of rows. Different sets of rows are processed in parallel.
-The following schedule expresses XGBoost's strategy.
+This is expressed in \Treebeard{}'s scheduling language as:
 \begin{lstlisting}[style=c++]
   tile(batch, b0, b1, CHUNK_SIZE)
   reorder(b0, tree, b1)
@@ -253,7 +254,7 @@ Tahoe\cite{Tahoe} has four strategies for inference on the GPU that it picks fro
 We show how two of these strategies can be encoded using \Treebeard{}'s scheduling language.
 The rest can be encoded similarly. 
 
-In the \emph{direct method}, a single GPU thread walks all trees
+In the \emph{direct method}~\cite{Tahoe}, a single GPU thread walks all trees
 for a given input row. The schedule for this strategy is as follows.
 \begin{lstlisting}[style=c++]
   tile(batch, b0, b1, ROWS_PER_TB)
@@ -263,7 +264,7 @@ for a given input row. The schedule for this strategy is as follows.
 \end{lstlisting}
 Here, \op{ROWS\_PER\_TB} is the number of rows that are processed by a single thread block.
 
-In the \emph{shared data} strategy, a thread block walks all the trees 
+In the \emph{shared data} strategy~\cite{Tahoe}, a thread block walks all the trees 
 for a given row in parallel. 
 % If threads walk multiple trees, each thread accumulates partial results. 
 Then, a thread block wide reduction is performed to compute 

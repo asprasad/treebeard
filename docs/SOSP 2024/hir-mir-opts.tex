@@ -1,4 +1,4 @@
-\section{\Treebeard{} Multi-Level Compiler}
+\section{Overview of \Treebeard{} Multi-Level Compilation}
 
 % \begin{itemize}
 %   \item The compiler performs a number of optimizations on the HIR and MIR to improve the performance of the generated code.
@@ -16,9 +16,14 @@ The inference computation is lowered through three intermediate representations
 -- high-level IR (HIR), mid-level IR (MIR) and low-level IR (LIR). The LIR is
 finally lowered to LLVM and then JIT'ed to the specified target processor. 
 \Treebeard{} is built using the open-source \TreebeardOLD{} infrastructure~\cite{Treebeard}.
-Since the \TreebeardOLD{} infrastructure was originally designed to target CPUs,
-significant extensions were required to support schedule-guided compilation for CPUs and GPUs. 
-These parts of the system are shown as shaded boxes in Figure \ref{Fig:CompilerStructure}.
+% Since the \TreebeardOLD{} infrastructure was originally designed to target CPUs,
+% significant extensions were required to support schedule-guided compilation for CPUs and GPUs. 
+The \TreebeardOLD{} infrastructure was originally designed to target CPUs.
+It lacks a scheduling language and does not support generating code for 
+different implementation strategies. We extend \TreebeardOLD{} significantly 
+to support schedule-guided compilation for CPUs and GPUs.
+The parts \Treebeard{} that are new or significantly different compared to \TreebeardOLD{}
+are shown as shaded boxes in Figure \ref{Fig:CompilerStructure}.
 % However, it implements several optimizations on the HIR and MIR that 
 % can be leveraged across target processors and we find that some these 
 % are beneficial for GPUs as well. 
@@ -72,8 +77,7 @@ are performed on the MIR.
 One surprising thing we found while developing \Treebeard{} was that 
 we could use ILP to improve performance on GPUs. 
 One of the performance bottlenecks in inference code targeted 
-to GPUs was that warps spent significant time being stalled. Since GPUs 
-implement scoreboarding~\cite{HennesseyPatterson}, we were able to 
+to GPUs was that warps spent significant time being stalled. We were able to 
 alleviate this bottleneck by interleaving tree walks. 
 % This significantly improved performance of generated 
 % code. The fact that exploiting ILP improved performance on GPUs was surprising. 
