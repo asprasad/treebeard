@@ -18,13 +18,31 @@
 The set of schedules that can be constructed using the scheduling language described in 
 Section \ref{sec:schedule} is unbounded.
 \TODO{kr: next few lines need more work}
-Even if one were to search for a good schedule offline, before deploying the model on a specific hardware, additional tools are needed help search for a 
-high-performance schedule. We anticipate that even for the most complex models, one would like to spend at most a few minutes doing this search.
-We propose a set of heuristics to guide the search for a good schedule and meet this goal. We do so in two steps, by first defining a bounded search space and then pruning this search space further.
+Even if one were to search for a good schedule offline, before deploying the model 
+on a specific hardware, additional tools are needed to help search for a 
+high-performance schedule. We anticipate that even for the most complex models, 
+% one would like to spend at most a few minutes doing this search.
+spending more than a few minutes on this search is not acceptable.
+We propose a set of heuristics to guide the search for a good schedule 
+and meet this goal. These heuristics work by first defining a 
+bounded search space and then pruning this search space further
+based on the batch size and model characteristics.
+
 \subsection{Bounding the search space}
-We bound the space using a few meta parameters that together define the primitives used to construct a schedule. We do so while making sure that the space (at-least) covers the known strategies published in prior work. Specifically, we use 4 numeric parameters and 4 boolean parameters listed in Table \ref{tab:schedparams}. 
+We bound the space using a few meta-parameters that together define 
+the primitives used to construct a schedule. We do so while making sure 
+that the space (at-least) covers the known strategies published in prior work.
+Specifically, we use 4 numeric parameters and 4 boolean parameters listed in Table \ref{tab:schedparams}. 
 %Note that even this template has a large number ($1728$) of schedules, and requires further pruning as we discuss later.
-The first three numeric parameters assign a configurable number of rows to each thread block, to each thread, and determine how trees are distributed across a specified number of threads. These parameters together define the loop schedule primitives to use (including the arguments to pass) from Table~\ref{Tab:LoopModifiers} and the parallelization strategy. The next four parameters determine the caching strategy, unroll factor{\footnote{We choose to always unroll trees completely, while its possible to partially unroll loops we did not observe any performance benefits from doing so.}} and how many trees to traverse simultaneously \TODO{Should we say, in the kernel/within a single thread?}.  (the remaining primitives from Table~\ref{Tab:Optimizations}).  
+The first three numeric parameters assign a configurable number of rows to each 
+thread block, to each thread, and determine how trees are distributed across a
+specified number of threads. These parameters together define the loop schedule 
+primitives to use (including the arguments to pass) from Table~\ref{Tab:LoopModifiers} 
+and the parallelization strategy. The next four parameters determine the caching strategy, 
+unroll factor{\footnote{We choose to always unroll trees completely, while its possible 
+to partially unroll loops we did not observe any performance benefits from doing so.}} 
+and how many trees to traverse simultaneously \TODO{Should we say, in the kernel/within
+a single thread?}.  (the remaining primitives from Table~\ref{Tab:Optimizations}).  
 The final parameter determines what reduction options to use (Table~\ref{Tab:ReductionOpts}).
 %Table \ref{tab:schedparams} lists the parameter values we tried. 
 % \begin{itemize}
@@ -76,22 +94,25 @@ module outside the core \Treebeard{} compiler.
   \label{Fig:ExecTimeDistribution}
 \end{figure}
 
-We evaluated all the schedules in this space on several real world models and observed that there is huge variation in performance with different parameter values. 
+We evaluated all the schedules in this space on several real world models and observed that 
+there is huge variation in performance with different parameter values. 
 Figure \ref{Fig:ExecTimeDistribution} shows the distribution of normalized execution times
 for some real-world models with different parameter values for the template schedule (inference
 times normalized w.r.t fastest time for that model).
 As can be seen very few schedules perform close to the best while a vast majority of
 schedules perform poorly.
 
-Exhaustive exploration over this bounded space ($1728$ schedules) is still very expensive, it took anywhere between thirty minutes to a few hours
-to explore the entire space for a given model. 
+Exhaustive exploration over this bounded space ($5184$ schedules) is still very expensive, taking
+anywhere between thirty minutes to a few hours to explore the entire space for a given model. 
 %Exploring the space for every model is infeasible.
 %\TODO{comment on online vs offline exploration? Set a goal for the heuristic?}
+
 \subsection{Pruning the search space}
 %Exploring the schedule space extensively even for a reasonable set of parameter values is very expensive.
  
 %Performing this extensive search for every model being compiled is infeasible in practise. 
-A careful analysis of the search space reveals that certain schedules are not likely to perform well as they either do not exploit the parallelism available in the model or do not take advantage of the hardware features.
+A careful analysis of the search space reveals that certain schedules are not likely to 
+perform well as they either do not exploit the parallelism available in the model or do not take advantage of the hardware features.
 We use a combination of 3 strategies to further prune the search space.
 Algorithm \ref{alg:heuristic} presents our final heuristic to find a good schedule.
 %need a better mechanism to guide the search for a good schedule.
@@ -115,8 +136,9 @@ Algorithm \ref{alg:heuristic} presents our final heuristic to find a good schedu
   % we should start partitioning the trees across more threads is when the number of features
   % is greater than 100. 
   \subsubsection*{Orthogonal parameters} We find that some parameters like reduction type are orthogonal to the rest. 
-  We therefore break the exploration into two phases, first we pick the best schedules without reduction and then evaluate reduction options on the best schedules.
-    %We find that when a model prefers schedules with shared reduction, the same schedules 
+  We therefore break the exploration into two phases, first we pick the best schedules without reduction
+  optimizations and then evaluate reduction options on the best schedules.
+  %We find that when a model prefers schedules with shared reduction, the same schedules 
   %without shared reduction are among the best performing schedules without shared reduction.
   % We therefore are able to separate the evaluation of shared reduction by collecting the 
   % best schedules without shared reduction and only evaluating shared reduction on them. 
