@@ -39,10 +39,16 @@ def plot_normalized_time_histogram(df_sorted, df_best, col_name):
     # print(df_sorted)
     # plot a histogram of the normalized times and save it to a file
     df_sorted.hist(column='normalized_'+col_name, bins=100)
+    plt.xlabel('Normalized Kernel Time')
+    plt.ylabel('Frequency')
+    plt.title('')
     plt.savefig(f'normalized_{col_name}_histogram.png')
 
     # plot a histogram of values with normalized times < 5
     df_sorted[df_sorted['normalized_'+col_name] < 5].hist(column='normalized_'+col_name, bins=500)
+    plt.xlabel('Normalized Kernel Time')
+    plt.ylabel('Frequency')
+    plt.title('')
     plt.savefig(f'normalized_{col_name}_histogram_lt5.png')
 
 def write_best_config_maps_to_file(df_best_total_time, benchmark_names, batch_sizes, file_name):
@@ -258,11 +264,11 @@ for benchmark in benchmark_names:
 
 # print(df_best_kernel_time)
 
-print('Comparison across batch sizes')
-compare_across_batch_sizes(df_best_kernel_time, df_sorted_by_kernel_time, batch_sizes, benchmark_names)
+# print('Comparison across batch sizes')
+# compare_across_batch_sizes(df_best_kernel_time, df_sorted_by_kernel_time, batch_sizes, benchmark_names)
 
-print()
-print('Comparison across benchmarks')
-compare_across_benchmarks(df_best_kernel_time, df_sorted_by_kernel_time, batch_sizes, benchmark_names)
-# plot_normalized_time_histogram(df_sorted_by_kernel_time, df_best_kernel_time, 'kernel')
+# print()
+# print('Comparison across benchmarks')
+# compare_across_benchmarks(df_best_kernel_time, df_sorted_by_kernel_time, batch_sizes, benchmark_names)
+plot_normalized_time_histogram(df_sorted_by_kernel_time, df_best_kernel_time, 'kernel')
 # write_best_config_maps_to_file(df_best_total_time, benchmark_names, batch_sizes, "best_configs.txt")
