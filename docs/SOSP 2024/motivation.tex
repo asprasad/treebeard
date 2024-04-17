@@ -1,10 +1,9 @@
 \section{Motivation}
 \label{sec:motivation}
-In this section, we first motivate the need for a scheduling language 
-by showing how a model can be compiled in different ways
-and subsequently, we show how drastically 
-performance can vary across these variants for real benchmarks.
+In this section, we first motivate our work by showing how a model can be compiled in different ways
+and subsequently, show the drastic performance difference across these variants for real benchmarks.
 
+\subsection{Motivating Example}
 \begin{figure}[htb]
   \centering
   \includegraphics[width=\linewidth]{figures/HIR.PNG}
@@ -55,13 +54,24 @@ is as follows.
 This schedule is ideally suited for a single-core CPU. It maximizes 
 the reuse of trees in the L1 cache and also minimizes the amount of
 branching by unrolling tree walks. However, it doesn't exploit  
-any parallelism and is therefore ill-suited for parallel processors.
+any parallelism. 
+%% RG
+%%  and is therefore ill-suited for parallel processors.
+Further, the \op{batch} for loop can be tiled to get locality benefits. 
 
 One form of parallelism that can be exploited is to process rows in 
-parallel. However, with massively parallel processors like GPUs,
-this may not yield sufficient parallel work. Another option is to also 
-parallelize across trees. A possible strategy to accomplish this is 
-encoded in the following schedule.
+parallel. 
+%% RG:
+While this may work for multi-core CPUs, with massively parallel processors like GPUs,
+this strategy may not yield sufficient parallel work. Another option is to also 
+parallelize across trees. 
+%% RG:
+% With GPUs, the performance of generated code would also vary with the 
+% kernel configuration, which specifies the number of thread blocks\footnote{We 
+% use NVIDIA CUDA terminology in the discussion, but as we demonstrate in 
+% Section~\ref{sec:results}, our framework can generate code for AMD GPUs as well.}, 
+% the size of thread blocks and so on. 
+A possible strategy to accomplish this is encoded in the following schedule.
 \begin{lstlisting}[style=c++]
   // Split the trees into two sets
   tile(tree, t0, t1, 2)
@@ -102,9 +112,13 @@ for each tree. The IR generated is as follows.
 \end{lstlisting}
 
 In the case of this schedule, the \op{reduce}
-operation needs special consideration. In order to correctly generate 
-code for this schedule, the compiler needs to determine that parallel 
-iterations of the \op{t1} 
+operation needs special consideration.  
+%% RG
+%% to correctly generate code for this schedule, the compiler needs 
+To generate the correct code for this schedule, the compiler needs to determine
+the required synchronization and temporary storage for reductions 
+given the parallelization strategy specified. In the given example, it 
+has to identify that parallel iterations of the \op{t1} 
 loop accumulate into the same element of the \op{result} array.
 One possible solution is to rewrite the reduction so that each parallel 
 iteration accumulates into a different array element by introducing 
@@ -137,10 +151,15 @@ As is evident from these examples, it is possible to optimize
 the inference routine in different ways. Also, the structure of the loop 
 nest in the inference routine can get quite complex even 
 for simple schedules. Writing these routines by hand 
-is error-prone and time-consuming.  We believe that designing a 
+is error-prone and time-consuming.  
+%% RG 
+%% We beleive 
+Hence designing a 
 scheduling language to encapsulate these strategies and a principled code 
-generator to automatically generate code based on the schedule is the 
-best approach. 
+generator to automatically generate code guided by the schedule is the 
+best approach. We promote such an approach in this paper.
+
+\subsection{Performance of Different Schedules} 
 
 \begin{figure}[]
   \centering
@@ -157,15 +176,27 @@ best approach.
   \end{subfigure}
 \end{figure}
 
-To further complicate matters, we find that these different strategies can have significantly different
-performance. Figures \ref{fig:sensitivitya} and \ref{fig:sensitivityb} show the
-variation in performance when the same schedules are used across batch sizes 
-and models respectively. These diagrams show that the best schedules to use 
-vary across batch sizes and models. The largest slowdown is 5$\times$ when 
-schedules are used across different batch sizes and 6$\times$ when schedules
-are used across different models. Therefore, no one strategy can be used 
-across all models and batch sizes. 
-A system that is capable of specializing generated code for both batch 
+Do different schedules and the code generated based on them matter? 
+%% RG 
+%% To further complicate matters, we 
+We find that these different strategies can have significantly different
+performance. Figures~\ref{fig:sensitivitya} and~\ref{fig:sensitivityb} show the
+variation in performance when the same schedules are used across different batch sizes 
+and different models, respectively. 
+These diagrams show that the best schedules to use vary across batch sizes and models. 
+%% RG
+% Each chart shows the performance of different schedules~-- slowdown compared to the best
+% performing schedule~-- as a heatmap. 
+The largest slowdown is 5$\times$ 
+%% RG
+when the best-performing schedule for a model is  
+%% schedules are 
+used across different batch sizes.  %% and 
+It increases to 6$\times$ when schedules are used across different models. 
+%% Therefore, no one strategy can be used across all models and batch sizes. 
+Clearly, using a single strategy across models and batch sizes leaves significant performance on the table. Hence, 
+%% 
+a system that is capable of specializing generated code for both batch 
 size and model is required for the best performance.
 
 Building such a configurable compiler and supporting code generation for CPUs and GPUs 
@@ -174,6 +205,11 @@ compiler to represent and optimize reductions, deal uniformly with different
 in-memory representations of the model, design optimizations to effectively 
 use the memory hierarchy of the target processor (shared memory on GPUs and 
 cache on the CPU) and finally be able to generate target specific code. 
+%% RG
+Lastly, we propose a simple heuristic to find a high-performance schedule 
+for a given model and batch size to remove this burden from the user. 
+We defer the task of implementing an auto-tuner to future work. 
+%%
 The rest of the paper describes these challenges in detail and how we
 solved them in \Treebeard{}.
 
