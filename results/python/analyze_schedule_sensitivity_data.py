@@ -53,9 +53,14 @@ def plot_batch_sensitivity_for_single_benchmark(df_depth, benchmark_name):
         dims=("Batch Size", "Comparison Batch Size"),
     )
 
-    da.plot(xscale="log", yscale="log")
+    fg = da.plot(xscale="log", yscale="log", aspect=1.3, size=20)
+    fg.colorbar.ax.tick_params(labelsize=40)
+    for axis in [fg.axes.xaxis, fg.axes.yaxis]:
+        axis.label.set_size(60)
+        axis.set_tick_params(labelsize=60)
+
     # plt.show()
-    plt.title(f"{benchmark_name} Batch Sensitivity")
+    # plt.title(f"{benchmark_name} Batch Sensitivity")
     # plt.colorbar(im, label='tb_kernel_speedup')
     plt.savefig(f'batch_sensitivity_{benchmark_name}.png')
     plt.close('all')
@@ -82,19 +87,20 @@ def plot_model_sensitivity_for_single_benchmark(df_depth, model_name):
         coords={"Model": x_positions, "Comparison Model": y_positions},
         dims=("Model", "Comparison Model"),
     )
-    da.plot(aspect=1.5, size=10)
+    fg = da.plot(aspect=1.3, size=20)
+    fg.colorbar.ax.tick_params(labelsize=40)
     plt.axis('off')
 
     for name, x_pos in zip(x, x_positions):
         name = name if name != "year_prediction_msd" else "year" 
-        plt.text(x_pos, -1.5, name, rotation=90, fontsize=10, wrap=True)
+        plt.text(x_pos, 2, name, rotation=90, fontsize=60, va = 'top')
     
     for name, y_pos in zip(y, y_positions):
         name = name if name != "year_prediction_msd" else "year"
-        plt.text(-1, y_pos, name, fontsize=10, wrap=True)
+        plt.text(2, y_pos, name, fontsize=60, ha='right')
     
     # plt.show()
-    plt.title(f"Batch Size {batch_size} Model Sensitivity")
+    # plt.title(f"Batch Size {batch_size} Model Sensitivity")
     plt.tight_layout()
     # plt.colorbar(im, label='tb_kernel_speedup')
     plt.savefig(f'model_sensitivity_{batch_size}.png')
