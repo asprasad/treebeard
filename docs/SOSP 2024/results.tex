@@ -55,9 +55,9 @@ We also evaluate \Treebeard{} on a set of randomly generated models.
   \item Figure \ref{Fig:KernelTimeIndividualBenchmarks4060} shows that \Treebeard{} outperforms RAPIDs and Tahoe on 
   individual benchmarks on the RTX 4060 at small (1024) and large (8192) batch sizes. These batch sizes 
   require different schedules, but the \Treebeard{} auto-tuning heuristic is able to find them.
-  \item Figure \ref{Fig:TotalTimeIndividualBenchmarks4060} compares the total time of \Treebeard{} vs RAPIDs on individual benchmarks. 
-  It shows that even with the overhead of data transfers, \Treebeard{} offers significant speedup. The graph in Figure \ref{Fig:TotalTimeIndividualBenchmarks4060} 
-  shows the breakup of the total time into kernel time and data transfer time.
+  % \item Figure \ref{Fig:TotalTimeIndividualBenchmarks4060} compares the total time of \Treebeard{} vs RAPIDs on individual benchmarks. 
+  % It shows that even with the overhead of data transfers, \Treebeard{} offers significant speedup. The graph in Figure \ref{Fig:TotalTimeIndividualBenchmarks4060} 
+  % shows the breakup of the total time into kernel time and data transfer time.
 \end{itemize}
 
 \begin{figure}[htb]
@@ -96,20 +96,20 @@ We also evaluate \Treebeard{} on a set of randomly generated models.
   \label{Fig:TBvsRAPIDsTahoe_T400_Speedup}
 \end{figure}
 
-\begin{figure*}[ht]
-  \centering
-  \begin{subfigure}[b]{.45\textwidth}
-    \subcaptionbox*{}{\includegraphics[width=\textwidth]{figures/abs_times_bar_graph_1024.png}}
-    \caption{Batch size 1024.}
-  \end{subfigure}
-  \begin{subfigure}[b]{.45\textwidth}
-    \subcaptionbox*{}{\includegraphics[width=\textwidth]{figures/abs_times_bar_graph_8192.png}}
-    \caption{Batch size 8192.}
-  \end{subfigure}
-  \hfill
-  \caption{\label{Fig:TotalTimeIndividualBenchmarks4060}\Treebeard{} vs RAPIDs total time comparison on NVIDIA RTX 4060. Numbers on the bars are the times 
-  per sample in $\mu$s for \Treebeard{} and RAPIDs. Times for each benchmark are normalized w.r.t the RAPIDs time for that benchmark.}
-\end{figure*}
+% \begin{figure*}[ht]
+%   \centering
+%   \begin{subfigure}[b]{.45\textwidth}
+%     \subcaptionbox*{}{\includegraphics[width=\textwidth]{figures/abs_times_bar_graph_1024.png}}
+%     \caption{Batch size 1024.}
+%   \end{subfigure}
+%   \begin{subfigure}[b]{.45\textwidth}
+%     \subcaptionbox*{}{\includegraphics[width=\textwidth]{figures/abs_times_bar_graph_8192.png}}
+%     \caption{Batch size 8192.}
+%   \end{subfigure}
+%   \hfill
+%   \caption{\label{Fig:TotalTimeIndividualBenchmarks4060}\Treebeard{} vs RAPIDs total time comparison on NVIDIA RTX 4060. Numbers on the bars are the times 
+%   per sample in $\mu$s for \Treebeard{} and RAPIDs. Times for each benchmark are normalized w.r.t the RAPIDs time for that benchmark.}
+% \end{figure*}
 
 \begin{figure}[htb]
   \centering
@@ -142,3 +142,13 @@ We also evaluate \Treebeard{} on a set of randomly generated models.
 \end{figure}
 
 \subsection{CPU Improvements}
+\begin{itemize}
+  \item The ability of \Treebeard{} to parallelize across both trees and rows has a significant impact on CPU performance.
+  \item We run experiments on the Intel Core i9-11900K processor to evaluate the impact of parallelizing across trees with small batch sizes. 
+  \item At batch size 32, we find that the average speedup over all 8 models is 2.2$\times$ with a max speedup of 5$\times$.
+  \item At batch size 64, we find that the average speedup over all 8 models is 1.1$\times$ with a max speedup of 2$\times$. 
+  However, we find that 2 of the 8 models show slowdowns in this case. Again, this highlights the need for schedule exploration on CPUs.
+  \item For small batch sizes, parallelizing across rows does not work great since there is limited reuse of trees in L1 cache.
+  Also, the amount of work per thread is very small leading to high overheads. 
+  \item Parallelizing across trees is more effective since there is more reuse in L1 cache and the amount of work per thread is higher.  
+\end{itemize}
