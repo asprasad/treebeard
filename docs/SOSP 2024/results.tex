@@ -62,17 +62,17 @@ We also evaluate \Treebeard{} on a set of randomly generated models.
 
 \begin{figure}[htb]
   \centering
-  \includegraphics[width=0.75\linewidth]{figures/geomean_speedup_4060_kernel_time.png}
-  \caption{\Treebeard{} vs RAPIDs and Tahoe Kernel Time Speedup on NVIDIA RTX 4060}
+  \includegraphics[width=0.75\linewidth]{figures/geomean_speedup_4060_kernel_time_total_time.png}
+  \caption{\Treebeard{} vs RAPIDs and Tahoe kernel time and total time speedup on NVIDIA RTX 4060}
   \label{Fig:TBvsRAPIDsTahoe_4060_Speedup}
 \end{figure}
 
-\begin{figure}[htb]
-  \centering
-  \includegraphics[width=0.75\linewidth]{figures/geomean_speedup_4060_total_time.png}
-  \caption{\Treebeard{} vs RAPIDs Total Time Speedup on NVIDIA RTX 4060.}
-  \label{Fig:TBvsRAPIDs_4060_TotalTimeSpeedup}
-\end{figure}
+% \begin{figure}[htb]
+%   \centering
+%   \includegraphics[width=0.75\linewidth]{figures/geomean_speedup_4060_total_time.png}
+%   \caption{\Treebeard{} vs RAPIDs Total Time Speedup on NVIDIA RTX 4060.}
+%   \label{Fig:TBvsRAPIDs_4060_TotalTimeSpeedup}
+% \end{figure}
 
 \begin{figure*}[ht]
   \centering
@@ -121,6 +121,13 @@ We also evaluate \Treebeard{} on a set of randomly generated models.
 \subsection{Autotuning Heuristic}
 \begin{figure}[htb]
   \centering
+  \includegraphics[width=0.75\linewidth]{figures/geomean_speedup_4060_best_vs_at.png}
+  \caption{Autotuning heuristics speedup vs best 4060 schedule on NVIDIA RTX 4060}
+  \label{Fig:AutotuningSpeedupvs4060Sched}
+\end{figure}
+
+\begin{figure}[htb]
+  \centering
   \includegraphics[width=0.75\linewidth]{figures/AutotuningSpeedupvs4060Sched_T400.png}
   \caption{Autotuning heuristics speedup vs best 4060 schedule on T400.}
   \label{Fig:AutotuningSpeedupvs4060Sched_T400}
@@ -128,10 +135,19 @@ We also evaluate \Treebeard{} on a set of randomly generated models.
 
 \begin{figure}[htb]
   \centering
-  \includegraphics[width=0.75\linewidth]{figures/HeuristicVsFullExplore_Speedup.png}
+  \includegraphics[width=0.75\linewidth]{figures/geomean_speedup_4060_full_exp_vs_at.png}
   \caption{Autotuning heuristic compile time speedup vs full schedule exploration.}
   \label{Fig:HeuristicVsFullExplore_Speedup}
 \end{figure}
+
+\begin{itemize}
+  \item We compare the schedule found by the schedule exploration heuristic on the RTX 4060 with the best schedule found by
+  extensive exploration. Figure \ref{Fig:HeuristicVsFullExplore_Speedup} shows that the heuristic is able to find schedules that are
+  very close to the best schedule found by exhaustive exploration.
+  \item The speedup of the heuristic schedule vs the best 4060 schedule is shown in Figure \ref{Fig:AutotuningSpeedupvs4060Sched}.
+  Geomean speedup range from 1.1$\times$ to 1.2$\times$.
+  \item 
+\end{itemize}
 
 \subsection{AMD GPU}
 \begin{figure}[htb]
