@@ -8,10 +8,12 @@ from scipy.stats import gmean
 results_4060_df = pd.read_csv('../4060_thedeep_results.csv')
 results_t400_df = pd.read_csv('../T400_holmes_results.csv')
 fullexp_vs_at_df = pd.read_csv('../fullexp_vs_at.csv')
+results_amdmi2160_df = pd.read_csv('../AMDMI2160_results.csv')
 
 results_4060_df = results_4060_df[results_4060_df['Batch size'] != 256]
 results_t400_df = results_t400_df[results_t400_df['Batch size'] != 256]
 fullexp_vs_at_df = fullexp_vs_at_df[fullexp_vs_at_df['Batch size'] != 256]
+results_amdmi2160_df = results_amdmi2160_df[results_amdmi2160_df['Batch size'] != 256]
 
 PLOT_FILE_EXTENSION = 'png'
 AXIS_FONT_SIZE = 15
@@ -136,14 +138,16 @@ def plot_bar_graph_speedups_for_batch_size(df, batch_size, kwargs=None):
 
 
 class LineGraphPlotter:
-    def __init__(self, gpu_name, file_name_suffix, lower_lim = 1, upper_lim = 1) -> None:
+    def __init__(self, gpu_name, file_name_suffix, lower_lim = 1, upper_lim = 1, round_up=True) -> None:
         self.gpu_name = gpu_name
         self.file_name_suffix = file_name_suffix
         _, self.ax = plt.subplots()
         self.ylim = (lower_lim, upper_lim)
+        self.round_up = round_up
 
     def plot_geomean_speedups_over_batch_size(self, df, tb_time_col, compare_time_cols, line_labels):
         batch_sizes = df['Batch size'].unique()
+        batch_sizes.sort()
         speedups = []
 
         assert(len(compare_time_cols) == len(line_labels))
@@ -167,7 +171,8 @@ class LineGraphPlotter:
         min_speedup = min([min(speedup) for speedup in speedups])
         diff = min_speedup - np.floor(min_speedup)
         lower_lim = np.floor(min_speedup) if diff <= 0.5 else np.floor(min_speedup) + 0.5
-        upper_lim = round(max([max(speedup) for speedup in speedups]) + 0.5, 1)
+        max_speedup = max([max(speedup) for speedup in speedups])
+        upper_lim = max_speedup if not self.round_up else round(max_speedup) + 0.5
         self.ylim = (min(self.ylim[0], lower_lim), max(self.ylim[1], upper_lim))
 
         # enable grid.
@@ -205,18 +210,19 @@ line_graph_plotter.plot_geomean_speedups_over_batch_size(results_4060_df, 'TB (A
 line_graph_plotter.save_plot()
 
 line_graph_plotter = LineGraphPlotter('T400', 'kernel_time')
-line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TBKernel(AT)', ['RAPIDS(kernel)', 'Tahoe(kernel)'], ['RAPIDS', 'Tahoe'])
+line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TBKernel(AT)', ['RAPIDS(kernel)', 'Tahoe(kernel)'], ['RAPIDS(kernel)', 'Tahoe(kernel)'])
+line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TB(AT)', ['RAPIDS(Total)'], ['RAPIDS(total)'])
 line_graph_plotter.save_plot()
 
-line_graph_plotter = LineGraphPlotter('T400', '4060_vs_T400', lower_lim=0.5)
-line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TB(AT)', ['TB(4060)'], ['4060 schedule vs Auto-Tuned schedule'])
-line_graph_plotter.save_plot()
-
-line_graph_plotter = LineGraphPlotter('4060', 'best_vs_at')
-line_graph_plotter.plot_geomean_speedups_over_batch_size(results_4060_df, 'TB (AT)', ['TB'], ['Auto-Tuned vs Best'])
+line_graph_plotter = LineGraphPlotter('T400', '4060_vs_T400', lower_lim=1)
+line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TBKernel(AT)', ['TBKernel(4060)'], ['Scheduling heuristic(T400) vs Best 4060 schedule'])
+line_graph_plotter.plot_geomean_speedups_over_batch_size(results_4060_df, 'TBKernel(AT)', ['TBKernel'], ['Scheduling heuristic(4060) vs Best 4060 schedule'])
 line_graph_plotter.save_plot()
 
 line_graph_plotter = LineGraphPlotter('4060', 'full_exp_vs_at', lower_lim=1, upper_lim=110)
 line_graph_plotter.plot_geomean_speedups_over_batch_size(fullexp_vs_at_df, 'AT', ['FullExplore'], [' Auto-Tuning vs Full Explore'])
 line_graph_plotter.save_plot()
 
+line_graph_plotter = LineGraphPlotter('AMDMI2160', '4060_vs_MI2160', lower_lim=1, upper_lim=1.6, round_up=False)
+line_graph_plotter.plot_geomean_speedups_over_batch_size(results_amdmi2160_df, 'TBKernel(MI2160)', ['TBKernel(4060)'], ['Scheduling heuristic(MI2160) vs Best 4060 schedule'])
+line_graph_plotter.save_plot()
