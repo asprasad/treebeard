@@ -17,8 +17,8 @@ The inference computation is lowered through three intermediate representations
 finally lowered to LLVM and then JIT'ed to the specified target processor. 
 \Treebeard{} is built using the open-source \TreebeardOLD{} infrastructure~\cite{Treebeard}.
 Since the \TreebeardOLD{} infrastructure was originally designed to target CPUs,
-significant extensions  (shown as dark boxes in Figure \ref{Fig:CompilerStructure})
-were required to support schedule guided compilation for CPUs and GPUs. 
+significant extensions were required to support schedule-guided compilation for CPUs and GPUs. 
+These parts of the system are shown as shaded boxes in Figure \ref{Fig:CompilerStructure}.
 % However, it implements several optimizations on the HIR and MIR that 
 % can be leveraged across target processors and we find that some these 
 % are beneficial for GPUs as well. 
@@ -39,9 +39,13 @@ In HIR, the model is represented as a collection of binary trees. This abstracti
 allows the implementation of optimizations that require the manipulation of the model
 or its constituent trees. We extend the \TreebeardOLD{} infrastructure with loop rewrites on 
 the HIR that are implemented through the scheduling language (Section \ref{sec:schedule}).
-We use these to implement the automatic scheduling described in Section \ref{sec:exploring}. 
-Additionally, the \TreebeardOLD{} infrastructure implements HIR transformations to reorder and pad 
-trees. 
+The \emph{schedule} is implemented as an MLIR attribute on the \op{predictEnsemble} operation.
+We use this object to implement the automatic scheduling described in Section \ref{sec:exploring}. 
+We reuse HIR transformations to reorder and pad trees from \TreebeardOLD{}.
+The tree transformations that reorder and pad trees are used in conjunction 
+with loop transformations like splitting to specialize inference code as the example 
+in Section \ref{sec:motivation} shows. Also, we enable tree padding only if the schedule 
+specifies unrolling of tree walks.
 % Figure \ref{Fig:HIRExample} shows this representation for a model 
 % with four trees and how the model can be transformed. The model contains two trees of 
 % depth 1 and two trees of depth 2 (\circled{A}). The right side of the diagram shows the models after 
@@ -59,7 +63,22 @@ trees.
 % it still abstracts details about the in-memory representation of the model. 
 
 The HIR is lowered to MIR as dictated by the \emph{schedule}.
-In the lowered MIR, the compiler uses the \op{reduce} op from 
+Optimizations like tree-walk unrolling and tree-walk interleaving
+are performed on the MIR. 
+% These optimizations are beneficial for GPUs as well.
+% and the design of \TreebeardOLD{} allows us to reuse the tree-walk 
+% unrolling and tree-walk interleaving optimizations on the MIR for GPUs.
+% While building \Treebeard{}, we found that
+One surprising thing we found while developing \Treebeard{} was that 
+we could use ILP to improve performance on GPUs. 
+One of the performance bottlenecks in inference code targeted 
+to GPUs was that warps spent significant time being stalled. Since GPUs 
+implement scoreboarding~\cite{HennesseyPatterson}, we were able to 
+alleviate this bottleneck by interleaving tree walks. 
+% This significantly improved performance of generated 
+% code. The fact that exploiting ILP improved performance on GPUs was surprising. 
+
+In the generated MIR, the compiler uses the \op{reduce} op from 
 the \op{reduction} dialect we design (details in Section \ref{sec:reduction})
 to represent reduction operations. The lowering of the \op{reduce} operation 
 involves introducing temporary buffers and splitting the operation  
@@ -67,33 +86,20 @@ to correctly implement reduction in the presence of
 parallel loops. This process, that we call \textbf{\emph{legalization}}, is 
 described in Section \ref{sec:reduction}. 
 
-\TreebeardOLD{} implements optimizations like 
-tree-walk unrolling, tree-walk interleaving, and parallelization
-on the MIR. These optimizations are beneficial for GPUs as well.
-and the design of \TreebeardOLD{} allows us to reuse the tree-walk 
-unrolling and tree-walk interleaving optimizations on the MIR for GPUs.
-While building \Treebeard{}, we found that one of the performance bottlenecks on the 
-GPU was that warps spent significant time being stalled. Since GPUs 
-implement scoreboarding~\cite{HennesseyPatterson}, we were able to alleviate this bottleneck by
-interleaving tree walks. This significantly improved performance of generated 
-code. The fact that exploting ILP improved performance on GPUs was surprising. 
-
 % \TODO{Should we talk about how interleaving is implemented as a 
 % statemachine and therefore it can be used across representations 
 % and tile traversal techniques?}
 
-The MIR is then further lowered to a low-level IR (LIR). 
+The MIR is further lowered to a low-level IR (LIR). 
 Significant changes to the original \TreebeardOLD{} design were required to get
 LIR to correctly lower to GPU code. The most important of these was 
-the change to how the compiler implements support for in-memory 
+changing how the compiler implements support for in-memory 
 representations of models (Section \ref{sec:representations}).
 % With these design changes, we were able to reuse much of the CPU 
 % implementation while customizing some parts for GPUs (for example,
 % buffers need to be allocated differently for CPU and GPU, caching 
 % is implemented differently etc.). 
-Also, this is the
-level at which the compilation pipeline diverges for different targets. In 
-the GPU compilation pipeline, the required memory transfers and kernel
+Also, when the target processor is a GPU, the required memory transfers and kernel
 invocations are inserted into the LIR. Additionally, buffers 
 to hold model values are inserted and abstract tree operations are lowered to
 explicitly refer to these buffers.
