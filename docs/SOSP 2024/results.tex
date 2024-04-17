@@ -1,38 +1,55 @@
 \section{Experimental Evaluation}
 \label{sec:results}
 
-We evaluate \Treebeard{} on several machines. The first machine has an AMD Ryzen 9 7950X 16-Core processor,
-128 GB of RAM, an NVIDIA RTX 4060 GPU with 8 GB of RAM and runs Ubuntu 22.04.2 LTS with CUDA 11.5. The 
-second has an Intel Core i9-11900K (Rocket Lake) processor with 8 physical cores, 128 GB of RAM, an 
-NVIDIA T400 with 2GB of RAM and runs Ubuntu 20.04.3 LTS with CUDA 11.8. We also evaluate \Treebeard{} on 
-an AMD MI210 GPU. To establish the efficacy of \Treebeard{}, we compare it with NVIDIA RAPIDs v23.10,
-Tahoe, and XGBoost v1.7.6. We use the same benchmark models as in the \TreebeardOLD{} paper\cite{Treebeard}.
-We also evaluate \Treebeard{} on a set of randomly generated models.
+We evaluate \Treebeard{} on four different machines and compare performance against four other systems. The first machine 
+%has an AMD Ryzen 9 7950X 16-Core processor, 128 GB of RAM, 
+has an NVIDIA RTX 4060 GPU with 8 GB of RAM and runs Ubuntu 22.04.2 LTS with CUDA 11.5. The 
+second has 
+%an Intel Core i9-11900K (Rocket Lake) processor with 8 physical cores, 128 GB of RAM, 
+an NVIDIA T400 GPU with 2GB of RAM and runs Ubuntu 20.04.3 LTS with CUDA 11.8. We also evaluate \Treebeard{} on 
+an AMD MI210 GPU and an Intel Core i9-11900K CPU. 
+We compare \Treebeard{} with NVIDIA RAPIDs v23.10,
+Tahoe, XGBoost v1.7.6 and TreebeardOLD{}. We measure both kernel time and total time (including data transfer to the GPU and results back) for RAPIDs and \Treebeard{}.
+Tahoe only allows us to measure the kernel time since it is written as an executable that performs inference repeatedly on the same data that is transferred to the GPU once.
 
-\subsection{Performance on Random Models}
-\begin{itemize}
-  \item Generated a set of over 700 random models with varying depths (6, 7, 8), number of trees (100 - 1000 in steps of 100), 
-  and number of features (powers of 2 between 8 to 1024 inclusive).
-  \item Compared the kernel time speedup of \Treebeard{} vs RAPIDs on the RTX 4060. The schedule used was the one picked by the auto-tuner. 
-  \item Speedups range between 1.5$\times$ and 8$\times$. \Treebeard{} outperforms RAPIDs on all models and batch sizes tested.
-  \item Figure \ref{fig:randomModels4060} shows the speedup for models of depth 8 and batch size 512 and depth 6 and batch size 4096.
-  Trends for other batch sizes and depths are similar.
-\end{itemize}
+We use two sets of benchmarks to perform the comparison.
+We use 8 real-world models trained on data from the Intel Machine Learning Benchmark suite~\cite{}. These models were also used in the \TreebeardOLD{} paper\cite{Treebeard}.
+To enable more exhaustive evaluation we trained 700 random models with varying number of trees (100---1000) and features (powers of two in the range 8---1024). Each tree has leaves at depths 2 to a maximum depth of 6, 7 or 8.
 
+
+\subsection{Performance comparisons on RTX 4060}
+We evaluated \Treebeard{} and RAPIDS on all 700 random models with varying input batch sizes, on multiple hardware.   
+Figure~\ref{fig:randomModels4060} shows two representative samples of the results, at batch sizes 512 and 4096 on all models. 
+Each plot is a 3D histogram of the speedup of \Treebeard{} over RAPIDS, with the x-axis representing the number of trees, the y-axis the number of features and the z-axis the speedup. 
+The schedule used by \Treebeard{} was automatically chosen using the algorithm described in Section~\ref{sec:exploring}. \TODO{kr: report exploration time?}.
+While the exact trends at different batch sizes vary it can be seen that \Treebeard{} consistently outperforms RAPIDS by $1.5-8\times$. 
+%\Treebeard{} consistently outperforms RAPIDS on all models and batch sizes tested.
+% \begin{itemize}
+%   \item Generated a set of over 700 random models with varying depths (6, 7, 8), number of trees (100 - 1000 in steps of 100), 
+%   and number of features (powers of 2 between 8 to 1024 inclusive).
+%   \item Compared the kernel time speedup of \Treebeard{} vs RAPIDs on the RTX 4060. The schedule used was the one picked by the auto-tuner. 
+%   \item Speedups range between 1.5$\times$ and 8$\times$. \Treebeard{} outperforms RAPIDs on all models and batch sizes tested.
+%   \item Figure \ref{fig:randomModels4060} shows the speedup for models of depth 8 and batch size 512 and depth 6 and batch size 4096.
+%   Trends for other batch sizes and depths are similar.
+% \end{itemize}
+We also did more detailed performance analysis on the real-world benchmarks.
+Figure~\ref{Fig:TBvsRAPIDsTahoe_4060_Speedup} shows the geomean speedup of \Treebeard{} over RAPIDs and Tahoe at different batch sizes. We do not report results for XGBoost since the speedups are an order of magnitude higher and too large to fit on the same graph.
+The plot has lines for kernel time and total time speedup over RAPIDS and kernel time speedup over Tahoe. As can been seen \Treebeard{} is uniformly faster than Tahoe by $2-3\times$ at all batch sizes. The relative performance of RAPIDs improves with batch size, but \Treebeard{} is still faster by $1.5-2\times$ evan at very high batch sizes. The plot also shows that the speedups are significant even when data needs to be transferred to the GPU and results need to be transferred back.
 \begin{figure*}[ht]
   \centering
   \begin{subfigure}[b]{.45\textwidth}
     \subcaptionbox*{}{\includegraphics[width=\textwidth]{figures/RandomModels/kernel_speedup_b512_depth8.png}}
-    \caption{Batch size 512, depth 8}
+    \caption{Batch size 512}
+
   \end{subfigure}
   \begin{subfigure}[b]{.45\textwidth}
     \subcaptionbox*{}{\includegraphics[width=\textwidth]{figures/RandomModels/kernel_speedup_b4096_depth6.png}}
-    \caption{Batch size 4096, depth 6}
+    \caption{Batch size 4096}
   \end{subfigure}
   \hfill
-  \caption{\label{fig:randomModels4060}\Treebeard{} vs RAPIDs Kernel Time Speedup on NVIDIA RTX 4060 for several randomly generated models.}
+  \caption{\label{fig:randomModels4060}\Treebeard{} vs RAPIDs Kernel Time Speedup for several randomly generated models.}
 \end{figure*}
-
+\begin{comment}
 \subsection{Comparison with RAPIDs, Tahoe and XGBoost}
 \begin{itemize}
   \item Measured both the kernel time and total time (time including transferring data to the 
@@ -59,7 +76,7 @@ We also evaluate \Treebeard{} on a set of randomly generated models.
   % It shows that even with the overhead of data transfers, \Treebeard{} offers significant speedup. The graph in Figure \ref{Fig:TotalTimeIndividualBenchmarks4060} 
   % shows the breakup of the total time into kernel time and data transfer time.
 \end{itemize}
-
+\end{comment}
 \begin{figure}[htb]
   \centering
   \includegraphics[width=0.75\linewidth]{figures/geomean_speedup_4060_kernel_time_total_time.png}
