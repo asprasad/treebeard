@@ -103,8 +103,8 @@ def plot_bar_graph_speedups_for_batch_size(df, batch_size, kwargs=None):
     gap = BAR_LABEL_FONT_SIZE * 0.3
     pos = np.array([float(2 * i * width + i * gap) for i in range(len(bar_names))])
 
-    ax.bar(pos, rapids_speedup, width, label='RAPIDS')
-    ax.bar(pos+width, tahoe_speedup, width, label='Tahoe')
+    ax.bar(pos, rapids_speedup, width, label='Speedup of SilvanForge vs RAPIDS', hatch='//////')
+    ax.bar(pos+width, tahoe_speedup, width, label='Speedup of SilvanForge vs Tahoe', hatch='......')
 
     # enable grid
     # ax.grid(True, which='both', axis='y')
@@ -112,7 +112,7 @@ def plot_bar_graph_speedups_for_batch_size(df, batch_size, kwargs=None):
     ax.set_ylim(0, max(max(rapids_speedup), max(tahoe_speedup)) + 1)
 
     # Add labels and title
-    ax.set_xlabel('Benchmark', fontsize=LABEL_FONT_SIZE)
+    # ax.set_xlabel('Benchmark', fontsize=LABEL_FONT_SIZE)
     ax.set_ylabel('Speedup', fontsize=LABEL_FONT_SIZE)
     # ax.set_title(f'Speedups for Batch Size {batch_size} (4060)')
     ax.set_xticks(pos + width / 2)
@@ -204,14 +204,14 @@ plot_bar_graph_speedups_for_batch_size(results_4060_df, 1024)
 plot_bar_graph_speedups_for_batch_size(results_4060_df, 8192)
 
 # plot geomean speedup over batch sizes
-line_graph_plotter = LineGraphPlotter('4060', 'kernel_time_total_time')
-line_graph_plotter.plot_geomean_speedups_over_batch_size(results_4060_df, 'TBKernel(AT)', ['RAPIDS(kernel)', 'Tahoe(kernel)'], ['RAPIDS(kernel)', 'Tahoe(kernel)'])
-line_graph_plotter.plot_geomean_speedups_over_batch_size(results_4060_df, 'TB (AT)', ['RAPIDS (Total)'], ['RAPIDS(total)'])
+line_graph_plotter = LineGraphPlotter('4060', 'kernel_time_total_time', lower_lim=1, upper_lim=5)
+line_graph_plotter.plot_geomean_speedups_over_batch_size(results_4060_df, 'TBKernel(AT)', ['RAPIDS(kernel)', 'Tahoe(kernel)'], ['Speedup of SilvanForge vs RAPIDS(kernel)', 'Speedup of SilvanForge vs Tahoe(kernel)'])
+line_graph_plotter.plot_geomean_speedups_over_batch_size(results_4060_df, 'TB (AT)', ['RAPIDS (Total)'], ['Speedup of SilvanForge vs RAPIDS(total)'])
 line_graph_plotter.save_plot()
 
 line_graph_plotter = LineGraphPlotter('T400', 'kernel_time')
-line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TBKernel(AT)', ['RAPIDS(kernel)', 'Tahoe(kernel)'], ['RAPIDS(kernel)', 'Tahoe(kernel)'])
-line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TB(AT)', ['RAPIDS(Total)'], ['RAPIDS(total)'])
+line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TBKernel(AT)', ['RAPIDS(kernel)', 'Tahoe(kernel)'], ['Speedup of SilvanForge vs RAPIDS(kernel)', 'Speedup of SilvanForge vs Tahoe(kernel)'])
+line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TB(AT)', ['RAPIDS(Total)'], ['Speedup of SilvanForge vs RAPIDS(total)'])
 line_graph_plotter.save_plot()
 
 line_graph_plotter = LineGraphPlotter('T400', '4060_vs_T400_vs_MI2160', lower_lim=1)
