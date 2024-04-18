@@ -7,17 +7,16 @@ and subsequently, show the drastic performance difference across these variants 
 \begin{figure}[htb]
   \centering
   \includegraphics[width=\linewidth]{figures/HIR.PNG}
-  \caption{The representation of a model in high-level IR and the model 
-  after trees are padded and reordered.\TODO{drop reorder, make 1,2 depth 1 and 3,4 depth 2.} }
+  \caption{Model for motivating example. The model has four trees, two of depth 1 and two of depth 2.}
   \label{Fig:HIRExample}
 \end{figure}
 
 Consider a model with four trees, two 
-trees of depth 1 and two of depth 2 (Figure \ref{Fig:HIRExample}).
+trees of depth 1 and two of depth 2 (\circled{A} in Figure \ref{Fig:HIRExample}).
 % We use this model as our running example throughout this section.
 We first describe a simple schedule that processes one tree at a time 
 for all input rows. The scheduling constructs are fairly intuitive. We 
-defer a detailed explanation of the scheduling language to Section~\ref{sec:scheduling}. 
+defer a detailed explanation of the scheduling language to Section~\ref{sec:schedule}. 
 The loop over the trees is split into two -- one that
 iterates over the first two trees (Trees 1 and 2 with depth 1) and 
 the second that iterates over the last two trees (Trees 3 and 4 with
@@ -26,7 +25,8 @@ and involves branching to check if a leaf has been reached.
 One way to avoid this as done in this schedule is to unroll the 
 tree walks for each tree. 
 When the schedule specifies that the tree walks should be unrolled, 
-\Treebeard{} pads the trees so that all leaves are at the same depth (the padded trees are also shown in Figure~\ref{Fig:HIRExample}).
+\Treebeard{} pads the trees so that all leaves are at the same depth
+(\circled{B} in Figure~\ref{Fig:HIRExample}).
 
 \begin{lstlisting}[style=c++]
   reorder(tree, batch)
@@ -42,7 +42,7 @@ is as follows.
 \begin{lstlisting}[style=c++]
   model = ensemble(...)
   for t_depth1 = 0 to 2 step 1 {
-    T = getTree(ensemble, t_depth1)
+    T = getTree(model, t_depth1)
     for batch = 0 to BATCH_SIZE step 1 {
       treePred = walkDecisionTree(T, 
                     input[batch]) <unrollDepth = 1>
@@ -50,7 +50,7 @@ is as follows.
     }
   }
   for t_depth2 = 2 to 4 step 1 {
-    T = getTree(ensemble, t_depth2)
+    T = getTree(model, t_depth2)
     for batch = 0 to BATCH_SIZE step 1 {
       treePred = walkDecisionTree(T,
                     input[batch]) <unrollDepth = 2>
@@ -102,13 +102,13 @@ for each tree. The IR generated is as follows.
   par.for batch = 0 to BATCH_SIZE step 1 <grid.x> {
     par.for t1 = 0 to 2 step 1 <block.x> {
       for t0_depth1 = 0 to 2 step 2 {
-        T = getTree(ensemble, t0_depth1 + t1)
+        T = getTree(model, t0_depth1 + t1)
         treePred = walkDecisionTree(T, 
                         input[batch]) <unrollDepth = 1>
         reduce(result[batch], treePred)
       }
       for t0_depth2 = 2 to 4 step 2 {
-        T = getTree(ensemble, t0_depth2 + t1)
+        T = getTree(model, t0_depth2 + t1)
         treePred = walkDecisionTree(T,
                         input[batch]) <unrollDepth = 2>
         reduce(result[batch], treePred) <'+', 0.0>
@@ -158,7 +158,7 @@ and let the GPU manage the branching. The schedules with and
 without unrolling place different constraints on the target processor,
 and the best choice depends on the characteristics of the model
 and micro-architectural features like register file size, handling 
-of branch divergence etc.~\cite{FungMicro11, SomethingElse}.
+of branch divergence etc.~\cite{FungMicro, MilindDivergence}.
 
 % As is evident from these examples, it is possible to optimize 
 % the inference routine in different ways. Also, the structure of the loop 
