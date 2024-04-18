@@ -136,6 +136,103 @@ def plot_bar_graph_speedups_for_batch_size(df, batch_size, kwargs=None):
     # plt.show()
     plt.savefig(f'speedup_bar_graph_{batch_size}.{PLOT_FILE_EXTENSION}')
 
+def plot_bar_graph_geomean_speedups_for_models(df, gpu_name):
+    # Prepare data for plotting
+    bar_names = df['Benchmark'].unique()
+    bar_names.sort()
+    batch_sizes = df['Batch size'].unique()
+    batch_sizes.sort()
+    speedups = [[],[]]
+
+    for benchmark in bar_names:
+        filtered_df = df[df['Benchmark'] == benchmark]
+        rapids_speedups = []
+        tahoe_speedups = []
+        for batch_size in batch_sizes:
+            batch_size_df = filtered_df[filtered_df['Batch size'] == batch_size]
+            assert(batch_size_df.shape[0] == 1)
+
+            tb_time = batch_size_df['TBKernel(AT)'].values[0]
+            rapids_time = batch_size_df['RAPIDS(kernel)'].values[0]
+            tahoe_time = batch_size_df['Tahoe(kernel)'].values[0]
+            rapids_speedups.append(rapids_time / tb_time)
+            tahoe_speedups.append(tahoe_time / tb_time)
+        
+        speedups[0].append(gmean(rapids_speedups))
+        speedups[1].append(gmean(tahoe_speedups))
+
+    # Plot the bar graph
+    width = BAR_LABEL_FONT_SIZE
+    gap = BAR_LABEL_FONT_SIZE * 0.3
+    pos = np.array([float(2 * i * width + i * gap) for i in range(len(bar_names))])
+
+    _, ax = plt.subplots()
+    
+    ax.bar(pos, speedups[0], width, label='Speedup of SilvanForge vs RAPIDS', hatch='//////')
+    ax.bar(pos + width, speedups[1], width, label='Speedup of SilvanForge vs Tahoe', hatch='......')
+
+    # Add labels and title
+    ax.set_xlabel('Benchmark', fontsize=AXIS_FONT_SIZE)
+    ax.set_ylabel('Speedup', fontsize=AXIS_FONT_SIZE)
+    ax.set_xticks(pos + width / 2)
+    ax.set_xticklabels(bar_names, rotation=90, fontsize=AXIS_FONT_SIZE)
+    ax.axes.yaxis.set_tick_params(labelsize=AXIS_FONT_SIZE)
+
+    # Show the legend and plot
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(f'geomean_speedup_{gpu_name}_bar_graph.png', format='png', bbox_inches='tight')
+
+def plot_double_y_axis_line_graph(df_4060, full_exp_df, gpu_name):
+    # Prepare data for plotting
+    batch_sizes = df_4060['Batch size'].unique()
+    batch_sizes.sort()
+    speedups = []
+    norm_times = []
+
+    for batch_size in batch_sizes:
+        filtered_df = df_4060[df_4060['Batch size'] == batch_size]
+        at_time = filtered_df['TBKernel(AT)'].to_list()
+        best_time = filtered_df['TBKernel'].to_list()
+        speedup = [ct/ tbt for ct, tbt in zip(best_time, at_time)]
+        speedups.append(round(min(gmean(speedup), 1), 2))
+
+    for batch_size in batch_sizes:
+        filtered_df = full_exp_df[full_exp_df['Batch size'] == batch_size]
+        fe_time = filtered_df['FullExplore'].to_list()
+        heur_time = filtered_df['AT'].to_list()
+        normalized_times = [ht/ft for ht, ft in zip(heur_time, fe_time)]
+        norm_times.append(np.mean(normalized_times))
+
+    # Plot the line graph
+    fig, ax1 = plt.subplots()
+    ax1.grid(True, which='both', axis='both')
+    ax2 = ax1.twinx()
+    l1 = ax1.plot(batch_sizes, speedups, 'o-', label='Schedule heuristic vs Best 4060 schedule')
+    l2 = ax2.plot(batch_sizes, norm_times, 'o-', color='orange', label='Normalized time w.r.t Full Explore time')
+    
+    ax1.set_xscale('log', base=2)
+    ax1.set_xlabel('Batch size', fontsize=AXIS_FONT_SIZE)
+    ax1.set_ylabel('Speedup', fontsize=AXIS_FONT_SIZE)
+    ax2.set_ylabel('Normalized Time', fontsize=AXIS_FONT_SIZE)
+    ax1.set_ylim(0, 1.5)
+    ax2.set_ylim(0.005, 0.02)
+    # ax1.set_title(f'Geomean Speedups Over Batch Size ({gpu_name})')
+    #ax1.set_yticks(speedups)
+    #ax1.set_yticklabels(speedups, fontsize=AXIS_FONT_SIZE)
+
+    ax1.xaxis.set_ticks(batch_sizes)
+    ax1.xaxis.set_ticklabels(batch_sizes, fontsize=AXIS_FONT_SIZE)
+    ax1.yaxis.set_tick_params(labelsize=AXIS_FONT_SIZE)
+    ax2.yaxis.set_tick_params(labelsize=AXIS_FONT_SIZE)
+
+    # plt.show()
+    ax1.legend(fontsize=10, loc='upper right')
+    ax2.legend(fontsize=10, loc='lower right')
+    plt.tight_layout()
+    plt.savefig(f'speedup_vs_norm_time_line_graph_{gpu_name}.png')
+
+
 
 class LineGraphPlotter:
     def __init__(self, gpu_name, file_name_suffix, lower_lim = 1, upper_lim = 1, round_up=True) -> None:
@@ -214,12 +311,16 @@ line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TBKer
 line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TB(AT)', ['RAPIDS(Total)'], ['Speedup of SilvanForge vs RAPIDS(total)'])
 line_graph_plotter.save_plot()
 
-line_graph_plotter = LineGraphPlotter('T400', '4060_vs_T400_vs_MI2160', lower_lim=1)
+line_graph_plotter = LineGraphPlotter('T400', '4060_vs_T400_vs_MI2160', lower_lim=1, upper_lim=1.6)
 line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TBKernel(AT)', ['TBKernel(4060)'], ['Scheduling heuristic(T400) vs Best 4060 schedule'])
-line_graph_plotter.plot_geomean_speedups_over_batch_size(results_4060_df, 'TBKernel(AT)', ['TBKernel'], ['Scheduling heuristic(4060) vs Best 4060 schedule'])
 line_graph_plotter.plot_geomean_speedups_over_batch_size(results_amdmi2160_df, 'TBKernel(MI2160)', ['TBKernel(4060)'], ['Scheduling heuristic(MI2160) vs Best 4060 schedule'])
 line_graph_plotter.save_plot()
 
 line_graph_plotter = LineGraphPlotter('4060', 'full_exp_vs_at', lower_lim=1, upper_lim=110)
 line_graph_plotter.plot_geomean_speedups_over_batch_size(fullexp_vs_at_df, 'AT', ['FullExplore'], ['Scheduling heuristic vs Full Exploration'])
 line_graph_plotter.save_plot()
+
+plot_bar_graph_geomean_speedups_for_models(results_4060_df, '4060')
+plot_bar_graph_geomean_speedups_for_models(results_t400_df, 'T400')
+
+plot_double_y_axis_line_graph(results_4060_df, fullexp_vs_at_df, '4060')
