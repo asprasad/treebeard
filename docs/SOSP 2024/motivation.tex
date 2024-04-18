@@ -8,7 +8,7 @@ and subsequently, show the drastic performance difference across these variants 
   \centering
   \includegraphics[width=\linewidth]{figures/HIR.PNG}
   \caption{The representation of a model in high-level IR and the model 
-  after trees are padded and reordered. }
+  after trees are padded and reordered.\TODO{drop reorder, make 1,2 depth 1 and 3,4 depth 2.} }
   \label{Fig:HIRExample}
 \end{figure}
 
@@ -26,7 +26,7 @@ and involves branching to check if a leaf has been reached.
 One way to avoid this as done in this schedule is to unroll the 
 tree walks for each tree. 
 When the schedule specifies that the tree walks should be unrolled, 
-\Treebeard{} pads the trees so that all leaves are at the same depth.
+\Treebeard{} pads the trees so that all leaves are at the same depth (the padded trees are also shown in Figure~\ref{Fig:HIRExample}).
 
 \begin{lstlisting}[style=c++]
   reorder(tree, batch)
@@ -61,15 +61,15 @@ is as follows.
 This schedule is ideally suited for a single-core CPU. It maximizes 
 the reuse of trees in the L1 cache. However, it doesn't exploit  
 any parallelism. 
-%% RG
+%% RG, 
 %%  and is therefore ill-suited for parallel processors.
 % Further, the \op{batch} for loop can be tiled to get locality benefits. 
 
 One form of parallelism that can be exploited is to process rows in 
 parallel. 
 %% RG:
-While this may work for multi-core CPUs, with massively parallel processors like GPUs,
-this strategy may not yield sufficient parallel work. To expose more parallelism, 
+While this may work for multi-core CPUs\footnote{As we report in Section~\ref{sec:results}, other ways to parallelize can benefit inference on CPUs as well.}, with massively parallel processors like GPUs,
+ this strategy may not yield sufficient parallel work. To expose more parallelism, 
 we can additionally parallelize across trees as done in the schedule below. 
 %% RG:
 % With GPUs, the performance of generated code would also vary with the 
@@ -216,7 +216,7 @@ As can be seen, performance degrades by 2$\times$ when the best schedule for a
 smaller batch size is used for a larger batch size and vice-versa.
 Across all our benchmarks, the largest slowdown is 5$\times$.  %% and 
 The degradation is much worse when schedules are used across different models.
-In many instances (~20\%), using the best schedule for one model 
+In many (\~20\%) instances, using the best schedule for one model 
 to compile another results in a 5$\times$ slowdown.
 As we report in Section \ref{sec:results}, reusing schedules across
 different architecture also leads to significant slowdowns.
