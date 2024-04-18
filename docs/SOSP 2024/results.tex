@@ -182,16 +182,9 @@ These results show that our heuristic is able to quickly find schedules that are
 
 \begin{figure}[htb]
   \centering
-  \includegraphics[width=0.75\linewidth]{figures/geomean_speedup_T400_4060_vs_T400.png}
-  \caption{Geomean speedup of schedule found by exploration heuristic vs best 4060 schedule on NVIDIA RTX 4060 and NVIDIA T400 across batch sizes}
+  \includegraphics[width=0.75\linewidth]{figures/geomean_speedup_T400_4060_vs_T400_vs_MI2160.png}
+  \caption{Geomean speedup of schedule found by exploration heuristic vs best 4060 schedule on NVIDIA RTX 4060, NVIDIA T400 and AMD MI2160 across batch sizes}
   \label{Fig:AutotuningSpeedupvs4060Sched}
-\end{figure}
-
-\begin{figure}[htb]
-  \centering
-  \includegraphics[width=0.75\linewidth]{figures/geomean_speedup_AMDMI2160_4060_vs_MI2160.png}
-  \caption{Speedup of schedule exploration heuristic vs best 4060 schedule on MI210}
-  \label{Fig:AMD_MI210_ATHeuristicVs4060Sched_speedup}
 \end{figure}
 
 \begin{figure}[htb]
@@ -214,7 +207,7 @@ These results show that our heuristic is able to quickly find schedules that are
 % \begin{itemize}
 %   \item \Treebeard{} is able to compile code to AMD GPUs. We run generated code on an AMD MI210 GPU.
 %   \item None of the other systems we compare against support running on AMD GPUs. This shows the portability of \Treebeard{}.
-%   \item The speedup of the heuristic schedule vs the best 4060 schedule when run on the MI210 is shown in Figure \ref{Fig:AMD_MI210_ATHeuristicVs4060Sched_speedup}.
+%   \item The speedup of the heuristic schedule vs the best 4060 schedule when run on the MI210 is shown in Figure \ref{Fig:AutotuningSpeedupvs4060Sched}.
 %   \item We see that the geomean speedup over all benchmarks is 1.5$\times$ at batch size 16k.
 %   \item The maximum speedup is 2$\times$ for the \op{letters} benchmark at batch size 16k.
 % \end{itemize}

@@ -214,15 +214,12 @@ line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TBKer
 line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TB(AT)', ['RAPIDS(Total)'], ['RAPIDS(total)'])
 line_graph_plotter.save_plot()
 
-line_graph_plotter = LineGraphPlotter('T400', '4060_vs_T400', lower_lim=1)
+line_graph_plotter = LineGraphPlotter('T400', '4060_vs_T400_vs_MI2160', lower_lim=1)
 line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TBKernel(AT)', ['TBKernel(4060)'], ['Scheduling heuristic(T400) vs Best 4060 schedule'])
 line_graph_plotter.plot_geomean_speedups_over_batch_size(results_4060_df, 'TBKernel(AT)', ['TBKernel'], ['Scheduling heuristic(4060) vs Best 4060 schedule'])
+line_graph_plotter.plot_geomean_speedups_over_batch_size(results_amdmi2160_df, 'TBKernel(MI2160)', ['TBKernel(4060)'], ['Scheduling heuristic(MI2160) vs Best 4060 schedule'])
 line_graph_plotter.save_plot()
 
 line_graph_plotter = LineGraphPlotter('4060', 'full_exp_vs_at', lower_lim=1, upper_lim=110)
-line_graph_plotter.plot_geomean_speedups_over_batch_size(fullexp_vs_at_df, 'AT', ['FullExplore'], [' Auto-Tuning vs Full Explore'])
-line_graph_plotter.save_plot()
-
-line_graph_plotter = LineGraphPlotter('AMDMI2160', '4060_vs_MI2160', lower_lim=1, upper_lim=1.6, round_up=False)
-line_graph_plotter.plot_geomean_speedups_over_batch_size(results_amdmi2160_df, 'TBKernel(MI2160)', ['TBKernel(4060)'], ['Scheduling heuristic(MI2160) vs Best 4060 schedule'])
+line_graph_plotter.plot_geomean_speedups_over_batch_size(fullexp_vs_at_df, 'AT', ['FullExplore'], ['Scheduling heuristic vs Full Exploration'])
 line_graph_plotter.save_plot()
