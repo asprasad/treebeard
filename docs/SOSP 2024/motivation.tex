@@ -173,20 +173,21 @@ of branch divergence etc.~\cite{FungMicro11, SomethingElse}.
 % best approach. We promote such an approach in this paper.
 
 \subsection{Performance of Different Schedules} 
-
 \begin{figure}[htb]
   \begin{subfigure}[t]{.45\linewidth}
+    \vspace{0pt}
     \centering
     \includegraphics[width=\linewidth]{figures/batch_sensitivity_covtype.png}
+    \vspace{2pt}
     \caption{\label{fig:sensitivitya}\op{covtype} batch sensitivity}
-  \end{subfigure}
-  \begin{subfigure}[t]{.45\linewidth}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{.52\linewidth}
+    \vspace{0pt}
     \centering
     \includegraphics[width=\linewidth]{figures/model_sensitivity_4096.png}
     \caption{\label{fig:sensitivityb}Model sensitivity at batch size 4096}
-\end{subfigure}
-  \caption{Batch and model sensitivity plots. Each point shows the slowdown when best schedule for the
-          x-axis batch size (model) is used for the y-axis batch size (model).}
+  \end{subfigure}
+  \caption{Batch and model sensitivity plots. Each point shows the slowdown when the best schedule for the x-axis batch size (model) is used for the y-axis batch size (model).}
 \end{figure}
 
 % \begin{figure}[htb]

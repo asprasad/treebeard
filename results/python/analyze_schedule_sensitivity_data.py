@@ -62,6 +62,7 @@ def plot_batch_sensitivity_for_single_benchmark(df_depth, benchmark_name):
     # plt.show()
     # plt.title(f"{benchmark_name} Batch Sensitivity")
     # plt.colorbar(im, label='tb_kernel_speedup')
+    plt.tight_layout()
     plt.savefig(f'batch_sensitivity_{benchmark_name}.png')
     plt.close('all')
 
