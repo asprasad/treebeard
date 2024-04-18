@@ -21,7 +21,8 @@ defer a detailed explanation of the scheduling language to Section~\ref{sec:sche
 The loop over the trees is split into two -- one that
 iterates over the first two trees (Trees 1 and 2 with depth 1) and 
 the second that iterates over the last two trees (Trees 3 and 4 with
-depth 2). Straightforward traversal of trees involves branching. 
+depth 2). Straightforward traversal of trees requires a \op{while} loop
+and involves branching to check if a leaf has been reached. 
 One way to avoid this as done in this schedule is to unroll the 
 tree walks for each tree. 
 When the schedule specifies that the tree walks should be unrolled, 
