@@ -32,7 +32,8 @@ based on the batch size and model characteristics.
 We bound the space using a few meta-parameters that together define 
 the primitives used to construct a schedule. We do so while making sure 
 that the space (at-least) covers the known strategies published in prior work.
-Specifically, we use 4 numeric parameters and 4 boolean parameters listed in Table \ref{tab:schedparams}. 
+Specifically, we use 4 numeric parameters and 4 boolean parameters listed in Table \ref{tab:schedparams}.
+We picked the specific values listed through experimentation.
 %Note that even this template has a large number ($1728$) of schedules, and requires further pruning as we discuss later.
 The first three numeric parameters assign a configurable number of rows to each 
 thread block, to each thread, and determine how trees are distributed across a
@@ -72,6 +73,7 @@ The final parameter determines what reduction options to use (Table~\ref{Tab:Red
     \textbf{Unroll walks} & $\{True, False\}$ \\
     \textbf{Tree walk interleave factor} & $\{1, 2, 4\}$ \\
     \textbf{Shared memory reduction} & $\{True, False\}$ \\
+    \textbf{Representation} & $\{array, sparse, reorg\}$ \\
     \bottomrule
   \end{tabularx}
   % }
