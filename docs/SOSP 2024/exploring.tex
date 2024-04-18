@@ -57,23 +57,24 @@ The final parameter determines what reduction options to use (Table~\ref{Tab:Red
 % \end{itemize}
 
 \begin{table}[htb]
+  \footnotesize
   \centering
-  \resizebox{\linewidth}{!}{
+  % \resizebox{\linewidth}{!}{
   \begin{tabularx}{\linewidth}{c | c }
-  \toprule
-  \textbf{Parameter} & \textbf{Values} \\
-  \midrule
-  \textbf{Rows per thread block} & $\{8, 32, 64\}$ \\
-  \textbf{Rows per thread} & $\{1, 2, 4\}$ \\
-  \textbf{Number of tree threads} & $\{2, 10, 20, 50\}$ \\
-  \textbf{Cache rows} & $\{True, False\}$ \\
-  \textbf{Cache trees} & $\{True, False\}$ \\
-  \textbf{Unroll walks} & $\{True, False\}$ \\
-  \textbf{Tree walk interleave factor} & $\{1, 2, 4\}$ \\
-  \textbf{Shared memory reduction} & $\{True, False\}$ \\
-  \bottomrule
+    \toprule
+    \textbf{Parameter} & \textbf{Values} \\
+    \midrule
+    \textbf{Rows per thread block} & $\{8, 32, 64\}$ \\
+    \textbf{Rows per thread} & $\{1, 2, 4\}$ \\
+    \textbf{Number of tree threads} & $\{2, 10, 20, 50\}$ \\
+    \textbf{Cache rows} & $\{True, False\}$ \\
+    \textbf{Cache trees} & $\{True, False\}$ \\
+    \textbf{Unroll walks} & $\{True, False\}$ \\
+    \textbf{Tree walk interleave factor} & $\{1, 2, 4\}$ \\
+    \textbf{Shared memory reduction} & $\{True, False\}$ \\
+    \bottomrule
   \end{tabularx}
-  }
+  % }
   \vskip 5pt
   \caption{\label{tab:schedparams} List of parameter values we explored for the template GPU schedule.}
 \end{table}
@@ -164,6 +165,7 @@ while improving the search time by two orders of magnitude (see Section \ref{sec
 \begin{algorithm}
   \caption{Heuristic to find a good schedule}
   \label{alg:heuristic}
+  \small{
   \begin{algorithmic}[1]
   \Procedure{TBConfigs}{$N_{batch}$, $N_f$}
     \State $T_{batch} \gets 2048,\; T_f \gets 128$
@@ -197,4 +199,5 @@ while improving the search time by two orders of magnitude (see Section \ref{sec
   \EndFor
   \State \Return $min(shMemSchedules \cup bestSchedules)$
   \end{algorithmic} 
+  }
 \end{algorithm}
