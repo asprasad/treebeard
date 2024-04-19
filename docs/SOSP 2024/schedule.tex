@@ -275,10 +275,10 @@ for a given row in parallel. Input rows are cached in shared memory.
 % the prediction.
 The schedule for this strategy is:
 \begin{lstlisting}[style=c++]
-reorder(batch, tree)
-gpuDimension(batch, grid.x)
-gpuDimension(tree, block.x)
-cache(batch)
+  reorder(batch, tree)
+  gpuDimension(batch, grid.x)
+  gpuDimension(tree, block.x)
+  cache(batch)
 \end{lstlisting}
 %   \item \textbf{Shared Forest}: In this strategy, the whole model is loaded into 
 %   shared memory and subsequently, a single thread walks all trees for a particular
