@@ -49,8 +49,7 @@ is included. They are lower than kernel time speedup as both systems have a cons
     \end{subfigure}
     % \hfill
     \caption{The first graph shows kernel and total time speedup of \Treebeard{} over RAPIDS and Tahoe (geomean over real-world 
-    benchmarks) across batch sizes on NVIDIA RTX 4060. The bar graphs show kernel time speedup of \Treebeard{} over RAPIDS and Tahoe 
-    on NVIDIA RTX 4060. Numbers on the bars are inference times per sample in $\mu$s for RAPIDS and Tahoe.}
+    benchmarks) across batch sizes on NVIDIA RTX 4060. The bar graphs shows the kernel time speedup of \Treebeard{} per benchmark. Numbers on the bars are inference times per sample in $\mu$s for RAPIDS and Tahoe.}
 \end{figure*}
 
 
@@ -104,14 +103,14 @@ with 26K trees.
 \begin{figure}[htb]
   \begin{subfigure}[t]{.475\linewidth}
     \includegraphics[width=\linewidth]{figures/RandomModels/kernel_speedup_b512_depth8.png}
-    \caption{}
+    \caption{Batch size 512}
   \end{subfigure}
   \begin{subfigure}[t]{.475\linewidth}
     \includegraphics[width=\linewidth]{figures/RandomModels/kernel_speedup_b4096_depth6.png}
-    \caption{}
+    \caption{Batch size 4096}
   \end{subfigure}
-  \caption{\label{fig:randomModels4060}Kernel time speedup of \Treebeard{} over RAPIDS for random models
-  of max depth 8 at batch size 512 and max depth 6 at batch size 4096.}
+  \caption{\label{fig:randomModels4060}Kernel time speedup of \Treebeard{} over RAPIDS for random models.
+  }
 \end{figure}
 
 \subsubsection*{Utility of Schedule Constructs}
@@ -209,8 +208,8 @@ not offer the best performance as there is limited reuse of trees in L1 cache.
 Also, the amount of work per thread is very small leading to high overheads. 
 Parallelizing across trees addresses both these problems. 
 
-\subsection{Discussion}
-Beyond portable performance, our evaluation indicates that \Treebeard{} has several additional advantages over existing systems.
+\subsection{Additional Observations}
+%Beyond portable performance, our evaluation indicates that \Treebeard{} has several additional advantages over existing systems.
 \subsubsection*{Cost Performance trade-off Across Hardware Platforms}
 Two of the three GPU targets we use are commodity GPUs that cost less than \$400. They 
 are infact much cheaper than the CPU we evaluate on. Despite this, performance on GPUs
@@ -218,16 +217,16 @@ is significantly better than on CPUs (by an order of magnitude on RTX 4060).
 \Treebeard{} can therefore help data scientists make the best use of 
 available processors on their systems.
 
-\subsubsection*{Performance considerations for batch size}
+\subsubsection*{A Note on batch size}
 Batch size, exposes a trade-off between latency and throughput. It is not possible to use 
 large batch sizes in latency sensitive applications. 
 Ideally, one would like 
 to maximize performance while respecting the batch size constraint imposed 
 by the application. \Treebeard{} enables users to explore this trade-off.  
-
-
-\noindent{}
+%\subsection*{}
+\bigbreak
+\noindent
 Overall, our evaluation shows that \Treebeard{} is able to efficiently generate 
 high-performance code for processors ranging from NVIDIA and AMD GPUs to Intel CPUs.
 On all platforms and models that we tested on, \Treebeard{} significantly outperforms
-state-of-the-art systems like RAPIDS, Tahoe and \TreebeardOLD{}.
+state-of-the-art systems like RAPIDS, Tahoe, XGBoost and \TreebeardOLD{}.
