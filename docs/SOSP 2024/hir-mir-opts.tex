@@ -49,8 +49,9 @@ We use this object to implement the automatic scheduling described in Section \r
 We reuse HIR transformations to reorder and pad trees from \TreebeardOLD{}.
 The tree transformations that reorder and pad trees are used in conjunction 
 with loop transformations like splitting to specialize inference code as the example 
-in Section \ref{sec:motivation} shows. Also, we enable tree padding only if the schedule 
-specifies unrolling of tree walks.
+in Section \ref{sec:motivation} shows. 
+% Also, we enable tree padding only if the schedule 
+% specifies unrolling of tree walks.
 % Figure \ref{Fig:HIRExample} shows this representation for a model 
 % with four trees and how the model can be transformed. The model contains two trees of 
 % depth 1 and two trees of depth 2 (\circled{A}). The right side of the diagram shows the models after 
@@ -104,7 +105,7 @@ representations of models (Section \ref{sec:representations}).
 % buffers need to be allocated differently for CPU and GPU, caching 
 % is implemented differently etc.). 
 Also, when the target processor is a GPU, the required memory transfers and kernel
-invocations are inserted into the LIR. Additionally, buffers 
+invocations are inserted into the LIR. Buffers 
 to hold model values are inserted and abstract tree operations are lowered to
 explicitly refer to these buffers.
 % This lowering is controlled by 
