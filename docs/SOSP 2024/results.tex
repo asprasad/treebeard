@@ -35,13 +35,33 @@ with batch size as RAPIDS is optimized for larger batches, but \Treebeard{} is s
 The plot also shows that the speedups are significant even when the overhead of data transfer to and from the GPU
 is included. They are lower than kernel time speedup as both systems have a constant additional transfer overhead.
 
-\begin{figure}[htb]
-  \centering
-  \includegraphics[width=0.75\linewidth]{figures/geomean_speedup_4060_kernel_time_total_time.png}
-  \caption{\Treebeard{} vs RAPIDS and Tahoe kernel time and total time speedup (geomean over real-world 
-  benchmarks) across batch sizes on NVIDIA RTX 4060}
-  \label{Fig:TBvsRAPIDSTahoe_4060_Speedup}
-\end{figure}
+\begin{figure*}[htb]
+    \begin{subfigure}[t]{.32\linewidth}
+      \includegraphics[width=\textwidth]{figures/geomean_speedup_4060_kernel_time_total_time.png}
+      \caption{\label{Fig:TBvsRAPIDSTahoe_4060_Speedup}Speedup vs batch size}      
+    \end{subfigure}
+    \begin{subfigure}[t]{.32\linewidth}
+      \includegraphics[width=\textwidth]{figures/speedup_bar_graph_1024.png}
+      \caption{\label{Fig:KernelTimeIndividualBenchmarks4060a} Batch size 1024}
+    \end{subfigure}
+    \begin{subfigure}[t]{.32\linewidth}
+      \includegraphics[width=\textwidth]{figures/speedup_bar_graph_8192.png}
+      \caption{\label{Fig:KernelTimeIndividualBenchmarks4060b} Batch size 8192}
+    \end{subfigure}
+    % \hfill
+    \caption{The first graph shows kernel and total time speedup of \Treebeard{} over RAPIDS and Tahoe (geomean over real-world 
+    benchmarks) across batch sizes on NVIDIA RTX 4060. The bar graphs show kernel time speedup of \Treebeard{} over RAPIDS and Tahoe 
+    on NVIDIA RTX 4060. Numbers on the bars are inference times per sample in $\mu$s for RAPIDS and Tahoe.}
+\end{figure*}
+
+
+% \begin{figure}[htb]
+%   \centering
+%   \includegraphics[width=0.75\linewidth]{figures/geomean_speedup_4060_kernel_time_total_time.png}
+%   \caption{\Treebeard{} vs RAPIDS and Tahoe kernel time and total time speedup (geomean over real-world 
+%   benchmarks) across batch sizes on NVIDIA RTX 4060}
+%   \label{Fig:TBvsRAPIDSTahoe_4060_Speedup}
+% \end{figure}
 
 % \begin{figure}[htb]
 %   \centering
@@ -51,32 +71,25 @@ is included. They are lower than kernel time speedup as both systems have a cons
 %   \label{Fig:TBvsRAPIDSTahoe_4060_Speedup}
 % \end{figure}
 
-\begin{figure}[htb]
-  \centering
-  \includegraphics[width=0.75\linewidth]{figures/geomean_speedup_T400_kernel_time.png}
-  \caption{\Treebeard{} vs RAPIDS and Tahoe kernel time and total time speedup (geomean over real-world 
-  benchmarks) across batch sizes on NVIDIA T400.}
-  \label{Fig:TBvsRAPIDSTahoe_T400_Speedup}
-\end{figure}
+% \begin{figure*}[ht]
+%   \centering
+%   \begin{subfigure}[b]{.45\textwidth}
+%     \subcaptionbox*{}{\includegraphics[width=\textwidth]{figures/speedup_bar_graph_1024.png}}
+%     \caption{Batch size 1024}
+%   \end{subfigure}
+%   \begin{subfigure}[b]{.45\textwidth}
+%     \subcaptionbox*{}{\includegraphics[width=\textwidth]{figures/speedup_bar_graph_8192.png}}
+%     \caption{Batch size 8192}
+%   \end{subfigure}
+%   \hfill
+%   \caption{\label{Fig:KernelTimeIndividualBenchmarks4060}Kernel time speedup of \Treebeard{} vs RAPIDS on NVIDIA RTX 4060. Numbers on the bars are 
+%   inference times per sample in $\mu$s for RAPIDS and Tahoe.}
+% \end{figure*}
 
-\begin{figure*}[ht]
-  \centering
-  \begin{subfigure}[b]{.45\textwidth}
-    \subcaptionbox*{}{\includegraphics[width=\textwidth]{figures/speedup_bar_graph_1024.png}}
-    \caption{Batch size 1024}
-  \end{subfigure}
-  \begin{subfigure}[b]{.45\textwidth}
-    \subcaptionbox*{}{\includegraphics[width=\textwidth]{figures/speedup_bar_graph_8192.png}}
-    \caption{Batch size 8192}
-  \end{subfigure}
-  \hfill
-  \caption{\label{Fig:KernelTimeIndividualBenchmarks4060}Kernel time speedup of \Treebeard{} vs RAPIDS on NVIDIA RTX 4060. Numbers on the bars are 
-  inference times per sample in $\mu$s for RAPIDS and Tahoe.}
-\end{figure*}
-
-Figure~\ref{Fig:KernelTimeIndividualBenchmarks4060} shows per benchmark results at two different batch sizes. 
+Figures~\ref{Fig:KernelTimeIndividualBenchmarks4060a} and ~\ref{Fig:KernelTimeIndividualBenchmarks4060b} 
+show per benchmark results at two different batch sizes. 
 \Treebeard{} is able to find better schedules than both RAPIDS and Tahoe on each of the benchmarks. It consistently
-outperforms both systems, achieving a speedup of upto $12\times$ an average speedup of over $2\times$.
+outperforms both systems, achieving a speedup of upto $12\times$ and average speedups of over $2\times$.
 For about half the benchmarks, the speedup is $2\times$ or more over both baselines at batch size 8192.
 
 % \begin{comment}
@@ -90,15 +103,15 @@ when the number of trees are increased even further. It achieves a speedup of ar
 with 26K trees.
 
 \begin{figure}[htb]
-  \begin{minipage}[t]{.475\linewidth}
+  \begin{subfigure}[t]{.475\linewidth}
     \includegraphics[width=\linewidth]{figures/RandomModels/kernel_speedup_b512_depth8.png}
-    %\caption{Batch size 512}
-  \end{minipage}
-  \begin{minipage}[t]{.475\linewidth}
+    \caption{}
+  \end{subfigure}
+  \begin{subfigure}[t]{.475\linewidth}
     \includegraphics[width=\linewidth]{figures/RandomModels/kernel_speedup_b4096_depth6.png}
-    %\caption{Batch size 4096}
-  \end{minipage}
-  \caption{\label{fig:randomModels4060}\Treebeard{} vs RAPIDS Kernel Time Speedup for random models
+    \caption{}
+  \end{subfigure}
+  \caption{\label{fig:randomModels4060}Kernel time speedup of \Treebeard{} over RAPIDS for random models
   of max depth 8 at batch size 512 and max depth 6 at batch size 4096.}
 \end{figure}
 
@@ -121,55 +134,13 @@ shows the speedup of code generated by \Treebeard{} vs RAPIDS and Tahoe on the T
 Even on the smaller T400 GPU, \Treebeard{} is able to outperform RAPIDS
 and Tahoe consistently (speedup greater than $1.5\times$). We observe similar trends to those on the RTX 4060.
 
-% \subsection{Comparison with RAPIDS, Tahoe and XGBoost}
-% \begin{itemize}
-%   \item Measured both the kernel time and total time (time including transferring data to the 
-%   GPU and results back) for RAPIDS and \Treebeard{}.
-%   \item Tahoe only allows us to measure the kernel time since it is written as an executable 
-%   that performs inference repeatedly on the same data that is transferred to the GPU once.
-%   \item Tahoe does not support multiclass models. We just ran the multiclass models (\op{covtype} and \op{letters})
-%   as regression models for the comparison. Tahoe also gives wrong results (as reported by its own tests) for 
-%   \op{letters} and \op{year}. In these cases, we pick the time of the fastest variant that gives the correct results.
-%   \item Compared the kernel time and total time speedup of \Treebeard{} vs RAPIDS on the RTX 4060 and T400.
-%   \item Compared the total time speedup of \Treebeard{} vs XGBoost on the RTX 4060.
-%   \item The schedule used was the one picked by the auto-tuner.
-%   \item \Treebeard{} outperforms RAPIDS at all batch sizes as shown in Figure \ref{Fig:TBvsRAPIDSTahoe_4060_Speedup}. 
-%   \item \Treebeard{} outperforms Tahoe on all models and batch sizes tested. Individual benchmark speedups range between 1.1$\times$ and 16$\times$.
-%   \item \Treebeard{} is faster than XGBoost by more than an order of magnitude. Results are not shown because the speedups don't fit on the same graph.
-%   \item Figure \ref{Fig:TBvsRAPIDS_4060_TotalTimeSpeedup} shows that \Treebeard{} offers substantial speedup over RAPIDS even when 
-%   data needs to be transferred to the GPU and results need to be transferred back.
-%   \item Figure \ref{Fig:TBvsRAPIDSTahoe_T400_Speedup} shows that these speedups are also observed on the T400 thus showing 
-%   that \Treebeard{} offers portable performance across different GPUs.
-%   \item Figure \ref{Fig:KernelTimeIndividualBenchmarks4060} shows that \Treebeard{} outperforms RAPIDS and Tahoe on 
-%   individual benchmarks on the RTX 4060 at small (1024) and large (8192) batch sizes. These batch sizes 
-%   require different schedules, but the \Treebeard{} auto-tuning heuristic is able to find them.
-%   % \item Figure \ref{Fig:TotalTimeIndividualBenchmarks4060} compares the total time of \Treebeard{} vs RAPIDS on individual benchmarks. 
-%   % It shows that even with the overhead of data transfers, \Treebeard{} offers significant speedup. The graph in Figure \ref{Fig:TotalTimeIndividualBenchmarks4060} 
-%   % shows the breakup of the total time into kernel time and data transfer time.
-% \end{itemize}
-% \end{comment}
-
-% \begin{figure*}[ht]
-%   \centering
-%   \begin{subfigure}[b]{.45\textwidth}
-%     \subcaptionbox*{}{\includegraphics[width=\textwidth]{figures/abs_times_bar_graph_1024.png}}
-%     \caption{Batch size 1024.}
-%   \end{subfigure}
-%   \begin{subfigure}[b]{.45\textwidth}
-%     \subcaptionbox*{}{\includegraphics[width=\textwidth]{figures/abs_times_bar_graph_8192.png}}
-%     \caption{Batch size 8192.}
-%   \end{subfigure}
-%   \hfill
-%   \caption{\label{Fig:TotalTimeIndividualBenchmarks4060}\Treebeard{} vs RAPIDS total time comparison on NVIDIA RTX 4060. Numbers on the bars are the times 
-%   per sample in $\mu$s for \Treebeard{} and RAPIDS. Times for each benchmark are normalized w.r.t the RAPIDS time for that benchmark.}
-% \end{figure*}
-
-% \begin{figure}[htb]
-%   \centering
-%   \includegraphics[width=0.75\linewidth]{figures/TBvsXGB_TotalTime.png}
-%   \caption{\Treebeard{} vs XGBoost Speedup on RTX 4060.}
-%   \label{Fig:TBvsXGBoost_Speedup}
-% \end{figure}
+\begin{figure}[htb]
+  \centering
+  \includegraphics[width=0.65\linewidth]{figures/geomean_speedup_T400_kernel_time.png}
+  \caption{Speedup of \Treebeard{} over RAPIDS and Tahoe (geomean over real-world 
+  benchmarks) across batch sizes on NVIDIA T400.}
+  \label{Fig:TBvsRAPIDSTahoe_T400_Speedup}
+\end{figure}
 
 \subsection{Performance on AMD GPUs}
 While Tahoe, RAPIDS and XGBoost only support NVIDIA GPUs, we demonstrate that \Treebeard{} 
@@ -208,46 +179,21 @@ between the schedules \Treebeard{} finds on the MI210 compared to the 4060 sched
 the geomean speedup over all benchmarks is 1.5$\times$ at batch size 16k and 
 The maximum speedup is 2$\times$ for the \op{letters} benchmark at batch size 16k.
 
-% \subsubsection*{Exploration Time}
-% Finally, we measure the improvement in exploration time that the heuristic provides 
-% compared to exhaustive exploration. Figure \ref{Fig:HeuristicVsFullExplore_Speedup} shows that the heuristic
-% is consistently close to two orders of magnitude faster than exhaustive exploration. 
-% The exploration time ranges between $6$ and $167$ seconds for the heuristic with a mean of $28.7$ seconds.
-% These results show that our heuristic is able to quickly find schedules that are close to the best schedule.
-
 \begin{figure}[htb]
   \centering
-  \includegraphics[width=0.75\linewidth]{figures/speedup_vs_norm_time_line_graph_4060.png}
-  \caption{Speedup of schedules found by the heuristic vs best schedule found through exhaustive search on NVIDIA RTX 4060 and 
+  \includegraphics[width=0.65\linewidth]{figures/speedup_vs_norm_time_line_graph_4060.png}
+  \caption{Slowdown of heuristic schedule vs best schedule on NVIDIA RTX 4060 and 
   heuristic schedule exploration time normalized w.r.t full schedule exploration time}
   \label{Fig:HeuristicVsFullExplore_Speedup}
 \end{figure}
 
 \begin{figure}[htb]
   \centering
-  \includegraphics[width=0.75\linewidth]{figures/geomean_speedup_T400_4060_vs_T400_vs_MI2160.png}
-  \caption{Geomean speedup of schedule found by exploration heuristic on NVIDIA T400 and AMD MI2160 vs 
+  \includegraphics[width=0.65\linewidth]{figures/geomean_speedup_T400_4060_vs_T400_vs_MI2160.png}
+  \caption{Geomean speedup of heuristic schedule on NVIDIA T400 and AMD MI2160 vs 
   the heuristic schedule on NVIDIA RTX 4060 across batch sizes}
   \label{Fig:AutotuningSpeedupvs4060Sched}
 \end{figure}
-
-% \begin{itemize}
-%   \item We compare the schedule found by the schedule exploration heuristic on the RTX 4060 with the best schedule found by
-%   extensive exploration. Figure \ref{Fig:HeuristicVsFullExplore_Speedup} shows that the heuristic is able to find schedules that are
-%   very close to the best schedule found by exhaustive exploration.
-%   \item The speedup of the heuristic schedule vs the best 4060 schedule when run on T400 is shown in Figure \ref{Fig:AutotuningSpeedupvs4060Sched}.
-%   Geomean speedup ranges from 1.05$\times$ to 1.2$\times$. 
-%   \item Unsurprisingly, there is some variation in the best schedule for a model even across NVIDIA GPUs.
-% \end{itemize}
-
-
-% \begin{itemize}
-%   \item \Treebeard{} is able to compile code to AMD GPUs. We run generated code on an AMD MI210 GPU.
-%   \item None of the other systems we compare against support running on AMD GPUs. This shows the portability of \Treebeard{}.
-%   \item The speedup of the heuristic schedule vs the best 4060 schedule when run on the MI210 is shown in Figure \ref{Fig:AutotuningSpeedupvs4060Sched}.
-%   \item We see that the geomean speedup over all benchmarks is 1.5$\times$ at batch size 16k.
-%   \item The maximum speedup is 2$\times$ for the \op{letters} benchmark at batch size 16k.
-% \end{itemize}
 
 \subsection{CPU Improvements}
 The enhancements made to the compiler enable \Treebeard{} to explore additional schedules on the CPU
@@ -277,17 +223,6 @@ exposes a tradeoff between latency and throughput. It is not possible to use
 large batch sizes in latency sensitive applications. Ideally, one would like 
 to maximize performance while respecting the batch size constraint imposed 
 by the application. \Treebeard{} enables users to explore this tradeoff.  
-
-% \begin{itemize}
-%   \item The ability of \Treebeard{} to parallelize across both trees and rows has a significant impact on CPU performance.
-%   \item We run experiments on the Intel Core i9-11900K processor to evaluate the impact of parallelizing across trees with small batch sizes. 
-%   \item At batch size 32, we find that the average speedup over all 8 models is 2.2$\times$ with a max speedup of 5$\times$.
-%   \item At batch size 64, we find that the average speedup over all 8 models is 1.1$\times$ with a max speedup of 2$\times$. 
-%   However, we find that 2 of the 8 models show slowdowns in this case. Again, this highlights the need for schedule exploration on CPUs.
-%   \item For small batch sizes, parallelizing across rows does not work great since there is limited reuse of trees in L1 cache.
-%   Also, the amount of work per thread is very small leading to high overheads. 
-%   \item Parallelizing across trees is more effective since there is more reuse in L1 cache and the amount of work per thread is higher.  
-% \end{itemize}
 
 Overall, our evaluation shows that \Treebeard{} is able to efficiently generate 
 high-performance code for processors ranging from NVIDIA and AMD GPUs to Intel CPUs.
