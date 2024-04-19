@@ -92,8 +92,8 @@ outperforms both systems, achieving speedups in the range $1.1-12\times$, with a
 \subsubsection*{Synthetic models}
 To establish that \Treebeard{} can consistently find betters schedules, we performed an exhaustive comparison between \Treebeard{} and RAPIDS on all 700 randomly generated models.   
 Figure~\ref{fig:randomModels4060} shows two representative samples of the results, at batch sizes 512 and 4096 on all models, on RTX 4060. 
-Each plot is a 3D histogram of the speedup of \Treebeard{} over RAPIDS, with the x-axis representing the number of trees, the y-axis the number of features and the z-axis the speedup. 
-While the exact trends at different batch sizes vary it can be seen that \Treebeard{} consistently outperforms RAPIDS by $1.5-8\times$. 
+Each plot shows the speedup of \Treebeard{} over RAPIDS along the z-axis, with the x-axis representing the number of trees and the y-axis the number of features. 
+While the exact trends at different batch sizes vary it can be seen that \Treebeard{} consistently outperforms RAPIDS by $1.5-8\times$. Along the tree dimension we find that the speedup is very high with fewer trees and stabilizes at around $2\times$ from 300 onwards. One of our real-world benchmarks $letters$ has 26K trees and still achieves a speedup of around $2\times$ over RAPIDS.
 %\Treebeard{} consistently outperforms RAPIDS on all models and batch sizes tested.
 % \begin{itemize}
 %   \item Generated a set of over 700 random models with varying depths (6, 7, 8), number of trees (100 - 1000 in steps of 100), 
