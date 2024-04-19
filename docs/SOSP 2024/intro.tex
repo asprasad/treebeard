@@ -41,7 +41,7 @@ Decision forest models are composed of a large collection of decision trees (typ
 traversing down each tree in the forest and aggregating the predictions. Inference is typically done in a batched
 setting, where multiple inputs are processed simultaneously.
 Despite the simplicity of the model and the availability of multiple sources of coarse-grain parallelism (parallelism 
-across inputs in a batch and parallelism across trees), existing systems do not consistently scale well across different
+across inputs in a batch and parallelism across trees), existing systems do not consistently perform well across different
 models even on the limited set of targets they support. 
 %This is because existing systems exploit a limited set of optimizations and often specialize the implementation to a specific hardware platform, and this limits their portability. 
 
@@ -56,23 +56,25 @@ loop transformations, parallelization, and memory access optimizations.
 %Parallelism, loop structure and model representation together determine the accesses patterns and the working set. 
 Existing systems today are mostly library based, and only support a predefined combination of optimizations
 and typically only target a single platform. 
-XGBoost~\cite{XGBoost} uses a sparse representation for the model and a loop structure that processes one tree for a block of rows before moving to 
-the next tree. RAPIDS FIL~\cite{FIL} uses a reorg representation and partitions trees across a fixed number of threads. 
+On the CPU, XGBoost~\cite{XGBoost} uses a sparse representation for the model 
+and a loop structure that processes one tree for a block of rows before moving to 
+the next tree. On the GPU, RAPIDS FIL~\cite{FIL} uses a reorg representation~\cite{FIL}
+and partitions trees across a fixed number of threads. 
 %% RG: 
 % \TODO{Should we say RAPIDS is only for nVidia GPUs?} 
 %%
-Tahoe~\cite{Tahoe} uses a
-variation of the reorg representation and has four predefined inference strategies from which it picks one based on an analytical model.
-All these systems are CUDA based and only work on NVIDIA based GPUs.
+Tahoe~\cite{Tahoe} uses a variation of the reorg representation and 
+has four predefined inference strategies from which it picks one based on an analytical model.
+The GPU systems are CUDA based and only work on NVIDIA GPUs.
 %These systems are all library based and are hard to extend. 
 \TreebeardOLD{}, the state-of-the-art decision tree model compiler for CPUs 
 %% RG
 built using the MLIR infrastructure~\cite{MLIR}, supports two fixed loop structures 
-and does not scale well with increasing number of threads. Additionally, it lacks 
-GPU specific optimizations that are critical to scale performance to massive number of threads.
-\TODO{Shouldn't we reverse this? First say no GPU support and then the scaling issue.}
+% and does not scale well with increasing number of threads. Additionally, it 
+and lacks GPU specific optimizations that are critical to scale performance to massive number of threads.
+% \TODO{Shouldn't we reverse this? First say no GPU support and then the scaling issue.}
 
-This paper presents \Treebeard{}, a novel schedule guided compilation infrastructure
+This paper presents \Treebeard{}, a novel schedule-guided compiler
 for decision tree inference on multiple hardware targets. \Treebeard{} is able to 
 generate high-performance code for decision tree inference by exploring a large optimization space. 
 %% RG - rewording
@@ -91,18 +93,22 @@ optimal schedule for the model being compiled.
 The second component of \Treebeard{} is a \emph{retargetable} multi-level compiler that can generate efficient code 
 for any specified schedule for both CPUs and GPUs. For this purpose, we re-architect \TreebeardOLD{} to
 support schedule-guided code generation, and incorporate several new optimizations that are critical to target GPUs. 
-These two components of the proposed \Treebeard{} compiler infrastructure are intertwined, each benefitting from the other.
+These two components of \Treebeard{} are intertwined, each benefitting from the other.
 %Last, to address the challenge of selecting a near-optimal schedule from the vast optimization space, 
 %%
 %we design and implement a heuristic that is able to quickly find high-performance schedules for the model being compiled.
 
 We evaluated \Treebeard{} on a large number of synthetic and real-world 
 benchmark models and compared against state-of-the-art systems RAPIDS~\cite{RAPIDS}, Tahoe~\cite{Tahoe}
-, XGBoost~\cite{XGBoost} and \TreebeardOLD{}~\cite{Treebeard}. While these systems can only run on 
-specific hardware, \Treebeard{} outperforms all these systems while providing portable performance across 
-a range of target hardware. The geomean speedup (across all benchmarks) of \Treebeard{} over
+, XGBoost~\cite{XGBoost} and \TreebeardOLD{}~\cite{Treebeard}. 
+% While these systems can only run on 
+% specific hardware, \Treebeard{} outperforms all these systems while providing portable performance across 
+% a range of target hardware.
+The geomean speedup (across all benchmarks) of \Treebeard{} over
 Tahoe and RAPIDS is in the range $2$--$5\times$ over several batch sizes. The geomean speedup over
-XGBoost is more than $10\times$. \Treebeard{} also enables better scalability on CPUs by parallelizing 
+XGBoost is more than $10\times$. While other systems can only run on specific hardware,
+\Treebeard{} can provide portable performance across a range of target hardware
+including AMD GPUs and CPUs. \Treebeard{} also enables better scalability on CPUs by parallelizing 
 across multiple dimensions. We also demonstrate that \Treebeard{}'s scheduling heuristic is able to 
 find near-optimal schedules in less than 30 seconds on average.
 
@@ -112,20 +118,14 @@ In summary, this paper makes the following contributions.
 \begin{itemize}
   \item We identify that there are many different ways to implement  
   decision tree inference and that the best implementation depends both on the model
-  and the target. We design a scheduling language that 
+  and the target processor. We design a scheduling language that 
   allows us to represent this solution space. 
-%   This 
-%   scheduling language is expressive enough to represent a wide range of  
-%   implementation strategies,  %%.  proposed by prior work.
-% %% RG: added CPUs and GPUs. 
-%   such as different data layouts, caching strategies, parallel reduction schemes, 
-%   that work across CPUs and GPUs. 
   \item We propose a retargetable compiler that can generate code as specified by 
   the schedule. The compiler also includes new abstractions for caching,
   reduction and representing models in memory. These are critical to generate 
   efficient GPU code.
-  \item The scheduling language can represent an unbounded number of schedules. 
-  We design and implement techniques to search over this space and find high-performance 
+  \item Since the scheduling language can represent an unbounded number of schedules, 
+  we design and implement techniques to search over this space and find high-performance 
   schedules in tens of seconds. 
   \item We exhaustively evaluate \Treebeard{} and report that it achieves 
   portable performance across a range of hardware targets and consistently outperforms

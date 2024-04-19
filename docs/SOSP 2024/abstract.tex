@@ -6,18 +6,19 @@
   inference of decision tree based models, the most popular models on tabular data,
   to run at peak performance on diverse CPU and GPU targets. Existing solutions are neither
   portable nor achieve the best possible performance for the specific hardware they 
-  target because they do not explore different optimization configurations. 
+  target because they do not explore and customize optimization configurations to the model 
+  being used. 
     
   We present \Treebeard{}, a \emph{schedule-guided},
   \emph{retargetable} compiler for decision tree based models
   that searches over several optimization choices and automatically generates 
   high-performance inference routines for CPUs and GPUs.  
   \Treebeard{} has two core components. The first is a scheduling language 
-  that encapsulates the optimization space for decision tree inference, 
-  and techniques to efficiently explore this space. 
-  The second is an optimizing retargetable compiler that 
+  that encapsulates the optimization space, and techniques to efficiently
+  explore this space. The second is an optimizing retargetable compiler that 
   can generate code for any specified schedule. \Treebeard{}'s ability to use different data layouts, 
-  loop structures and caching strategies enables it to achieve portable performance.   
+  loop structures and caching strategies enables it to achieve portable performance
+  across a range of CPUs and GPUs.   
   % To accomplish this level of configurability, we re-architect 
   % and significantly extend the open-source \TreebeardOLD{} CPU compiler
   % to support (i) schedule-guided compilation, (ii) retargetable GPU code
