@@ -65,7 +65,8 @@ the reduction by inserting a privatized array
 is reduced at the end of the \op{t0} loop.
 
 \begin{lstlisting}[style=c++]
-  float result[batch_size], partResults[2][batch_size]
+  float result[batch_size];
+  float partResults[2][batch_size];
   model = ensemble(...) 
   par.for t0 = 0 to N_t step N_t/2:
     for t1 = 0 to N_t/2:
