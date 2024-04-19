@@ -34,19 +34,20 @@ the reuse of trees in the L1 cache. However, it doesn't exploit
 any parallelism. 
 
 \begin{figure*}[]
-  \begin{subfigure}[t]{.495\linewidth}
+  \begin{subfigure}[t]{.5\linewidth}
     \vspace{0pt}
     \centering
     \includegraphics[width=\linewidth]{figures/MotivatingExample1.PNG}
     \caption{\label{fig:schedulea}}
   \end{subfigure}\hfill
-  \begin{subfigure}[t]{.495\linewidth}
+  \begin{subfigure}[t]{.5\linewidth}
     \vspace{0pt}
     \centering
     \includegraphics[width=\linewidth]{figures/MotivatingExample2.PNG}
     \caption{\label{fig:scheduleb}}
   \end{subfigure}
-  \caption{Some possible schedules to compile the motivating example and the generated \Treebeard{} IR.}
+  \caption{Some possible schedules to compile the motivating example and the generated \Treebeard{} IR.
+  The arrows connect entities in the schedule to related entities in the IR. }
   \label{Fig:Schedules}
 \end{figure*}
 
@@ -71,7 +72,7 @@ of branch divergence~\cite{FungMicro, MilindDivergence}.
 
 These \Treebeard{} schedules just use a combination of 4-8 constructs and already generate strategies 
 that are different from what library based systems like XGBoost, Tahoe and RAPIDs FIL use. 
-As one can imagine, several other schedules with different trade-offs can be generating using 
+As one can imagine, several other schedules with different trade-offs can be generated using 
 these constructs.
 
 \subsection{Performance of Different Schedules} 
