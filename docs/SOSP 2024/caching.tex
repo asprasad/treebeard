@@ -24,7 +24,7 @@ separate the implementation of representations from the rest of the compiler. Th
 us to implement representations as plugins to the compiler. We define an interface 
 that representations implement. The code generator is implemented using
 this interface thus hiding details of the actual representation from the core 
-compiler. Curcially, the interface abstracts how and what buffers 
+compiler. Crucially, the interface abstracts how and what buffers 
 are allocated, how to move from a node to its child, how trees 
 are cached, reading the value of leaves and now threshold and 
 feature indices are read from the allocated buffers.
@@ -108,7 +108,7 @@ and generates a caching operation with the appropriate limits.
 
 %\subsection{Lowering of Caching Operations}
 When the MIR is lowered to LIR, the cache ops are lowered to target-specific code. Each of 
-the two caching operations is lowered differently for the CPU and the GPU. On CPU, the cahce operations are lowered to preteches while
+the two caching operations is lowered differently for the CPU and the GPU. On CPU, the cache operations are lowered to prefetches while
 on the GPU they are lowered to reads into shared memory.
 
 Lowering the \op{cacheRows} operation is straightforward
