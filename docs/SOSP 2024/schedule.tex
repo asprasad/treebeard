@@ -1,4 +1,4 @@
-\section{Scheduling Language}
+\section{\Treebeard{}'s Scheduling Language}
 \label{sec:schedule}
 % As established in Section \ref{sec:motivation}, there are several 
 % configurations and optimizations strategies for decision 
@@ -6,8 +6,7 @@
 % models, batch sizes and hardware platforms. Therefore, designing
 % any one hard-coded strategy is not feasible as this would 
 % make portable performance impossible. 
-This section presents all constructs in the scheduling language. 
-The language provides an abstract way to specify loop structure and 
+\Treebeard{}'s scheduling language provides an abstract way to specify loop structure and 
 other optimizations as an input to the compiler. The specified 
 \textbf{\emph{schedule}} controls the lowering of model inference to a set of 
 loop nests. The configurability provided by the schedule allows us 
@@ -27,10 +26,12 @@ Each index variable has a range of values that it can take along
 with a step. 
 The language provides directives to manipulate these index 
 variables. There are two special index variables -- \op{batch} and
-\op{tree} that are used to represent the batch and tree loops and all 
+\op{tree} that are used to represent the batch and tree loops\footnote{
+The canonical inference routine has a batch loop that goes over 
+all rows and a loop that goes over all trees nested within it.} and all 
 other index variables are derived from these. A schedule derives 
 new index variables from these root index variables by applying
-directives. \TODO{Should we somehow explain what tree and batch loop are?}
+directives.
 
 \Treebeard{}'s scheduling language has three classes of directives. The first is a set 
 of loop modifiers that are used to specify the structure of the loop nest to
@@ -42,9 +43,9 @@ Finally, we have a class of attributes that enable reduction specific optimizati
 The compiler internally represents loops (index variables) 
 as nodes in a tree where the children
 of a node represent immediately contained loops. Each schedule 
-primitive modifies this tree in some way. The compiler tracks 
-the lineage of each of the loops. This allows the compiler to 
-automatically infer the ranges for all loops.
+primitive modifies this tree in some way. Also, the compiler 
+automatically infers the ranges of all loops by tracking
+its lineage.
 
 % \subsubsection{Loop Modifiers}
 % The clauses modify these index variables or 
@@ -74,19 +75,15 @@ automatically infer the ranges for all loops.
                                                &  \textbf{inner} &  \\
                                                &  \textbf{tileSize} &  \\
    \midrule
-   \multirow{6}{*}{\texttt{split}} & \textbf{indexVar}  & \multirow{6}{*}{\parbox{0.55\linewidth}{Fiss the loop represented by \textbf{indexVar}
+   \multirow{4}{*}{\texttt{split}} & \textbf{indexVar}  & \multirow{4}{*}{\parbox{0.55\linewidth}{Fiss the loop represented by \textbf{indexVar}
    at iteration \textbf{splitIter}. Resulting loops will be represented by \textbf{first} and \textbf{second}.}} \\
                                                &  \textbf{first} & \\
                                                &  \textbf{second} &  \\
                                                &  \textbf{splitIter} &  \\
-                                               & & \\
-                                               & & \\
-
    \midrule
-   \multirow{4}{*}{\texttt{reorder}} & \textbf{indices[]}  & \multirow{4}{*}{\parbox{0.55\linewidth}{Permute loops corresponding to the specified index variables.
+   \multirow{3}{*}{\texttt{reorder}} & \textbf{indices[]}  & \multirow{3}{*}{\parbox{0.55\linewidth}{Permute loops corresponding to the specified index variables.
    The loops must be perfectly nested.}} \\
                                                &   & \\
-                                               &   &  \\
                                                &   &  \\
   %  \midrule
   %  \multirow{4}{*}{\texttt{specialize}} & \textbf{indexVar}  & \multirow{4}{*}{\parbox{0.55\linewidth}{Generate specialized code for each iteration of the loop. 
@@ -95,10 +92,9 @@ automatically infer the ranges for all loops.
   %                                              &   &  \\
   %                                              &   &  \\
    \midrule
-   \multirow{3}{*}{\texttt{gpuDimension}} & \textbf{indexVar}  & \multirow{3}{*}{\parbox{0.55\linewidth}{Map the passed index variable to a dimension of either the grid
+   \multirow{2}{*}{\texttt{gpuDimension}} & \textbf{indexVar}  & \multirow{2}{*}{\parbox{0.55\linewidth}{Map the passed index variable to a dimension of either the grid
    or thread block.}} \\
                                                & \textbf{gpuDim}  & \\
-                                               &   &  \\
 
   \bottomrule
   \end{tabularx}
@@ -155,9 +151,8 @@ automatically infer the ranges for all loops.
    \toprule
    \textbf{Directive} & \textbf{Inputs} & \textbf{Description} \\
    \midrule
-   \multirow{4}{*}{\texttt{cache}} & \textbf{indexVar}  & \multirow{4}{*}{\parbox{0.55\linewidth}{Cache the working set of one iteration of the specified loop. 
+   \multirow{3}{*}{\texttt{cache}} & \textbf{indexVar}  & \multirow{3}{*}{\parbox{0.55\linewidth}{Cache the working set of one iteration of the specified loop. 
    Cache rows for a batch loop and trees for a tree loop.}} \\
-                                               &  &  \\
                                                &  &  \\
                                                &  &  \\
    \midrule
@@ -166,9 +161,8 @@ automatically infer the ranges for all loops.
                                                &  & \\
 
    \midrule                                               
-   \multirow{3}{*}{\texttt{interleave}} & \textbf{indexVar}  & \multirow{3}{*}{\parbox{0.55\linewidth}{Interleave tree walks within the specified 
+   \multirow{2}{*}{\texttt{interleave}} & \textbf{indexVar}  & \multirow{2}{*}{\parbox{0.55\linewidth}{Interleave tree walks within the specified 
    loop (must be innermost loop).}} \\
-                                               &  & \\
                                                &  & \\
 
    \midrule                                               
@@ -210,9 +204,8 @@ automatically infer the ranges for all loops.
                                                &  &  \\
                                                &  &  \\
    \midrule
-   \multirow{3}{*}{\texttt{sharedReduce}} & \textbf{indexVar}  & \multirow{3}{*}{\parbox{0.55\linewidth}{Specifies that intermediate
+   \multirow{2}{*}{\texttt{sharedReduce}} & \textbf{indexVar}  & \multirow{2}{*}{\parbox{0.55\linewidth}{Specifies that intermediate
    results are to be stored in shared memory (GPU only).}} \\
-                                               &  & \\
                                                &  & \\
 
    \midrule                                               
