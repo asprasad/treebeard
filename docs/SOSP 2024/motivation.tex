@@ -17,12 +17,12 @@ trees of depth 1 and two of depth 2 (\circled{A} in Figure \ref{Fig:HIRExample})
 We first describe the simple schedule shown in Figure \ref{fig:schedulea} that processes one tree at a time 
 for all input rows. The scheduling constructs are fairly intuitive. We 
 defer a detailed explanation of the scheduling language to Section~\ref{sec:schedule}. 
-The loop over the trees is split into two -- one that
+In this schedule, the loop over the trees is split into two -- one that
 iterates over the first two trees (Trees 1 and 2 with depth 1) and 
 the second that iterates over the last two trees (Trees 3 and 4 with
 depth 2). Straightforward traversal of trees requires a \op{while} loop
 and involves branching to check if a leaf has been reached. 
-One way to avoid this as done in this schedule is to unroll the 
+One way to avoid this, as done in this schedule, is to unroll the 
 tree walks for each tree. 
 When the schedule specifies that the tree walks should be unrolled, 
 \Treebeard{} pads the trees so that all leaves are at the same depth
@@ -41,7 +41,7 @@ When the schedule specifies that the tree walks should be unrolled,
     \includegraphics[width=\linewidth]{figures/MotivatingExample2.PNG}
     \caption{\label{fig:scheduleb}}
   \end{subfigure}
-  \caption{Possible schedules to compile the motivating example and the generated \Treebeard{} IR.}
+  \caption{Some possible schedules to compile the motivating example and the generated \Treebeard{} IR.}
   \label{Fig:Schedules}
 \end{figure*}
 
@@ -109,13 +109,15 @@ we can additionally parallelize across trees as done in the schedule in Figure \
 %   gpuDimension(batch, grid.x)
 %   gpuDimension(t1, block.x)
 % \end{lstlisting}
-This schedule generates an inference function that runs on the GPU as shown in 
-the IR in Figure \ref{fig:scheduleb}. 
-The inference routine processes one input row per thread block (since the \op{batch}
-loop is mapped directly to \op{grid.x}).
-It also splits the trees into two sets by tiling the \op{tree} loop.
-Each of the two sets is processed in parallel. We unroll the tree walks 
-for each tree.
+The corresponding GPU inference routine is shown in the same figure. 
+This schedule generates a routine that processes one input row per thread block (\op{batch}
+loop is mapped to \op{grid.x}).
+The schedule also tiles the \op{tree} loop into a nest of two loops with indices $t0$ and $t1$. 
+It then additionally parallelizes across the $t1$ loop.
+Finally, it splits $t0$ and unrolls the walks for each tree depth.
+%It also splits the trees into two sets by tiling the \op{tree} loop.
+%Each of the two sets is processed in parallel. We unroll the tree walks 
+%for each tree.
 % The IR generated is as follows. 
 % \begin{lstlisting}[style=c++]
 %   model = ensemble(...)
@@ -172,14 +174,16 @@ for each tree.
 % \end{lstlisting}
 % Here, partial results are accumulated into \op{temp} and then
 % reduced across the \op{t1} dimension to get the final result.
-Note that while unrolling helps avoid branching, it likely increases 
+Note that while unrolling helps avoid branching, it increases 
 the total amount of computation. Another option is to not unroll 
 and let the GPU manage the branching. The schedules with and 
 without unrolling place different constraints on the target processor,
 and the best choice depends on the characteristics of the model
-and micro-architectural features like register file size, handling 
-of branch divergence etc.~\cite{FungMicro, MilindDivergence}.
-
+and micro-architectural features like register file size and handling 
+of branch divergence~\cite{FungMicro, MilindDivergence}.
+These schedules just use a combination of 4-8 constructs and already generate schedules 
+that are different from what library based systems like XGBoost, Tahoe and RAPIDs FIL use. 
+As one can imagine several other schedules with different trade-offs can be generating using the constructs.
 % As is evident from these examples, it is possible to optimize 
 % the inference routine in different ways. Also, the structure of the loop 
 % nest in the inference routine can get quite complex even 
