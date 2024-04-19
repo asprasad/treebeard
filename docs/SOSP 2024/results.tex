@@ -1,8 +1,8 @@
 \section{Experimental Evaluation}
 \label{sec:results}
 
-We evaluate \Treebeard{} on four different target processors, an NVIDIA RTX 4060 GPU (8GB RAM, CUDA 11.5),
-an NVIDIA T400 GPU (2GB RAM, CUDA 11.5), an AMD MI210 GPU (64GB RAM, ROCm 4.5\TODO{Check the version}) and an 
+We evaluate \Treebeard{} on four different target processors, an NVIDIA RTX 4060 GPU (8GB RAM, CUDA 11.8),
+an NVIDIA T400 GPU (2GB RAM, CUDA 11.5), an AMD MI210 GPU (64GB RAM, ROCm 6.0.2) and an 
 Intel Core i9-11900K CPU (16 virtual cores, 128 GB RAM). We compare \Treebeard{} with 
 four other systems, NVIDIA RAPIDs v23.10, Tahoe, XGBoost v1.7.6 and \TreebeardOLD{} CPU. 
 We measure both kernel time and total time (including data transfer to the GPU and results back) 
@@ -24,7 +24,8 @@ heuristic (Section \ref{sec:exploring}) unless otherwise specified.
 \begin{figure}[htb]
   \centering
   \includegraphics[width=0.75\linewidth]{figures/geomean_speedup_4060_kernel_time_total_time.png}
-  \caption{\Treebeard{} vs RAPIDs and Tahoe kernel time and total time speedup on NVIDIA RTX 4060}
+  \caption{\Treebeard{} vs RAPIDs and Tahoe kernel time and total time speedup (geomean over real-world 
+  benchmarks) across batch sizes on NVIDIA RTX 4060}
   \label{Fig:TBvsRAPIDsTahoe_4060_Speedup}
 \end{figure}
 
@@ -39,7 +40,8 @@ heuristic (Section \ref{sec:exploring}) unless otherwise specified.
 \begin{figure}[htb]
   \centering
   \includegraphics[width=0.75\linewidth]{figures/geomean_speedup_T400_kernel_time.png}
-  \caption{\Treebeard{} vs RAPIDs and Tahoe kernel time and total time speedup on NVIDIA T400.}
+  \caption{\Treebeard{} vs RAPIDs and Tahoe kernel time and total time speedup (geomean over real-world 
+  benchmarks) across batch sizes on NVIDIA T400.}
   \label{Fig:TBvsRAPIDsTahoe_T400_Speedup}
 \end{figure}
 
@@ -68,7 +70,7 @@ the multiclass models (\op{covtype} and \op{letters}) as regression models only 
 of Tahoe produce wrong results (as reported by its own tests) for \op{letters} and \op{year}. In these cases, we pick the 
 time of the fastest variant that gives the correct results.}} by $2-3\times$ at all batch sizes. 
 Compared to RAPIDS, \Treebeard{} is about $4\times$ faster at batch size 512. The relative performance of RAPIDs improves 
-with batch size, but \Treebeard{} is still faster by $1.5-2\times$ even at very high ($16K$) batch sizes. 
+with batch size, but \Treebeard{} is still faster by $1.5-2\times$ even at very high batch sizes ($16k$). 
 The plot also shows that the speedups are significant even when data needs to be transferred to the GPU and results need to
 be transferred back. They are lower than kernel time speedup as both systems have a constant additional transfer overhead.
  
@@ -90,10 +92,13 @@ outperforms both systems, achieving speedups in the range $1.1-12\times$, with a
 
 % \begin{comment}
 \subsubsection*{Synthetic models}
-To establish that \Treebeard{} can consistently find betters schedules, we performed an exhaustive comparison between \Treebeard{} and RAPIDS on all 700 randomly generated models.   
+To establish that \Treebeard{} can consistently find betters schedules, we performed an exhaustive comparison between \Treebeard{} and RAPIDS on 700 randomly generated models.   
 Figure~\ref{fig:randomModels4060} shows two representative samples of the results, at batch sizes 512 and 4096 on all models, on RTX 4060. 
 Each plot shows the speedup of \Treebeard{} over RAPIDS along the z-axis, with the x-axis representing the number of trees and the y-axis the number of features. 
-While the exact trends at different batch sizes vary it can be seen that \Treebeard{} consistently outperforms RAPIDS by $1.5-8\times$. Along the tree dimension we find that the speedup is very high with fewer trees and stabilizes at around $2\times$ from 300 onwards. One of our real-world benchmarks $letters$ has 26K trees and still achieves a speedup of around $2\times$ over RAPIDS.
+While the exact trends at different batch sizes vary it can be seen that \Treebeard{} consistently outperforms RAPIDS by $1.5-8\times$. Along the tree 
+dimension we find that the speedup is very high with fewer trees and stabilizes at around $2\times$ from 300 onwards. We note that \Treebeard{} continues to scale well 
+when the number of trees are increased even further. It achieves a speedup of around $2\times$ compared to RAPIDS on \op{letters}, a real-world benchmark
+with 26K trees.
 %\Treebeard{} consistently outperforms RAPIDS on all models and batch sizes tested.
 % \begin{itemize}
 %   \item Generated a set of over 700 random models with varying depths (6, 7, 8), number of trees (100 - 1000 in steps of 100), 
@@ -106,9 +111,10 @@ While the exact trends at different batch sizes vary it can be seen that \Treebe
 \subsubsection*{Utility of Schedule Constructs}
 A detailed analysis of the generated schedules indicate that caching, in-memory representation 
 and reduction optimizations are crucial for performance. We observe that all three representations 
-are necessary, array representation is used 60\% of the time, sparse 30\% of the time and reorg 10\% of the time. 
+are necessary, array representation is used 60\% of the time, sparse 30\% of the time and reorg 
+10\% of the time for the best schedules on the NVIDIA 4060.  
 Shared reduction significantly improves performance especially for multi-class models. For example, 
-the \op{letters} benchmark achieves a speedup of 1.5$\times$ with shared reduction. 
+the \op{letters} and \op{covtype} benchmarks achieves speedups of 1.5$\times$ with shared reduction. 
 Shared reduction increases the memory pressure (on shared memory) and not all schedules use it.
 While GPUs have a hardware managed cache, explicitly caching the rows using the scheduling primitives 
 helps exploit the reuse of rows across trees. We find that caching rows is beneficial for many models
@@ -216,8 +222,9 @@ The maximum speedup is 2$\times$ for the \op{letters} benchmark at batch size 16
 \begin{figure}[htb]
   \centering
   \includegraphics[width=0.75\linewidth]{figures/speedup_vs_norm_time_line_graph_4060.png}
-  \caption{Speedup of schedule found by the heuristic vs best schedule found through exhaustive search on NVIDIA RTX 4060 and 
-  normalized schedule exploration heuristic exploration time speedup w.r.t full schedule exploration}
+  \caption{Speedup of schedules found by the heuristic vs best schedule found through exhaustive search on NVIDIA RTX 4060 and 
+  heuristic schedule exploration time normalized w.r.t full schedule exploration time \TODO{Change orange line label 
+  to ``Heuristic's Normalized Exploration Time''} \TODO{Change other label to say ``Heuristic Schedule vs Best 4060 Schedule''}}
   \label{Fig:HeuristicVsFullExplore_Speedup}
 \end{figure}
 
@@ -225,7 +232,7 @@ The maximum speedup is 2$\times$ for the \op{letters} benchmark at batch size 16
   \centering
   \includegraphics[width=0.75\linewidth]{figures/geomean_speedup_T400_4060_vs_T400_vs_MI2160.png}
   \caption{Geomean speedup of schedule found by exploration heuristic on NVIDIA T400 and AMD MI2160 vs 
-  schedule found by the heuristic on NVIDIA RTX 4060 across batch sizes\TODO{Change the plot labels to say vs 4060 heuristic schedule}}
+  the heuristic schedule on NVIDIA RTX 4060 across batch sizes\TODO{Change the plot labels to say vs 4060 heuristic schedule}}
   \label{Fig:AutotuningSpeedupvs4060Sched}
 \end{figure}
 
@@ -249,10 +256,10 @@ The maximum speedup is 2$\times$ for the \op{letters} benchmark at batch size 16
 
 \subsection{CPU Improvements}
 The enhancements made to the compiler enable \Treebeard{} to explore additional schedules on the CPU
-than \TreebeardOLD{}. 
+compared to \TreebeardOLD{}. 
 In particular, we find that the ability to parallelize across trees improves performance 
 significantly at small batch sizes. At batch size 32, we find that the geomean speedup over 
-all benchmark models is 2.2$\times$ with a max speedup of 5$\times$. At batch size 64, the average speedup
+all 8 real-world benchmark models is 2.2$\times$ with a max speedup of 5$\times$. At batch size 64, the average speedup
 is 1.1$\times$ with a max speedup of 2$\times$. At batch size 32, parallelizing across trees is faster 
 for all models and at batch size 64 the \TreebeardOLD{} schedule that parallelizes across 
 rows is faster for only 2 of the 8 models. For small batch sizes, parallelizing across rows does 
