@@ -4,7 +4,7 @@
 The design of the \Treebeard{} compiler allows the implementation of different strategies for 
 the in-memory representation of the model. The compiler currently has implementations for 
 the three representations shown in Figure \ref{Fig:Representations}. The array and sparse 
-representations are the ones described in the \TreebeardOLD{} paper\cite{Treebeard}. The reorg 
+representations are as proposed in \TreebeardOLD{}~\cite{Treebeard}. The reorg 
 representation is the representation used by the RAPIDs library\cite{FIL}. 
 The \textbf{array representation} is the simplest representation where the trees are stored in an array
 in level order. The \textbf{sparse representation} stores the trees in a sparse format where 
@@ -19,7 +19,7 @@ designed to improve memory coalescing when tree nodes are being loaded.
   \label{Fig:Representations}
 \end{figure}
 
-One of the major changes we make to the original design of \TreebeardOLD{} \cite{Treebeard} is to
+We change the design of \TreebeardOLD{}~\cite{Treebeard} to
 separate the implementation of representations from the rest of the compiler. This allows
 us to implement representations as plugins to the compiler. We define an interface 
 that representations implement. The code generator is implemented using

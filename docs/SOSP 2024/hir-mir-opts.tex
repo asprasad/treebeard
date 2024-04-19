@@ -18,7 +18,7 @@ finally lowered to LLVM and then JIT'ed to the specified target processor.
 \Treebeard{} is built using the open-source \TreebeardOLD{} infrastructure~\cite{Treebeard}.
 % Since the \TreebeardOLD{} infrastructure was originally designed to target CPUs,
 % significant extensions were required to support schedule-guided compilation for CPUs and GPUs. 
-The \TreebeardOLD{} infrastructure was originally designed to target CPUs.
+The \TreebeardOLD{} infrastructure targets CPUs.
 It lacks a scheduling language and does not support generating code for 
 different implementation strategies. We enhance \TreebeardOLD{}  
 to support schedule-guided compilation for CPUs and GPUs.
@@ -95,7 +95,7 @@ described in Section \ref{sec:reduction}.
 % and tile traversal techniques?}
 
 The MIR is further lowered to a low-level IR (LIR). 
-Significant changes to the original \TreebeardOLD{} design were required to get
+Significant changes to \TreebeardOLD{} were required to get
 LIR to correctly lower to GPU code. The most important of these was 
 changing how the compiler implements support for in-memory 
 representations of models (Section \ref{sec:representations}).
