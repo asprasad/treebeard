@@ -24,7 +24,8 @@ and in-memory representation for all models. XGBoost \cite{XGBoost} also impleme
 support\cite{XGBGPU} but uses a single strategy and in-memory representation. 
 % In contrast, \Treebeard{} is a compiler that can explore a much larger
 % optimization space and can generate code that is tailored to a specific model.
-
+As shown in Section \ref{sec:results}, \Treebeard{} outperforms
+these systems by a significant margin.
 % Finally, all of Tahoe's optimizations are designed to address GPU specific problems. 
 % For example, it uses an elaborate and opaque heuristic based on locality sensitive hashing 
 % to coalesce accesses to the GPU global memory. We believe that the tree tiling
@@ -73,7 +74,7 @@ over \TreebeardOLD{}.
 Hummingbird\cite{Hummingbird} is a compiler that compiles traditional ML models
 to tensor operations, thereby enabling them to be run on tensor-based frameworks like
 TensorFlow\cite{TensorFlow}. While it can target both CPUs
-and GPUs, its performance is lower than that of other frameworks~\cite{Treebeard}.
+and GPUs, its performance is shown to be lower than that of other frameworks~\cite{Treebeard}.
 
 % Hummingbird\cite{Hummingbird} compiles traditional ML models to make use of tensor primitives so that
 % they can be integrated into tensor-based frameworks like TensorFlow \cite{TensorFlow}.
@@ -137,7 +138,7 @@ Comprehensions\cite{TensorComprehensions} are optimizing compilers
 for DNNs that can target a variety of processors. Similarly, 
 Halide\cite{Halide} is a DSL and compiler primarily designed for 
 image processing applications. The concept of separating the computation 
-from the schedule was pioneered by Halide and has since been adopted 
+from the schedule was effectively utilized by Halide and has since been adopted 
 by several other systems~\cite{TVM,Tiramisu,GraphIt}. 
 % However, to 
 % the best of our knowledge, \Treebeard{} is the first system to design
