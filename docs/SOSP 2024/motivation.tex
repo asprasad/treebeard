@@ -15,8 +15,8 @@ Consider a model with four trees, two
 trees of depth 1 and two of depth 2 (\circled{A} in Figure \ref{Fig:HIRExample}).
 % We use this model as our running example throughout this section.
 We first describe the simple schedule shown in Figure \ref{fig:schedulea} that processes one tree at a time 
-for all input rows. The scheduling constructs are fairly intuitive. We 
-defer a detailed explanation of the scheduling language to Section~\ref{sec:schedule}. 
+for all input rows. \footnote{Since the scheduling constructs are fairly intuitive, we 
+defer a detailed explanation of the scheduling language to Section~\ref{sec:schedule}.} 
 In this schedule, the loop over the trees is split into two -- one that
 iterates over the first two trees (Trees 1 and 2 with depth 1) and 
 the second that iterates over the last two trees (Trees 3 and 4 with
@@ -25,8 +25,13 @@ and involves branching to check if a leaf has been reached.
 One way to avoid this, as done in this schedule, is to unroll the 
 tree walks for each tree. 
 When the schedule specifies that the tree walks should be unrolled, 
-\Treebeard{} pads the trees so that all leaves are at the same depth
+\Treebeard{} pads the trees so that all leaves of a tree are at the same depth
 (\circled{B} in Figure~\ref{Fig:HIRExample}). 
+The concrete implementation of this schedule (in \Treebeard{}'s IR) 
+is as shown in Figure \ref{fig:schedulea}.
+This schedule is ideally suited for a single-core CPU. It maximizes 
+the reuse of trees in the L1 cache. However, it doesn't exploit  
+any parallelism. 
 
 \begin{figure*}[]
   \begin{subfigure}[t]{.495\linewidth}
@@ -45,135 +50,17 @@ When the schedule specifies that the tree walks should be unrolled,
   \label{Fig:Schedules}
 \end{figure*}
 
-% \begin{lstlisting}[style=c++]
-%   reorder(tree, batch)
-%   // Fiss tree loop so trees with equal depth 
-%   // are processed together  
-%   split(tree, t_depth1, t_depth2, 2)
-%   // Unroll the tree walks
-%   unrollWalk(t_depth1, 1)
-%   unrollWalk(t_depth2, 2)
-% \end{lstlisting}
-The concrete implementation of this schedule (in \Treebeard{}'s IR) 
-is as shown in Figure \ref{fig:schedulea}.
-% \begin{lstlisting}[style=c++]
-%   model = ensemble(...)
-%   for t_depth1 = 0 to 2 step 1 {
-%     T = getTree(model, t_depth1)
-%     for batch = 0 to BATCH_SIZE step 1 {
-%       treePred = walkDecisionTree(T, 
-%                     input[batch]) <unrollDepth = 1>
-%       reduce(result[batch], treePred)
-%     }
-%   }
-%   for t_depth2 = 2 to 4 step 1 {
-%     T = getTree(model, t_depth2)
-%     for batch = 0 to BATCH_SIZE step 1 {
-%       treePred = walkDecisionTree(T,
-%                     input[batch]) <unrollDepth = 2>
-%       reduce(result[batch], treePred) <'+', 0.0>
-%     }
-%   }
-% \end{lstlisting}
-This schedule is ideally suited for a single-core CPU. It maximizes 
-the reuse of trees in the L1 cache. However, it doesn't exploit  
-any parallelism. 
-%% RG, 
-%%  and is therefore ill-suited for parallel processors.
-% Further, the \op{batch} for loop can be tiled to get locality benefits. 
-
-One form of parallelism that can be exploited is to process rows in 
-parallel. 
-%% RG:
+One form of parallelism that can be exploited is to process rows in parallel. 
 While this may work for multi-core CPUs\footnote{As we report in Section~\ref{sec:results}, 
 other ways to parallelize can benefit inference on CPUs as well.}, with massively parallel processors like GPUs,
  this strategy may not yield sufficient parallel work. To expose more parallelism, 
 we can additionally parallelize across trees as done in the schedule in Figure \ref{fig:scheduleb}. 
-%% RG:
-% With GPUs, the performance of generated code would also vary with the 
-% kernel configuration, which specifies the number of thread blocks\footnote{We 
-% use NVIDIA CUDA terminology in the discussion, but as we demonstrate in 
-% Section~\ref{sec:results}, our framework can generate code for AMD GPUs as well.}, 
-% the size of thread blocks and so on. 
-% A possible strategy to accomplish this is encoded in the following schedule.
-% \begin{lstlisting}[style=c++]
-%   // Split the trees into two sets
-%   tile(tree, t0, t1, 2)
-%   reorder(batch, t1, t0)
-%   // Fiss loop so that trees with equal 
-%   // depth are processed together
-%   split(t0, t0_depth1, t0_depth2, 2)
-%   unrollWalk(t0_depth1, 1)
-%   unrollWalk(t0_depth2, 2)
-%   // Configure the GPU kernel dimensions
-%   gpuDimension(batch, grid.x)
-%   gpuDimension(t1, block.x)
-% \end{lstlisting}
 The corresponding GPU inference routine is shown in the same figure. 
 This schedule generates a routine that processes one input row per thread block (\op{batch}
-loop is mapped to \op{grid.x}).
-The schedule also tiles the \op{tree} loop into a nest of two loops with indices $t0$ and $t1$. 
-It then additionally parallelizes across the $t1$ loop.
+loop is mapped to \op{grid.x}). The schedule also tiles the \op{tree} loop into a
+nest of two loops with indices $t0$ and $t1$. It then additionally parallelizes across the $t1$ loop.
 Finally, it splits $t0$ and unrolls the walks for each tree depth.
-%It also splits the trees into two sets by tiling the \op{tree} loop.
-%Each of the two sets is processed in parallel. We unroll the tree walks 
-%for each tree.
-% The IR generated is as follows. 
-% \begin{lstlisting}[style=c++]
-%   model = ensemble(...)
-%   par.for batch = 0 to BATCH_SIZE step 1 <grid.x> {
-%     par.for t1 = 0 to 2 step 1 <block.x> {
-%       for t0_depth1 = 0 to 2 step 2 {
-%         T = getTree(model, t0_depth1 + t1)
-%         treePred = walkDecisionTree(T, 
-%                         input[batch]) <unrollDepth = 1>
-%         reduce(result[batch], treePred)
-%       }
-%       for t0_depth2 = 2 to 4 step 2 {
-%         T = getTree(model, t0_depth2 + t1)
-%         treePred = walkDecisionTree(T,
-%                         input[batch]) <unrollDepth = 2>
-%         reduce(result[batch], treePred) <'+', 0.0>
-%       }
-%     }
-%   }
-% \end{lstlisting}
 
-% In the case of this schedule, the \op{reduce}
-% operation needs special consideration.  
-% %% RG
-% %% to correctly generate code for this schedule, the compiler needs 
-% To generate the correct code for this schedule, the compiler needs to determine
-% the required synchronization and temporary storage for reductions 
-% given the parallelization strategy specified. In the given example, it 
-% has to identify that parallel iterations of the \op{t1} 
-% loop accumulate into the same element of the \op{result} array.
-% One possible solution is to rewrite the reduction so that each parallel 
-% iteration accumulates into a different array element by introducing 
-% a temporary buffer (\op{temp}) as follows.
-% \begin{lstlisting}[style=c++]
-%   float temp[2][BATCH_SIZE]
-%   model = ensemble(...)
-%   par.for batch = 0 to BATCH_SIZE step 1 <grid.x> {
-%     par.for t1 = 0 to 2 step 1 <block.x> {
-%       for t0_depth1 = 0 to 2 step 2 {
-%         T = getTree(ensemble, t0_depth1 + t1)
-%         treePred = walkDecisionTree(T, 
-%                       input[batch]) <unrollDepth = 1>
-%         reduce(temp[t1][batch], treePred)
-%       }
-%       for t0_depth2 = 2 to 4 step 2 {
-%         T = getTree(ensemble, t0_depth2 + t1)
-%         treePred = walkDecisionTree(T,
-%                       input[batch]) <unrollDepth = 2>
-%         reduce(temp[t1][batch], treePred) <'+', 0.0>
-%       }
-%     }
-%     result[batch] = reduce_dimension(temp[:][batch], 0)
-%   }
-% \end{lstlisting}
-% Here, partial results are accumulated into \op{temp} and then
-% reduced across the \op{t1} dimension to get the final result.
 Note that while unrolling helps avoid branching, it increases 
 the total amount of computation. Another option is to not unroll 
 and let the GPU manage the branching. The schedules with and 
@@ -181,20 +68,11 @@ without unrolling place different constraints on the target processor,
 and the best choice depends on the characteristics of the model
 and micro-architectural features like register file size and handling 
 of branch divergence~\cite{FungMicro, MilindDivergence}.
-These schedules just use a combination of 4-8 constructs and already generate schedules 
+
+These \Treebeard{} schedules just use a combination of 4-8 constructs and already generate strategies 
 that are different from what library based systems like XGBoost, Tahoe and RAPIDs FIL use. 
-As one can imagine several other schedules with different trade-offs can be generating using the constructs.
-% As is evident from these examples, it is possible to optimize 
-% the inference routine in different ways. Also, the structure of the loop 
-% nest in the inference routine can get quite complex even 
-% for simple schedules. Writing these routines by hand 
-% is error-prone and time-consuming.  
-% %% RG 
-% %% We beleive 
-% Hence designing a 
-% scheduling language to encapsulate these strategies and a principled code 
-% generator to automatically generate code guided by the schedule is the 
-% best approach. We promote such an approach in this paper.
+As one can imagine, several other schedules with different trade-offs can be generating using 
+these constructs.
 
 \subsection{Performance of Different Schedules} 
 \begin{figure}[htb]
@@ -211,21 +89,9 @@ As one can imagine several other schedules with different trade-offs can be gene
     \includegraphics[width=\linewidth]{figures/model_sensitivity_4096.png}
     \caption{\label{fig:sensitivityb}Model sensitivity at batch size 4096}
   \end{subfigure}
-  \caption{Batch and model sensitivity plots. Each point shows the slowdown when the best schedule for the x-axis batch size (model) is used for the y-axis batch size (model).}
+  \caption{Batch and model sensitivity plots. Each point shows the slowdown when the best 
+  schedule for the x-axis batch size (model) is used for the y-axis batch size (model).}
 \end{figure}
-
-% \begin{figure}[htb]
-%   \begin{minipage}[t]{.475\linewidth}
-%     \subcaptionbox*{}{\includegraphics[width=\linewidth]{figures/batch_sensitivity_covtype.png}}
-%     \caption{\label{fig:sensitivitya}Batch sensitivity for \op{covtype}}
-%   \end{minipage}
-%   \begin{minipage}[t]{.475\linewidth}
-%     \subcaptionbox*{}{\includegraphics[width=\linewidth]{figures/model_sensitivity_4096.png}}
-%     \caption{\label{fig:sensitivityb}Model sensitivity at batch size 4096}
-%   \end{minipage}
-%   \caption{Batch and model sensitivity plots. Each point shows the slowdown when best schedule for the
-%           x-axis batch size (model) is used for the y-axis batch size (model).}
-% \end{figure}
 
 To establish the importance of choosing the right schedule, we
 compare the performance of the schedules generated by \Treebeard{}
@@ -240,7 +106,7 @@ As can be seen, performance degrades by 2$\times$ when the best schedule for a
 smaller batch size is used for a larger batch size and vice-versa.
 Across all our benchmarks, the largest slowdown is 5$\times$.  %% and 
 The degradation is much worse when schedules are used across different models.
-In many (\~20\%) instances, using the best schedule for one model 
+In many ($\sim20$\%) instances, using the best schedule for one model 
 to compile another results in a 5$\times$ slowdown.
 As we report in Section \ref{sec:results}, reusing schedules across
 different architecture also leads to significant slowdowns.
