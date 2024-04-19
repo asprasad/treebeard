@@ -37,7 +37,7 @@ commodity platforms with CPUs and GPUs.
 % In particular, we focus on a range of commodity CPUs and GPUs, a class of hardware that has seen widespread 
 % adoption across client/edge devices used for inference.
 
-Decision forest models are composed of a large collection of decision trees (100-1000), and inference involves 
+Decision forest models are composed of a large collection of decision trees (typically 100--1000), and inference involves 
 traversing down each tree in the forest and aggregating the predictions. Inference is typically done in a batched
 setting, where multiple inputs are processed simultaneously.
 Despite the simplicity of the model and the availability of multiple sources of coarse-grain parallelism (parallelism 
@@ -108,6 +108,7 @@ find near-optimal schedules in less than 30 seconds on average.
 
 %% RG: This may not be needed -- can be removed to save space!
 %% \TODO{Oganization}
+In summary, this paper makes the following contributions.
 \begin{itemize}
   \item We identify that there are many different ways to implement  
   decision tree inference and that the best implementation depends both on the model
