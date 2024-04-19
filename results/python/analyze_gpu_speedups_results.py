@@ -202,14 +202,14 @@ def plot_double_y_axis_line_graph(df_4060, full_exp_df, gpu_name):
         fe_time = filtered_df['FullExplore'].to_list()
         heur_time = filtered_df['AT'].to_list()
         normalized_times = [ht/ft for ht, ft in zip(heur_time, fe_time)]
-        norm_times.append(np.mean(normalized_times))
+        norm_times.append(gmean(normalized_times))
 
     # Plot the line graph
-    fig, ax1 = plt.subplots()
+    _, ax1 = plt.subplots()
     ax1.grid(True, which='both', axis='both')
     ax2 = ax1.twinx()
-    l1 = ax1.plot(batch_sizes, speedups, 'o-', label='Schedule heuristic vs Best 4060 schedule')
-    l2 = ax2.plot(batch_sizes, norm_times, 'o-', color='orange', label='Normalized time w.r.t Full Explore time')
+    ax1.plot(batch_sizes, speedups, 'o-', label='Heuristic Schedule vs Best 4060 Schedule')
+    ax2.plot(batch_sizes, norm_times, 'o-', color='orange', label='Heuristic\'s Normalized Exploration Time')
     
     ax1.set_xscale('log', base=2)
     ax1.set_xlabel('Batch size', fontsize=AXIS_FONT_SIZE)
@@ -286,9 +286,9 @@ class LineGraphPlotter:
         # plt.show()
         # plt.savefig(f'geomean_speedup_{gpu_name}_{time_measured}.{PLOT_FILE_EXTENSION}')
 
-    def save_plot(self):
+    def save_plot(self, leg_font_size=LEGEND_FONT_SIZE):
         self.ax.set_ylim(self.ylim[0], self.ylim[1])
-        plt.legend(fontsize=12)
+        plt.legend(fontsize=leg_font_size)
         plt.tight_layout()
         plt.savefig(f'geomean_speedup_{self.gpu_name}_{self.file_name_suffix}.{PLOT_FILE_EXTENSION}')
 
@@ -312,9 +312,9 @@ line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TB(AT
 line_graph_plotter.save_plot()
 
 line_graph_plotter = LineGraphPlotter('T400', '4060_vs_T400_vs_MI2160', lower_lim=1, upper_lim=1.6)
-line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TBKernel(AT)', ['TBKernel(4060)'], ['Scheduling heuristic(T400) vs Best 4060 schedule'])
-line_graph_plotter.plot_geomean_speedups_over_batch_size(results_amdmi2160_df, 'TBKernel(MI2160)', ['TBKernel(4060)'], ['Scheduling heuristic(MI2160) vs Best 4060 schedule'])
-line_graph_plotter.save_plot()
+line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TBKernel(AT)', ['TBKernel(4060)'], ['Scheduling heuristic(T400) vs 4060 heuristic schedule'])
+line_graph_plotter.plot_geomean_speedups_over_batch_size(results_amdmi2160_df, 'TBKernel(MI2160)', ['TBKernel(4060)'], ['Scheduling heuristic(MI2160) vs 4060 heuristic schedule'])
+line_graph_plotter.save_plot(leg_font_size=11.5)
 
 line_graph_plotter = LineGraphPlotter('4060', 'full_exp_vs_at', lower_lim=1, upper_lim=110)
 line_graph_plotter.plot_geomean_speedups_over_batch_size(fullexp_vs_at_df, 'AT', ['FullExplore'], ['Scheduling heuristic vs Full Exploration'])
