@@ -7,18 +7,18 @@ from scipy.stats import gmean
 # Read the CSV file into a dataframe
 results_4060_df = pd.read_csv('../4060_thedeep_results.csv')
 results_t400_df = pd.read_csv('../T400_holmes_results.csv')
-fullexp_vs_at_df = pd.read_csv('../fullexp_vs_at.csv')
+fullexp_over_at_df = pd.read_csv('../fullexp_vs_at.csv')
 results_amdmi2160_df = pd.read_csv('../AMDMI2160_results.csv')
 
 results_4060_df = results_4060_df[results_4060_df['Batch size'] != 256]
 results_t400_df = results_t400_df[results_t400_df['Batch size'] != 256]
-fullexp_vs_at_df = fullexp_vs_at_df[fullexp_vs_at_df['Batch size'] != 256]
+fullexp_over_at_df = fullexp_over_at_df[fullexp_over_at_df['Batch size'] != 256]
 results_amdmi2160_df = results_amdmi2160_df[results_amdmi2160_df['Batch size'] != 256]
 
 PLOT_FILE_EXTENSION = 'png'
 AXIS_FONT_SIZE = 15
 LABEL_FONT_SIZE = 15
-LEGEND_FONT_SIZE = 12
+LEGEND_FONT_SIZE = 11.5
 BAR_LABEL_FONT_SIZE = 8
 
 def plot_bar_graph_of_abs_times_for_batch_size(df, batch_size):
@@ -103,8 +103,8 @@ def plot_bar_graph_speedups_for_batch_size(df, batch_size, kwargs=None):
     gap = BAR_LABEL_FONT_SIZE * 0.3
     pos = np.array([float(2 * i * width + i * gap) for i in range(len(bar_names))])
 
-    ax.bar(pos, rapids_speedup, width, label='Speedup of SilvanForge vs RAPIDS', hatch='//////')
-    ax.bar(pos+width, tahoe_speedup, width, label='Speedup of SilvanForge vs Tahoe', hatch='......')
+    ax.bar(pos, rapids_speedup, width, label='Speedup of SilvanForge over RAPIDS', hatch='//////')
+    ax.bar(pos+width, tahoe_speedup, width, label='Speedup of SilvanForge over Tahoe', hatch='......')
 
     # enable grid
     # ax.grid(True, which='both', axis='y')
@@ -168,8 +168,8 @@ def plot_bar_graph_geomean_speedups_for_models(df, gpu_name):
 
     _, ax = plt.subplots()
     
-    ax.bar(pos, speedups[0], width, label='Speedup of SilvanForge vs RAPIDS', hatch='//////')
-    ax.bar(pos + width, speedups[1], width, label='Speedup of SilvanForge vs Tahoe', hatch='......')
+    ax.bar(pos, speedups[0], width, label='Speedup of SilvanForge over RAPIDS', hatch='//////')
+    ax.bar(pos + width, speedups[1], width, label='Speedup of SilvanForge over Tahoe', hatch='......')
 
     # Add labels and title
     ax.set_xlabel('Benchmark', fontsize=AXIS_FONT_SIZE)
@@ -208,7 +208,7 @@ def plot_double_y_axis_line_graph(df_4060, full_exp_df, gpu_name):
     _, ax1 = plt.subplots()
     ax1.grid(True, which='both', axis='both')
     ax2 = ax1.twinx()
-    ax1.plot(batch_sizes, speedups, 'o-', label='Heuristic Schedule vs Best 4060 Schedule')
+    ax1.plot(batch_sizes, speedups, 'o-', label='Heuristic Schedule over Best 4060 Schedule')
     ax2.plot(batch_sizes, norm_times, 'o-', color='orange', label='Heuristic\'s Normalized Exploration Time')
     
     ax1.set_xscale('log', base=2)
@@ -227,10 +227,10 @@ def plot_double_y_axis_line_graph(df_4060, full_exp_df, gpu_name):
     ax2.yaxis.set_tick_params(labelsize=AXIS_FONT_SIZE)
 
     # plt.show()
-    ax1.legend(fontsize=10, loc='upper right')
-    ax2.legend(fontsize=10, loc='lower right')
+    ax1.legend(fontsize=LEGEND_FONT_SIZE, loc='upper right')
+    ax2.legend(fontsize=LEGEND_FONT_SIZE, loc='lower right')
     plt.tight_layout()
-    plt.savefig(f'speedup_vs_norm_time_line_graph_{gpu_name}.png')
+    plt.savefig(f'speedup_over_norm_time_line_graph_{gpu_name}.png')
 
 
 
@@ -302,25 +302,25 @@ plot_bar_graph_speedups_for_batch_size(results_4060_df, 8192)
 
 # plot geomean speedup over batch sizes
 line_graph_plotter = LineGraphPlotter('4060', 'kernel_time_total_time', lower_lim=1, upper_lim=5)
-line_graph_plotter.plot_geomean_speedups_over_batch_size(results_4060_df, 'TBKernel(AT)', ['RAPIDS(kernel)', 'Tahoe(kernel)'], ['Speedup of SilvanForge vs RAPIDS(kernel)', 'Speedup of SilvanForge vs Tahoe(kernel)'])
-line_graph_plotter.plot_geomean_speedups_over_batch_size(results_4060_df, 'TB (AT)', ['RAPIDS (Total)'], ['Speedup of SilvanForge vs RAPIDS(total)'])
+line_graph_plotter.plot_geomean_speedups_over_batch_size(results_4060_df, 'TBKernel(AT)', ['RAPIDS(kernel)', 'Tahoe(kernel)'], ['Speedup of SilvanForge over RAPIDS(kernel)', 'Speedup of SilvanForge over Tahoe(kernel)'])
+line_graph_plotter.plot_geomean_speedups_over_batch_size(results_4060_df, 'TB (AT)', ['RAPIDS (Total)'], ['Speedup of SilvanForge over RAPIDS(total)'])
 line_graph_plotter.save_plot()
 
 line_graph_plotter = LineGraphPlotter('T400', 'kernel_time')
-line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TBKernel(AT)', ['RAPIDS(kernel)', 'Tahoe(kernel)'], ['Speedup of SilvanForge vs RAPIDS(kernel)', 'Speedup of SilvanForge vs Tahoe(kernel)'])
-line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TB(AT)', ['RAPIDS(Total)'], ['Speedup of SilvanForge vs RAPIDS(total)'])
+line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TBKernel(AT)', ['RAPIDS(kernel)', 'Tahoe(kernel)'], ['Speedup of SilvanForge over RAPIDS(kernel)', 'Speedup of SilvanForge over Tahoe(kernel)'])
+line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TB(AT)', ['RAPIDS(Total)'], ['Speedup of SilvanForge over RAPIDS(total)'])
 line_graph_plotter.save_plot()
 
-line_graph_plotter = LineGraphPlotter('T400', '4060_vs_T400_vs_MI2160', lower_lim=1, upper_lim=1.6)
-line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TBKernel(AT)', ['TBKernel(4060)'], ['Scheduling heuristic(T400) vs 4060 heuristic schedule'])
-line_graph_plotter.plot_geomean_speedups_over_batch_size(results_amdmi2160_df, 'TBKernel(MI2160)', ['TBKernel(4060)'], ['Scheduling heuristic(MI2160) vs 4060 heuristic schedule'])
-line_graph_plotter.save_plot(leg_font_size=11.5)
+line_graph_plotter = LineGraphPlotter('T400', '4060_over_T400_over_MI2160', lower_lim=1, upper_lim=1.6)
+line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TBKernel(AT)', ['TBKernel(4060)'], ['Scheduling heuristic(T400) over 4060 heuristic schedule'])
+line_graph_plotter.plot_geomean_speedups_over_batch_size(results_amdmi2160_df, 'TBKernel(MI2160)', ['TBKernel(4060)'], ['Scheduling heuristic(MI2160) over 4060 heuristic schedule'])
+line_graph_plotter.save_plot(leg_font_size=11)
 
-line_graph_plotter = LineGraphPlotter('4060', 'full_exp_vs_at', lower_lim=1, upper_lim=110)
-line_graph_plotter.plot_geomean_speedups_over_batch_size(fullexp_vs_at_df, 'AT', ['FullExplore'], ['Scheduling heuristic vs Full Exploration'])
+line_graph_plotter = LineGraphPlotter('4060', 'full_exp_over_at', lower_lim=1, upper_lim=110)
+line_graph_plotter.plot_geomean_speedups_over_batch_size(fullexp_over_at_df, 'AT', ['FullExplore'], ['Scheduling heuristic over Full Exploration'])
 line_graph_plotter.save_plot()
 
 plot_bar_graph_geomean_speedups_for_models(results_4060_df, '4060')
 plot_bar_graph_geomean_speedups_for_models(results_t400_df, 'T400')
 
-plot_double_y_axis_line_graph(results_4060_df, fullexp_vs_at_df, '4060')
+plot_double_y_axis_line_graph(results_4060_df, fullexp_over_at_df, '4060')
