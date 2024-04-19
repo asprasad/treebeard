@@ -19,7 +19,7 @@ PLOT_FILE_EXTENSION = 'png'
 AXIS_FONT_SIZE = 15
 LABEL_FONT_SIZE = 15
 LEGEND_FONT_SIZE = 11.5
-BAR_LABEL_FONT_SIZE = 8
+BAR_LABEL_FONT_SIZE = 11
 
 def plot_bar_graph_of_abs_times_for_batch_size(df, batch_size):
     filtered_df = df[df['Batch size'] == batch_size]
@@ -109,7 +109,7 @@ def plot_bar_graph_speedups_for_batch_size(df, batch_size, kwargs=None):
     # enable grid
     # ax.grid(True, which='both', axis='y')
 
-    ax.set_ylim(0, max(max(rapids_speedup), max(tahoe_speedup)) + 1)
+    ax.set_ylim(0, max(max(rapids_speedup), max(tahoe_speedup)) + 2)
 
     # Add labels and title
     # ax.set_xlabel('Benchmark', fontsize=LABEL_FONT_SIZE)
@@ -127,11 +127,11 @@ def plot_bar_graph_speedups_for_batch_size(df, batch_size, kwargs=None):
         rt = round(rt, 2)
         tt = round(tt, 2)
 
-        plt.text(benchmark, rs + 0.2 , str(rt), ha='center', fontsize=BAR_LABEL_FONT_SIZE)
-        plt.text(benchmark + width, ts + 0.2, str(tt), ha='center', fontsize=BAR_LABEL_FONT_SIZE)
+        plt.text(benchmark, rs + 0.2 , str(rt), ha='center', fontsize=BAR_LABEL_FONT_SIZE, rotation=90)
+        plt.text(benchmark + width, ts + 0.2, str(tt), ha='center', fontsize=BAR_LABEL_FONT_SIZE, rotation=90)
 
     # Show the legend and plot
-    plt.legend(fontsize=LEGEND_FONT_SIZE)
+    plt.legend(fontsize=LEGEND_FONT_SIZE, loc='upper left')
     plt.tight_layout()
     # plt.show()
     plt.savefig(f'speedup_bar_graph_{batch_size}.{PLOT_FILE_EXTENSION}')
