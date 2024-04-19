@@ -32,7 +32,7 @@ based on the batch size and model characteristics.
 We bound the space using a few meta-parameters that together define 
 the primitives used to construct a schedule. We do so while making sure 
 that the space (at-least) covers the known strategies published in prior work.
-Specifically, we use 4 numeric parameters and 4 boolean parameters listed in Table \ref{tab:schedparams}.
+Specifically, we use 4 numeric parameters, 4 boolean parameters and one ternary parameter as listed in Table \ref{tab:schedparams}.
 We picked the specific values listed through experimentation.
 %Note that even this template has a large number ($1728$) of schedules, and requires further pruning as we discuss later.
 The first three numeric parameters assign a configurable number of rows to each 
@@ -44,7 +44,7 @@ unroll factor{\footnote{We choose to always unroll trees completely, while its p
 to partially unroll loops we did not observe any performance benefits from doing so.}} 
 and how many trees to traverse simultaneously \TODO{Should we say, in the kernel/within
 a single thread?}.  (the remaining primitives from Table~\ref{Tab:Optimizations}).  
-The final parameter determines what reduction options to use (Table~\ref{Tab:ReductionOpts}).
+The last two parameters determine reduction option (Table~\ref{Tab:ReductionOpts}) and the layout{\footnote{This does not have a schedule primitive. We always explore all three layout options.}} to use.
 %Table \ref{tab:schedparams} lists the parameter values we tried. 
 % \begin{itemize}
 %   \item \textbf{Number of rows per thread block (Integer):} The number of rows that are processed by each thread block.
@@ -102,11 +102,10 @@ there is huge variation in performance with different parameter values.
 Figure \ref{Fig:ExecTimeDistribution} shows the distribution of normalized execution times
 for some real-world models with different parameter values for the template schedule (inference
 times normalized w.r.t fastest time for that model).
-As can be seen very few schedules perform close to the best while a vast majority of
-schedules perform poorly.
+As can be seen very few schedules perform close to the best while a vast majority perform poorly.
 
 Exhaustive exploration over this bounded space ($5184$ schedules) is still very expensive, taking
-anywhere between thirty minutes to a few hours to explore the entire space for a given model. 
+ between $30-600$ minutes to explore the entire space for a given model. 
 %Exploring the space for every model is infeasible.
 %\TODO{comment on online vs offline exploration? Set a goal for the heuristic?}
 
@@ -122,7 +121,7 @@ Algorithm \ref{alg:heuristic} presents our final heuristic to find a good schedu
 
 \subsubsection*{Insufficient parallelism}
  Some configurations do not expose sufficient parallelism, we prune these out.
-  For example when the batch size is small, it does not make sense to have a many rows
+  For example when the batch size is small, it does not make sense to have many rows
   per thread block or to partition the trees across a few threads. 
   We therefore limit the combinations used based on batch size (see lines 3---8).
 \subsubsection*{Utilizing shared memory}
