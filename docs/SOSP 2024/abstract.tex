@@ -1,13 +1,14 @@
 \begin{abstract}
-  
-  The rapid proliferation of machine learning together with the accelerating evolution of 
+  The proliferation of machine learning together with the rapid evolution of 
   the hardware ecosystem has led to a surge in the demand for model inference on a variety
-  of hardware. This paper is motivated by the problems encountered when targeting 
-  inference of decision tree based models, the most popular models on tabular data,
-  to run at peak performance on diverse CPU and GPU targets. Existing solutions are neither
+  of hardware. 
+  Decision tree based models are the most popular models on tabular data.
+  This paper is motivated by the problems encountered when targeting 
+  inference of these models to run at peak performance on CPU and GPU targets.
+  Existing solutions are neither
   portable nor achieve the best possible performance for the specific hardware they 
-  target because they do not explore and customize optimization configurations to the model 
-  being used. 
+  target. This is because they do not explore and customize optimization 
+  configurations to the model being used. 
     
   We present \Treebeard{}, a \emph{schedule-guided},
   \emph{retargetable} compiler for decision tree based models
@@ -18,7 +19,7 @@
   explore this space. The second is an optimizing retargetable compiler that 
   can generate code for any specified schedule. \Treebeard{}'s ability to use different data layouts, 
   loop structures and caching strategies enables it to achieve portable performance
-  across a range of CPUs and GPUs.   
+  across a range of targets.   
   % To accomplish this level of configurability, we re-architect 
   % and significantly extend the open-source \TreebeardOLD{} CPU compiler
   % to support (i) schedule-guided compilation, (ii) retargetable GPU code

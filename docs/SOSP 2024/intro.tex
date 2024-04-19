@@ -54,7 +54,7 @@ loop transformations, parallelization, and memory access optimizations.
 %This requires a combination of techniques like data layout optimizations, loop transformations, and memory access optimizations. 
 %Existing systems each use specific data layouts for the underlying tree and use fixed loop structures. 
 %Parallelism, loop structure and model representation together determine the accesses patterns and the working set. 
-Existing systems today are mostly library based, and only support a predefined combination of optimizations
+Existing systems today are mostly library based, only support a predefined combination of optimizations
 and typically only target a single platform. 
 On the CPU, XGBoost~\cite{XGBoost} uses a sparse representation for the model 
 and a loop structure that processes one tree for a block of rows before moving to 
@@ -67,9 +67,9 @@ Tahoe~\cite{Tahoe} uses a variation of the reorg representation and
 has four predefined inference strategies from which it picks one based on an analytical model.
 The GPU systems are CUDA based and only work on NVIDIA GPUs.
 %These systems are all library based and are hard to extend. 
-\TreebeardOLD{}, the state-of-the-art decision tree model compiler for CPUs 
+\TreebeardOLD{}, the state-of-the-art decision tree model compiler for CPUs
 %% RG
-built using the MLIR infrastructure~\cite{MLIR}, supports two fixed loop structures 
+, supports two fixed loop structures 
 % and does not scale well with increasing number of threads. Additionally, it 
 and lacks GPU specific optimizations that are critical to scale performance to massive number of threads.
 % \TODO{Shouldn't we reverse this? First say no GPU support and then the scaling issue.}
