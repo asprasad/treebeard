@@ -17,10 +17,12 @@
 % \end{itemize}
 The set of schedules that can be constructed using the scheduling language described in 
 Section \ref{sec:schedule} is unbounded.
-\TODO{kr: next few lines need more work}
-Even if one were to search for a good schedule offline, before deploying the model 
-on a specific hardware, additional tools are needed to help search for a 
-high-performance schedule. We anticipate that even for the most complex models, 
+%\TODO{kr: next few lines need more work}
+% Even if one were to search for a good schedule offline, before deploying the model 
+% on a specific hardware, additional tools are needed to help search for a 
+% high-performance schedule. 
+Additional tools are required to help search for a high-performance schedule.
+We anticipate that even for the most complex models, 
 % one would like to spend at most a few minutes doing this search.
 spending more than a few minutes on this search is not acceptable.
 We propose a set of heuristics to guide the search for a good schedule 
@@ -42,9 +44,10 @@ primitives to use (including the arguments to pass) from Table~\ref{Tab:LoopModi
 and the parallelization strategy. The next four parameters determine the caching strategy, 
 unroll factor{\footnote{We choose to always unroll trees completely, while its possible 
 to partially unroll loops we did not observe any performance benefits from doing so.}} 
-and how many trees to traverse simultaneously \TODO{Should we say, in the kernel/within
-a single thread?}.  (the remaining primitives from Table~\ref{Tab:Optimizations}).  
-The last two parameters determine reduction option (Table~\ref{Tab:ReductionOpts}) and the layout{\footnote{This does not have a schedule primitive. We always explore all three layout options.}} to use.
+and how many trees to traverse simultaneously within
+a single thread (the remaining primitives from Table~\ref{Tab:Optimizations}).  
+The last two parameters determine reduction optimizations (Table~\ref{Tab:ReductionOpts}) 
+and the layout{\footnote{This does not have a schedule primitive. We always explore all three layout options.}} to use.
 %Table \ref{tab:schedparams} lists the parameter values we tried. 
 % \begin{itemize}
 %   \item \textbf{Number of rows per thread block (Integer):} The number of rows that are processed by each thread block.
@@ -91,21 +94,21 @@ module outside the core \Treebeard{} compiler.
 
 \begin{figure}[htb]
   \centering
-  \includegraphics[width=0.7\linewidth]{figures/normalized_kernel_histogram_lt5.png}
-  \caption{Distribution of normalized execution times for all benchmark models
-  with the template schedule using parameter values as shown in Table \ref{tab:schedparams}}. 
+  \includegraphics[width=0.85\linewidth]{figures/normalized_kernel_histogram_lt5.png}
+  \caption{Distribution of normalized execution times for real-world benchmark models
+  with different combinations of parameter values shown in Table \ref{tab:schedparams}}. 
   \label{Fig:ExecTimeDistribution}
 \end{figure}
 
 We evaluated all the schedules in this space on several real world models and observed that 
 there is huge variation in performance with different parameter values. 
 Figure \ref{Fig:ExecTimeDistribution} shows the distribution of normalized execution times
-for some real-world models with different parameter values for the template schedule (inference
+for our real-world benchmark models with different parameter values (inference
 times normalized w.r.t fastest time for that model).
 As can be seen, very few schedules perform close to the best while a vast majority perform poorly.
 
 Exhaustive exploration over this bounded space ($5184$ schedules) is still very expensive, taking
- between $30-600$ minutes to explore the entire space for a given model. 
+between $30-300$ minutes to explore the entire space for a given model. 
 %Exploring the space for every model is infeasible.
 %\TODO{comment on online vs offline exploration? Set a goal for the heuristic?}
 
@@ -155,7 +158,7 @@ is then computed (\op{schedules}).
 \end{comment}
 
 \noindent
-\Treebeard{} performs an exhaustive search over the pruned schedules from Algorithm~\ref{alg:heuristic} to find the best schedule.
+\Treebeard{} performs an exhaustive search over the pruned schedules to find the best schedule.
 The model is compiled with each of these schedules and evaluated on a few input batches. 
 %The three best performing schedules 
 %are collected and shared reduction is enabled on them and the resulting schedules evaluated.
