@@ -43,7 +43,7 @@ an atomic accumulation, i.e. it guarantees that all accumulations
 are correctly performed even in the presence of parallel loops. 
 The \op{reduce} op is defined for all associative and commutative
 reduction operations with a well-defined initial value. The 
-reduction operator and the initial value are attributes applied
+reduction operator and the initial value are attributes
 on the \op{reduce} op. 
 
 Having modeled the reductions with an abstract operation, the 
@@ -108,8 +108,8 @@ compute intermediate results when several reduction loops are identified.
 % Since the lowering pipeline from MIR to LIR are different for CPU and GPU 
 % compilation, we implement lowering and optimization of our reduction dialect to CPUs and
 % GPUs simply using different MLIR rewrite patterns. 
-In this section, we briefly describe 
-how we lower the reduction operations to the CPU and GPU. 
+% In this section, we briefly describe 
+% how we lower the reduction operations to the CPU and GPU. 
 
 For both CPU and GPU, \op{reduce} is lowered to a sequence 
 of load, compute and write operations. This is possible because 
@@ -155,7 +155,6 @@ in a thread block busy.
 % enough independent reductions, then the lowering pass generates a tree 
 % style reduction where multiple threads cooperate to perform a single reduction
 % using inter-thread shuffles.
-
 % Another feature specific to GPU reductions is the use of shared memory. 
 Additionally, if the schedule specifies that the reduction needs to be performed 
 using shared memory, the privatized buffer is allocated in shared memory. 

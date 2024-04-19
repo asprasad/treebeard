@@ -26,7 +26,7 @@ that representations implement. The code generator is implemented using
 this interface thus hiding details of the actual representation from the core 
 compiler. Crucially, the interface abstracts how and what buffers 
 are allocated, how to move from a node to its child, how trees 
-are cached, reading the value of leaves and now threshold and 
+are cached, reading the value of leaves and how threshold and 
 feature indices are read from the allocated buffers.
 % The interface abstracts the following details. 
 % \begin{itemize}
@@ -82,17 +82,18 @@ the implementations across different lowering pipelines.
 \Treebeard{} provides mechanisms to cache both trees and input rows 
 on both the CPU and GPU. As described in Section \ref{sec:schedule}, 
 the user can specify that the working set of an iteration of a loop
-needs to be cached using the \op{cache} directive. This 
-provides a unified way to specify caching of both trees and input rows.
+needs to be cached using the \op{cache} directive. 
+% This provides a unified way to specify caching of both trees and input rows.
 \Treebeard{} implements caching at the granularity of a tree or a row.
 
 % \subsection{IR Representation of Caching}
 Caching is encoded in the mid-level IR using the \op{cacheTrees} and \op{cacheRows} operations (Table \ref{Tab:IRSpecification}). 
-These operations are generated when the HIR lowered to MIR and \op{cache} is specified on an 
-index variable in the schedule. While the HIR is being lowered and a cached index variable is 
+% These operations are generated when the HIR lowered to MIR and \op{cache} is specified on an 
+% index variable in the schedule. 
+When the HIR is being lowered and a cached index variable is 
 encountered, the compiler generates a \op{cacheTrees} or \op{cacheRows} operation depending on 
 whether the index variable is a tree or a batch index variable.
-\Treebeard{} also determines the working set of the loop  
+\Treebeard{} also determines the working set of one iteration of the loop  
 and generates a caching operation with the appropriate limits.
 
 % Each of the caching operations take parameters that specify the set of trees or rows that need 
@@ -115,12 +116,13 @@ Lowering the \op{cacheRows} operation is straightforward
 % \Treebeard{} uses pre-implemented lowerings for both
 % CPU and GPU. This is possible 
 because the input is currently assumed to be a dense
-array format. The lowering for the \op{cacheRows} operation is implemented directly in the \Treebeard{} compiler.
+array format. The lowering for the \op{cacheRows} operation is 
+implemented directly in the \Treebeard{} compiler as a series of 
+coalesced loads into shared memory.
 
 For the \op{cacheTrees} operation, the lowering is representation-specific. Each representation
 provides a lowering to the target-specific code 
-generator to lower the \op{cacheTrees} op when
-that representation is used.
+generator to lower the \op{cacheTrees} op.
 %  However, the \Treebeard{} infrastructure does provide helpers 
 % to generate caching code to cache contiguous regions of memory. These helpers are reused 
 % as required across different representations. 
