@@ -230,7 +230,7 @@ def plot_double_y_axis_line_graph(df_4060, full_exp_df, gpu_name):
     ax1.legend(fontsize=LEGEND_FONT_SIZE, loc='upper right')
     ax2.legend(fontsize=LEGEND_FONT_SIZE, loc='lower right')
     plt.tight_layout()
-    plt.savefig(f'speedup_over_norm_time_line_graph_{gpu_name}.png')
+    plt.savefig(f'speedup_vs_norm_time_line_graph_{gpu_name}.png')
 
 
 
@@ -311,12 +311,12 @@ line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TBKer
 line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TB(AT)', ['RAPIDS(Total)'], ['Speedup of SilvanForge over RAPIDS(total)'])
 line_graph_plotter.save_plot()
 
-line_graph_plotter = LineGraphPlotter('T400', '4060_over_T400_over_MI2160', lower_lim=1, upper_lim=1.6)
+line_graph_plotter = LineGraphPlotter('T400', '4060_vs_T400_vs_MI2160', lower_lim=1, upper_lim=1.6)
 line_graph_plotter.plot_geomean_speedups_over_batch_size(results_t400_df, 'TBKernel(AT)', ['TBKernel(4060)'], ['Scheduling heuristic(T400) over 4060 heuristic schedule'])
 line_graph_plotter.plot_geomean_speedups_over_batch_size(results_amdmi2160_df, 'TBKernel(MI2160)', ['TBKernel(4060)'], ['Scheduling heuristic(MI2160) over 4060 heuristic schedule'])
 line_graph_plotter.save_plot(leg_font_size=11)
 
-line_graph_plotter = LineGraphPlotter('4060', 'full_exp_over_at', lower_lim=1, upper_lim=110)
+line_graph_plotter = LineGraphPlotter('4060', 'full_exp_vs_at', lower_lim=1, upper_lim=110)
 line_graph_plotter.plot_geomean_speedups_over_batch_size(fullexp_over_at_df, 'AT', ['FullExplore'], ['Scheduling heuristic over Full Exploration'])
 line_graph_plotter.save_plot()
 
