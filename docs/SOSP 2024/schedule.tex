@@ -269,15 +269,16 @@ for a given input row. The schedule for this strategy is:
 Here, \op{ROWS\_PER\_TB} is the number of rows that are processed by a single thread block.
 
 In the \emph{shared data} strategy~\cite{Tahoe}, a thread block walks all the trees 
-for a given row in parallel. 
+for a given row in parallel. Input rows are cached in shared memory.
 % If threads walk multiple trees, each thread accumulates partial results. 
-Then, a thread block wide reduction is performed to compute 
-the prediction. The schedule for this strategy is:
+% Then, a thread block wide reduction is performed to compute 
+% the prediction.
+The schedule for this strategy is:
 \begin{lstlisting}[style=c++]
 reorder(batch, tree)
 gpuDimension(batch, grid.x)
 gpuDimension(tree, block.x)
-reduce(batch)
+cache(batch)
 \end{lstlisting}
 %   \item \textbf{Shared Forest}: In this strategy, the whole model is loaded into 
 %   shared memory and subsequently, a single thread walks all trees for a particular
