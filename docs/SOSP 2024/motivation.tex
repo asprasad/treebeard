@@ -15,8 +15,8 @@ Consider a model with four trees, two
 trees of depth 1 and two of depth 2 (\circled{A} in Figure \ref{Fig:HIRExample}).
 % We use this model as our running example throughout this section.
 We first describe the simple schedule shown in Figure \ref{fig:schedulea} that processes one tree at a time 
-for all input rows. \footnote{Since the scheduling constructs are fairly intuitive, we 
-defer a detailed explanation of the scheduling language to Section~\ref{sec:schedule}.} 
+for all input rows\footnote{Since the scheduling constructs are fairly intuitive, we 
+defer a detailed explanation of the scheduling language to Section~\ref{sec:schedule}.}.
 In this schedule, the loop over the trees is split into two -- one that
 iterates over the first two trees (Trees 1 and 2 with depth 1) and 
 the second that iterates over the last two trees (Trees 3 and 4 with
@@ -28,7 +28,9 @@ When the schedule specifies that the tree walks should be unrolled,
 \Treebeard{} pads the trees so that all leaves of a tree are at the same depth
 (\circled{B} in Figure~\ref{Fig:HIRExample}). 
 The concrete implementation of this schedule (in \Treebeard{}'s IR) 
-is as shown in Figure \ref{fig:schedulea}.
+is as shown in Figure \ref{fig:schedulea}\footnote{We do not show 
+the full MLIR listing of the IR. Instead, we present inference routines 
+as pseudo-code for the sake of clarity.}.
 This schedule is ideally suited for a single-core CPU. It maximizes 
 the reuse of trees in the L1 cache. However, it doesn't exploit  
 any parallelism. 
