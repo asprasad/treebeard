@@ -184,7 +184,7 @@ Figure \ref{Fig:AutotuningSpeedupvs4060Sched} reports the Geomean performance im
 As can be seen the T400 specific schedule is 1.05$\times$ to 1.2$\times$ better 
 with the maximum difference being $2\times$ (\op{epsilon} at batch size 512).
 There is a much larger variation in performance on MI120. For example, 
-the geomean speedup over all benchmarks is 1.5$\times$ at batch size 16k (maxiumum 2$\times$ for the \op{letters} benchmark).
+the geomean speedup over all benchmarks is 1.5$\times$ at batch size 16k (maximum 2$\times$ for the \op{letters} benchmark).
 In conclusion, schedules found on one GPU do not carry over to other GPUs and often result in sub-optimal performance.
 It is necessary tune schedules on each target to achieve the best performance.
 
@@ -206,7 +206,7 @@ Parallelizing across trees addresses both these problems.
 %Beyond portable performance, our evaluation indicates that \Treebeard{} has several additional advantages over existing systems.
 \subsubsection*{Cost Performance trade-off Across Hardware Platforms}
 Two of the three GPU targets we use are commodity GPUs that cost less than \$400. They 
-are infact much cheaper than the CPU we evaluate on. Despite this, performance on GPUs
+are in fact much cheaper than the CPU we evaluate on. Despite this, performance on GPUs
 is significantly better than on CPUs (by an order of magnitude on RTX 4060).
 \Treebeard{} can therefore help data scientists make the best use of 
 available processors on their systems.

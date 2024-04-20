@@ -8,12 +8,12 @@ that existing reduction support in MLIR is insufficient to code
 generate and optimize these reductions. MLIR only supports reductions
 of value types and does not provide ways to lower reductions to GPUs. 
 To address this gap, we design an MLIR dialect that allows us to
-specify accumulating values into an element of a multi-dimensional array
+specify accumulating values into an element of a multidimensional array
 and can be lowered to CPU or GPU. 
 
 The main abstraction we introduce is the \op{reduce} op. It models 
 atomically accumulating values into an element of a 
-multi-dimensional array (represented by an MLIR \op{memref}).
+multidimensional array (represented by an MLIR \op{memref}).
 Consider the following \Treebeard{} schedule.
 In our example, \op{N\_t} is the number of trees 
 and \op{batch\_size} is the batch size. The schedule tiles the 
