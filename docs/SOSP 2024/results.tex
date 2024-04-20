@@ -1,6 +1,24 @@
 \section{Experimental Evaluation}
 \label{sec:results}
 
+\begin{figure*}[htb]
+  \begin{subfigure}[t]{.32\linewidth}
+    \includegraphics[width=\textwidth]{figures/geomean_speedup_4060_kernel_time_total_time.png}
+    \caption{\label{Fig:TBvsRAPIDSTahoe_4060_Speedup}Speedup vs batch size.}      
+  \end{subfigure}
+  \begin{subfigure}[t]{.32\linewidth}
+    \includegraphics[width=\textwidth]{figures/speedup_bar_graph_1024.png}
+    \caption{\label{Fig:KernelTimeIndividualBenchmarks4060a} Batch size 1024.}
+  \end{subfigure}
+  \begin{subfigure}[t]{.32\linewidth}
+    \includegraphics[width=\textwidth]{figures/speedup_bar_graph_8192.png}
+    \caption{\label{Fig:KernelTimeIndividualBenchmarks4060b} Batch size 8192.}
+  \end{subfigure}
+  % \hfill
+  \caption{The first graph shows kernel and total time speedup of \Treebeard{} over RAPIDS and Tahoe (geomean over real-world 
+  benchmarks) across batch sizes on NVIDIA RTX 4060. The bar graphs shows the kernel time speedup of \Treebeard{} per benchmark. Numbers on the bars are inference times per sample in $\mu$s for RAPIDS and Tahoe.}
+\end{figure*}
+
 We evaluate \Treebeard{} on four different target processors, a low resource NVIDIA T400 GPU with 2GB RAM, a medium-tier NVIDIA RTX 4060 GPU with 8GB RAM, a large AMD MI210 GPU with 64GB RAM, and an 
 Intel Core i9 CPU  with 16 virtual cores and 128 GB RAM. We compare \Treebeard{} with 
 four other systems, NVIDIA RAPIDS\cite{RAPIDS} v23.10, Tahoe\cite{Tahoe}, XGBoost\cite{XGBoost}
@@ -33,25 +51,6 @@ Compared to RAPIDS, \Treebeard{} is about $4\times$ faster at batch size 512. Th
 with batch size from 512---4096 as RAPIDS is optimized for larger batches. \Treebeard{} is still consistently faster by $1.5-2\times$ all the way up to a very large batch size of $16k$. 
 The plot also shows that the speedups are significant even when the overhead of data transfer to and from the GPU
 is included. They are lower than kernel time speedup as both systems have a constant additional transfer overhead.
-
-\begin{figure*}[htb]
-    \begin{subfigure}[t]{.32\linewidth}
-      \includegraphics[width=\textwidth]{figures/geomean_speedup_4060_kernel_time_total_time.png}
-      \caption{\label{Fig:TBvsRAPIDSTahoe_4060_Speedup}Speedup vs batch size.}      
-    \end{subfigure}
-    \begin{subfigure}[t]{.32\linewidth}
-      \includegraphics[width=\textwidth]{figures/speedup_bar_graph_1024.png}
-      \caption{\label{Fig:KernelTimeIndividualBenchmarks4060a} Batch size 1024.}
-    \end{subfigure}
-    \begin{subfigure}[t]{.32\linewidth}
-      \includegraphics[width=\textwidth]{figures/speedup_bar_graph_8192.png}
-      \caption{\label{Fig:KernelTimeIndividualBenchmarks4060b} Batch size 8192.}
-    \end{subfigure}
-    % \hfill
-    \caption{The first graph shows kernel and total time speedup of \Treebeard{} over RAPIDS and Tahoe (geomean over real-world 
-    benchmarks) across batch sizes on NVIDIA RTX 4060. The bar graphs shows the kernel time speedup of \Treebeard{} per benchmark. Numbers on the bars are inference times per sample in $\mu$s for RAPIDS and Tahoe.}
-\end{figure*}
-
 
 % \begin{figure}[htb]
 %   \centering
@@ -112,6 +111,31 @@ with 26K trees.
   }
 \end{figure}
 
+\begin{figure*}[h]
+  \begin{minipage}[t]{.3\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/geomean_speedup_T400_kernel_time.png}
+    \caption{Speedup of \Treebeard{} over RAPIDS and Tahoe (geomean over real-world 
+    benchmarks) across batch sizes on NVIDIA T400.}
+    \label{Fig:TBvsRAPIDSTahoe_T400_Speedup}
+  \end{minipage}
+  \hspace{0.5cm}
+  \begin{minipage}[t]{.3\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/speedup_vs_norm_time_line_graph_4060.png}
+    \caption{Slowdown of heuristic schedule vs best schedule on NVIDIA RTX 4060 and 
+    heuristic schedule exploration time normalized w.r.t full schedule exploration time.}
+    \label{Fig:HeuristicVsFullExplore_Speedup}
+  \end{minipage}
+  \hspace{0.5cm}
+  \begin{minipage}[t]{.3\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/geomean_speedup_T400_4060_vs_T400_vs_MI2160.png}
+    \caption{Geomean speedup of using a hardware specific schedule on NVIDIA T400 and AMD MI210 over the best schedule from a different hardware (NVIDIA RTX 4060).}
+    \label{Fig:AutotuningSpeedupvs4060Sched}
+  \end{minipage}
+  \end{figure*}
+  
 \subsubsection*{Utility of Schedule Constructs}
 A detailed analysis of the generated schedules indicate that caching, in-memory representation 
 and reduction optimizations are crucial for performance. We observe that all three representations 
@@ -163,31 +187,6 @@ There is a much larger variation in performance on MI120. For example,
 the geomean speedup over all benchmarks is 1.5$\times$ at batch size 16k (maxiumum 2$\times$ for the \op{letters} benchmark).
 In conclusion, schedules found on one GPU do not carry over to other GPUs and often result in sub-optimal performance.
 It is necessary tune schedules on each target to achieve the best performance.
-
-\begin{figure*}[htb]
-\begin{minipage}[t]{.3\linewidth}
-  \centering
-  \includegraphics[width=\linewidth]{figures/geomean_speedup_T400_kernel_time.png}
-  \caption{Speedup of \Treebeard{} over RAPIDS and Tahoe (geomean over real-world 
-  benchmarks) across batch sizes on NVIDIA T400.}
-  \label{Fig:TBvsRAPIDSTahoe_T400_Speedup}
-\end{minipage}
-\hspace{0.5cm}
-\begin{minipage}[t]{.3\linewidth}
-  \centering
-  \includegraphics[width=\linewidth]{figures/speedup_vs_norm_time_line_graph_4060.png}
-  \caption{Slowdown of heuristic schedule vs best schedule on NVIDIA RTX 4060 and 
-  heuristic schedule exploration time normalized w.r.t full schedule exploration time.}
-  \label{Fig:HeuristicVsFullExplore_Speedup}
-\end{minipage}
-\hspace{0.5cm}
-\begin{minipage}[t]{.3\linewidth}
-  \centering
-  \includegraphics[width=\linewidth]{figures/geomean_speedup_T400_4060_vs_T400_vs_MI2160.png}
-  \caption{Geomean speedup of using a hardware specific schedule on NVIDIA T400 and AMD MI210 over the best schedule from a different hardware (NVIDIA RTX 4060).}
-  \label{Fig:AutotuningSpeedupvs4060Sched}
-\end{minipage}
-\end{figure*}
 
 \subsection{CPU Improvements}
 The enhancements made to the compiler enable \Treebeard{} to explore additional schedules on the CPU
