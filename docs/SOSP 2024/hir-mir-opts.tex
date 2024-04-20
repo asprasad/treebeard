@@ -15,14 +15,14 @@ Figure \ref{Fig:CompilerStructure} shows the structure of the \Treebeard{} compi
 The inference computation is lowered through three intermediate representations
 -- high-level IR (HIR), mid-level IR (MIR) and low-level IR (LIR). The LIR is
 finally lowered to LLVM and then JIT'ed to the specified target processor. 
-\Treebeard{} is built using the open-source \TreebeardOLD{} infrastructure~\cite{Treebeard}.
+\Treebeard{} is built using the open-source \TreebeardOLD{} compiler~\cite{Treebeard}
 % Since the \TreebeardOLD{} infrastructure was originally designed to target CPUs,
 % significant extensions were required to support schedule-guided compilation for CPUs and GPUs. 
-The \TreebeardOLD{} infrastructure targets CPUs.
-It lacks a scheduling language and does not support generating code for 
+that targets CPUs.
+\TreebeardOLD{} lacks a scheduling language and does not support code generation for 
 different implementation strategies. We enhance \TreebeardOLD{}  
 to support schedule-guided compilation for CPUs and GPUs.
-The parts \Treebeard{} that are new or significantly different compared to \TreebeardOLD{}
+The parts of \Treebeard{} that are new or significantly different compared to \TreebeardOLD{}
 are shown as shaded boxes in Figure \ref{Fig:CompilerStructure}.
 % However, it implements several optimizations on the HIR and MIR that 
 % can be leveraged across target processors and we find that some these 
@@ -42,7 +42,7 @@ are shown as shaded boxes in Figure \ref{Fig:CompilerStructure}.
 Table \ref{Tab:IRSpecification} lists the operations in the three IRs. 
 In HIR, the model is represented as a collection of binary trees. This abstraction
 allows the implementation of optimizations that require the manipulation of the model
-or its constituent trees. We extend the \TreebeardOLD{} infrastructure with loop rewrites on 
+or its constituent trees. We extend \TreebeardOLD{} with loop rewrites on 
 the HIR that are implemented through the scheduling language (Section \ref{sec:schedule}).
 The \emph{schedule} is implemented as an MLIR attribute on the \op{predictEnsemble} operation.
 We use this object to implement the automatic scheduling described in Section \ref{sec:exploring}. 
