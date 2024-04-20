@@ -29,7 +29,7 @@ When the schedule specifies that the tree walks should be unrolled,
 (\circled{B} in Figure~\ref{Fig:HIRExample}). 
 The concrete implementation of this schedule (in \Treebeard{}'s IR) 
 is as shown in Figure \ref{fig:schedulea}\footnote{We do not show 
-the full MLIR listing of the IR. Instead, we present inference routines 
+the full listing of the IR. Instead, we present inference routines 
 as pseudo-code for the sake of clarity.}.
 This schedule is ideally suited for a single-core CPU. It maximizes 
 the reuse of trees in the L1 cache. However, it doesn't exploit  
