@@ -15,10 +15,10 @@ Figure \ref{Fig:CompilerStructure} shows the structure of the \Treebeard{} compi
 The inference computation is lowered through three intermediate representations
 -- high-level IR (HIR), mid-level IR (MIR) and low-level IR (LIR). The LIR is
 finally lowered to LLVM and then JIT'ed to the specified target processor. 
-\Treebeard{} is built using the open-source \TreebeardOLD{} compiler~\cite{Treebeard}
+\Treebeard{} extends the open-source \TreebeardOLD{} compiler~\cite{Treebeard}.
 % Since the \TreebeardOLD{} infrastructure was originally designed to target CPUs,
 % significant extensions were required to support schedule-guided compilation for CPUs and GPUs. 
-that targets CPUs.
+The \TreebeardOLD{} compiler is built using MLIR~\cite{MLIR} and generates efficient CPU code for decisions tree inference.
 \TreebeardOLD{} lacks a scheduling language and does not support code generation for 
 different implementation strategies. We enhance \TreebeardOLD{}  
 to support schedule-guided compilation for CPUs and GPUs.
