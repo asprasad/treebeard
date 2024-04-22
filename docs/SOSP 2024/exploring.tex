@@ -22,9 +22,11 @@ Section \ref{sec:schedule} is unbounded.
 % on a specific hardware, additional tools are needed to help search for a 
 % high-performance schedule. 
 Additional tools are required to help search for a high-performance schedule.
-We anticipate that even for the most complex models, 
+Like with other schedule-guided ML compilers~\cite{TVM},
+we expect schedule exploration will be performed offline (before a model deployment),
+% But still, even for the most complex models, 
 % one would like to spend at most a few minutes doing this search.
-spending more than a few minutes on this search is not acceptable.
+but spending more than a few minutes on this search is likely not acceptable.
 We propose a set of heuristics to guide the search for a good schedule 
 and meet this goal. These heuristics work by first defining a 
 bounded search space and then pruning this search space further
@@ -34,7 +36,7 @@ based on the batch size and model characteristics.
 We bound the space using a few meta-parameters that together define 
 the primitives used to construct a schedule. We do so while making sure 
 that the space (at-least) covers the known strategies published in prior work.
-Specifically, we use 4 numeric parameters, 4 boolean parameters and one ternary parameter as listed in Table \ref{tab:schedparams}.
+Specifically, we use the 9 parameters listed in Table \ref{tab:schedparams}.
 We picked the specific values listed through experimentation.
 %Note that even this template has a large number ($1728$) of schedules, and requires further pruning as we discuss later.
 The first three numeric parameters assign a configurable number of rows to each 

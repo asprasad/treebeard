@@ -25,8 +25,8 @@ In comparison, \Treebeard{} explores a much larger set of implementation options
 in-memory representations for models and picks the best.
 % In contrast, \Treebeard{} is a compiler that can explore a much larger
 % optimization space and can generate code that is tailored to a specific model.
-As shown in Section \ref{sec:results}, \Treebeard{} outperforms
-these systems by a significant margin.
+As shown in Section \ref{sec:results}, \Treebeard{} outperforms these systems
+by a significant margin.
 % Finally, all of Tahoe's optimizations are designed to address GPU specific problems. 
 % For example, it uses an elaborate and opaque heuristic based on locality sensitive hashing 
 % to coalesce accesses to the GPU global memory. We believe that the tree tiling
@@ -64,12 +64,12 @@ to pick one of a few predefined parallelization and vectorization strategies.
 Other systems that hide dependency stalls by interleaving tree walks\cite{VPred},
 implement optimized algorithms for tree inference\cite{QuickScorer, QuickScorer1}
 and improve cache performance of decision tree ensembles on CPUs\cite{CacheConscious1, CacheConscious2}
-have been proposed in prior work.
+have been proposed.
 Some systems have been proposed to parallelize decision tree training 
 on CPUs and GPUs\cite{Jansson2014gpuRFAG, Nasridinov2013DecisionTC}.
 However, none of these systems provide portable performance across different target machines.
 While the specifics may vary, \Treebeard{} supports retargetable compiler optimizations that 
-achieve similar results as techniques in these systems.
+achieve similar results. % as techniques in these systems.
 
 \emph{Other Systems and Techniques:} Ren et. al.~\cite{PortableVM} design an
 intermediate language and a virtual machine to enable vector execution of decision tree
@@ -145,18 +145,18 @@ across targets by implementing a scheduling language for decision tree inference
 % optimization opportunities.
 
 \emph{Reductions:} CUB\cite{CUB} and Thrust\cite{Thrust} are libraries 
-that implement high-performance parallel reductions on GPUs. 
+that implement reductions on GPUs. 
 However, it is not possible to fuse these functions with other computations  
 as required in \Treebeard{}. Reddy et. al.~\cite{ChandanReduction}
 describe language constructs in {\sc {Pencil}}~\cite{Pencil}
-to express reductions and to represent and optimize them using the polyhedral 
+to express reductions and optimize them using the polyhedral 
 framework. 
 % It is not clear how these techniques can be fused with 
 % other computations in arbitrary loop nests as required in \Treebeard{}.
 %Additionally, 
 Their system does not express the hierarchical nature of 
 reductions and also only targets GPUs. Suriana et. al.~\cite{HalideReductions}
-extend Halide to add support for factoring reductions in the Halide 
+extend Halide to add support for reductions in the Halide 
 scheduling language and to synthesize reduction operators. De Gonzalo 
 et. al.~\cite{TangramReduction} describe a system based on Tangram 
 that composes several partial reduction implementations into different 
