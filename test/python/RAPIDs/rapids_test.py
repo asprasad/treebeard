@@ -157,9 +157,9 @@ def get_num_repeats(model_name : str):
 #############################################################
 
 def RunSingleTest_XGB(modelJSONPath, csvPath, num_repeats) -> float:
-  params = {"predictor": "gpu_predictor"}
-  booster = xgb.Booster(model_file=modelJSONPath, params=params)
-  # booster.set_param({"predictor": "gpu_predictor", "device":"cuda:0"})
+  # params = {"predictor": "gpu_predictor"}
+  booster = xgb.Booster(model_file=modelJSONPath)
+  booster.set_param({"predictor": "gpu_predictor", "device":"cuda:0"})
 
   num_batches, inputs = construct_inputs(csvPath, batchSize)
 
@@ -423,11 +423,11 @@ if __name__ == "__main__":
   num_trials = 5
   # benchmarks = ["abalone", "airline", "airline-ohe", "covtype", "higgs", "letters", "year_prediction_msd"]
   # benchmarks = ["letters"]
-  batch_sizes = [16384]
+  # batch_sizes = [16384]
 
   benchmarks = ["abalone", "airline", "airline-ohe", "covtype", "epsilon", "higgs", "letters", "year_prediction_msd"]
   # batch_sizes = [4096, 8192] #, 16384]
-  # batch_sizes = [256, 512, 1024, 2048]
+  batch_sizes = [256, 512]
   # batch_sizes = [256, 512, 1024, 2048, 4096, 8192] #, 16384]
   xgb_total_times = []
   rapids_total_times = []

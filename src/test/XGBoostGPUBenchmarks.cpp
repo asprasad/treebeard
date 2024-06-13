@@ -54,11 +54,11 @@ std::map<std::string, int32_t> explorationTimeMap;
 // std::vector<int32_t> rowsPerTB{8, 16, 32, 64, 128, 256, 512, 1024, 2048};
 // std::vector<int32_t> rowsPerThread{1, 2, 4, 8, 16, 32, 64, 128, 256};
 
-std::vector<int32_t> batchSizes{4096, 8192, 16384};
+std::vector<int32_t> batchSizes{4096}; //, 8192, 16384};
 // std::vector<int32_t> batchSizes{512, 1024, 2048};
-std::vector<int32_t> numTreeThreads{1, 2, 10, 20, 50}; //, 100};
-std::vector<int32_t> rowsPerTB{2, 4, 8, 32, 64, 256};  //, 512};
-std::vector<int32_t> rowsPerThread{1, 2};              //, 4};
+std::vector<int32_t> numTreeThreads{/*1,*/ 2, 10, 20, 50}; //, 100};
+std::vector<int32_t> rowsPerTB{/*2, 4,*/ 8, 32, 64, 256};  //, 512};
+std::vector<int32_t> rowsPerThread{1};                     //, 2, 4};
 std::vector<int32_t> interleaveDepth{2, 4};
 
 // TODO_Ashwin the compiler is not currently equiped to handle tile size 16!
@@ -153,6 +153,8 @@ void RunAutoScheduleBenchmarks(const std::string &modelName,
 
   mlir::decisionforest::numberOfKernelRuns =
       getNumRepeats(modelName, batchSize);
+  // NUM_RUNS = getNumRepeats(modelName, batchSize);
+
   MeasureExplorationTime measureTime(modelName);
 
   BenchmarkIfNoSharedMemOverflow<ThresholdType, ReturnType, false, false,
@@ -981,7 +983,7 @@ void RunAllCustomScheduleBenchmarks() {
 
 void RunXGBoostGPUBenchmarks() {
   mlir::decisionforest::measureGpuKernelTime = true;
-  mlir::decisionforest::numberOfKernelRuns = NUM_RUNS;
+  // mlir::decisionforest::numberOfKernelRuns = NUM_RUNS;
   RunAllAutoScheduleXGBoostGPUBenchmarks();
   // RunAllCustomScheduleBenchmarks();
   // std::vector<int32_t> batchSizes{256, 512, 1024, 4096, 8192, 16384};
