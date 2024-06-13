@@ -155,13 +155,14 @@ def ConstructCompilerOptionsList(tile_size, pipeline_width):
   return optionsList
 
 def ConstructTreeParallelCompilerOptionsList(tile_size, pipeline_width):
+  num_par_tree_sets = 10
   invertLoopsTileSize8Options = treebeard.CompilerOptions(batchSize, tile_size)
   invertLoopsTileSize8Options.SetPipelineWidth(pipeline_width)
   invertLoopsTileSize8Options.SetReorderTreesByDepth(True)
   invertLoopsTileSize8Options.SetMakeAllLeavesSameDepth(1)
   if run_parallel:
-    invertLoopsTileSize8Options.SetNumberOfCores(int(num_cores/4))
-    invertLoopsTileSize8Options.SetNumberOfParallelTreeBatches(4)
+    # invertLoopsTileSize8Options.SetNumberOfCores(int(num_cores/num_par_tree_sets))
+    invertLoopsTileSize8Options.SetNumberOfParallelTreeBatches(num_par_tree_sets)
 
   invertLoopsTileSize8MulticlassOptions = treebeard.CompilerOptions(batchSize, tile_size)
   invertLoopsTileSize8MulticlassOptions.SetReturnTypeWidth(8)
@@ -170,8 +171,8 @@ def ConstructTreeParallelCompilerOptionsList(tile_size, pipeline_width):
   invertLoopsTileSize8MulticlassOptions.SetReorderTreesByDepth(True)
   invertLoopsTileSize8MulticlassOptions.SetMakeAllLeavesSameDepth(1)
   if run_parallel:
-    invertLoopsTileSize8MulticlassOptions.SetNumberOfCores(int(num_cores/4))
-    invertLoopsTileSize8MulticlassOptions.SetNumberOfParallelTreeBatches(4)
+    # invertLoopsTileSize8MulticlassOptions.SetNumberOfCores(int(num_cores/num_par_tree_sets))
+    invertLoopsTileSize8MulticlassOptions.SetNumberOfParallelTreeBatches(num_par_tree_sets)
 
   optionsList = []
   for model in modelNames:
@@ -262,7 +263,7 @@ def run_benchmarks_for_several_configs():
 
 # batchSizes = [64, 128, 256, 512, 1024, 2000]
 batchSize = -1
-batchSizes = [64]
+batchSizes = [32, 64]
 
 def run_benchmarks(benchmark_func):
   global batchSize

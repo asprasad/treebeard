@@ -48,6 +48,28 @@ def RunParallelTests():
 
   RunAllTests("one-tree-par-4cores", invertLoopsTileSize8Options, invertLoopsTileSize8MulticlassOptions, RunSingleTestJIT)
 
+def RunTreeParallelTests():
+  batchSize = 200
+  tile_size = 8
+  pipeline_width = 8
+  invertLoopsTileSize8Options = treebeard.CompilerOptions(batchSize, tile_size)
+  invertLoopsTileSize8Options.SetPipelineWidth(pipeline_width)
+  invertLoopsTileSize8Options.SetReorderTreesByDepth(True)
+  invertLoopsTileSize8Options.SetMakeAllLeavesSameDepth(1)
+  # invertLoopsTileSize8Options.SetNumberOfCores(num_cores)
+  invertLoopsTileSize8Options.SetNumberOfParallelTreeBatches(10)
+
+  invertLoopsTileSize8MulticlassOptions = treebeard.CompilerOptions(batchSize, tile_size)
+  invertLoopsTileSize8MulticlassOptions.SetReturnTypeWidth(8)
+  invertLoopsTileSize8MulticlassOptions.SetReturnTypeIsFloatType(False)
+  invertLoopsTileSize8MulticlassOptions.SetPipelineWidth(pipeline_width)
+  invertLoopsTileSize8MulticlassOptions.SetReorderTreesByDepth(True)
+  invertLoopsTileSize8MulticlassOptions.SetMakeAllLeavesSameDepth(1)
+  # invertLoopsTileSize8MulticlassOptions.SetNumberOfCores(num_cores)
+  invertLoopsTileSize8MulticlassOptions.SetNumberOfParallelTreeBatches(10)
+
+  RunAllTests("tree-par-10sets", invertLoopsTileSize8Options, invertLoopsTileSize8MulticlassOptions, RunSingleTestJIT)
+
 def RunProbBasedTilingTests():
   probTilingOptions = treebeard.CompilerOptions(200, 8)
   probTilingOptions.SetTilingType(2) # prob tiling
@@ -223,6 +245,7 @@ def run_all_tests():
   treebeard.SetEnableSparseRepresentation(1)
   RunPipeliningTests()
   RunParallelTests()
+  RunTreeParallelTests()
   treebeard.SetEnableSparseRepresentation(0)
 
 if __name__ == "__main__":

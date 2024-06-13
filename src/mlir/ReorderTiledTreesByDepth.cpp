@@ -419,7 +419,7 @@ struct SplitTreeLoopsByTreeDepthPattern : public RewritePattern {
                      m_parallelTreeBatches);
       schedule->Parallel(tree_parallel);
       schedule->Reorder({&tree_parallel, &tree_serial, batchIndexPtr});
-      schedule->AtomicReduce(tree_parallel);
+      // schedule->AtomicReduce(tree_parallel);
 
       if (doesTreeLoopNeedSpecialization(forest, m_parallelTreeBatches)) {
         decisionforest::Schedule::IterationSpecializationInfo
