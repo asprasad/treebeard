@@ -1,10 +1,8 @@
 Q1: How does SilvanForge’s decision-forest-based ‘schedule space’ and scheduling language differ from prior languages for other domains, e.g., TVM’s? For instance, what operators are new to SilvanForge?
 
-The novelty of SivanForge's scheduling language lies in the non-trivial realization that a suitably enhaced loop centric scheduling language elegantly encapsulates the optimization space for an irregular application like decision tree inference. SilvanForge’s scheduling language naturally adds scheduling primitives that are specific to decision tree inference (to represent walk interleaving, walk unrolling, reductions etc.) which cannot be supported with existing scheduling languages. 
+One of our paper's core contributions is identifying that a schedule space exists for decision tree inference, showing that there is a huge variation in performance depending on which schedule is picked and  then designing a scheduling language that cleanly encapsulates this space on both CPUs and GPUs. To the best of our knowledge, ours is the first work to study the design of a scheduling language for the domain of decision tree inference. While several prior works proposed various techniques to optimize decision tree inference, all of them (RAPIDs, Tahoe, XGBoost etc) use a fixed set of techniques. In contrast, SilvanForge’s scheduling language is general enough to represent the specific optimizations that are used in several previous systems and therefore unifies several existing techniques. 
 
-This is similar to how TVM provided tensor specific primitives, namely tensorization and cooperative data loading. Importantly, we note that none of the several prior systems that address decision tree inference (RAPIDs, Tahoe, Hummingbird, XGBoost etc) have a scheduling language. In contrast, SilvanForge’s scheduling language is general enough to represent the specific optimizations that are used in several previous systems and therefore unifies several existing techniques. We believe that the design of SilvanForge's scheduling language is conceptually satisfying because it shows that extending a core set of loop transformation primitives with a few domain specific primitives can capture the optimization space of a complex application like decision tree inference (similar to how TVM extensions to the scheduling language were sufficient to compile tensor based applications).
-
-TODO: Can we say the core contribution is the realization that a schedule space exists for decision tree inference, showing that there is huge variation in performance and then realizing that a scheduling language is the right way to capture this space?
+SilvanForge's scheduling language is novel because of the non-obvious realization that a suitably enhaced loop centric scheduling language elegantly encapsulates the optimization space for an irregular application like decision tree inference. SilvanForge’s scheduling language naturally adds scheduling primitives that are specific to decision tree inference (to represent walk interleaving, walk unrolling, reductions etc.) which cannot be supported with existing scheduling languages. This is reminiscent of how TVM provided tensor specific primitives, namely tensorization and cooperative data loading.  We believe that the design of SilvanForge's scheduling language is conceptually satisfying because it shows that extending a core set of loop transformation primitives with a few domain specific primitives can capture the optimization space of a complex application like decision tree inference (similar to how TVM extensions to the scheduling language were sufficient to compile tensor based applications).
 
 Q2: Which SilvanForge optimizations are least likely to be supported by PyTorch (in the context of a decision forest compiled by modern Hummingbird), and why?
 * Mention how tensor representations are not a suitable abstraction to express all the transformations that SF can do
@@ -13,20 +11,24 @@ Q2: Which SilvanForge optimizations are least likely to be supported by PyTorch 
 * HB is hard-coded to use one kind of representation which is not ideal for all models and target machines. 
 * TODO should we also say how TB cannot match up on the CPU? And focus on how SF improves even on TB with the schedule? 
 
-Q: You claim that SilvanForge decouples schedule from the backend architecture  but it seems both of these would change substantially with CPU? What fraction of your compiler changes are 'portable' across platforms, and how well does the CPU search heuristic work?
+RB Q: You claim that SilvanForge decouples schedule from the backend architecture  but it seems both of these would change substantially with CPU? What fraction of your compiler changes are 'portable' across platforms, and how well does the CPU search heuristic work?
 A: The scheduling language, HIR and MIR parts of the compiler are fully shared. Most of the backend is shared as well. Maybe a good idea to talk about how we share low level code gen between CPU and GPU? 
 We found that a search heuristic is not needed on the GPU. Exploring only a few configurations is sufficient to find the best schedule. 
 
-Q: How much do different optimizations contribute to overall performance of code generated by SILVANFORGE?
+RC Q: Although I wonder if at least some of the explanation is that so many people have moved on from decision tree models to the hot new generative thing.
+
+RC Q: It's really surprising to me that MLIR doesn't support reductions well -- they seem pretty fundamental to many kernels that other compilers targeting MLIR would see. But this section doesn't really explain if there's anything specific to the decision tree world here, or if this is just a general-purpose "add reductions to MLIR" thing. Either is probably interesting, but I didn't get enough context from the paper to know the answer.
+
+RE Q: How much do different optimizations contribute to overall performance of code generated by SILVANFORGE?
 A: TODO Mention what we've said about perf improvements due to shared reduction and row caching? 
 
-Q: There might be other metrics besides kernel time speedup. For instance, the memory footprint of the resulting model.
+RE Q: There might be other metrics besides kernel time speedup. For instance, the memory footprint of the resulting model.
 While we did not evaluate such metrics, it should not be difficult to optimize for any other such metrics. We believe that the scheduling language is expressive enough to optimize for other metrics.
 
-Q: It's really surprising to me that MLIR doesn't support reductions well -- they seem pretty fundamental to many kernels that other compilers targeting MLIR would see. But this section doesn't really explain if there's anything specific to the decision tree world here, or if this is just a general-purpose "add reductions to MLIR" thing. Either is probably interesting, but I didn't get enough context from the paper to know the answer.
+RD Q: ...speedup diminishes on large batch sizes.
 
-Q: Specifically, its speedup diminishes on large batch sizes.
-
+RC Q:  It would be helpful to see results at batch size 1, for example, even if they're not great.
+TODO: Should we say that we would use CPUs for such small batch sizes?
 -------------------------------------------------------------------------
 
 Reviewer A
