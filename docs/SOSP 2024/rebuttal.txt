@@ -16,6 +16,9 @@ The above discussion brings up a more practical system level problem. Expressing
 
 These views are partially validated by experiments in previous literature where, on CPUs, a direct comparison between Treebeard (that performs optimizations like unrolling and interleaving) and Hummingbird reveals an order-of-magnitude performance gap. We expect that a future comparison of Hummingbird and SilvanForge on GPUs will show similar results.
 
+Rev#D Practical applicability.
+There is interest from industry practitioners to adopt SilvanForge based on the results we demonstrate. We gather that there are a wide variety of application specific use-cases where maximizing performance at both low and high batch sizes is important. 
+
 Rev#B: Are your compiler changes 'portable' across platforms?
 The scheduling language, high-level IR and mid-level IR and optimizations on them are fully shared. The same scheduling language is used to specify the structure of inference code on CPUs and GPUs. When a schedule doesn't mark any loops as targetting a GPU dimension, CPU code is generated. The compilation pipelines diverge starting at the lowering of MIR to low-level IR. Even so, we are able to share significant amount of code between the CPU and GPU lowering because of how in-memory representations are abstracted (Section 6).
 
