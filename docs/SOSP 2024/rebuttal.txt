@@ -14,7 +14,7 @@ The tensor compiler cannot perform the required caching and reduction optimizati
 
 The above discussion brings up a more practical system level problem. Expressing the tree inference using PyTorch means that the decision tree compiler has no control over lower level details like shared memory, thread synchronization, etc. Kernels are generated dynamically and there is no scope for controlling how these kernels are optimized. Systems like TorchDynamo and TorchInductor do not provide this level of control to the PyTorch program. 
 
-These views are partially validated by experiments in previous literature where, on CPUs, a direct comparison between Treebeard (that performs optimizations like unrolling and interleaving) and Hummingbird reveals an order-of-magnitude performance gap. 
+These views are partially validated by experiments in previous literature where, on CPUs, a direct comparison between Treebeard (that performs optimizations like unrolling and interleaving) and Hummingbird reveals an order-of-magnitude performance gap. We expect that a future comparison of Hummingbird and SilvanForge on GPUs will show similar results.
 
 Rev#B: Are your compiler changes 'portable' across platforms?
 The scheduling language, high-level IR and mid-level IR and optimizations on them are fully shared. The same scheduling language is used to specify the structure of inference code on CPUs and GPUs. When a schedule doesn't mark any loops as targetting a GPU dimension, CPU code is generated. The compilation pipelines diverge starting at the lowering of MIR to low-level IR. Even so, we are able to share significant amount of code between the CPU and GPU lowering because of how in-memory representations are abstracted (Section 6).
