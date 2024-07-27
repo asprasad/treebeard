@@ -8,7 +8,7 @@ We believe that the design of SilvanForge's scheduling language is conceptually 
 
 _Q2: Comparison with Hummingbird, PyTorch etc._
 
-Hummingbird translates decision tree inference into a series of tensor operations to use PyTorch. While this enables re-targetability, the tensor abstraction is insufficient to express all SilvanForge optimizations. The generated tensor code performs all tree walks in parallel, stores the individual tree predictions in a tensor and finally performs a reduction. Hummingbird performs a limited form of tree-walk unrolling (it pads all trees to the same depth and unrolls walks), which is not always useful (Section 2). However, it is very difficult to express other SilvanForge optimizations including tree walk interleaving, caching and reduction optimizations, using tensor operations. 
+Hummingbird translates decision tree inference into a series of tensor operations to use PyTorch. While this enables re-targetability, the tensor abstraction is insufficient to express all SilvanForge optimizations. In the latest Hummingbird version, the generated tensor code performs all tree walks in parallel, stores the individual tree predictions in a tensor and finally performs a reduction. Hummingbird performs a limited form of tree-walk unrolling (it pads all trees to the same depth and unrolls walks), which is not always useful (Section 2). However, it is very difficult to express other SilvanForge optimizations including tree walk interleaving, caching and reduction optimizations, using tensor operations. 
 
 Further, using tensor operations to represent tree traversals obscures the computation's semantics, making it difficult for the tensor compiler to perform these optimizations. Consider the example of walk-interleaving. SilvanForge’s tree-walk interleaving relies on unrolling only the trees whose walks are being interleaved to the same depth. It also reorders trees so that trees with the same depth are processed together. While it maybe possible to extend tensor compilers to perform interleaving, it will be very hard to mimic what SilvanForge does. Current tensor compilers optimize dense matrix computation and do not have the optimizations necessary to interleave instructions across iterations. Even if this support is added, picking the right tree-walks (same tree different rows, different trees same row etc.) to interleave would be a non-trivial problem.  
 
@@ -20,7 +20,7 @@ These views are partially validated by experiments in previous literature where,
 
 _Rev#D: Practical applicability._
 
-Industry practitioners are interested in adopting SilvanForge based on the results we demonstrate. We have an ongoing discussion with relevant stakeholders. We gather that there are a wide variety of application-specific use-cases where maximizing performance at both low and high batch sizes is important. 
+We are currently engaging with industry practitioners and library code owners who are keen to adopt SilvanForge, inspired by the promising results we’ve demonstrated. Their requirements include maximizing performance across a range of batch sizes, as their application use-cases vary. 
 
 _Rev#A: Benchmarks._
 
