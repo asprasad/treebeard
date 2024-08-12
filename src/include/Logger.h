@@ -4,15 +4,13 @@
 #include <iostream>
 #include <string>
 
-namespace TreeBeard
-{
-namespace Logging
-{
+namespace TreeBeard {
+namespace Logging {
 
 struct LoggingOptions {
   bool logGenCodeStats;
   bool logTreeStats;
-
+  bool logGeneralMessages;
   LoggingOptions();
   bool ShouldEnableLogging();
 };
@@ -20,12 +18,12 @@ struct LoggingOptions {
 extern LoggingOptions loggingOptions;
 extern bool loggingEnabled;
 
-inline void Log(const std::string& message) {
+inline void Log(const std::string &message) {
   if (loggingEnabled)
     std::cout << message << std::endl;
 }
 
-} // Logging
-} // TreeBeard
+} // namespace Logging
+} // namespace TreeBeard
 
 #endif // _LOGGER_H_

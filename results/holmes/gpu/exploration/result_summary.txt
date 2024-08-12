@@ -1,0 +1,359 @@
+Holmes
+-------------------------------
+PADDED TREES
+
+treepar-cacherow-64-4-10	abalone_xgb_model_save.json	gpu_array	4096	FALSE	0.266055	0.249092
+treepar-cacherow-256-4-2	abalone_xgb_model_save.json	gpu_sparse	8192	FALSE	0.254564	0.245924
+treepar-cacherow-64-2-2	abalone_xgb_model_save.json	gpu_array	16384	FALSE	0.259351	0.25225
+
+treepar-cacherow-32-1-2	airline_xgb_model_save.json	gpu_reorg	4096	FALSE	0.0606519	0.0441772
+treepar-cacherow-256-4-2	airline_xgb_model_save.json	gpu_sparse	8192	FALSE	0.0493066	0.0354028
+treepar-cacherow-256-2-2	airline_xgb_model_save.json	gpu_array	16384	FALSE	0.0431317	0.0316522
+
+treepar-32-1-20	airline-ohe_xgb_model_save.json	gpu_sparse	4096	FALSE	2.63643	2.32964
+treepar-32-1-20	airline-ohe_xgb_model_save.json	gpu_sparse	8192	FALSE	2.70521	2.41094
+treepar-32-1-20	airline-ohe_xgb_model_save.json	gpu_sparse	16384	FALSE	2.75262	2.45896
+
+treepar-cacherow-64-1-2	covtype_xgb_model_save.json	gpu_reorg	4096	FALSE	0.468213	0.425647
+treepar-cacherow-64-1-2	covtype_xgb_model_save.json	gpu_reorg	8192	FALSE	0.434817	0.381909
+treepar-cacherow-64-1-2	covtype_xgb_model_save.json	gpu_reorg	16384	FALSE	0.419592	0.38089
+
+treepar-32-1-20	epsilon_xgb_model_save.json	gpu_array	4096	FALSE	1.36942	0.541768
+treepar-32-1-20	epsilon_xgb_model_save.json	gpu_array	8192	FALSE	1.35879	0.537749
+treepar-32-1-20	epsilon_xgb_model_save.json	gpu_array	16384	FALSE	1.356	0.5408
+
+treepar-cacherow-64-4-10	higgs_xgb_model_save.json	gpu_array	4096	FALSE	0.07021	0.0429297
+treepar-cacherow-256-4-2	higgs_xgb_model_save.json	gpu_sparse	8192	FALSE	0.0572681	0.036748
+treepar-cacherow-256-2-2	higgs_xgb_model_save.json	gpu_array	16384	FALSE	0.0566309	0.0339978
+
+treepar-cacherow-64-4-10	year_prediction_msd_xgb_model_save.json	gpu_array	4096	FALSE	0.091748	0.0446289
+treepar-cacherow-32-1-2	year_prediction_msd_xgb_model_save.json	gpu_reorg	8192	FALSE	0.0885461	0.040127
+treepar-cacherow-64-2-2	year_prediction_msd_xgb_model_save.json	gpu_array	16384	FALSE	0.0748175	0.0329919
+
+------------------------------------------------------------------
+NO PADDING
+
+treepar-cacherow-64-4-10	abalone_xgb_model_save.json	gpu_array	4096	FALSE	0.261372	0.245078
+treepar-cacherow-256-4-2	abalone_xgb_model_save.json	gpu_array	8192	FALSE	0.234463	0.225773
+treepar-cacherow-64-2-2	abalone_xgb_model_save.json	gpu_array	16384	FALSE	0.215901	0.208511
+
+treepar-cacherow-32-1-2	airline_xgb_model_save.json	gpu_reorg	4096	FALSE	0.0596167	0.0440063
+treepar-cacherow-256-4-2	airline_xgb_model_save.json	gpu_sparse	8192	FALSE	0.0492407	0.0356836
+treepar-cacherow-256-2-2	airline_xgb_model_save.json	gpu_array	16384	FALSE	0.0444214	0.0315527
+
+treepar-cacherow-64-1-2	covtype_xgb_model_save.json	gpu_reorg	4096	FALSE	0.33593	0.296099
+treepar-cacherow-64-1-2	covtype_xgb_model_save.json	gpu_reorg	8192	FALSE	0.306011	0.259865
+treepar-cacherow-64-1-2	covtype_xgb_model_save.json	gpu_reorg	16384	FALSE	0.28525	0.249332
+
+treepar-cacherow-64-4-10	higgs_xgb_model_save.json	gpu_array	4096	FALSE	0.0686206	0.0429492
+treepar-cacherow-256-4-2	higgs_xgb_model_save.json	gpu_sparse	8192	FALSE	0.0571472	0.0369568
+treepar-cacherow-256-2-2	higgs_xgb_model_save.json	gpu_array	16384	FALSE	0.0561719	0.0338678
+
+treepar-cacherow-64-1-2	year_prediction_msd_xgb_model_save.json	gpu_reorg	8192	FALSE	0.0864905	0.0371851
+treepar-cacherow-64-2-2	year_prediction_msd_xgb_model_save.json	gpu_sparse	4096	FALSE	0.087583	0.0423779
+treepar-cacherow-64-2-2	year_prediction_msd_xgb_model_save.json	gpu_array	16384	FALSE	0.0715558	0.029715
+
+-------------------------------------
+4060
+PADDED
+SORTED BY TOTAL TIME
+-------------------------------------
+treepar-cacherow-64-2-10	abalone_xgb_model_save.json	gpu_array	4096	FALSE	0.0651709	0.0458545
+treepar-cacherow-64-1-10	abalone_xgb_model_save.json	gpu_sparse	8192	FALSE	0.055415	0.0411487
+treepar-cacherow-256-1-2	abalone_xgb_model_save.json	gpu_array	16384	FALSE	0.0435669	0.0351324
+
+treepar-64-2-10	airline_xgb_model_save.json	gpu_sparse	4096	FALSE	0.0347729	0.013999
+treepar-cacherow-32-1-2	airline_xgb_model_save.json	gpu_reorg	8192	FALSE	0.0258508	0.0114124
+treepar-cacherow-64-1-2	airline_xgb_model_save.json	gpu_array	16384	FALSE	0.0181403	0.00705872
+
+treepar-cachetreeAndRows-64-1-10	airline-ohe_xgb_model_save.json	gpu_array	4096	FALSE	0.470461	0.172454
+treepar-cachetreeAndRows-512-1-2	airline-ohe_xgb_model_save.json	gpu_array	8192	FALSE	0.379419	0.102162
+treepar-cachetreeAndRows-512-2-2	airline-ohe_xgb_model_save.json	gpu_array	16384	FALSE	0.343506	0.0739166
+
+treepar-cacherow-64-1-2	covtype_xgb_model_save.json	gpu_reorg	4096	FALSE	0.150632	0.108784
+treepar-cacherow-64-1-2	covtype_xgb_model_save.json	gpu_reorg	8192	FALSE	0.123447	0.0793127
+treepar-cacherow-64-1-2	covtype_xgb_model_save.json	gpu_array	16384	FALSE	0.0879236	0.0537866
+
+treepar-cachetreeAndRows-64-1-10	epsilon_xgb_model_save.json	gpu_sparse	4096	FALSE	0.822468	0.0403467
+onetree-cachetreeAndRow-512-1	epsilon_xgb_model_save.json	gpu_array	8192	FALSE	0.790463	0.0229663
+onetree-cachetreeAndRow-512-1	epsilon_xgb_model_save.json	gpu_array	16384	FALSE	0.767484	0.0149469
+
+treepar-cacherow-32-2-10	higgs_xgb_model_save.json	gpu_sparse	4096	FALSE	0.0414673	0.0160962
+treepar-cacherow-32-4-10	higgs_xgb_model_save.json	gpu_sparse	8192	FALSE	0.0328003	0.0111426
+treepar-cacherow-256-1-2	higgs_xgb_model_save.json	gpu_array	16384	FALSE	0.0284808	0.00787109
+
+treepar-cacherow-64-1-10	year_prediction_msd_xgb_model_save.json	gpu_sparse	4096	FALSE	0.0659131	0.0178418
+treepar-32-1-10	year_prediction_msd_xgb_model_save.json	gpu_sparse	8192	FALSE	0.0616895	0.0119971
+treepar-cacherow-32-2-10	year_prediction_msd_xgb_model_save.json	gpu_sparse	16384	FALSE	0.0493347	0.00783752
+------------
+4060
+PADDED
+SORTED BY TOTAL TIME
+TRY2
+------------
+treepar-cacherow-64-2-10	abalone_xgb_model_save.json	gpu_array	4096	FALSE	0.0602026	0.0454053
+treepar-cacherow-64-1-10	abalone_xgb_model_save.json	gpu_array	8192	FALSE	0.0525	0.0401282
+treepar-cacherow-256-1-2	abalone_xgb_model_save.json	gpu_array	16384	FALSE	0.042384	0.035105
+
+treepar-64-2-10	airline_xgb_model_save.json	gpu_sparse	4096	FALSE	0.0318237	0.0136963
+treepar-cacherow-64-1-2	airline_xgb_model_save.json	gpu_reorg	8192	FALSE	0.0251917	0.0118372
+treepar-cacherow-256-1-2	airline_xgb_model_save.json	gpu_array	16384	FALSE	0.0173523	0.00680908
+
+treepar-cacherow-64-4-20	airline-ohe_xgb_model_save.json	gpu_array	4096	FALSE	0.350798	0.0639844
+treepar-cacherow-32-2-20	airline-ohe_xgb_model_save.json	gpu_sparse	8192	FALSE	0.333326	0.0517151
+treepar-cacherow-256-1-2	airline-ohe_xgb_model_save.json	gpu_array	16384	FALSE	0.31545	0.0478998
+
+treepar-cacherow-64-1-2	covtype_xgb_model_save.json	gpu_reorg	4096	FALSE	0.136155	0.100059
+treepar-cacherow-64-1-2	covtype_xgb_model_save.json	gpu_reorg	8192	FALSE	0.11319	0.0722839
+treepar-cacherow-32-1-2	covtype_xgb_model_save.json	gpu_sparse	16384	FALSE	0.0860706	0.0521802
+
+treepar-cacherow-64-1-10	epsilon_xgb_model_save.json	gpu_array	4096	FALSE	0.809116	0.0282813
+treepar-cacherow-512-1-2	epsilon_xgb_model_save.json	gpu_array	8192	FALSE	0.785615	0.0193787
+treepar-cacherow-256-1-2	epsilon_xgb_model_save.json	gpu_array	16384	FALSE	0.76623	0.0121582
+
+treepar-64-2-10	higgs_xgb_model_save.json	gpu_array	4096	FALSE	0.0386499	0.0149951
+treepar-cacherow-32-1-10	higgs_xgb_model_save.json	gpu_sparse	8192	FALSE	0.0317456	0.0101111
+treepar-cacherow-32-1-2	higgs_xgb_model_save.json	gpu_sparse	16384	FALSE	0.0272229	0.00735596
+
+treepar-cacherow-64-2-10	year_prediction_msd_xgb_model_save.json	gpu_sparse	4096	FALSE	0.0628931	0.0150195
+treepar-cacherow-32-1-10	year_prediction_msd_xgb_model_save.json	gpu_sparse	8192	FALSE	0.0620032	0.0108862
+treepar-cacherow-64-1-2	year_prediction_msd_xgb_model_save.json	gpu_array	16384	FALSE	0.047998	0.00737976
+
+-------------------------------------
+4060
+PADDED
+SORTED BY KERNEL TIME
+TRY 2
+-------------------------------------
+treepar-cacherow-64-4-20	abalone_xgb_model_save.json	gpu_array	4096	FALSE	0.0674487	0.0443481 [3]
+treepar-cacherow-32-2-20	abalone_xgb_model_save.json	gpu_array	8192	FALSE	0.0571387	0.0356335 [6]
+treepar-cacherow-64-2-10	abalone_xgb_model_save.json	gpu_array	16384	FALSE	0.0484912	0.033443 [5]
+
+treepar-32-1-20	airline_xgb_model_save.json	gpu_sparse	4096	FALSE	0.036582	0.0132837 [5]
+treepar-64-1-10	airline_xgb_model_save.json	gpu_array	8192	FALSE	0.0278467	0.00934326 [51]
+treepar-cacherow-64-1-2	airline_xgb_model_save.json	gpu_array	16384	FALSE	0.0187482	0.00661743 [4]
+
+treepar-cacherow-32-1-20	airline-ohe_xgb_model_save.json	gpu_array	4096	FALSE	0.355664	0.0612866 [3]
+treepar-cacherow-32-2-20	airline-ohe_xgb_model_save.json	gpu_sparse	8192	FALSE	0.333326	0.0517151 [1]
+treepar-cacherow-64-2-20	airline-ohe_xgb_model_save.json	gpu_array	16384	FALSE	0.322152	0.0450909 [2]
+
+treepar-cacherow-32-1-20	covtype_xgb_model_save.json	gpu_sparse	4096	FALSE	0.200471	0.0701563 [31]
+treepar-cacherow-64-1-10	covtype_xgb_model_save.json	gpu_reorg	8192	FALSE	0.142083	0.0562488 [20]
+treepar-cacherow-64-1-10	covtype_xgb_model_save.json	gpu_reorg	16384	FALSE	0.124167	0.051662 [4]
+
+treepar-cacherow-64-1-10	epsilon_xgb_model_save.json	gpu_array	4096	FALSE	0.809116	0.0282813 [1]
+treepar-cacherow-512-1-2	epsilon_xgb_model_save.json	gpu_array	8192	FALSE	0.785615	0.0193787 [1]
+treepar-cacherow-256-1-2	epsilon_xgb_model_save.json	gpu_array	16384	FALSE	0.76623	0.0121582 [1]
+
+treepar-32-1-20	higgs_xgb_model_save.json	gpu_array	4096	FALSE	0.0443359	0.013938 [6]
+treepar-cacherow-32-2-20	higgs_xgb_model_save.json	gpu_array	8192	FALSE	0.0396558	0.00968506 [5]
+treepar-cacherow-256-1-2	higgs_xgb_model_save.json	gpu_array	16384	FALSE	0.0286896	0.00726929 [4]
+
+treepar-cacherow-64-2-10	year_prediction_msd_xgb_model_save.json	gpu_sparse	4096	FALSE	0.0628931	0.0150195 [1]
+treepar-cacherow-64-1-10	year_prediction_msd_xgb_model_save.json	gpu_array	8192	FALSE	0.0635327	0.0106421 [4]
+treepar-cacherow-64-1-2	year_prediction_msd_xgb_model_save.json	gpu_array	16384	FALSE	0.047998	0.00737976 [1]
+
+--------------------------------
+4060
+Autoschedule
+--------------------------------
+abalone	gpu_array	4096	32	1	20	FALSE	FALSE	TRUE	0.0663013	0.0443115
+abalone	gpu_reorg	8192	32	1	2	TRUE	FALSE	TRUE	0.0537073	0.0443518
+abalone	gpu_array	16384	64	1	2	TRUE	FALSE	TRUE	0.0432416	0.0357819
+
+airline	gpu_sparse	4096	32	2	10	FALSE	FALSE	TRUE	0.0343213	0.0136499
+airline	gpu_sparse	8192	64	1	2	FALSE	FALSE	TRUE	0.0257324	0.0121252
+airline	gpu_array	16384	64	1	2	FALSE	FALSE	TRUE	0.0177985	0.00671509
+
+airline-ohe	gpu_array	4096	32	1	20	FALSE	FALSE	TRUE	0.510928	0.216611
+airline-ohe	gpu_reorg	8192	32	1	20	FALSE	FALSE	TRUE	0.479631	0.199889
+airline-ohe	gpu_array	16384	32	1	20	FALSE	FALSE	FALSE	0.472741	0.195893
+
+covtype	gpu_array	4096	32	1	2	TRUE	FALSE	TRUE	0.155344	0.113564
+covtype	gpu_array	8192	32	1	2	TRUE	FALSE	TRUE	0.119222	0.0775232
+covtype	gpu_array	16384	32	1	2	TRUE	FALSE	TRUE	0.104564	0.0701971
+
+epsilon	gpu_sparse	4096	64	2	10	FALSE	FALSE	FALSE	0.827783	0.0496045
+epsilon	gpu_sparse	8192	64	1	10	FALSE	FALSE	TRUE	0.82089	0.0513818
+epsilon	gpu_array	16384	32	1	20	FALSE	FALSE	FALSE	0.801794	0.0424347
+
+higgs	gpu_sparse	4096	32	1	10	FALSE	FALSE	FALSE	0.0407373	0.0148218
+higgs	gpu_array	8192	32	1	10	FALSE	FALSE	TRUE	0.0329053	0.010603
+higgs	gpu_array	16384	256	1	2	TRUE	FALSE	TRUE	0.0293884	0.00854736
+
+letters	gpu_array	4096	32	1	10	TRUE	TRUE	TRUE	3.06722	2.89776
+letters	gpu_array	8192	32	1	10	FALSE	TRUE	TRUE	2.75936	2.6008
+letters	gpu_array	16384	64	1	10	FALSE	FALSE	TRUE	2.72353	2.57664
+
+year_prediction_msd	gpu_array	4096	32	1	10	FALSE	FALSE	FALSE	0.065166	0.0167188
+year_prediction_msd	gpu_sparse	8192	32	1	10	FALSE	FALSE	FALSE	0.0655835	0.0121375
+year_prediction_msd	gpu_sparse	16384	64	1	10	FALSE	FALSE	FALSE	0.0518036	0.0098877
+
+------------------------------------------------------
+4060 - 300 reps - Custom schedule exploration - Fixed cache row
+------------------------------------------------------
+treepar-32-2-10	abalone_xgb_model_save.json	gpu_array	4096	FALSE	0.0694686	0.0526001
+treepar-32-1-10	abalone_xgb_model_save.json	gpu_array	8192	FALSE	0.0585555	0.0446399
+treepar-cacherow-64-1-2	abalone_xgb_model_save.json	gpu_array	16384	FALSE	0.0464996	0.0399109
+
+treepar-cacherow-64-2-10	airline_xgb_model_save.json	gpu_sparse	4096	FALSE	0.0340324	0.0153149
+treepar-32-1-2	airline_xgb_model_save.json	gpu_array	8192	FALSE	0.0260905	0.0125444
+treepar-256-1-2	airline_xgb_model_save.json	gpu_array	16384	FALSE	0.018692	0.00763733
+
+treepar-32-1-20	airline-ohe_xgb_model_save.json	gpu_reorg	4096	FALSE	0.504596	0.21376
+treepar-32-1-20	airline-ohe_xgb_model_save.json	gpu_reorg	8192	FALSE	0.474911	0.201363
+treepar-32-1-20	airline-ohe_xgb_model_save.json	gpu_sparse	16384	FALSE	0.469362	0.195874
+
+treepar-cacherow-64-2-10	covtype_xgb_model_save.json	gpu_array	4096	FALSE	0.181159	0.090555
+treepar-cacherow-32-1-2	covtype_xgb_model_save.json	gpu_sparse	8192	FALSE	0.134679	0.0948413
+treepar-cacherow-64-1-2	covtype_xgb_model_save.json	gpu_array	16384	FALSE	0.120854	0.0874253	594021.5808
+
+treepar-64-2-10	epsilon_xgb_model_save.json	gpu_array	4096	FALSE	0.826012	0.0498844	1015003.546
+treepar-32-1-20	epsilon_xgb_model_save.json	gpu_array	8192	FALSE	0.821537	0.0483065	2019009.331
+treepar-32-1-20	epsilon_xgb_model_save.json	gpu_sparse	16384	FALSE	0.802897	0.04361	3946399.334
+
+treepar-cacherow-64-2-10	higgs_xgb_model_save.json	gpu_sparse	4096	FALSE	0.0406234	0.0165283	49918.03392
+treepar-cacherow-32-1-10	higgs_xgb_model_save.json	gpu_array	8192	FALSE	0.0325431	0.0108512	79977.92256
+treepar-cacherow-64-1-2	higgs_xgb_model_save.json	gpu_array	16384	FALSE	0.0283305	0.00867798	139250.0736
+
+treepar-cacherow-32-1-20	letters_xgb_model_save.json	gpu_array	4096	FALSE	3.16127	2.87491	3884568.576
+treepar-cacherow-64-1-10	letters_xgb_model_save.json	gpu_array	8192	FALSE	2.92549	2.77893	7189684.224
+treepar-cacherow-32-1-10	letters_xgb_model_save.json	gpu_array	16384	FALSE	2.85092	2.71343	14012841.98
+
+treepar-64-2-10	year_prediction_msd_xgb_model_save.json	gpu_array	4096	FALSE	0.0656242	0.0176628	80639.01696
+treepar-64-1-10	year_prediction_msd_xgb_model_save.json	gpu_sparse	8192	FALSE	0.0618465	0.0124194	151993.9584
+treepar-64-1-10	year_prediction_msd_xgb_model_save.json	gpu_sparse	16384	FALSE	0.0512893	0.00976746	252097.1674
+
+--------------------------------
+4060 - Autoschedule - With pipelining - 600 reps (Sorted on total time)
+--------------------------------
+model	representation	batch_size	rowsPerTB	rowsPerT	numTreeThreads	treeInterleaveDepth	cache_rows	cache_trees	unroll	total	kernel
+
+abalone	gpu_array	4096	64	1	10	4	TRUE	FALSE	TRUE	0.0556095	0.0406698
+abalone	gpu_array	4096	32	2	10	-1	FALSE	FALSE	FALSE	0.0677454	0.0530863
+abalone	gpu_array	8192	32	1	2	4	TRUE	FALSE	TRUE	0.048808	0.0379218
+abalone	gpu_array	8192	32	1	10	-1	FALSE	FALSE	FALSE	0.0593107	0.0452883
+abalone	gpu_array	16384	64	1	2	2	FALSE	FALSE	TRUE	0.039939	0.0333434
+abalone	gpu_array	16384	32	1	2	-1	TRUE	FALSE	FALSE	0.0448762	0.038347
+
+airline	gpu_sparse	4096	64	1	10	2	TRUE	FALSE	TRUE	0.0298682	0.011768
+airline	gpu_array	4096	64	2	10	-1	FALSE	FALSE	FALSE	0.0310319	0.0132524
+airline	gpu_sparse	8192	32	1	2	2	TRUE	FALSE	TRUE	0.0226849	0.00902181
+airline	gpu_array	8192	64	1	2	-1	TRUE	FALSE	FALSE	0.0253739	0.0118384
+airline	gpu_array	16384	32	1	2	2	TRUE	FALSE	TRUE	0.0154924	0.00511698
+airline	gpu_array	16384	32	1	2	-1	TRUE	FALSE	FALSE	0.0159628	0.00591593
+
+airline-ohe	gpu_array	4096	8	1	50	-1	TRUE	FALSE	TRUE	0.360975	0.0642472
+airline-ohe	gpu_array	4096	8	1	50	-1	TRUE	FALSE	FALSE	0.372987	0.0766642
+airline-ohe	gpu_sparse	8192	8	1	20	2	TRUE	FALSE	TRUE	0.332117	0.0584642
+airline-ohe	gpu_sparse	8192	8	1	50	-1	TRUE	FALSE	FALSE	0.35743	0.0746403
+airline-ohe	gpu_sparse	16384	8	1	20	2	TRUE	FALSE	TRUE	0.330223	0.0550322
+airline-ohe	gpu_array	16384	8	1	50	-1	TRUE	FALSE	FALSE	0.362889	0.0722509
+
+covtype	gpu_array	4096	32	1	2	4	TRUE	FALSE	TRUE	0.099821	0.06288 
+covtype	gpu_array	4096	32	1	2	-1	TRUE	FALSE	FALSE	0.161438	0.124864
+covtype	gpu_array	8192	32	1	2	4	TRUE	FALSE	TRUE	0.0979547	0.0574314 
+covtype	gpu_sparse	8192	32	1	2	-1	TRUE	FALSE	FALSE	0.118706	0.0775623
+covtype	gpu_array	16384	64	1	2	4	TRUE	FALSE	TRUE	0.0871933	0.0537914
+covtype	gpu_sparse	16384	32	1	2	-1	TRUE	FALSE	FALSE	0.10878	0.0760308
+
+epsilon	gpu_array	4096	32	2	10	2	FALSE	FALSE	TRUE	0.825499	0.0481413
+epsilon	gpu_array	4096	64	2	10	-1	FALSE	FALSE	FALSE	0.82857	0.0499512
+epsilon	gpu_sparse	8192	32	1	20	4	FALSE	FALSE	TRUE	0.818763	0.0440098
+epsilon	gpu_array	8192	32	1	20	-1	FALSE	FALSE	FALSE	0.82243	0.0483885
+epsilon	gpu_sparse	16384	32	1	20	4	FALSE	FALSE	TRUE	0.796904	0.0387017
+epsilon	gpu_array	16384	32	1	20	-1	FALSE	FALSE	FALSE	0.799883	0.0420859
+
+epsilon	gpu_sparse	8192	32	2	50	4	FALSE	FALSE	TRUE	0.826289	0.0402677
+epsilon	gpu_sparse	8192	8	1	50	-1	FALSE	FALSE	FALSE	0.82848	0.0438829
+epsilon	gpu_sparse	16384	32	2	50	4	FALSE	FALSE	TRUE	0.809006	0.0321117
+epsilon	gpu_array	16384	8	1	50	-1	FALSE	FALSE	FALSE	0.813994	0.0372913
+
+higgs	gpu_array	4096	64	2	10	-1	TRUE	FALSE	TRUE	0.0397001	0.01382
+higgs	gpu_array	4096	32	2	10	-1	TRUE	FALSE	FALSE	0.0403394	0.0139034
+higgs	gpu_sparse	8192	64	1	2	2	TRUE	FALSE	TRUE	0.029692	0.00980428
+higgs	gpu_sparse	8192	64	1	10	-1	TRUE	FALSE	FALSE	0.0321238	0.010233
+higgs	gpu_array	16384	256	1	2	2	TRUE	FALSE	TRUE	0.0262995	0.00646545
+higgs	gpu_array	16384	256	1	2	-1	TRUE	FALSE	FALSE	0.0270562	0.00718404
+
+higgs	gpu_sparse	4096	64	1	10	2	TRUE	FALSE	TRUE	0.0443856	0.0130249
+higgs	gpu_array	4096	32	2	10	-1	TRUE	FALSE	FALSE	0.0403394	0.0139034
+higgs	gpu_array	8192	64	1	10	2	TRUE	FALSE	TRUE	0.0320831	0.00889099
+higgs	gpu_array	8192	32	1	10	-1	TRUE	FALSE	FALSE	0.0331954	0.00978414
+higgs	gpu_array	16384	32	1	2	2	TRUE	FALSE	TRUE	0.0272414	0.00598287
+higgs	gpu_array	16384	32	1	2	-1	TRUE	FALSE	FALSE	0.0272147	0.00677694
+
+year_prediction_msd	gpu_array	4096	32	1	10	-1	TRUE	FALSE	FALSE	0.0632247	0.0150468
+
+year_prediction_msd	gpu_array	8192	64	1	10	2	TRUE	FALSE	TRUE	0.0616968	0.012264
+year_prediction_msd	gpu_array	8192	8	1	10	-1	TRUE	FALSE	FALSE	0.0617061	0.0116189
+year_prediction_msd	gpu_sparse	16384	32	1	2	2	TRUE	FALSE	TRUE	0.0485412	0.00853241
+year_prediction_msd	gpu_array	16384	32	1	10	-1	TRUE	FALSE	FALSE	0.0489127	0.0070108
+
+year_prediction_msd	gpu_array	4096	32	1	10	-1	TRUE	FALSE	FALSE	0.0632247	0.0150468
+year_prediction_msd	gpu_array	8192	32	1	10	-1	TRUE	FALSE	FALSE	0.0651646	0.010139
+year_prediction_msd	gpu_array	16384	32	1	10	-1	TRUE	FALSE	FALSE	0.0489127	0.0070108
+
+--------------------------------
+4060 with Transfer Optimization (memset) - Autoschedule - With pipelining - 600 reps (Sorted on total time)
+--------------------------------
+model	representation	batch_size	rowsPerTB	rowsPerT	numTreeThreads	treeInterleaveDepth	cache_rows	cache_trees	unroll	total	kernel
+
+abalone	gpu_array	4096	32	1	20	2	TRUE	FALSE	TRUE	0.0499194	0.0388672 (1.22x)
+abalone	gpu_array	4096	32	1	20	-1	TRUE	FALSE	FALSE	0.0581014	0.047476
+abalone	gpu_array	8192	32	1	10	4	TRUE	FALSE	TRUE	0.040378	0.0331268 (1.34x)
+abalone	gpu_array	8192	32	1	10	-1	TRUE	FALSE	FALSE	0.0516148	0.0445351
+abalone	gpu_array	16384	64	1	2	2	FALSE	FALSE	TRUE	0.0403134	0.0336309 (1.15x)
+abalone	gpu_array	16384	64	1	2	-1	TRUE	FALSE	FALSE	0.0453459	0.0385903
+
+airline	gpu_array	4096	64	2	10	2	TRUE	FALSE	TRUE	0.0258903	0.0112166 (1.07x)
+airline	gpu_array	4096	64	2	10	-1	TRUE	FALSE	FALSE	0.0264176	0.0120524
+airline	gpu_array	8192	32	1	10	2	TRUE	FALSE	TRUE	0.0193209	0.00780741 (1.13x)
+airline	gpu_sparse	8192	64	2	20	-1	TRUE	FALSE	FALSE	0.0202974	0.00881226
+airline	gpu_array	16384	32	1	2	4	TRUE	FALSE	TRUE	0.0160925	0.00554016 (1.13x)
+airline	gpu_array	16384	32	1	2	-1	TRUE	FALSE	FALSE	0.0167773	0.00624898
+
+airline-ohe	gpu_array	4096	8	1	50	2	TRUE	FALSE	TRUE	0.34565	0.0557678 (1.35x)
+airline-ohe	gpu_array	4096	8	1	50	-1	TRUE	FALSE	FALSE	0.363778	0.0751086
+airline-ohe	gpu_array	8192	8	1	50	2	TRUE	FALSE	TRUE	0.324783	0.0521134 (1.36x)
+airline-ohe	gpu_array	8192	8	1	50	-1	TRUE	FALSE	FALSE	0.343484	0.0711847
+airline-ohe	gpu_array	16384	8	1	50	2	TRUE	FALSE	TRUE	0.326958	0.0502448 (1.43x)
+airline-ohe	gpu_array	16384	8	1	50	-1	TRUE	FALSE	FALSE	0.34594	0.0720669
+
+covtype	gpu_array	4096	32	1	2	4	TRUE	FALSE	TRUE	0.0928817	0.0628707 (1.1x, 2x)
+covtype	gpu_sparse	4096	32	1	20	-1	TRUE	FALSE	FALSE	0.11686	0.0693896
+covtype	gpu_array	4096	32	1	2	-1	TRUE	FALSE	FALSE	0.154765	0.124701
+covtype	gpu_array	8192	32	1	2	4	TRUE	FALSE	TRUE	0.085353	0.055675 (1.07x, 1.4x)
+covtype	gpu_array	8192	64	1	10	-1	TRUE	FALSE	FALSE	0.0914124	0.0596948
+covtype	gpu_array	8192	32	1	2	-1	TRUE	FALSE	FALSE	0.106313	0.0778249
+covtype	gpu_array	16384	64	1	2	4	TRUE	FALSE	TRUE	0.081852	0.0541864 (1.04x. 1.43x)
+covtype	gpu_sparse	16384	64	1	10	-1	TRUE	FALSE	FALSE	0.0916613	0.0563793
+covtype	gpu_array	16384	64	1	2	-1	TRUE	FALSE	FALSE	0.105102	0.0775726
+
+epsilon	gpu_sparse	4096	64	2	10	2	FALSE	FALSE	TRUE	0.820219	0.0431718 (1.07x)
+epsilon	gpu_sparse	4096	64	2	10	-1	FALSE	FALSE	FALSE	0.821737	0.0462077
+epsilon	gpu_sparse	8192	32	2	50	2	FALSE	FALSE	TRUE	0.807149	0.038785 (1.09x)
+epsilon	gpu_sparse	8192	8	1	50	-1	FALSE	FALSE	FALSE	0.809672	0.0423124
+epsilon	gpu_sparse	16384	32	2	50	2	FALSE	FALSE	TRUE	0.790315	0.031921 (1.17x)
+epsilon	gpu_array	16384	8	1	50	-1	FALSE	FALSE	FALSE	0.794938	0.0374645
+
+higgs	gpu_array	4096	64	2	10	-1	TRUE	FALSE	TRUE	0.0330416	0.0126078 (1.02x, 1.03x)
+higgs	gpu_array	4096	32	1	20	-1	TRUE	FALSE	FALSE	0.0336735	0.0128455
+higgs	gpu_array	4096	64	2	10	-1	TRUE	FALSE	FALSE	0.0340788	0.0130688
+higgs	gpu_array	8192	32	1	10	2	TRUE	FALSE	TRUE	0.026192	0.00847799 (1.07x, 1.11x)
+higgs	gpu_array	8192	64	1	10	-1	TRUE	FALSE	FALSE	0.0268443	0.00910319
+higgs	gpu_sparse	8192	32	1	10	-1	TRUE	FALSE	FALSE	0.0272439	0.00948222
+higgs	gpu_array	16384	32	1	2	2	TRUE	FALSE	TRUE	0.0261952	0.00627065 (1.12x)
+higgs	gpu_array	16384	32	1	2	-1	TRUE	FALSE	FALSE	0.026797	0.00703471
+
+year_prediction_msd	gpu_array	4096	32	1	10	-1	TRUE	FALSE	FALSE	0.0567306	0.0132544
+year_prediction_msd	gpu_sparse	8192	64	1	10	-1	TRUE	FALSE	FALSE	0.0590865	0.00986186
+year_prediction_msd	gpu_array	16384	32	1	10	-1	TRUE	FALSE	FALSE	0.0479652	0.0071402
+
+
+
+
+
+
+
+

@@ -1,0 +1,4 @@
+1. Made NUM_RUNS = number of runs the auto-tuner would have done
+2. Did not repeat kernel execution, instead repeated full inference so that we could break out 
+of running inference for configurations that lead to runtime errors due to resource constraints.
+This is not possible with kernel repeats.

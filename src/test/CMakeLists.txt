@@ -5,10 +5,13 @@ CodeGenTests.cpp
 TestUtilsCommon.cpp
 XGBoostTests.cpp
 XGBoostBenchmarks.cpp
+XGBoostGPUBenchmarks.cpp
 StatsTests.cpp
 XGBoostProbTiling.cpp
 ONNXTests.cpp
-GPUTests.cpp)
+GPUTests.cpp
+GPUSyntheticXGBTests.cpp
+ReductionTests.cpp)
 
 target_sources(treebeard-runtime 
 PRIVATE

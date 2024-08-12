@@ -1,0 +1,166 @@
+\section{Related Work}
+\label{Sec:Related}
+% While several optimization strategies for decision tree based models have been 
+% studied in the literature, to the best of our knowledge, no systems that are 
+% capable of exploring the full optimization space exist.
+This section discusses prior work related to \Treebeard{}.
+
+\emph{Decision Tree Inference Systems:} 
+Tahoe~\cite{Tahoe} is a library-based system that picks 
+between four predefined strategies to implement decision tree inference on GPUs.
+% Also, \Treebeard{} generates code that is specific to 
+% a particular model, specializing both the parallelism (by deciding the thread block 
+% structure on a per model basis) and the kernel code itself by 
+% performing optimizations like tree walk unrolling and interleaving.
+% In contrast, Tahoe 
+% uses a library-based approach, and cannot generate code tailored to a model 
+% like \Treebeard{} does.
+RAPIDS FIL\cite{FIL}, the most widely used GPU library for decision tree inference
+% implements some heuristics to pick a good configuration for every model, 
+% but these techniques are limited and the library uses a single strategy 
+% and in-memory representation for all models. 
+and XGBoost's\cite{XGBoost} GPU library\cite{XGBGPU} 
+use a single strategy and in-memory representation.
+In comparison, \Treebeard{} explores a much larger set of implementation options and 
+in-memory representations for models and picks the best.
+% In contrast, \Treebeard{} is a compiler that can explore a much larger
+% optimization space and can generate code that is tailored to a specific model.
+As shown in Section \ref{sec:results}, \Treebeard{} outperforms these systems
+by a significant margin.
+% Finally, all of Tahoe's optimizations are designed to address GPU specific problems. 
+% For example, it uses an elaborate and opaque heuristic based on locality sensitive hashing 
+% to coalesce accesses to the GPU global memory. We believe that the tree tiling
+% infrastructure described in this paper will allow us to deterministically 
+% coalesce accesses to GPU global memory.
+%As described previously, Hummingbird\cite{Hummingbird} uses tensor operations to perform decision tree inference. 
+% While compiling decision tree inference to GPUs presents a distinct set of challenges,
+% we believe, we can achieve this while reusing much of \Treebeard{}'s current infrastructure.
+% Specifically, we expect that most of the HIR and MIR
+% optimizations described in this paper will carry over directly while LIR 
+% optimizations and in-memory representations will need to be retargeted.
+% This can be the subject of a separate future work.
+
+Some compilers for decision tree ensembles have been proposed in the 
+literature \cite{Treelite, Treebeard, Hummingbird}. \TreebeardOLD{} and Treelite
+exclusively target CPUs and all their optimizations are designed purely for 
+performance on CPUs. 
+Treelite\cite{Treelite} is a model compiler that only  
+generates \op{if-else} code for each tree in the model. 
+\TreebeardOLD{} is the work most closely related to \Treebeard{}. While we 
+build on top of \TreebeardOLD{}, \Treebeard{} is a significant enhancement 
+over \TreebeardOLD{}. 
+Hummingbird\cite{Hummingbird} is a compiler that compiles traditional ML models
+to tensor operations, thereby enabling them to be run using tensor-based frameworks like
+PyTorch\cite{NEURIPS2019_9015} on CPUs and GPUs. As reported in their paper, Hummingbird's performance
+on decision tree models is comparable to that of RAPIDS on GPUs. On CPU, \TreebeardOLD{} 
+is faster~\cite{Treebeard}.
+% While it can target both CPUs
+% and GPUs, its performance has been shown to be lower than that of other frameworks~\cite{Treebeard}.
+
+On CPUs, XGBoost\cite{XGBoost}, LightGBM\cite{LightGBM} and
+scikit-learn\cite{Sklearn} are extremely popular.
+A recent paper~\cite{PACTVanLunteren} describes an adaptive mechanism 
+to pick one of a few predefined parallelization and vectorization strategies.
+Other systems that hide dependency stalls by interleaving tree walks\cite{VPred},
+implement optimized algorithms for tree inference\cite{QuickScorer, QuickScorer1}
+and improve cache performance of decision tree ensembles on CPUs\cite{CacheConscious1, CacheConscious2}
+have been proposed.
+Some systems have been proposed to parallelize decision tree training 
+on CPUs and GPUs\cite{Jansson2014gpuRFAG, Nasridinov2013DecisionTC}.
+However, none of these systems provide portable performance across different target machines.
+While the specifics may vary, \Treebeard{} supports retargetable compiler optimizations that 
+achieve similar results. % as techniques in these systems.
+
+\emph{Other Systems and Techniques:} Ren et. al.~\cite{PortableVM} design an
+intermediate language and a virtual machine to enable vector execution of decision tree
+inference. However, this virtual machine is implemented by 
+hand on different target processors.
+%This is clearly more expensive than \Treebeard{}'s approach.
+% Additionally, even though they perform layout optimizations, their system does
+% not perform any model specific optimizations.
+Jo et. al.\cite{MilindTreeVectorization} describe code transformations and runtime 
+techniques that vectorize tree-based applications but these 
+optimizations are not specific to decision trees.
+% Both these works vectorize tree walks by performing different tree walks on each
+% vector lane. The main issue with this approach is the divergence of tree walks.
+% Another issue is that memory accesses are \op{gather}'s rather than vector
+% loads. \Treebeard{}'s approach to vectorization solves both these issues. Also,
+% these approaches are not precluded by \Treebeard{}'s tiling based vectorization.
+% Multiple tiled tree walks can be combined into a single vectorized walk. We
+% leave an exploration of this to future work.  FAST\cite{FAST} is a system that
+% accelerates tree structured index search on CPUs and GPUs. FAST defines a layout
+% for the index tree that enables vectorization of the tree walk. FAST uses a tree
+% tiling approach to vectorize tree walks. However, FAST only uses a single
+% triangular tile shape. \Treebeard{}'s basic tiling algorithm is a generalization
+% of the tiling used in FAST. If given a perfectly balanced tree, the basic tiling
+% algorithm would return exactly the tiling used by FAST.  Also, the tree walks in
+% FAST are hand coded using intrinsics on the CPU and CUDA on the GPU and
+% therefore need repeated effort to implement on each target. 
+Inspector-executor systems \cite{TaoOfParallelism,HybridCPUGPU}  
+parallelize tree walks but are not a good fit 
+for decision tree inference as the individual node predicates are 
+simple and the overhead of an inspector-executor system would be prohibitive.
+
+\emph{Code Generation Systems for Other Domains:}
+% Several optimizing compilers and code generation techniques have been developed 
+% for other domains. 
+TVM\cite{TVM}, Tiramisu\cite{Tiramisu}, and Tensor 
+Comprehensions\cite{TensorComprehensions} are optimizing compilers 
+for DNNs that can target a variety of processors. Similarly, 
+Halide\cite{Halide} is a DSL and compiler primarily designed for 
+image processing applications. The concept of separating the computation 
+from the schedule was effectively utilized by Halide and has since been adopted 
+by several other systems~\cite{TVM,Tiramisu,GraphIt}. 
+% However, to 
+% the best of our knowledge, \Treebeard{} is the first system to design
+% a scheduling language for decision tree inference optimization
+% and to build a system capable of state-of-the-art performance 
+% across different processors.
+% {\sc {Cortex}} transforms 
+% recursive computations in DNNs to loop based computations and optimizes them.
+% However, the model properties {\sc {Cortex}} assumes to optimize
+% generated code do not hold in the context of decision tree inference. For example, 
+% {\sc {Cortex}} assumes that control flow depends purely on data structure 
+% connectivity. This is not the case with decision trees. Control flow is determined 
+% by the input value and not by the structure of the tree. This makes the 
+% problems addressed by \Treebeard{} very different from the ones handled
+% by {\sc {Cortex}}.
+Libraries that compose or generate optimized implementations  
+for BLAS\cite{BLIS, atlas_sc98, CUTLASS} and signal processing\cite{FFTW, SPIRAL}
+have also been developed.
+However, \Treebeard{} is the first system that provides state-of-the-art performance
+across targets by implementing a scheduling language for decision tree inference.
+% BLIS\cite{BLIS} and ATLAS\cite{atlas_sc98}
+% are systems to instantiate high performance BLAS routines on multiple 
+% target architectures. CUTLASS\cite{CUTLASS} provides building blocks 
+% in the form of C++ templates to quickly instantiate high performance 
+% BLAS functions on different GPU architectures. SPIRAL\cite{SPIRAL}
+% is a domain specific compiler for signal processing applications
+% that instantiates high performance routines for linear transformations 
+% like FFTs and FIR filters. FFTW\cite{FFTW} is a fast fourier transform 
+% compiler that generates high performance FFT routines by customizing 
+% the routine based on FFT size and the target machine. 
+% However, no such frameworks for decision tree ensembles exist currently.
+% \Treebeard{} is a first step in this direction and unlocks several future 
+% optimization opportunities.
+
+\emph{Reductions:} CUB\cite{CUB} and Thrust\cite{Thrust} are libraries 
+that implement reductions on GPUs. 
+However, it is not possible to fuse these functions with other computations  
+as required in \Treebeard{}. Reddy et. al.~\cite{ChandanReduction}
+describe language constructs in {\sc {Pencil}}~\cite{Pencil}
+to express reductions and optimize them using the polyhedral 
+framework. 
+% It is not clear how these techniques can be fused with 
+% other computations in arbitrary loop nests as required in \Treebeard{}.
+%Additionally, 
+Their system does not express the hierarchical nature of 
+reductions and also only targets GPUs. Suriana et. al.~\cite{HalideReductions}
+extend Halide to add support for reductions in the Halide 
+scheduling language and to synthesize reduction operators. De Gonzalo 
+et. al.~\cite{TangramReduction} describe a system based on Tangram 
+that composes several partial reduction implementations into different 
+reduction implementations for GPUs and then searches through these
+alternate implementations to find the best ones. In summary, none of 
+these systems provide abstractions and a general framework to generate 
+and optimize reductions across different target processors as \Treebeard{} does.

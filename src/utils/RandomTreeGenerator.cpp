@@ -1,23 +1,24 @@
-#include "DecisionForest.h"
 #include "../test/TestUtilsCommon.h"
+#include "DecisionForest.h"
 #include "json.hpp"
 #include <fstream>
-#include <queue>
 #include <map>
+#include <queue>
 
 using namespace mlir;
 using namespace mlir::decisionforest;
 
 using json = nlohmann::json;
 
-namespace TreeBeard
-{
-namespace test
-{
-namespace
-{
-int32_t GenerateRandomTreeHelper(DecisionTree& tree, int32_t numFeatures, int32_t depth, int32_t maxDepth, 
-                             RandomIntGenerator& featureIdxGen, RandomRealGenerator& thresholdGen, RandomRealGenerator& nodeTypeGen, double leafCutoff) {
+namespace TreeBeard {
+namespace test {
+namespace {
+int32_t GenerateRandomTreeHelper(DecisionTree &tree, int32_t numFeatures,
+                                 int32_t depth, int32_t maxDepth,
+                                 RandomIntGenerator &featureIdxGen,
+                                 RandomRealGenerator &thresholdGen,
+                                 RandomRealGenerator &nodeTypeGen,
+                                 double leafCutoff) {
   bool isLeaf = nodeTypeGen() < leafCutoff || depth == maxDepth;
 
   if (isLeaf) {
@@ -25,47 +26,61 @@ int32_t GenerateRandomTreeHelper(DecisionTree& tree, int32_t numFeatures, int32_
     auto threshold = thresholdGen();
     auto leaf = tree.NewNode(threshold, -1);
     return leaf;
-  }
-  else {
+  } else {
     // Create new node
     auto threshold = thresholdGen();
     auto featureIdx = featureIdxGen();
     auto node = tree.NewNode(threshold, featureIdx);
 
     // Recurse
-    auto leftChild = GenerateRandomTreeHelper(tree, numFeatures, depth+1, maxDepth, featureIdxGen, thresholdGen, nodeTypeGen, (double)depth/maxDepth);
-    auto rightChild = GenerateRandomTreeHelper(tree, numFeatures, depth+1, maxDepth, featureIdxGen, thresholdGen, nodeTypeGen, (double)depth/maxDepth);
+    auto leftChild = GenerateRandomTreeHelper(
+        tree, numFeatures, depth + 1, maxDepth, featureIdxGen, thresholdGen,
+        nodeTypeGen, 0.1 * (double)depth / maxDepth);
+    auto rightChild = GenerateRandomTreeHelper(
+        tree, numFeatures, depth + 1, maxDepth, featureIdxGen, thresholdGen,
+        nodeTypeGen, 0.1 * (double)depth / maxDepth);
     tree.SetNodeParent(leftChild, node);
     tree.SetNodeParent(rightChild, node);
     tree.SetNodeRightChild(node, rightChild);
     tree.SetNodeLeftChild(node, leftChild);
-    
+
     return node;
   }
 }
-}
+} // namespace
 
-DecisionTree GenerateRandomTree(int32_t numFeatures, double thresholdMin, double thresholdMax, int32_t maxDepth) {
+DecisionTree GenerateRandomTree(int32_t numFeatures, double thresholdMin,
+                                double thresholdMax, int32_t maxDepth) {
   DecisionTree tree;
-  RandomIntGenerator featureIdxGen = [=]() { return GetRandomInt(0, numFeatures-1); };
-  RandomRealGenerator thresholdGen = [=]() { return GetRandomReal(thresholdMin, thresholdMax); };
+  RandomIntGenerator featureIdxGen = [=]() {
+    return GetRandomInt(0, numFeatures - 1);
+  };
+  RandomRealGenerator thresholdGen = [=]() {
+    return GetRandomReal(thresholdMin, thresholdMax);
+  };
   RandomRealGenerator nodeTypeGen = [=]() { return GetRandomReal(0.0, 1.0); };
-  GenerateRandomTreeHelper(tree, numFeatures, 0, maxDepth, featureIdxGen, thresholdGen, nodeTypeGen, 0.0);
+  GenerateRandomTreeHelper(tree, numFeatures, 0, maxDepth, featureIdxGen,
+                           thresholdGen, nodeTypeGen, 0.0);
   return tree;
 }
 
-DecisionForest GenerateRandomDecisionForest(int32_t numTrees, int32_t numFeatures, double thresholdMin, double thresholdMax, int32_t maxDepth) {
+DecisionForest GenerateRandomDecisionForest(int32_t numTrees,
+                                            int32_t numFeatures,
+                                            double thresholdMin,
+                                            double thresholdMax,
+                                            int32_t maxDepth) {
   DecisionForest forest;
-  for (int32_t i=0; i<numFeatures ; ++i)
+  for (int32_t i = 0; i < numFeatures; ++i)
     forest.AddFeature(std::to_string(i) /*name*/, "float" /*type*/);
-  for (int32_t i=0 ; i<numTrees ; ++i) {
-    auto& tree = forest.NewTree();
-    tree = GenerateRandomTree(numFeatures, thresholdMin, thresholdMax, maxDepth);
+  for (int32_t i = 0; i < numTrees; ++i) {
+    auto &tree = forest.NewTree();
+    tree =
+        GenerateRandomTree(numFeatures, thresholdMin, thresholdMax, maxDepth);
   }
   return forest;
 }
 
-json CreateTreeJSON(DecisionTree& tree, int32_t id, int32_t numFeatures) {
+json CreateTreeJSON(DecisionTree &tree, int32_t id, int32_t numFeatures) {
   json treeJSON;
   treeJSON["id"] = id;
   treeJSON["tree_param"]["num_deleted"] = "0";
@@ -85,9 +100,9 @@ json CreateTreeJSON(DecisionTree& tree, int32_t id, int32_t numFeatures) {
   std::vector<int32_t> leftChildren, rightChildren, parents, splitIndices;
   std::vector<double> splitConditions;
   mlir::decisionforest::LevelOrderTraversal levelOrder(tree.GetNodes());
-  const auto& nodes = levelOrder.LevelOrderNodes();
-  for (size_t i=0 ; i<nodes.size() ; ++i) {
-    const auto& node = nodes[i];
+  const auto &nodes = levelOrder.LevelOrderNodes();
+  for (size_t i = 0; i < nodes.size(); ++i) {
+    const auto &node = nodes[i];
     leftChildren.push_back(node.leftChild);
     rightChildren.push_back(node.rightChild);
     if (node.featureIndex != -1)
@@ -96,7 +111,8 @@ json CreateTreeJSON(DecisionTree& tree, int32_t id, int32_t numFeatures) {
       splitIndices.push_back(0);
     splitConditions.push_back(node.threshold);
     if (node.parent == DecisionTree::INVALID_NODE_INDEX)
-      parents.push_back(2147483647); //Some XGBoost weirdness for the parent of the root
+      parents.push_back(
+          2147483647); // Some XGBoost weirdness for the parent of the root
     else
       parents.push_back(node.parent);
   }
@@ -109,32 +125,36 @@ json CreateTreeJSON(DecisionTree& tree, int32_t id, int32_t numFeatures) {
   return treeJSON;
 }
 
-json CreateModelJSON(DecisionForest& forest) {
+json CreateModelJSON(DecisionForest &forest) {
   json modelJSON;
-  modelJSON["gbtree_model_param"]["num_trees"] = std::to_string(forest.NumTrees());
+  modelJSON["gbtree_model_param"]["num_trees"] =
+      std::to_string(forest.NumTrees());
   modelJSON["gbtree_model_param"]["size_leaf_vector"] = "0";
   modelJSON["tree_info"] = std::vector<int32_t>(forest.NumTrees(), 0);
-  for (size_t i=0 ; i<forest.NumTrees() ; ++i)
-    modelJSON["trees"].push_back(CreateTreeJSON(forest.GetTree(i), (int32_t)i, (int32_t)forest.GetFeatures().size()));
+  for (size_t i = 0; i < forest.NumTrees(); ++i)
+    modelJSON["trees"].push_back(CreateTreeJSON(
+        forest.GetTree(i), (int32_t)i, (int32_t)forest.GetFeatures().size()));
   return modelJSON;
 }
 
-void SaveToXGBoostJSON(DecisionForest& forest, const std::string& filename) {
+void SaveToXGBoostJSON(DecisionForest &forest, const std::string &filename) {
   json forestJSON;
-  forestJSON["version"] = { 1, 4, 0 };
+  forestJSON["version"] = {1, 4, 0};
 
   json learnerJSON;
   learnerJSON["attributes"] = "{ }"_json;
-  learnerJSON["feature_types"] = std::vector<std::string>(forest.GetFeatures().size(), "float");
+  learnerJSON["feature_types"] =
+      std::vector<std::string>(forest.GetFeatures().size(), "float");
 
   json learnerModelParamJSON;
   learnerModelParamJSON["base_score"] = "5E-1";
   learnerModelParamJSON["num_class"] = "0";
-  learnerModelParamJSON["num_feature"] = std::to_string(forest.GetFeatures().size());
+  learnerModelParamJSON["num_feature"] =
+      std::to_string(forest.GetFeatures().size());
   learnerJSON["learner_model_param"] = learnerModelParamJSON;
 
   json objectiveJSON;
-  
+
   objectiveJSON["name"] = "reg:squarederror";
   objectiveJSON["reg_loss_param"]["scale_pos_weight"] = "1";
   learnerJSON["objective"] = objectiveJSON;
@@ -146,20 +166,80 @@ void SaveToXGBoostJSON(DecisionForest& forest, const std::string& filename) {
   fout << forestJSON;
 }
 
-void GenerateRandomModelJSONs(const std::string& dirname, int32_t numberOfModels, int32_t maxNumTrees, 
-                              int32_t maxNumFeatures, double thresholdMin, double thresholdMax, int32_t maxDepth) {
-    for(int32_t i=0 ; i<numberOfModels ; ++i) {
-      std::string filename = "TestModel_Size" + std::to_string(maxNumTrees) + "_" + std::to_string(i+1) + ".json";
-      std::string filepath = dirname + "/" + filename;
-      auto numTrees = maxNumTrees; // GetRandomInt(1, maxNumTrees);
-      std::cout << "Number of trees : " << numTrees << std::endl;
-      auto numFeatures = GetRandomInt(1, maxNumFeatures);
-
-      auto forest = GenerateRandomDecisionForest(numTrees, numFeatures, thresholdMin, thresholdMax, maxDepth);
-      SaveToXGBoostJSON(forest, filepath);
-    }
-
+void GenerateSingleRandomModelJSON(const std::string &filename,
+                                   int32_t numTrees, int32_t numFeatures,
+                                   double thresholdMin, double thresholdMax,
+                                   int32_t maxDepth) {
+  auto forest = GenerateRandomDecisionForest(
+      numTrees, numFeatures, thresholdMin, thresholdMax, maxDepth);
+  SaveToXGBoostJSON(forest, filename);
 }
 
-} // test
-} // treebeard
+std::string getFilename(const std::string &dirname, int32_t numTrees,
+                        int32_t numFeatures, int32_t depth) {
+  static int32_t id = 0;
+  ++id;
+  return dirname + "/TestModel_" + std::to_string(id) + "_" +
+         std::to_string(numTrees) + "_" + std::to_string(numFeatures) + "_" +
+         std::to_string(depth) + "_" + std::to_string(id) + ".json";
+}
+
+void GenerateRandomModelJSONs(const std::string &dirname,
+                              int32_t numberOfModels, int32_t maxNumTrees,
+                              int32_t maxNumFeatures, double thresholdMin,
+                              double thresholdMax, int32_t maxDepth) {
+  for (int32_t i = 0; i < numberOfModels; ++i) {
+    std::string filename = "TestModel_Size" + std::to_string(maxNumTrees) +
+                           "_" + std::to_string(i + 1) + ".json";
+    std::string filepath = dirname + "/" + filename;
+    auto numTrees = maxNumTrees; // GetRandomInt(1, maxNumTrees);
+    std::cout << "Number of trees : " << numTrees << std::endl;
+    auto numFeatures = GetRandomInt(1, maxNumFeatures);
+
+    GenerateSingleRandomModelJSON(filepath, numTrees, numFeatures, thresholdMin,
+                                  thresholdMax, maxDepth);
+  }
+}
+
+void generateRandomInputs(const std::string &filename, int32_t numFeatures,
+                          int32_t numTrees, int32_t numSamples,
+                          double thresholdMin, double thresholdMax) {
+  std::ofstream fout(filename);
+  fout << numSamples << std::endl;
+  for (int32_t i = 0; i < numSamples; ++i) {
+    for (int32_t j = 0; j < numFeatures; ++j) {
+      fout << GetRandomReal(thresholdMin, thresholdMax) << " ";
+    }
+    fout << std::endl;
+  }
+}
+
+void generateRandomXGBoostModels(const std::string &dirName) {
+  constexpr int32_t numberOfModels = 3;
+  constexpr int32_t minNumTrees = 100;
+  constexpr int32_t minNumFeatures = 8;
+  constexpr int32_t maxNumFeatures = 1024;
+  constexpr int32_t maxNumTrees = 1000;
+  constexpr int32_t minDepth = 6, maxDepth = 8;
+  constexpr double thresholdMin = -10.0, thresholdMax = 10.0;
+  for (auto numTrees = minNumTrees; numTrees <= maxNumTrees; numTrees += 100) {
+    for (auto numFeatures = minNumFeatures; numFeatures <= maxNumFeatures;
+         numFeatures *= 2) {
+      for (auto depth = minDepth; depth <= maxDepth; ++depth) {
+
+        for (auto i = 0; i < numberOfModels; ++i) {
+          auto filename = getFilename(dirName, numTrees, numFeatures, depth);
+          std::cout << "Generating model : " << filename << std::endl;
+          GenerateSingleRandomModelJSON(filename, numTrees, numFeatures,
+                                        thresholdMin, thresholdMax, depth);
+          // Generate test inputs
+          generateRandomInputs(filename + ".csv", numFeatures, numTrees, 8192,
+                               thresholdMin, thresholdMax);
+        }
+      }
+    }
+  }
+}
+
+} // namespace test
+} // namespace TreeBeard

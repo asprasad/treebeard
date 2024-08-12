@@ -9,7 +9,7 @@ echo "Using LLVM rooted at : $LLVM_DIR"
 
 CMAKE="cmake"
 MLIR_BUILD="build"
-CONFIG="Debug"
+CONFIG="Release"
 
 while getopts "d:m:c:" opt
 do

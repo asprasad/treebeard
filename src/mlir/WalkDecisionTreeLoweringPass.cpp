@@ -21,12 +21,48 @@ struct WalkDecisionTreeOpLowering: public ConversionPattern {
   WalkDecisionTreeOpLowering(MLIRContext *ctx) : ConversionPattern(mlir::decisionforest::WalkDecisionTreeOp::getOperationName(), 1 /*benefit*/, ctx) {}
 
   LogicalResult
+  GenerateUnrolledWalk(mlir::decisionforest::WalkDecisionTreeOp walkTreeOp, 
+                       ArrayRef<Value> operands,
+                       ConversionPatternRewriter &rewriter) const {
+    auto tree = operands[0];
+    auto inputRow = operands[1];
+    
+    auto location = walkTreeOp->getLoc();
+    auto context = inputRow.getContext();
+    auto treeType = tree.getType().cast<mlir::decisionforest::TreeType>();
+
+    auto nodeType = mlir::decisionforest::NodeType::get(context);
+    auto node = rewriter.create<decisionforest::GetRootOp>(location, nodeType, tree);
+    auto currNode = node.getResult();
+    auto walkUnrollFactor = static_cast<int64_t>(walkTreeOp.getUnrollSteps());
+    for (auto i=0 ; i<walkUnrollFactor ; ++i) {
+        auto cmpPredicate = walkTreeOp.getPredicateAttr();
+        auto traverseTile = rewriter.create<decisionforest::TraverseTreeTileOp>(
+          location,
+          nodeType,
+          cmpPredicate,
+          tree,
+          currNode,
+          inputRow);
+        currNode = traverseTile.getResult();
+    }
+    auto treePrediction = rewriter.create<decisionforest::GetLeafValueOp>(location, treeType.getThresholdType(), tree, currNode);
+    rewriter.replaceOp(walkTreeOp, static_cast<Value>(treePrediction));
+
+    return mlir::success();
+  }
+
+  LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands, ConversionPatternRewriter &rewriter) const final {
     mlir::decisionforest::WalkDecisionTreeOp walkTreeOp = llvm::dyn_cast<mlir::decisionforest::WalkDecisionTreeOp>(op);
     assert(walkTreeOp);
     assert(operands.size() == 2);
     if (!walkTreeOp)
         return mlir::failure();
+
+    auto walkUnrollFactor = static_cast<int64_t>(walkTreeOp.getUnrollSteps());
+    if (walkUnrollFactor != -1)
+      return GenerateUnrolledWalk(walkTreeOp, operands, rewriter);
 
     auto tree = operands[0];
     auto inputRow = operands[1];

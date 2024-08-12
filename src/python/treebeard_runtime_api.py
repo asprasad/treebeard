@@ -92,11 +92,20 @@ class TreebeardAPI:
       self.runtime_lib.Set_numberOfCores.argtypes = [ctypes.c_int64, ctypes.c_int32]
       self.runtime_lib.Set_numberOfCores.restype = None
 
+      self.runtime_lib.Set_numParallelTreeBatches.argtypes = [ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Set_numParallelTreeBatches.restype = None
+
       self.runtime_lib.Set_statsProfileCSVPath.argtypes = [ctypes.c_int64, ctypes.c_char_p]
       self.runtime_lib.Set_statsProfileCSVPath.restype = None
 
+      # self.runtime_lib.Set_compileToGPU.argtypes = [ctypes.c_int64, ctypes.c_bool]
+      # self.runtime_lib.Set_compileToGPU.restype = None
+
       self.runtime_lib.SetOneTreeAtATimeSchedule.argtypes = [ctypes.c_int64]
       self.runtime_lib.SetOneTreeAtATimeSchedule.restype = None
+
+      # self.runtime_lib.SetBasicGPUSchedule.argtypes = [ctypes.c_int64, ctypes.c_int32]
+      # self.runtime_lib.SetBasicGPUSchedule.restype = None
 
       self.runtime_lib.GenerateLLVMIRForXGBoostModel.argtypes = (ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int64)
       self.runtime_lib.GenerateLLVMIRForXGBoostModel.restype = None
@@ -128,6 +137,22 @@ class TreebeardAPI:
       self.runtime_lib.Schedule_Split.argtypes = [ctypes.c_int64, ctypes.c_int64, ctypes.c_int64, ctypes.c_int64, ctypes.c_int32, ctypes.c_int64]
       self.runtime_lib.Schedule_Split.restype = None
 
+      # intptr_t Schedule_Specialize(intptr_t schedPtr, intptr_t indexPtr) {
+      self.runtime_lib.Schedule_Specialize.argtypes = [ctypes.c_int64, ctypes.c_int64]
+      self.runtime_lib.Schedule_Specialize.restype = ctypes.c_int64
+
+      # int64_t GetSpecializationInfoNumIterations(intptr_t infoPtr) {
+      self.runtime_lib.GetSpecializationInfoNumIterations.argtypes = [ctypes.c_int64]
+      self.runtime_lib.GetSpecializationInfoNumIterations.restype = ctypes.c_int64
+
+      # int64_t GetSpecializationInfoNumEntries(intptr_t infoPtr) {
+      self.runtime_lib.GetSpecializationInfoNumEntries.argtypes = [ctypes.c_int64]
+      self.runtime_lib.GetSpecializationInfoNumEntries.restype = ctypes.c_int64
+
+      # void GetSpecializationInfoEntries(intptr_t infoPtr, intptr_t lengths, intptr_t indices)
+      self.runtime_lib.GetSpecializationInfoEntries.argtypes = [ctypes.c_int64, ctypes.c_void_p, ctypes.c_void_p]
+      self.runtime_lib.GetSpecializationInfoEntries.restype = None
+
       self.runtime_lib.Schedule_Pipeline.argtypes = [ctypes.c_int64, ctypes.c_int64, ctypes.c_int32]
       self.runtime_lib.Schedule_Pipeline.restype = None
 
@@ -140,6 +165,15 @@ class TreebeardAPI:
       self.runtime_lib.Schedule_PeelWalk.argtypes = [ctypes.c_int64, ctypes.c_int64, ctypes.c_int32]
 
       self.runtime_lib.Schedule_Cache.argtypes = [ctypes.c_int64, ctypes.c_int64]
+      
+      # void Schedule_AtomicReduce(intptr_t schedPtr, intptr_t indexVarPtr)
+      self.runtime_lib.Schedule_AtomicReduce.argtypes = [ctypes.c_int64, ctypes.c_int64]
+
+      # void Schedule_VectorReduce(intptr_t schedPtr, intptr_t indexVarPtr
+      self.runtime_lib.Schedule_VectorReduce.argtypes = [ctypes.c_int64, ctypes.c_int64, ctypes.c_int32]
+
+      # void Schedule_SharedReduce(intptr_t schedPtr, intptr_t indexVarPtr)
+      self.runtime_lib.Schedule_SharedReduce.argtypes = [ctypes.c_int64, ctypes.c_int64]
 
       self.runtime_lib.Schedule_GetRootIndex.restype = ctypes.c_int64
       self.runtime_lib.Schedule_GetRootIndex.argtypes = [ctypes.c_int64]
@@ -173,6 +207,9 @@ class TreebeardAPI:
       self.runtime_lib.ConstructTreebeardContext.restype = ctypes.c_int64
       self.runtime_lib.ConstructTreebeardContext.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int64]
 
+      self.runtime_lib.ConstructTreebeardContextFromGPUAutoscheduleOptions.restype = ctypes.c_int64
+      self.runtime_lib.ConstructTreebeardContextFromGPUAutoscheduleOptions.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int64, ctypes.c_int64]
+
       self.runtime_lib.DestroyTreebeardContext.argTypes = [ctypes.c_int64]
 
       self.runtime_lib.SetForestCreatorType.argTypes = [ctypes.c_int64, ctypes.c_char_p]
@@ -189,6 +226,58 @@ class TreebeardAPI:
 
       self.runtime_lib.ConstructInferenceRunnerFromHIR.restype = ctypes.c_int64
       self.runtime_lib.ConstructInferenceRunnerFromHIR.argtypes = [ctypes.c_int64]
+
+      # extern "C" void *ConstructGPUInferenceRunnerFromHIR(void *tbContext)
+      self.runtime_lib.ConstructGPUInferenceRunnerFromHIR.restype = ctypes.c_int64
+      self.runtime_lib.ConstructGPUInferenceRunnerFromHIR.argtypes = [ctypes.c_int64]
+
+      # extern "C" void *ConstructGPUInferenceRunnerFromTBContext(void *tbContext)
+      self.runtime_lib.ConstructGPUInferenceRunnerFromTBContext.restype = ctypes.c_int64
+      self.runtime_lib.ConstructGPUInferenceRunnerFromTBContext.argtypes = [ctypes.c_int64]
+
+      # void IndexVariable_SetGPUThreadDim(intptr_t indexVarPtr, int32_t construct, int32_t dim)
+      self.runtime_lib.IndexVariable_SetGPUThreadDim.restype = None
+      self.runtime_lib.IndexVariable_SetGPUThreadDim.argtypes = [ctypes.c_int64, ctypes.c_int32, ctypes.c_int32]
+
+      # extern "C" intptr_t CreateGPUAutoScheduleOptions()
+      self.runtime_lib.CreateGPUAutoScheduleOptions.restype = ctypes.c_int64
+      self.runtime_lib.CreateGPUAutoScheduleOptions.argtypes = None
+
+      # extern "C" void DeleteGPUAutoScheduleOptions(intptr_t options) 
+      self.runtime_lib.DeleteGPUAutoScheduleOptions.restype = None
+      self.runtime_lib.DeleteGPUAutoScheduleOptions.argtypes = [ctypes.c_int64]
+
+      # extern "C" void *findBestGPUScheduleAndCompileModel(void *tbContext)
+      self.runtime_lib.findBestGPUScheduleAndCompileModel.restype = ctypes.c_int64
+      self.runtime_lib.findBestGPUScheduleAndCompileModel.argtypes = [ctypes.c_int64]
+
+      self.runtime_lib.Set_numRowsPerTB.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
+      self.runtime_lib.Set_numRowsPerThread.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
+      self.runtime_lib.Set_rowTileSize.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
+      self.runtime_lib.Set_numTreeThreads.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
+      self.runtime_lib.Set_numTreesAtATime.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
+      self.runtime_lib.Set_cacheRows.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
+      self.runtime_lib.Set_cacheTrees.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
+      self.runtime_lib.Set_unrollTreeWalks.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
+      self.runtime_lib.Set_treeWalkInterleaveFactor.argtypes = [ctypes.c_int64, ctypes.c_int32]
+      self.runtime_lib.Set_sharedMemoryReduce.argtypes = [ctypes.c_int64, ctypes.c_int32]
+
+      self.runtime_lib.Set_numRowsPerTB.restype = None
+      self.runtime_lib.Set_numRowsPerThread.restype = None
+      self.runtime_lib.Set_rowTileSize.restype = None
+      self.runtime_lib.Set_numTreeThreads.restype = None
+      self.runtime_lib.Set_numTreesAtATime.restype = None
+      self.runtime_lib.Set_cacheRows.restype = None
+      self.runtime_lib.Set_cacheTrees.restype = None
+      self.runtime_lib.Set_unrollTreeWalks.restype = None
+      self.runtime_lib.Set_treeWalkInterleaveFactor.restype = None
+      self.runtime_lib.Set_sharedMemoryReduce.restype = None
+
+      self.runtime_lib.SetEnableMeasureGpuKernelTime.argtypes = [ctypes.c_int8]
+      self.runtime_lib.SetEnableMeasureGpuKernelTime.restype = None
+
+      self.runtime_lib.GetGPUKernelExecutionTime.argtypes = [ctypes.c_int64]
+      self.runtime_lib.GetGPUKernelExecutionTime.restype = ctypes.c_int64
 
     except Exception as e:
       print("Loading the TreeBeard runtime failed with exception :", e)
@@ -244,7 +333,16 @@ class TreebeardAPI:
       self.runtime_lib.Schedule_PeelWalk(ctypes.c_int64(schedPtr), ctypes.c_int64(indexVarPtr), ctypes.c_int32(numberOfIterations))
 
   def Schedule_Cache(self, schedPtr, indexVarPtr):
-      self.runtime_lib.Schedule_Cache(ctypes.c_int64(schedPtr), ctypes.c_int64(indexVarPtr))
+      self.runtime_lib.Schedule_Cache(schedPtr, ctypes.c_int64(indexVarPtr))
+  
+  def Schedule_AtomicReduce(self, schedPtr, indexVarPtr):
+      self.runtime_lib.Schedule_AtomicReduce(schedPtr, ctypes.c_int64(indexVarPtr))
+  
+  def Schedule_VectorReduce(self, schedPtr, indexVarPtr, vectorWidth):
+      self.runtime_lib.Schedule_VectorReduce(schedPtr, ctypes.c_int64(indexVarPtr), ctypes.c_int32(vectorWidth))
+  
+  def Schedule_SharedReduce(self, schedPtr, indexVarPtr):
+      self.runtime_lib.Schedule_SharedReduce(ctypes.c_int64(schedPtr), ctypes.c_int64(indexVarPtr))
 
   def Schedule_GetRootIndex(self, schedPtr):
       return self.runtime_lib.Schedule_GetRootIndex(schedPtr)
@@ -274,6 +372,13 @@ class TreebeardAPI:
     model_path_ascii = model_path.encode('ascii')
     model_globals_path_ascii = model_globals_path.encode('ascii')
     tbContext = self.runtime_lib.ConstructTreebeardContext(model_path_ascii, model_globals_path_ascii, options_ptr)
+    # print("TBContext_Create: ", tbContext, type(tbContext))
+    return tbContext
+  
+  def ConstructTreebeardContextFromGPUAutoscheduleOptions(self, model_path, model_globals_path, options_ptr, gpu_autoschedule_options_ptr):
+    model_path_ascii = model_path.encode('ascii')
+    model_globals_path_ascii = model_globals_path.encode('ascii')
+    tbContext = self.runtime_lib.ConstructTreebeardContextFromGPUAutoscheduleOptions(model_path_ascii, model_globals_path_ascii, options_ptr, gpu_autoschedule_options_ptr)
     # print("TBContext_Create: ", tbContext, type(tbContext))
     return tbContext
 

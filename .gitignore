@@ -3,7 +3,6 @@ debug/
 release/
 runtime_test_binaries/
 test/python/treelite_generated_code
-.vscode/
 *.so
 libtreebeard-runtime.so.*
 *.treebeard-globals.json
@@ -14,3 +13,4 @@ libtreebeard-runtime.so.*
 *.gz
 docs/MICRO*2022/*.pdf
 .cache
+.vscode/launch.json
