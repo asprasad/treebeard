@@ -56,6 +56,12 @@ int32_t GPUInferenceRunner::initializeGpuLut() {
 }
 
 void GPUInferenceRunner::Init() {
+  using ClearGPUModuleCache_t = void (*)();
+  auto clearGPUModuleCachePtr = reinterpret_cast<ClearGPUModuleCache_t>(
+      dlsym(nullptr, "mgpuClearModuleCache"));
+  assert(clearGPUModuleCachePtr != nullptr);
+  clearGPUModuleCachePtr();
+
   super::Init();
   if (m_tileSize != 1) {
     initializeGpuLut();
