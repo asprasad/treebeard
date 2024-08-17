@@ -169,6 +169,7 @@ void InitializeMLIRContext(mlir::MLIRContext &context) {
 void ConvertONNXModelToLLVMIR(TreebeardContext &tbContext,
                               const std::string &llvmIRFilePath) {
 
+#if ENABLE_ONNX_PARSER
   // Hardcoding to float because ONNX doesn't support double. Revisit this
   // #TODOSampath
   auto onnxFileParser = TreeBeard::ONNXFileParser<float>(tbContext);
@@ -177,6 +178,9 @@ void ConvertONNXModelToLLVMIR(TreebeardContext &tbContext,
       TreeBeard::ConstructLLVMDialectModuleFromForestCreator(tbContext,
                                                              onnxFileParser);
   mlir::decisionforest::dumpLLVMIRToFile(module, llvmIRFilePath);
+#else
+  assert(false && "ONNX parser is not enabled");
+#endif // ENABLE_ONNX_PARSER
 }
 
 void ConvertXGBoostJSONToLLVMIR(TreebeardContext &tbContext,

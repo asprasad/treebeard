@@ -260,6 +260,7 @@ extern "C" void CreateLLVMIRForONNXModel(const char *modelPath,
                                          const char *llvmIrPath,
                                          const char *modelGlobalsJSONPath,
                                          intptr_t options) {
+#if ENABLE_ONNX_PARSER
   TreeBeard::CompilerOptions *optionsPtr =
       reinterpret_cast<TreeBeard::CompilerOptions *>(options);
 
@@ -270,10 +271,14 @@ extern "C" void CreateLLVMIRForONNXModel(const char *modelPath,
       nullptr /*TODO_ForestCreator*/);
 
   TreeBeard::ConvertONNXModelToLLVMIR(tbContext, llvmIrPath);
+#else
+  assert(false && "ONNX parser is not enabled");
+#endif // ENABLE_ONNX_PARSER
 }
 
 extern "C" intptr_t CreateInferenceRunnerForONNXModel(const char *modelPath,
                                                       intptr_t options) {
+#if ENABLE_ONNX_PARSER
   TreeBeard::CompilerOptions *optionsPtr =
       reinterpret_cast<TreeBeard::CompilerOptions *>(options);
 
@@ -283,7 +288,10 @@ extern "C" intptr_t CreateInferenceRunnerForONNXModel(const char *modelPath,
   auto inferenceRunner = TreeBeard::CreateInferenceRunnerForONNXModel<float>(
       modelPath, modelGlobalsJSONPath.string().c_str(), optionsPtr);
   return reinterpret_cast<intptr_t>(inferenceRunner);
-
+#else
+  assert(false && "ONNX parser is not enabled");
+  return 0;
+#endif // ENABLE_ONNX_PARSER
 }
 
 extern "C" void SetEnableSparseRepresentation(int32_t val) {

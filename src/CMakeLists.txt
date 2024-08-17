@@ -1,4 +1,5 @@
 option(GPU_SUPPORT "Turn on Treebeard GPU support" OFF)
+option(ENABLE_ONNX_PARSER "Turn on Treebeard ONNX parser" OFF)
 
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
@@ -34,6 +35,9 @@ add_definitions(-DLLVM_LIB_DIR="${LLVM_BUILD_DIRECTORY}")
 add_definitions(-DTREEBEARD_BUILD_DIR="${CMAKE_BINARY_DIR}")
 if(GPU_SUPPORT)
         add_definitions(-DTREEBEARD_GPU_SUPPORT=1)
+endif()
+if(ENABLE_ONNX_PARSER)
+        add_definitions(-DENABLE_ONNX_PARSER=1)
 endif()
 mlir_check_all_link_libraries(treebeard)
 

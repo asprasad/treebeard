@@ -1,6 +1,8 @@
 #ifndef ONNX_MODEL_PARSER_H
 #define ONNX_MODE_PARSER_H
 
+#if ENABLE_ONNX_PARSER
+
 #include "CompileUtils.h"
 #include "DecisionForest.h"
 #include "ExecutionHelpers.h"
@@ -401,5 +403,7 @@ ConstructONNXFileParser(TreebeardContext &tbContext) {
   return std::make_shared<ONNXFileParser<float>>(tbContext);
 }
 } // namespace TreeBeard
+
+#endif // ENABLE_ONNX_PARSER
 
 #endif // ONNX_MODEL_PARSER_H
