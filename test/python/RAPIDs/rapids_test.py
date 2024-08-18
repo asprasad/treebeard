@@ -427,8 +427,8 @@ if __name__ == "__main__":
 
   benchmarks = ["abalone", "airline", "airline-ohe", "covtype", "epsilon", "higgs", "letters", "year_prediction_msd"]
   # batch_sizes = [4096, 8192] #, 16384]
-  batch_sizes = [256, 512]
-  # batch_sizes = [256, 512, 1024, 2048, 4096, 8192] #, 16384]
+  batch_sizes = [16384]
+  # batch_sizes = [512, 1024, 2048, 4096, 8192] #, 16384]
   xgb_total_times = []
   rapids_total_times = []
   rapids_kernel_times = []
@@ -447,8 +447,8 @@ if __name__ == "__main__":
 
   for batchSize in batch_sizes:
     for benchmark in benchmarks:
-      xgb_total_func = partial(RunTestOnSingleModelTestInputs_XGB, modelName=benchmark)
-      xgb_total_time = run_benchmark_function_and_return_median_time(xgb_total_func, num_trials)
+      xgb_total_func = 0 # partial(RunTestOnSingleModelTestInputs_XGB, modelName=benchmark)
+      xgb_total_time = 0 # run_benchmark_function_and_return_median_time(xgb_total_func, num_trials)
       xgb_total_times.append(xgb_total_time)
 
       rapids_total_func = partial(RunTestOnSingleModelTestInputs_RAPIDs, modelName=benchmark)
