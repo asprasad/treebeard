@@ -593,7 +593,7 @@ void LowerGPUToLLVM(
       "amdgcn-amd-amdhsa", "gfx900", "", 3 /*opt level*/));
 #endif // GPU support
 
-  pm.addPass(std::make_unique<PrintModulePass>());
+  // pm.addPass(std::make_unique<PrintModulePass>());
   pm.addPass(createConvertSCFToCFPass());
   pm.addPass(std::make_unique<GpuToLLVMConversionPass>(representation));
   pm.addPass(createReconcileUnrealizedCastsPass());
