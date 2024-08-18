@@ -2,6 +2,7 @@
 
 #include <optional>
 
+#include "mlir/Conversion/AMDGPUToROCDL/AMDGPUToROCDL.h"
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/AsyncToLLVM/AsyncToLLVM.h"
@@ -10,6 +11,7 @@
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
+#include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
@@ -25,6 +27,7 @@
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -89,7 +92,7 @@ FlatSymbolRefAttr getOrInsertCacheOpSyncFunc(std::string &functionName,
   auto entryBlock = func.addEntryBlock();
   rewriter.setInsertionPointToStart(entryBlock);
 
-  rewriter.create<NVVM::Barrier0Op>(module.getLoc());
+  rewriter.create<gpu::BarrierOp>(module.getLoc());
   rewriter.create<LLVM::ReturnOp>(module.getLoc(), ValueRange{});
   return SymbolRefAttr::get(context, functionName);
 }
@@ -143,36 +146,20 @@ struct CacheOpEndOpLowering : public ConversionPattern {
 };
 
 template <typename DerivedT>
-class ConvertGpuOpsToNVVMOpsBase
-    : public ::mlir::OperationPass<gpu::GPUModuleOp> {
+class LowerGpuOpsToTargetBase : public ::mlir::OperationPass<gpu::GPUModuleOp> {
+  std::shared_ptr<decisionforest::IRepresentation> m_representation;
+
 public:
-  using Base = ConvertGpuOpsToNVVMOpsBase;
+  using Base = LowerGpuOpsToTargetBase;
 
-  ConvertGpuOpsToNVVMOpsBase()
+  LowerGpuOpsToTargetBase(
+      std::shared_ptr<decisionforest::IRepresentation> representation)
       : ::mlir::OperationPass<gpu::GPUModuleOp>(
-            ::mlir::TypeID::get<DerivedT>()) {}
-  ConvertGpuOpsToNVVMOpsBase(const ConvertGpuOpsToNVVMOpsBase &other)
-      : ::mlir::OperationPass<gpu::GPUModuleOp>(other) {}
-
-  /// Returns the command-line argument attached to this pass.
-  static constexpr ::llvm::StringLiteral getArgumentName() {
-    return ::llvm::StringLiteral("convert-gpu-to-nvvm");
-  }
-  ::llvm::StringRef getArgument() const override {
-    return "convert-gpu-to-nvvm";
-  }
-
-  ::llvm::StringRef getDescription() const override {
-    return "Generate NVVM operations for gpu operations";
-  }
-
-  /// Returns the derived pass name.
-  static constexpr ::llvm::StringLiteral getPassName() {
-    return ::llvm::StringLiteral("ConvertGpuOpsToNVVMOps");
-  }
-  ::llvm::StringRef getName() const override {
-    return "ConvertGpuOpsToNVVMOps";
-  }
+            ::mlir::TypeID::get<DerivedT>()),
+        m_representation(representation) {}
+  LowerGpuOpsToTargetBase(const LowerGpuOpsToTargetBase &other)
+      : ::mlir::OperationPass<gpu::GPUModuleOp>(other),
+        m_representation(other.m_representation) {}
 
   /// Support isa/dyn_cast functionality for the derived pass class.
   static bool classof(const ::mlir::Pass *pass) {
@@ -184,87 +171,38 @@ public:
     return std::make_unique<DerivedT>(*static_cast<const DerivedT *>(this));
   }
 
-  /// Return the dialect that must be loaded in the context before this pass.
-  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
-    registry.insert<memref::MemRefDialect>();
-    registry.insert<NVVM::NVVMDialect>();
-    // registry.insert<StandardOpsDialect>();
-  }
+  // Run re-writes that do not require a special type converter.
+  virtual void populateMemorySpaceConversion(TypeConverter typeConverter) = 0;
 
-protected:
-  ::mlir::Pass::Option<unsigned> indexBitwidth{
-      *this, "index-bitwidth",
-      ::llvm::cl::desc(
-          "Bitwidth of the index type, 0 to use size of machine word"),
-      ::llvm::cl::init(0)};
-};
-/// A pass that replaces all occurrences of GPU device operations with their
-/// corresponding NVVM equivalent.
-///
-/// This pass only handles device code and is not meant to be run on GPU host
-/// code.
-struct LowerGpuOpsToNVVMOpsPass
-    : public ConvertGpuOpsToNVVMOpsBase<LowerGpuOpsToNVVMOpsPass> {
-  std::shared_ptr<decisionforest::IRepresentation> m_representation;
+  // Add rewrites that require the custom type converter
+  virtual LogicalResult populateTargetSpecificRewritesAndConversions(
+      RewritePatternSet &set, LLVMTypeConverter &typeConverter) = 0;
 
-  LowerGpuOpsToNVVMOpsPass(
-      std::shared_ptr<decisionforest::IRepresentation> representation)
-      : m_representation(representation) {}
-  LowerGpuOpsToNVVMOpsPass(unsigned indexBitwidth) {
-    this->indexBitwidth = indexBitwidth;
-  }
+  virtual void doPostLoweringFixup(gpu::GPUModuleOp module) {
+  } // do nothing by default.
+
+  virtual void
+  configureTargetConversionLegality(LLVMConversionTarget &target) = 0;
 
   void runOnOperation() override {
     gpu::GPUModuleOp m = getOperation();
 
-    // Request C wrapper emission.
-    for (auto func : m.getOps<func::FuncOp>()) {
-      func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
-                    UnitAttr::get(&getContext()));
-    }
-
-    /// Customize the bitwidth used for the device side index computations.
-    LowerToLLVMOptions options(
-        m.getContext(),
-        DataLayout(cast<DataLayoutOpInterface>(m.getOperation())));
-
-    if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
-      options.overrideIndexBitwidth(indexBitwidth);
-
-    // Apply in-dialect lowering. In-dialect lowering will replace
-    // ops which need to be lowered further, which is not supported by a
-    // single conversion pass.
+    // This just lowers gpu.allreduce to a bunch of simpler ops from the
+    // gpu dialect and other dialects. We probably don't need this for
+    // Treebeard?
     {
       RewritePatternSet patterns(m.getContext());
       populateGpuRewritePatterns(patterns);
-      if (failed(applyPatternsAndFoldGreedily(m, std::move(patterns))))
-        return signalPassFailure();
+      (void)applyPatternsAndFoldGreedily(m, std::move(patterns));
     }
 
-    // MemRef conversion for GPU to NVVM lowering.
     {
       RewritePatternSet patterns(m.getContext());
       TypeConverter typeConverter;
       typeConverter.addConversion([](Type t) { return t; });
-      // NVVM uses alloca in the default address space to represent private
-      // memory allocations, so drop private annotations. NVVM uses address
-      // space 3 for shared memory. NVVM uses the default address space to
-      // represent global memory.
-      gpu::populateMemorySpaceAttributeTypeConversions(
-          typeConverter, [](gpu::AddressSpace space) -> unsigned {
-            switch (space) {
-            case gpu::AddressSpace::Global:
-              return static_cast<unsigned>(
-                  NVVM::NVVMMemorySpace::kGlobalMemorySpace);
-            case gpu::AddressSpace::Workgroup:
-              return static_cast<unsigned>(
-                  NVVM::NVVMMemorySpace::kSharedMemorySpace);
-            case gpu::AddressSpace::Private:
-              return 0;
-            }
-            llvm_unreachable("unknown address space enum value");
-            return 0;
-          });
+
+      populateMemorySpaceConversion(typeConverter);
+
       gpu::populateMemorySpaceLoweringPatterns(typeConverter, patterns);
       ConversionTarget target(getContext());
       gpu::populateLowerMemorySpaceOpLegality(target);
@@ -272,25 +210,22 @@ struct LowerGpuOpsToNVVMOpsPass
         return signalPassFailure();
     }
 
+    LowerToLLVMOptions options(
+        m.getContext(),
+        DataLayout(cast<DataLayoutOpInterface>(m.getOperation())));
     LLVMTypeConverter converter(m.getContext(), options);
-    // Lowering for MMAMatrixType.
-    converter.addConversion([&](gpu::MMAMatrixType type) -> Type {
-      return convertMMAToLLVMType(type);
-    });
-
     RewritePatternSet llvmPatterns(m.getContext());
 
     arith::populateCeilFloorDivExpandOpsPatterns(llvmPatterns);
-    arith::populateArithToLLVMConversionPatterns(converter, llvmPatterns);
+    mlir::arith::populateArithToLLVMConversionPatterns(converter, llvmPatterns);
     populateAffineToStdConversionPatterns(llvmPatterns);
     populateSCFToControlFlowConversionPatterns(llvmPatterns);
-    cf::populateControlFlowToLLVMConversionPatterns(converter, llvmPatterns);
-    populateFuncToLLVMConversionPatterns(converter, llvmPatterns);
-    populateVectorToLLVMConversionPatterns(converter, llvmPatterns);
-    populateMemRefToLLVMConversionPatterns(converter, llvmPatterns);
-    populateMathToLLVMConversionPatterns(converter, llvmPatterns);
-    populateGpuToNVVMConversionPatterns(converter, llvmPatterns);
-    populateGpuWMMAToNVVMConversionPatterns(converter, llvmPatterns);
+
+    if (failed(populateTargetSpecificRewritesAndConversions(llvmPatterns,
+                                                            converter))) {
+      return signalPassFailure();
+    }
+
     m_representation->AddTypeConversions(*m.getContext(), converter);
     m_representation->AddLLVMConversionPatterns(converter, llvmPatterns);
     decisionforest::populateDebugOpLoweringPatterns(llvmPatterns, converter);
@@ -298,12 +233,180 @@ struct LowerGpuOpsToNVVMOpsPass
     llvmPatterns.add<CacheOpEndOpLowering>(converter);
 
     LLVMConversionTarget target(getContext());
-    configureGpuToNVVMConversionLegality(target);
+    configureTargetConversionLegality(target);
     target.addIllegalDialect<decisionforest::DecisionForestDialect,
                              math::MathDialect>();
 
     if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
       signalPassFailure();
+
+    doPostLoweringFixup(m);
+  }
+};
+
+/// A pass that replaces all occurrences of GPU device operations with their
+/// corresponding NVVM equivalent.
+///
+/// This pass only handles device code and is not meant to be run on GPU host
+/// code.
+struct LowerGpuOpsToNVVMOpsPass
+    : public LowerGpuOpsToTargetBase<LowerGpuOpsToNVVMOpsPass> {
+
+  LowerGpuOpsToNVVMOpsPass(
+      std::shared_ptr<decisionforest::IRepresentation> representation)
+      : LowerGpuOpsToTargetBase(representation) {}
+  LowerGpuOpsToNVVMOpsPass(const LowerGpuOpsToNVVMOpsPass &other)
+      : LowerGpuOpsToTargetBase(other) {}
+
+  ::llvm::StringRef getName() const override {
+    return "Treebeard.LowerGpuOpsToNVVMOpsPass";
+  }
+
+  /// Return the dialect that must be loaded in the context before this pass.
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<memref::MemRefDialect>();
+    registry.insert<NVVM::NVVMDialect>();
+  }
+
+  void populateMemorySpaceConversion(TypeConverter typeConverter) override {
+    // NVVM uses alloca in the default address space to represent private
+    // memory allocations, so drop private annotations. NVVM uses address
+    // space 3 for shared memory. NVVM uses the default address space to
+    // represent global memory.
+    gpu::populateMemorySpaceAttributeTypeConversions(
+        typeConverter, [](gpu::AddressSpace space) -> unsigned {
+          switch (space) {
+          case gpu::AddressSpace::Global:
+            return static_cast<unsigned>(
+                NVVM::NVVMMemorySpace::kGlobalMemorySpace);
+          case gpu::AddressSpace::Workgroup:
+            return static_cast<unsigned>(
+                NVVM::NVVMMemorySpace::kSharedMemorySpace);
+          case gpu::AddressSpace::Private:
+            return 0;
+          }
+          llvm_unreachable("unknown address space enum value");
+          return 0;
+        });
+  }
+
+  // Add rewrites that require the custom type converter
+  LogicalResult populateTargetSpecificRewritesAndConversions(
+      RewritePatternSet &llvmPatterns, LLVMTypeConverter &converter) override {
+    cf::populateControlFlowToLLVMConversionPatterns(converter, llvmPatterns);
+    populateFuncToLLVMConversionPatterns(converter, llvmPatterns);
+    populateVectorToLLVMConversionPatterns(converter, llvmPatterns);
+    populateMemRefToLLVMConversionPatterns(converter, llvmPatterns);
+    populateMathToLLVMConversionPatterns(converter, llvmPatterns);
+    populateGpuToNVVMConversionPatterns(converter, llvmPatterns);
+    populateGpuWMMAToNVVMConversionPatterns(converter, llvmPatterns);
+
+    return LogicalResult::success();
+  }
+
+  void
+  configureTargetConversionLegality(LLVMConversionTarget &target) override {
+    configureGpuToNVVMConversionLegality(target);
+  }
+};
+
+/// A pass that replaces all occurrences of GPU device operations with their
+/// corresponding ROCDL equivalent. This is used for AMD gpus
+///
+/// This pass only handles device code and is not meant to be run on GPU host
+/// code.
+struct LowerGpuOpsToROCDLOpsPass
+    : public LowerGpuOpsToTargetBase<LowerGpuOpsToROCDLOpsPass> {
+
+private:
+  gpu::amd::Runtime m_runtime;
+  std::string m_chipset;
+
+public:
+  LowerGpuOpsToROCDLOpsPass(
+      std::string chipset, gpu::amd::Runtime runtime,
+      std::shared_ptr<decisionforest::IRepresentation> representation)
+      : LowerGpuOpsToTargetBase(representation), m_runtime(runtime),
+        m_chipset(chipset) {}
+  LowerGpuOpsToROCDLOpsPass(const LowerGpuOpsToROCDLOpsPass &other)
+      : LowerGpuOpsToTargetBase(other), m_runtime(other.m_runtime),
+        m_chipset(other.m_chipset) {}
+
+  ::llvm::StringRef getName() const override {
+    return "Treebeard.LowerGpuOpsToROCDLOpsPass";
+  }
+
+  /// Return the dialect that must be loaded in the context before this pass.
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<ROCDL::ROCDLDialect>();
+    registry.insert<cf::ControlFlowDialect>();
+    registry.insert<memref::MemRefDialect>();
+  }
+
+  void populateMemorySpaceConversion(TypeConverter typeConverter) override {
+    gpu::populateMemorySpaceAttributeTypeConversions(
+        typeConverter, [](gpu::AddressSpace space) {
+          switch (space) {
+          case gpu::AddressSpace::Global:
+            return 1;
+          case gpu::AddressSpace::Workgroup:
+            return 3;
+          case gpu::AddressSpace::Private:
+            return 5;
+          }
+          llvm_unreachable("unknown address space enum value");
+          return 0;
+        });
+  }
+
+  // Add rewrites that require the custom type converter
+  LogicalResult populateTargetSpecificRewritesAndConversions(
+      RewritePatternSet &llvmPatterns, LLVMTypeConverter &converter) override {
+
+    FailureOr<amdgpu::Chipset> maybeChipset = amdgpu::Chipset::parse(m_chipset);
+    if (failed(maybeChipset)) {
+      emitError(UnknownLoc::get(llvmPatterns.getContext()),
+                "Invalid chipset name: " + m_chipset);
+      maybeChipset;
+    }
+
+    populateAMDGPUToROCDLConversionPatterns(converter, llvmPatterns,
+                                            *maybeChipset);
+    populateVectorToLLVMConversionPatterns(converter, llvmPatterns);
+    cf::populateControlFlowToLLVMConversionPatterns(converter, llvmPatterns);
+    populateFuncToLLVMConversionPatterns(converter, llvmPatterns);
+    populateMemRefToLLVMConversionPatterns(converter, llvmPatterns);
+    populateGpuToROCDLConversionPatterns(converter, llvmPatterns, m_runtime);
+
+    return LogicalResult::success();
+  }
+
+  void
+  configureTargetConversionLegality(LLVMConversionTarget &target) override {
+    configureGpuToROCDLConversionLegality(target);
+  }
+
+  void doPostLoweringFixup(gpu::GPUModuleOp module) override {
+    // Manually rewrite known block size attributes so the LLVMIR translation
+    // infrastructure can pick them up.
+    module.walk([ctx = module.getContext()](LLVM::LLVMFuncOp op) {
+      if (auto blockSizes =
+              op->removeAttr(gpu::GPUFuncOp::getKnownBlockSizeAttrName())
+                  .dyn_cast_or_null<DenseI32ArrayAttr>()) {
+        op->setAttr(ROCDL::ROCDLDialect::getReqdWorkGroupSizeAttrName(),
+                    blockSizes);
+        // Also set up the rocdl.flat_work_group_size attribute to prevent
+        // conflicting metadata.
+        uint32_t flatSize = 1;
+        for (uint32_t size : blockSizes.asArrayRef()) {
+          flatSize *= size;
+        }
+        StringAttr flatSizeAttr =
+            StringAttr::get(ctx, Twine(flatSize) + "," + Twine(flatSize));
+        op->setAttr(ROCDL::ROCDLDialect::getFlatWorkGroupSizeAttrName(),
+                    flatSizeAttr);
+      }
+    });
   }
 };
 
@@ -436,15 +539,26 @@ std::unique_ptr<mlir::Pass> createDeleteSharedMemoryGlobalsPass(
     int32_t &sharedMemorySize,
     std::shared_ptr<decisionforest::IRepresentation> representation);
 
-void LowerGPUToLLVM(
-    mlir::MLIRContext &context, mlir::ModuleOp module,
-    std::shared_ptr<decisionforest::IRepresentation> representation,
-    TreeBeard::GPUCompileInfo &compileInfo) {
-  // Initialize LLVM NVPTX backend.
+void InitializeGPUTarget(TreeBeard::GPUCompileInfo &compileInfo) {
+#ifdef TREEBEARD_NV_GPU_SUPPORT
   LLVMInitializeNVPTXTarget();
   LLVMInitializeNVPTXTargetInfo();
   LLVMInitializeNVPTXTargetMC();
   LLVMInitializeNVPTXAsmPrinter();
+#elif defined(TREEBEARD_AMD_GPU_SUPPORT)
+  LLVMInitializeAMDGPUAsmParser();
+  LLVMInitializeAMDGPUAsmPrinter();
+  LLVMInitializeAMDGPUTarget();
+  LLVMInitializeAMDGPUTargetInfo();
+  LLVMInitializeAMDGPUTargetMC();
+#endif // GPU support
+}
+
+void LowerGPUToLLVM(
+    mlir::MLIRContext &context, mlir::ModuleOp module,
+    std::shared_ptr<decisionforest::IRepresentation> representation,
+    TreeBeard::GPUCompileInfo &compileInfo) {
+  InitializeGPUTarget(compileInfo);
   // llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
@@ -459,13 +573,27 @@ void LowerGPUToLLVM(
       compileInfo.sharedMemoryInBytes, representation));
   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
   // pm.addPass(std::make_unique<PrintModulePass>());
+#ifdef TREEBEARD_NV_GPU_SUPPORT
   pm.addNestedPass<gpu::GPUModuleOp>(
       std::make_unique<LowerGpuOpsToNVVMOpsPass>(representation));
+#elif defined(TREEBEARD_AMD_GPU_SUPPORT)
+  pm.addNestedPass<gpu::GPUModuleOp>(
+      std::make_unique<LowerGpuOpsToROCDLOpsPass>(
+          "gfx900", gpu::amd::Runtime::Unknown, representation));
+#endif // GPU support
+
   // pm.addPass(std::make_unique<PrintModulePass>());
   pm.addPass(createReconcileUnrealizedCastsPass());
   // pm.addPass(std::make_unique<PrintModulePass>());
+#ifdef TREEBEARD_NV_GPU_SUPPORT
   pm.addNestedPass<gpu::GPUModuleOp>(
       createGpuSerializeToCubinPass("nvptx64-nvidia-cuda", "sm_35", "+ptx60"));
+#elif defined(TREEBEARD_AMD_GPU_SUPPORT)
+  pm.addNestedPass<gpu::GPUModuleOp>(createGpuSerializeToHsacoPass(
+      "amdgcn-amd-amdhsa", "gfx900", "", 3 /*opt level*/));
+#endif // GPU support
+
+  pm.addPass(std::make_unique<PrintModulePass>());
   pm.addPass(createConvertSCFToCFPass());
   pm.addPass(std::make_unique<GpuToLLVMConversionPass>(representation));
   pm.addPass(createReconcileUnrealizedCastsPass());
