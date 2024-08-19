@@ -25,7 +25,7 @@ if __name__ == "__main__":
     benchmark_map = { "benchmarks": benchmarks[i:i+3] }
     benchmark_json = json.dumps(benchmark_map)
     # run the compare script
-    cmd = f"python  {executor_script_path} --benchmarks '{benchmark_json}' --batch_size {batch_size} --num_trials {num_trials}"
+    cmd = f"python -u {executor_script_path} --benchmarks '{benchmark_json}' --batch_size {batch_size} --num_trials {num_trials}"
     # print(cmd, flush=True)
     os.system(cmd)
     # break
