@@ -56,8 +56,7 @@ We consider figures 7 and 8 to be the key results of the paper _"SilvanForge: A 
 2. **Figure 8:** Activate the ```silvanforge``` conda environment and run the following commands.
     ```bash
     cd <silvanforge_home>/test/python/RAPIDs
-    [TODO]
+    . runRandomModelCompare.sh
     ```
-## MLIR Version
-The current version of Treebeard is tested with LLVM 16 (branch release/16.x of the LLVM github repo).
+    This will take close to 10 hours to run. Two PNG files, ```Figure8a.png``` and ```Figure8b.png``` will be generated in the same directory.
 
