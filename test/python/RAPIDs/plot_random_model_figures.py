@@ -68,6 +68,10 @@ def plot_random_model_graph(batch_size, result_file_path, graph_file_path, depth
     # plt.show()
 
 if __name__ == "__main__":
-    results_file_path = os.path.join(os.path.dirname(__file__), "test_output.txt")
+    results_file_path_512 = os.path.join(os.path.dirname(__file__), "random_models_512.txt")
     graph_file_path = os.path.join(os.path.dirname(__file__), "Figure8a.png")
-    plot_random_model_graph(512, results_file_path, graph_file_path, 8)
+    plot_random_model_graph(512, results_file_path_512, graph_file_path, 8)
+
+    results_file_path_4k = os.path.join(os.path.dirname(__file__), "random_models_4k.txt")
+    graph_file_path = os.path.join(os.path.dirname(__file__), "Figure8b.png")
+    plot_random_model_graph(4096, results_file_path_4k, graph_file_path, 6)
