@@ -5,11 +5,8 @@ import json
 filepath = os.path.abspath(__file__)
 treebeard_repo_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(filepath))))
 
-# compute it from the model_path as follows
-# - split the model_path by the "/" char and get the file name
-# - split the file name by the "_" char and get the third element
-def get_num_trees(model_path):
-    return int(model_path.split("/")[-1].split("_")[2])
+def get_tree_depth(model_path):
+    return int(model_path.split("/")[-1].split("_")[4])
 
 def get_benchmark_names(dir_name, batch_size):
   # get all the json files in the directory dir_name
@@ -18,7 +15,7 @@ def get_benchmark_names(dir_name, batch_size):
   files = [f for f in files if not f.endswith("treebeard-globals.json")]
   json_files = [os.path.join(dir_name, f) for f in files if f.endswith(".json")]
   depth = 8 if batch_size == 512 else 6
-  json_files = [f for f in json_files if get_num_trees(f) == depth]
+  json_files = [f for f in json_files if get_tree_depth(f) == depth]
   return json_files
 
 if __name__ == "__main__":
