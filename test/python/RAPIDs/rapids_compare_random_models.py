@@ -246,6 +246,7 @@ if __name__ == "__main__":
   # print(args.benchmarks, args.batch_size, args.num_trials, flush=True)
   benchmarks_json = json.loads(args.benchmarks)
   benchmarks = benchmarks_json["benchmarks"]
+  assert len(benchmarks) <= 3
 
   batch_sizes = [args.batch_size]
   
