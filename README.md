@@ -53,10 +53,12 @@ We consider figures 7 and 8 to be the key results of the paper _"SilvanForge: A 
     python run_gpu_benchmarks.py
     ```
     This will take 3-4 hours to run. Three PNG files (```figure7a.png```, ```figure7b.png```, ```figure7c.png```) will be generated in the same directory.
-2. **Figure 8:** Activate the ```silvanforge``` conda environment and run the following commands.
-    ```bash
-    cd <silvanforge_home>/test/python/RAPIDs
-    . runRandomModelCompare.sh
-    ```
-    This will take close to 10 hours to run. Two PNG files, ```Figure8a.png``` and ```Figure8b.png``` will be generated in the same directory.
+2. **Figure 8:** 
+    1. Download the randomly generated models [here](https://drive.google.com/file/d/1ip_3iaINDO0oZAEI8avS2gUfkR4Hjs4g/view?usp=drive_link) using a browser and save the file as as ```<silvanforge_home>/xgb_models/test/random-models.tar.gz```. **Note: ```wget``` does not work for this link.**    
+    2. Activate the ```silvanforge``` conda environment and run the following commands.
+       ```bash
+        cd <silvanforge_home>/test/python/RAPIDs
+        . runRandomModelCompare.sh
+       ```
+       This will take close to 10 hours to run. Two PNG files, ```Figure8a.png``` and ```Figure8b.png``` will be generated in the same directory.
 
