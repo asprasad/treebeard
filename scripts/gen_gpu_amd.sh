@@ -40,6 +40,7 @@ if command -v ninja > /dev/null 2>&1; then
         -DLLVM_BUILD_DIRECTORY=$LLVM_DIR/$MLIR_BUILD/ \
         -DCMAKE_BUILD_TYPE=$CONFIG \
         -DAMD_GPU_SUPPORT=ON
+        -DAMD_GPU_CHIPSET=$AMD_CHIPSET
     #      -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
     #      -DLLVM_ENABLE_LLD=ON
     #      -DCMAKE_CXX_FLAGS="-std=c++17"
@@ -50,6 +51,7 @@ else
         -DLLVM_BUILD_DIRECTORY=$LLVM_DIR/$MLIR_BUILD/ \
         -DCMAKE_BUILD_TYPE=$CONFIG \
         -DAMD_GPU_SUPPORT=ON
+        -DAMD_GPU_CHIPSET=$AMD_CHIPSET
     #      -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
     #      -DLLVM_ENABLE_LLD=ON
     #      -DCMAKE_CXX_FLAGS="-std=c++17"
