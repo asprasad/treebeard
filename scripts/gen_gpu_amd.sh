@@ -26,7 +26,8 @@ if ! command -v rocminfo > /dev/null 2>&1; then
     exit 1
 fi
 
-AMD_CHIPSET=`rocminfo | grep amdgcn-amd* | awk -F'--|:' '{print $3}'`
+CHIPSETS=`rocminfo | grep amdgcn-amd* | awk -F'--|:' '{print $3}'`
+AMD_CHIPSET=$(echo "$CHIPSETS" | awk 'NR==1 {print $1}')
 
 echo "Using cmake command : $CMAKE"
 echo "Using MLIR_BUILD : $MLIR_BUILD"
