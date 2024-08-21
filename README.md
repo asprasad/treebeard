@@ -16,12 +16,12 @@ SilvanForge is an optimizing compiler for decision tree ensemble inference. Plea
         ```
     2. **[NVIDIA GPUs]** Download script to setup LLVM, SilvanForge and Tahoe and run it.
         ```bash
-        wget https://raw.githubusercontent.com/asprasad/treebeard/master/scripts/setupSilvanForge.sh
+        wget https://raw.githubusercontent.com/asprasad/treebeard/silvanforge/scripts/setupSilvanForge.sh
         bash setupSilvanForge.sh
         ```
     3. **[AMD GPUs]** Download script to setup LLVM, SilvanForge and Tahoe and run it.
         ```bash
-        wget https://raw.githubusercontent.com/asprasad/treebeard/master/scripts/setupSilvanForgeAMD.sh
+        wget https://raw.githubusercontent.com/asprasad/treebeard/silvanforge/scripts/setupSilvanForgeAMD.sh
         bash setupSilvanForgeAMD.sh
         ```
 ## Setting up Python Support (NVIDIA GPUs)
