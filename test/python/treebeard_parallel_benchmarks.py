@@ -154,6 +154,34 @@ def ConstructCompilerOptionsList(tile_size, pipeline_width):
       optionsList.append(invertLoopsTileSize8Options)
   return optionsList
 
+def ConstructTreeParallelCompilerOptionsList(tile_size, pipeline_width):
+  num_par_tree_sets = 10
+  invertLoopsTileSize8Options = treebeard.CompilerOptions(batchSize, tile_size)
+  invertLoopsTileSize8Options.SetPipelineWidth(pipeline_width)
+  invertLoopsTileSize8Options.SetReorderTreesByDepth(True)
+  invertLoopsTileSize8Options.SetMakeAllLeavesSameDepth(1)
+  if run_parallel:
+    # invertLoopsTileSize8Options.SetNumberOfCores(int(num_cores/num_par_tree_sets))
+    invertLoopsTileSize8Options.SetNumberOfParallelTreeBatches(num_par_tree_sets)
+
+  invertLoopsTileSize8MulticlassOptions = treebeard.CompilerOptions(batchSize, tile_size)
+  invertLoopsTileSize8MulticlassOptions.SetReturnTypeWidth(8)
+  invertLoopsTileSize8MulticlassOptions.SetReturnTypeIsFloatType(False)
+  invertLoopsTileSize8MulticlassOptions.SetPipelineWidth(pipeline_width)
+  invertLoopsTileSize8MulticlassOptions.SetReorderTreesByDepth(True)
+  invertLoopsTileSize8MulticlassOptions.SetMakeAllLeavesSameDepth(1)
+  if run_parallel:
+    # invertLoopsTileSize8MulticlassOptions.SetNumberOfCores(int(num_cores/num_par_tree_sets))
+    invertLoopsTileSize8MulticlassOptions.SetNumberOfParallelTreeBatches(num_par_tree_sets)
+
+  optionsList = []
+  for model in modelNames:
+    if model=="covtype" or model=="letters":
+      optionsList.append(invertLoopsTileSize8MulticlassOptions)
+    else:
+      optionsList.append(invertLoopsTileSize8Options)
+  return optionsList
+
 def print_title_row():
   print("Title", "Batch Size", sep=", ", end="")
   for model in modelNames:
@@ -173,28 +201,29 @@ def run_benchmarks_for_batchsize():
   xgboost_speedups = []
   treelite_speedups = []
   options = ConstructCompilerOptionsList(8, 8)
+  optionsTreePar = ConstructTreeParallelCompilerOptionsList(8, 8)
   i = 0
   for model in modelNames:
     treebeardTime = RunTestOnSingleModelTestInputsJIT_Multibatch(model, sparse[i], options[i], return_types[i])
     treebeard_times.append(treebeardTime)
-    xgBoostTime = RunTestOnSingleModelTestInputs_XGBoost(model)
+    xgBoostTime = RunTestOnSingleModelTestInputsJIT_Multibatch(model, sparse[i], optionsTreePar[i], return_types[i]) # RunTestOnSingleModelTestInputs_XGBoost(model)
     xgboost_times.append(xgBoostTime)
-    treeliteTime = RunTestOnSingleModelTestInputs_Treelite(model)
-    treelite_times.append(treeliteTime)
+    # treeliteTime = RunTestOnSingleModelTestInputs_Treelite(model)
+    # treelite_times.append(treeliteTime)
     speedup = xgBoostTime/treebeardTime
     xgboost_speedups.append(speedup)
-    treelite_speedup = treeliteTime/treebeardTime
-    treelite_speedups.append(treelite_speedup)
+    # treelite_speedup = treeliteTime/treebeardTime
+    # treelite_speedups.append(treelite_speedup)
     i += 1
 
   print_title_row()
   print_result_list("Treebeard (s)", treebeard_times)
   print_result_list("XGBoost (s)", xgboost_times)
-  print_result_list("Treelite (s)", treelite_times)
+  # print_result_list("Treelite (s)", treelite_times)
   print_result_list("TB speedup vs XGBoost", xgboost_speedups)
-  print_result_list("TB speedup vs Treelite", treelite_speedups)
+  # print_result_list("TB speedup vs Treelite", treelite_speedups)
   print("Treebeard geomean speedup vs XGBoost: ", gmean(xgboost_speedups))
-  print("Treebeard geomean speedup vs Treelite: ", gmean(treelite_speedups))
+  # print("Treebeard geomean speedup vs Treelite: ", gmean(treelite_speedups))
 
 def run_benchmarks_for_several_configs():
   print("Running configuration exploration")
@@ -234,7 +263,7 @@ def run_benchmarks_for_several_configs():
 
 # batchSizes = [64, 128, 256, 512, 1024, 2000]
 batchSize = -1
-batchSizes = [1024]
+batchSizes = [32, 64]
 
 def run_benchmarks(benchmark_func):
   global batchSize

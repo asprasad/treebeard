@@ -14,46 +14,44 @@
 
 #include "llvm/Support/TargetSelect.h"
 
-#include "TreeTilingUtils.h"
-#include "TypeDefinitions.h"
-#include "TreebeardContext.h"
 #include "ExecutionHelpers.h"
+#include "TreeTilingUtils.h"
+#include "TreebeardContext.h"
+#include "TypeDefinitions.h"
 
-namespace mlir
-{
-namespace decisionforest
-{
+namespace mlir {
+namespace decisionforest {
 
 class GPUInferenceRunner : public InferenceRunnerBase {
 protected:
   using super = InferenceRunnerBase;
   llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> m_maybeEngine;
-  std::unique_ptr<mlir::ExecutionEngine>& m_engine;
+  std::unique_ptr<mlir::ExecutionEngine> &m_engine;
   mlir::ModuleOp m_module;
 
-  void* GetFunctionAddress(const std::string& functionName) override;
-  void Init()  final;
+  void *GetFunctionAddress(const std::string &functionName) override;
+  void Init() final;
   int32_t initializeGpuLut();
-  llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>> CreateExecutionEngine(mlir::ModuleOp module);
+  llvm::Expected<std::unique_ptr<mlir::ExecutionEngine>>
+  CreateExecutionEngine(mlir::ModuleOp module);
+
 public:
-  GPUInferenceRunner(std::shared_ptr<IModelSerializer> serializer, 
-                     mlir::ModuleOp module,
-                     int32_t tileSize,
-                     int32_t thresholdSize,
-                     int32_t featureIndexSize)
-    : InferenceRunnerBase(serializer, tileSize, thresholdSize, featureIndexSize),
-      m_maybeEngine(CreateExecutionEngine(module)),
-      m_engine(m_maybeEngine.get()), m_module(module) 
-  {
-    m_serializer->ReadData(); 
+  GPUInferenceRunner(std::shared_ptr<IModelSerializer> serializer,
+                     mlir::ModuleOp module, int32_t tileSize,
+                     int32_t thresholdSize, int32_t featureIndexSize)
+      : InferenceRunnerBase(serializer, tileSize, thresholdSize,
+                            featureIndexSize),
+        m_maybeEngine(CreateExecutionEngine(module)),
+        m_engine(m_maybeEngine.get()), m_module(module) {
+    m_serializer->ReadData();
     // Okay to call virtual fn here, it's final.
     Init();
   }
   virtual ~GPUInferenceRunner();
 };
 
-} // decisionforest
-} // mlir
+} // namespace decisionforest
+} // namespace mlir
 
 #endif // TREEBEARD_GPU_SUPPORT
 
