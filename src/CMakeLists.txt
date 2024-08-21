@@ -1,6 +1,7 @@
 option(AMD_GPU_SUPPORT "Turn on AMD GPU support" OFF)
 option(NV_GPU_SUPPORT "Turn on NVIDIA GPU support" OFF)
 option(ENABLE_ONNX_PARSER "Turn on Treebeard ONNX parser" OFF)
+option(AMD_GPU_CHIPSET "AMD GPU architecture identifier" "")
 
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
@@ -50,6 +51,12 @@ if(NV_GPU_SUPPORT)
         add_definitions(-DTREEBEARD_NV_GPU_SUPPORT)
 elseif(AMD_GPU_SUPPORT)
         add_definitions(-DTREEBEARD_AMD_GPU_SUPPORT)
+
+        if(AMD_GPU_CHIPSET STREQUAL "")
+                message(FATAL_ERROR "AMD_GPU_CHIPSET must be set when AMD_GPU_SUPPORT is enabled")
+        endif()
+
+        add_definitions(-DTREEBEARD_AMD_GPU_CHIPSET="${AMD_GPU_CHIPSET}")
 endif()
 
 mlir_check_all_link_libraries(treebeard)

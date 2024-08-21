@@ -20,9 +20,18 @@ do
    esac
 done
 
+# check if rocminfo is available.
+if ! command -v rocminfo > /dev/null 2>&1; then
+    echo "rocminfo not found. Please install ROCm and make sure it is in your PATH."
+    exit 1
+fi
+
+AMD_CHIPSET=`rocminfo | grep amdgcn-amd* | awk -F'--|:' '{print $3}'`
+
 echo "Using cmake command : $CMAKE"
 echo "Using MLIR_BUILD : $MLIR_BUILD"
 echo "Using configuration : $CONFIG"
+echo "Using AMD GPU architecture : $AMD_CHIPSET"
 
 if command -v ninja > /dev/null 2>&1; then
     # run this from the build directory
