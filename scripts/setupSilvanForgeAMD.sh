@@ -16,9 +16,8 @@ cd ../mlir/examples
 git clone https://github.com/asprasad/treebeard.git
 cd treebeard
 
-# **** TODO remove this checkout!! *****
-git checkout move-pvt-to-os
-# *************************************
+# Checkout branch with changes made for silvanforge
+git checkout silvanforge
 
 mkdir build
 cd build
