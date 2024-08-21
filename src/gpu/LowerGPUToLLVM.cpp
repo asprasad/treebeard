@@ -579,7 +579,7 @@ void LowerGPUToLLVM(
 #elif defined(TREEBEARD_AMD_GPU_SUPPORT)
   pm.addNestedPass<gpu::GPUModuleOp>(
       std::make_unique<LowerGpuOpsToROCDLOpsPass>(
-          "gfx900", gpu::amd::Runtime::Unknown, representation));
+          "gfx90a", gpu::amd::Runtime::Unknown, representation));
 #endif // GPU support
 
   // pm.addPass(std::make_unique<PrintModulePass>());
@@ -590,7 +590,7 @@ void LowerGPUToLLVM(
       createGpuSerializeToCubinPass("nvptx64-nvidia-cuda", "sm_35", "+ptx60"));
 #elif defined(TREEBEARD_AMD_GPU_SUPPORT)
   pm.addNestedPass<gpu::GPUModuleOp>(createGpuSerializeToHsacoPass(
-      "amdgcn-amd-amdhsa", "gfx900", "", 3 /*opt level*/));
+      "amdgcn-amd-amdhsa", "gfx90a", "", 3 /*opt level*/));
 #endif // GPU support
 
   // pm.addPass(std::make_unique<PrintModulePass>());

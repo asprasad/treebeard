@@ -66,9 +66,11 @@ mlir::ModuleOp LowerHIRModuleToGPU(mlir::ModuleOp module,
   // decisionforest::RunCanonicalizerPass(context, module);
   // module->dump();
 
+#ifndef TREEBEARD_AMD_GPU_SUPPORT
   if (tileSize > 1)
     decisionforest::ConvertTraverseToSimtTraverse(context, module);
-  // module->dump();
+    // module->dump();
+#endif // TREEBEARD_AMD_GPU_SUPPORT
 
   mlir::decisionforest::LowerGPUEnsembleToMemrefs(context, module, serializer,
                                                   representation);
