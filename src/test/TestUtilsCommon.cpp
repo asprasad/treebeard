@@ -38,6 +38,8 @@ TestCSVReader::TestCSVReader(const std::string &filename, int32_t numRows,
   assert(fin);
   if (hasNumRows) {
     fin >> numRows;
+    std::string line;
+    std::getline(fin, line);
   }
   int numRowsRead = 0;
   while (!fin.eof() && (numRows == -1 || numRowsRead < numRows)) {
