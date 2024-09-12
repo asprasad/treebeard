@@ -42,7 +42,7 @@ results_str = """
 35              covtype        8192  1.619791e-06   2.413561e-06  3.962591e-07   5.436562e-08       29.794411         44.394986        7.288782
 36              epsilon        8192  8.573441e-07   8.944107e-07  7.927612e-07   7.901448e-07        1.085047          1.131958        1.003311
 37                higgs        8192  1.036406e-07   1.597967e-07  5.513527e-08   3.065186e-08        3.381218          5.213279        1.798757
-38              letters        8192  1.000000e+00   1.000000e+00  1.080486e-05   1.869327e-06   534951.939091     534951.939091        5.780083
+38              letters        8192 -1.869327e-06  -1.869327e-06  1.080486e-05   1.869327e-06        -1.00000         -1.000000        5.780083
 39  year_prediction_msd        8192  1.363504e-07   1.799270e-07  8.422071e-08   5.448625e-08        2.502474          3.302246        1.545724
 40              abalone       16384  1.436962e-06   2.183755e-06  3.983857e-07   4.240203e-08       33.889001         51.501196        9.395441
 41              airline       16384  1.741275e-07   2.323783e-07  4.022831e-08   1.492478e-08       11.667001         15.569961        2.695403
@@ -50,7 +50,7 @@ results_str = """
 43              covtype       16384  1.588820e-06   2.395662e-06  3.827577e-07   5.538951e-08       28.684487         43.251184        6.910293
 44              epsilon       16384  8.692124e-07   9.251148e-07  7.748092e-07   7.794342e-07        1.115184          1.186906        0.994066
 45                higgs       16384  1.850138e-07   2.396667e-07  5.358144e-08   2.575859e-08        7.182605          9.304341        2.080139
-46              letters       16384  1.000000e+00   1.000000e+00  8.998938e-06   1.725320e-06   579602.734933     579602.734933        5.215809
+46              letters       16384 -1.725320e-06  -1.725320e-06  8.998938e-06   1.725320e-06        -1.00000         -1.000000        5.215809
 47  year_prediction_msd       16384  2.078216e-07   2.643270e-07  7.135464e-08   4.500973e-08        4.617259          5.872664        1.585316
 """
 summary_str = """
@@ -103,9 +103,9 @@ def plot_bar_graph_speedups_for_batch_size(df, batch_size, filename, kwargs=None
     torch_speedup = [tt/ tbt if tt != 1.0 else 0.0 for tt, tbt in zip(hb_torch_time, tb_time)]
     tvm_speedup = [tvmt/ tbt for tvmt, tbt in zip(hb_tvm_time, tb_time)]
 
-    jit_speedup += [gmean(jit_speedup)]
-    torch_speedup += [gmean(torch_speedup)]
-    tvm_speedup += [gmean(tvm_speedup)]
+    jit_speedup += [gmean([speedup for speedup in jit_speedup if speedup != -1])]
+    torch_speedup += [gmean([speedup for speedup in torch_speedup if speedup != -1])]
+    tvm_speedup += [gmean([speedup for speedup in tvm_speedup if speedup != -1])]
 
 
     # show label in microseconds
@@ -124,14 +124,48 @@ def plot_bar_graph_speedups_for_batch_size(df, batch_size, filename, kwargs=None
     gap = BAR_LABEL_FONT_SIZE * 0.3
     pos = np.array([float(3 * i * width + i * gap) for i in range(len(bar_names))])
 
-    ax.bar(pos, jit_speedup, width, label='Speedup of SilvanForge over RAPIDS', hatch='//////')
-    ax.bar(pos+width, torch_speedup, width, label='Speedup of SilvanForge over Tahoe', hatch='......')
-    ax.bar(pos+2*width, tvm_speedup, width, label='Speedup of SilvanForge over TVM', hatch='----')
+    max_speedup = 10
+
+    jit_speedup_c = [min(speedup, max_speedup) for speedup in jit_speedup]
+    torch_speedup_c = [min(speedup, max_speedup) for speedup in torch_speedup]
+    tvm_speedup_c = [min(speedup, max_speedup) for speedup in tvm_speedup]
+
+    ax.bar(pos, jit_speedup_c, width, label='SilvanForge over HB (torch.jit)', hatch='//////')
+    ax.bar(pos+width, torch_speedup_c, width, label='SilvanForge over HB (torch)', hatch='......')
+    ax.bar(pos+2*width, tvm_speedup_c, width, label='SilvanForge over HB (tvm)', hatch='----')
+
+    # Plot gray bars for crashed speedups with open top
+    for i, speedup in enumerate(jit_speedup):
+        if speedup == -1.0:
+            ax.bar(pos[i], max_speedup, width, color='gray', hatch='//', edgecolor='black', linewidth=1)
+    for i, speedup in enumerate(torch_speedup):
+        if speedup == -1.0:
+            ax.bar(pos[i] + width, max_speedup, width, color='gray', hatch='//', edgecolor='black', linewidth=1)
+    for i, speedup in enumerate(tvm_speedup):
+        if speedup == -1.0:
+            ax.bar(pos[i] + 2*width, max_speedup, width, color='gray', hatch='//', edgecolor='black', linewidth=1)
+
+    # Add labels for clipped bars
+    for i, (speedup, speedup_clipped) in enumerate(zip(jit_speedup, jit_speedup_c)):
+        if speedup > speedup_clipped:
+            plt.text(pos[i], max_speedup >> 1, f"{speedup:.2f}", ha='center', fontsize=BAR_LABEL_FONT_SIZE, rotation=90, color='white')
+        if speedup == -1.0:
+            plt.text(pos[i], max_speedup >> 1, 'Crashed', ha='center', fontsize=BAR_LABEL_FONT_SIZE, rotation=90, color='white')
+    for i, (speedup, speedup_clipped) in enumerate(zip(torch_speedup, torch_speedup_c)):
+        if speedup > speedup_clipped:
+            plt.text(pos[i] + width, max_speedup >> 1, f"{speedup:.2f}", ha='center', fontsize=BAR_LABEL_FONT_SIZE, rotation=90, color='white')
+        if speedup == -1.0:
+            plt.text(pos[i] + width, max_speedup >> 1, 'Crashed', ha='center', fontsize=BAR_LABEL_FONT_SIZE, rotation=90, color='white')
+    for i, (speedup, speedup_clipped) in enumerate(zip(tvm_speedup, tvm_speedup_c)):
+        if speedup > speedup_clipped:
+            plt.text(pos[i] + 2*width, max_speedup >> 1, f"{speedup:.2f}", ha='center', fontsize=BAR_LABEL_FONT_SIZE, rotation=90, color='white')
+        if speedup == -1.0:
+            plt.text(pos[i] + 2*width, max_speedup >> 1, 'Crashed', ha='center', fontsize=BAR_LABEL_FONT_SIZE, rotation=90, color='white')
 
     # enable grid
     # ax.grid(True, which='both', axis='y')
 
-    ax.set_ylim(0, max(max(jit_speedup), max(torch_speedup), max(tvm_speedup)) + 2)
+    ax.set_ylim(0, max(max(jit_speedup_c), max(torch_speedup_c), max(tvm_speedup_c)) + 6)
 
     # Add labels and title
     # ax.set_xlabel('Benchmark', fontsize=LABEL_FONT_SIZE)
@@ -139,20 +173,21 @@ def plot_bar_graph_speedups_for_batch_size(df, batch_size, filename, kwargs=None
     # ax.set_title(f'Speedups for Batch Size {batch_size} (4060)')
     ax.set_xticks(pos + width / 2)
     ax.set_xticklabels(bar_names, rotation=90, fontsize=AXIS_FONT_SIZE)
-    ax.axes.yaxis.set_tick_params(labelsize=AXIS_FONT_SIZE)        
+    ax.axes.yaxis.set_tick_params(labelsize=AXIS_FONT_SIZE)
+    ax.set_yticks(np.arange(0, max(max(jit_speedup_c), max(torch_speedup_c), max(tvm_speedup_c)) + 5, 2))
 
     # Add value labels on top of each bar
-    for benchmark, rs, rt, ts, tt, tvm_speedup, tvm_label in zip(pos, jit_speedup, jit_bar_top_label, torch_speedup, torch_bar_top_label, tvm_speedup, tvm_bar_top_label):
-        if rt != -1:
+    for benchmark, rs, rt, ts, tt, tvm_speedup, tvm_label in zip(pos, jit_speedup_c, jit_bar_top_label, torch_speedup_c, torch_bar_top_label, tvm_speedup_c, tvm_bar_top_label):
+        if rt != -1 and rs != -1 and ts != -1:
             rt = round(rt, 2)
             tt = round(tt, 2)
 
-            plt.text(benchmark, rs + 0.2 , str(rt), ha='center', fontsize=BAR_LABEL_FONT_SIZE, rotation=90)
-            plt.text(benchmark + width, ts + 0.2, str(tt), ha='center', fontsize=BAR_LABEL_FONT_SIZE, rotation=90)
+            plt.text(benchmark, rs + 0.4 , str(rt), ha='center', fontsize=BAR_LABEL_FONT_SIZE, rotation=90)
+            plt.text(benchmark + width, ts + 0.4, str(tt), ha='center', fontsize=BAR_LABEL_FONT_SIZE, rotation=90)
 
         if tvm_label != -1:
             tvm_label = round(tvm_label, 2)
-            plt.text(benchmark + 2*width, tvm_speedup + 0.2, str(tvm_label), ha='center', fontsize=BAR_LABEL_FONT_SIZE, rotation=90)
+            plt.text(benchmark + 2*width, tvm_speedup + 0.4, str(tvm_label), ha='center', fontsize=BAR_LABEL_FONT_SIZE, rotation=90)
 
     # Show the legend and plot
     plt.legend(fontsize=LEGEND_FONT_SIZE, loc='upper left')
