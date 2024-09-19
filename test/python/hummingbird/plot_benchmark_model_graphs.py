@@ -202,6 +202,13 @@ class LineGraphPlotter:
         _, self.ax = plt.subplots()
         self.ylim = (lower_lim, upper_lim)
         self.round_up = round_up
+        self.linestyles = ['solid', 'dashed', 'dotted', 'dashdot'] # add more if neeeded
+        self.cur_line_style = 0
+    
+    def get_next_line_style(self):
+        next_style = self.linestyles[self.cur_line_style]
+        self.cur_line_style = (self.cur_line_style + 1) % len(self.linestyles)
+        return next_style
 
     def plot_geomean_speedups_over_batch_size(self, df, compare_time_cols, line_labels):
         batch_sizes = df['batch_size'].unique()
@@ -216,7 +223,7 @@ class LineGraphPlotter:
 
         # Plot the line graph
         for batch_size_speedup, label in zip(speedups, line_labels):
-            self.ax.plot(batch_sizes, batch_size_speedup, 'o-', label=label)
+            self.ax.plot(batch_sizes, batch_size_speedup, 'o', label=label, linestyle=self.get_next_line_style())
         
         self.ax.set_xscale('log', base=2)
         min_speedup = min([min(speedup) for speedup in speedups])
@@ -253,6 +260,6 @@ if __name__ == "__main__":
 
     # plot geomean speedup over batch sizes
     line_graph_plotter = LineGraphPlotter('figure9a.png', '4060', lower_lim=0, upper_lim=5)
-    line_graph_plotter.plot_geomean_speedups_over_batch_size(summary_df, ['avg_jit_speedup', 'avg_torch_speedup'], ['Speedup of SilvanForge over HB(torch.jit)', 'Speedup of SilvanForge over HB(torch)'])
-    line_graph_plotter.plot_geomean_speedups_over_batch_size(summary_df, ['avg_tvm_speedup'], ['Speedup of SilvanForge over HB(tvm)'])
+    line_graph_plotter.plot_geomean_speedups_over_batch_size(summary_df, ['avg_jit_speedup', 'avg_torch_speedup'], ['SilvanForge over HB(torch.jit)', 'SilvanForge over HB(torch)'])
+    line_graph_plotter.plot_geomean_speedups_over_batch_size(summary_df, ['avg_tvm_speedup'], ['SilvanForge over HB(tvm)'])
     line_graph_plotter.save_plot()
