@@ -240,7 +240,26 @@ namespace mlir
 namespace decisionforest
 {
 void DoProbabilityBasedTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth) {
+  // Check if the environment variable PRINT_AFTER_ALL is set
+  const char *printAfterAllEnv = std::getenv("PRINT_AFTER_ALL");
+  bool printAfterAll = printAfterAllEnv && std::string(printAfterAllEnv) == "true";
+
+  if(printAfterAll)
+    context.disableMultithreading();
+  
+
   mlir::PassManager pm(&context);
+  
+  // If PRINT_AFTER_ALL is set to "true", enable IR printing
+  if (printAfterAll) {
+    /* Enable Print After All For Debugging */
+    pm.enableIRPrinting(
+        [=](mlir::Pass *a, Operation *b) { return false; },  // Don't print before passes
+        [=](mlir::Pass *a, Operation *b) { return true; },   // Print after every pass
+        true,  // Print at module scope
+        false  // Print after every pass, regardless of changes
+    );
+  }
   pm.addPass(std::make_unique<ProbabilityBasedTilingPass>(tileSize, tileShapeBitWidth));
 
   if (mlir::failed(pm.run(module))) {
@@ -249,7 +268,26 @@ void DoProbabilityBasedTiling(mlir::MLIRContext& context, mlir::ModuleOp module,
 }
 
 void DoHybridTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth) {
+  // Check if the environment variable PRINT_AFTER_ALL is set
+  const char *printAfterAllEnv = std::getenv("PRINT_AFTER_ALL");
+  bool printAfterAll = printAfterAllEnv && std::string(printAfterAllEnv) == "true";
+
+  if(printAfterAll)
+    context.disableMultithreading();
+  
+
   mlir::PassManager pm(&context);
+  
+  // If PRINT_AFTER_ALL is set to "true", enable IR printing
+  if (printAfterAll) {
+    /* Enable Print After All For Debugging */
+    pm.enableIRPrinting(
+        [=](mlir::Pass *a, Operation *b) { return false; },  // Don't print before passes
+        [=](mlir::Pass *a, Operation *b) { return true; },   // Print after every pass
+        true,  // Print at module scope
+        false  // Print after every pass, regardless of changes
+    );
+  }
   pm.addPass(std::make_unique<ProbabilityBasedTilingPass>(tileSize, tileShapeBitWidth, true, 0.20));
 
   if (mlir::failed(pm.run(module))) {
