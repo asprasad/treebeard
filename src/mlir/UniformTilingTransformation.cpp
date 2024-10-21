@@ -245,7 +245,26 @@ namespace decisionforest {
 void DoUniformTiling(mlir::MLIRContext &context, mlir::ModuleOp module,
                      int32_t tileSize, int32_t tileShapeBitWidth,
                      bool makeAllLeavesSameDepth) {
+  // Check if the environment variable PRINT_AFTER_ALL is set
+  const char *printAfterAllEnv = std::getenv("PRINT_AFTER_ALL");
+  bool printAfterAll = printAfterAllEnv && std::string(printAfterAllEnv) == "true";
+
+  if(printAfterAll)
+    context.disableMultithreading();
+  
+
   mlir::PassManager pm(&context);
+  
+  // If PRINT_AFTER_ALL is set to "true", enable IR printing
+  if (printAfterAll) {
+    /* Enable Print After All For Debugging */
+    pm.enableIRPrinting(
+        [=](mlir::Pass *a, Operation *b) { return false; },  // Don't print before passes
+        [=](mlir::Pass *a, Operation *b) { return true; },   // Print after every pass
+        true,  // Print at module scope
+        false  // Print after every pass, regardless of changes
+    );
+  }
   pm.addPass(std::make_unique<UniformTilingPass>(tileSize, tileShapeBitWidth,
                                                  makeAllLeavesSameDepth));
 
@@ -256,7 +275,26 @@ void DoUniformTiling(mlir::MLIRContext &context, mlir::ModuleOp module,
 
 void padTreesToMakeAllLeavesSameDepth(mlir::MLIRContext &context,
                                       mlir::ModuleOp module) {
+  // Check if the environment variable PRINT_AFTER_ALL is set
+  const char *printAfterAllEnv = std::getenv("PRINT_AFTER_ALL");
+  bool printAfterAll = printAfterAllEnv && std::string(printAfterAllEnv) == "true";
+
+  if(printAfterAll)
+    context.disableMultithreading();
+  
+
   mlir::PassManager pm(&context);
+  
+  // If PRINT_AFTER_ALL is set to "true", enable IR printing
+  if (printAfterAll) {
+    /* Enable Print After All For Debugging */
+    pm.enableIRPrinting(
+        [=](mlir::Pass *a, Operation *b) { return false; },  // Don't print before passes
+        [=](mlir::Pass *a, Operation *b) { return true; },   // Print after every pass
+        true,  // Print at module scope
+        false  // Print after every pass, regardless of changes
+    );
+  }
   mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
   optPM.addPass(std::make_unique<PadTreesToMakeAllLeavesSameDepthPass>());
 

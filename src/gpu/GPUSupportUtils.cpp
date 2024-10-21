@@ -416,7 +416,28 @@ bool isThreadLoop(scf::ParallelOp parallelOp) {
 }
 
 void GreedilyMapParallelLoopsToGPU(mlir::ModuleOp module) {
-  mlir::PassManager pm(module.getContext());
+
+   // Check if the environment variable PRINT_AFTER_ALL is set
+  const char *printAfterAllEnv = std::getenv("PRINT_AFTER_ALL");
+  bool printAfterAll = printAfterAllEnv && std::string(printAfterAllEnv) == "true";
+
+  if(printAfterAll)
+    module.getContext()->disableMultithreading();
+  
+
+    mlir::PassManager pm(module.getContext());
+  
+  // If PRINT_AFTER_ALL is set to "true", enable IR printing
+  if (printAfterAll) {
+    /* Enable Print After All For Debugging */
+    pm.enableIRPrinting(
+        [=](mlir::Pass *a, Operation *b) { return false; },  // Don't print before passes
+        [=](mlir::Pass *a, Operation *b) { return true; },   // Print after every pass
+        true,  // Print at module scope
+        false  // Print after every pass, regardless of changes
+    );
+  }
+
   mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
   optPM.addPass(createGpuMapParallelLoopsPass());
 
@@ -427,7 +448,26 @@ void GreedilyMapParallelLoopsToGPU(mlir::ModuleOp module) {
 
 void ConvertParallelLoopsToGPU(mlir::MLIRContext &context,
                                mlir::ModuleOp module) {
+  // Check if the environment variable PRINT_AFTER_ALL is set
+  const char *printAfterAllEnv = std::getenv("PRINT_AFTER_ALL");
+  bool printAfterAll = printAfterAllEnv && std::string(printAfterAllEnv) == "true";
+
+  if(printAfterAll)
+    context.disableMultithreading();
+  
+
   mlir::PassManager pm(&context);
+  
+  // If PRINT_AFTER_ALL is set to "true", enable IR printing
+  if (printAfterAll) {
+    /* Enable Print After All For Debugging */
+    pm.enableIRPrinting(
+        [=](mlir::Pass *a, Operation *b) { return false; },  // Don't print before passes
+        [=](mlir::Pass *a, Operation *b) { return true; },   // Print after every pass
+        true,  // Print at module scope
+        false  // Print after every pass, regardless of changes
+    );
+  }
   mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
   // optPM.addPass(std::make_unique<MakeGPULoopsPerfectlyNestedPass>());
   optPM.addPass(createParallelLoopToGpuPass());
@@ -441,7 +481,26 @@ void ConvertParallelLoopsToGPU(mlir::MLIRContext &context,
 }
 
 void OutlineGPUKernels(mlir::MLIRContext &context, mlir::ModuleOp module) {
+  // Check if the environment variable PRINT_AFTER_ALL is set
+  const char *printAfterAllEnv = std::getenv("PRINT_AFTER_ALL");
+  bool printAfterAll = printAfterAllEnv && std::string(printAfterAllEnv) == "true";
+
+  if(printAfterAll)
+    context.disableMultithreading();
+  
+
   mlir::PassManager pm(&context);
+  
+  // If PRINT_AFTER_ALL is set to "true", enable IR printing
+  if (printAfterAll) {
+    /* Enable Print After All For Debugging */
+    pm.enableIRPrinting(
+        [=](mlir::Pass *a, Operation *b) { return false; },  // Don't print before passes
+        [=](mlir::Pass *a, Operation *b) { return true; },   // Print after every pass
+        true,  // Print at module scope
+        false  // Print after every pass, regardless of changes
+    );
+  }
   pm.addPass(createGpuKernelOutliningPass());
 
   if (mlir::failed(pm.run(module))) {
@@ -450,7 +509,26 @@ void OutlineGPUKernels(mlir::MLIRContext &context, mlir::ModuleOp module) {
 }
 
 void RunCanonicalizerPass(mlir::MLIRContext &context, mlir::ModuleOp module) {
+  // Check if the environment variable PRINT_AFTER_ALL is set
+  const char *printAfterAllEnv = std::getenv("PRINT_AFTER_ALL");
+  bool printAfterAll = printAfterAllEnv && std::string(printAfterAllEnv) == "true";
+
+  if(printAfterAll)
+    context.disableMultithreading();
+  
+
   mlir::PassManager pm(&context);
+  
+  // If PRINT_AFTER_ALL is set to "true", enable IR printing
+  if (printAfterAll) {
+    /* Enable Print After All For Debugging */
+    pm.enableIRPrinting(
+        [=](mlir::Pass *a, Operation *b) { return false; },  // Don't print before passes
+        [=](mlir::Pass *a, Operation *b) { return true; },   // Print after every pass
+        true,  // Print at module scope
+        false  // Print after every pass, regardless of changes
+    );
+  }
   mlir::GreedyRewriteConfig config;
   std::vector<std::string> disabledPatterns = {
       "(anonymous namespace)::MergeNestedParallelLoops"};
