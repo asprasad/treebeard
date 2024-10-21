@@ -7,10 +7,18 @@ LLVM_DIR=`dirname $LLVM_DIR`
 LLVM_DIR=`dirname $LLVM_DIR`
 echo "Using LLVM rooted at : $LLVM_DIR"
 
-CMAKE="cmake"
-MLIR_BUILD="build"
-CONFIG="Release"
+if [ "$BUILD_MODE" = "debug" ]; then
+    MLIR_BUILD="debug_build"
+    CONFIG="Debug"
+else
+    MLIR_BUILD="build"
+    CONFIG="Release"
+fi
 
+# Default cmake command
+CMAKE="cmake"
+
+# Process options
 while getopts "d:m:c:" opt
 do
    case "$opt" in
@@ -24,7 +32,7 @@ echo "Using cmake command : $CMAKE"
 echo "Using MLIR_BUILD : $MLIR_BUILD"
 echo "Using configuration : $CONFIG"
 
-# run this from the build directory
+# Run the cmake command from the build directory
 $CMAKE -G Ninja .. -DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
        -DMLIR_DIR=$LLVM_DIR/$MLIR_BUILD/lib/cmake/mlir \
        -DLLVM_BUILD_DIRECTORY=$LLVM_DIR/$MLIR_BUILD/ \
