@@ -13,6 +13,7 @@
 #include "GPUExecutionHelper.h"
 #include "GPUSupportUtils.h"
 
+
 namespace mlir {
 class MLIRContext;
 }
@@ -152,6 +153,7 @@ void RunSanityTests();
 void RunXGBoostBenchmarks();
 void RunXGBoostParallelBenchmarks();
 void RunXGBoostGPUBenchmarks();
+void RunIndividualTests(const std::string &individualTestName);
 
 // ===---------------------------------------------=== //
 // Configuration for tests

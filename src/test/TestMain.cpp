@@ -19,6 +19,7 @@
 #include <sstream>
 #include <vector>
 
+
 using namespace mlir::decisionforest;
 
 namespace TreeBeard {
@@ -892,6 +893,7 @@ bool Test_TileSize8_Year_TestInputs_CPUAutoSchedule_TreeParallel_f32i16(
 bool Test_GPUCodeGeneration_Abalone_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache_SharedReduce(
     TestArgs_t &args);
 
+
 void InitializeVectorWithRandValues(std::vector<double> &vec) {
   for (size_t i = 0; i < vec.size(); ++i)
     vec[i] = (double)rand() / RAND_MAX;
@@ -1637,6 +1639,568 @@ bool Test_SplitSchedule(TestArgs_t &args) {
   schedule.WriteToDOTFile(dotFile);
   return true;
 }
+
+
+std::map<std::string, TestFunc_t> testFuncMap = {
+    {"Test_TiledCodeGeneration_LeftHeavy_BatchSize1", Test_TiledCodeGeneration_LeftHeavy_BatchSize1},
+    {"Test_TiledCodeGeneration_RightHeavy_BatchSize1", Test_TiledCodeGeneration_RightHeavy_BatchSize1},
+    {"Test_TiledCodeGeneration_BalancedTree_BatchSize1", Test_TiledCodeGeneration_BalancedTree_BatchSize1},
+    {"Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1", Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1},
+    {"Test_TiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape", Test_TiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape},
+    {"Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape", Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape},
+    {"Test_TiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape", Test_TiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape},
+    {"Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape", Test_TiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape},
+    {"Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize", Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize},
+    {"Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize", Test_TiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize},
+    {"Test_UniformTiling_LeftHeavy_BatchSize1", Test_UniformTiling_LeftHeavy_BatchSize1},
+    {"Test_UniformTiling_RightHeavy_BatchSize1", Test_UniformTiling_RightHeavy_BatchSize1},
+    {"Test_UniformTiling_Balanced_BatchSize1", Test_UniformTiling_Balanced_BatchSize1},
+    {"Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1", Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1},
+    {"Test_UniformTiling_LeftHeavy_BatchSize1_Int8TileShape", Test_UniformTiling_LeftHeavy_BatchSize1_Int8TileShape},
+    {"Test_UniformTiling_RightHeavy_BatchSize1_Int8TileShape", Test_UniformTiling_RightHeavy_BatchSize1_Int8TileShape},
+    {"Test_UniformTiling_Balanced_BatchSize1_Int8TileShape", Test_UniformTiling_Balanced_BatchSize1_Int8TileShape},
+    {"Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1_Int8TileShape", Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1_Int8TileShape},
+    {"Test_UniformTiling_LeftHeavy_BatchSize1_Int16TileShape", Test_UniformTiling_LeftHeavy_BatchSize1_Int16TileShape},
+    {"Test_UniformTiling_RightHeavy_BatchSize1_Int16TileShape", Test_UniformTiling_RightHeavy_BatchSize1_Int16TileShape},
+    {"Test_UniformTiling_Balanced_BatchSize1_Int16TileShape", Test_UniformTiling_Balanced_BatchSize1_Int16TileShape},
+    {"Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1_Int16TileShape", Test_UniformTiling_LeftfAndRighttHeavy_BatchSize1_Int16TileShape},
+    {"Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize1", Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize1},
+    {"Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize1", Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize1},
+    {"Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize1", Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize1},
+    {"Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize2", Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize2},
+    {"Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize2", Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize2},
+    {"Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize2", Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize2},
+    {"Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4", Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4},
+    {"Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4", Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4},
+    {"Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4", Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4},
+    {"Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4_Int8TileShape", Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4_Int8TileShape},
+    {"Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4_Int16TileShape", Test_UniformTiling_RandomXGBoostJSONs_1Tree_BatchSize4_Int16TileShape},
+    {"Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4_Int8TileShape", Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4_Int8TileShape},
+    {"Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4_Int16TileShape", Test_UniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4_Int16TileShape},
+    {"Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4_Int8TileShape", Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4_Int8TileShape},
+    {"Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4_Int16TileShape", Test_UniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4_Int16TileShape},
+    {"Test_Scalar_Abalone", Test_Scalar_Abalone},
+    {"Test_TileSize2_Abalone", Test_TileSize2_Abalone},
+    {"Test_TileSize3_Abalone", Test_TileSize3_Abalone},
+    {"Test_TileSize4_Abalone", Test_TileSize4_Abalone},
+    {"Test_TileSize8_Abalone", Test_TileSize8_Abalone},
+    {"Test_Scalar_Airline", Test_Scalar_Airline},
+    {"Test_TileSize2_Airline", Test_TileSize2_Airline},
+    {"Test_TileSize3_Airline", Test_TileSize3_Airline},
+    {"Test_TileSize4_Airline", Test_TileSize4_Airline},
+    {"Test_TileSize8_Airline", Test_TileSize8_Airline},
+    {"Test_Scalar_AirlineOHE", Test_Scalar_AirlineOHE},
+    {"Test_TileSize2_AirlineOHE", Test_TileSize2_AirlineOHE},
+    {"Test_TileSize3_AirlineOHE", Test_TileSize3_AirlineOHE},
+    {"Test_TileSize4_AirlineOHE", Test_TileSize4_AirlineOHE},
+    {"Test_TileSize8_AirlineOHE", Test_TileSize8_AirlineOHE},
+    {"Test_Scalar_Bosch", Test_Scalar_Bosch},
+    {"Test_TileSize2_Bosch", Test_TileSize2_Bosch},
+    {"Test_TileSize3_Bosch", Test_TileSize3_Bosch},
+    {"Test_TileSize4_Bosch", Test_TileSize4_Bosch},
+    {"Test_TileSize8_Bosch", Test_TileSize8_Bosch},
+    {"Test_Scalar_Epsilon", Test_Scalar_Epsilon},
+    {"Test_TileSize2_Epsilon", Test_TileSize2_Epsilon},
+    {"Test_TileSize3_Epsilon", Test_TileSize3_Epsilon},
+    {"Test_TileSize4_Epsilon", Test_TileSize4_Epsilon},
+    {"Test_TileSize8_Epsilon", Test_TileSize8_Epsilon},
+    {"Test_Scalar_Higgs", Test_Scalar_Higgs},
+    {"Test_TileSize2_Higgs", Test_TileSize2_Higgs},
+    {"Test_TileSize3_Higgs", Test_TileSize3_Higgs},
+    {"Test_TileSize4_Higgs", Test_TileSize4_Higgs},
+    {"Test_TileSize8_Higgs", Test_TileSize8_Higgs},
+    {"Test_TileSize1_Letters_Int8Type", Test_TileSize1_Letters_Int8Type},
+    {"Test_TileSize2_Letters_Int8Type", Test_TileSize2_Letters_Int8Type},
+    {"Test_TileSize3_Letters_Int8Type", Test_TileSize3_Letters_Int8Type},
+    {"Test_TileSize4_Letters_Int8Type", Test_TileSize4_Letters_Int8Type},
+    {"Test_TileSize8_Letters_Int8Type", Test_TileSize8_Letters_Int8Type},
+    {"Test_Scalar_Year", Test_Scalar_Year},
+    {"Test_TileSize2_Year", Test_TileSize2_Year},
+    {"Test_TileSize3_Year", Test_TileSize3_Year},
+    {"Test_TileSize4_Year", Test_TileSize4_Year},
+    {"Test_TileSize8_Year", Test_TileSize8_Year},
+    {"Test_TileSize1_CovType_Int8Type", Test_TileSize1_CovType_Int8Type},
+    {"Test_TileSize2_CovType_Int8Type", Test_TileSize2_CovType_Int8Type},
+    {"Test_TileSize3_CovType_Int8Type", Test_TileSize3_CovType_Int8Type},
+    {"Test_TileSize4_CovType_Int8Type", Test_TileSize4_CovType_Int8Type},
+    {"Test_TileSize8_CovType_Int8Type", Test_TileSize8_CovType_Int8Type},
+    {"Test_SparseCodeGeneration_LeftHeavy_BatchSize1_I32ChildIdx", Test_SparseCodeGeneration_LeftHeavy_BatchSize1_I32ChildIdx},
+    {"Test_SparseCodeGeneration_RightHeavy_BatchSize1_I32ChildIdx", Test_SparseCodeGeneration_RightHeavy_BatchSize1_I32ChildIdx},
+    {"Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize1_I32ChildIdx", Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize1_I32ChildIdx},
+    {"Test_SparseCodeGeneration_LeftHeavy_BatchSize2_I32ChildIdx", Test_SparseCodeGeneration_LeftHeavy_BatchSize2_I32ChildIdx},
+    {"Test_SparseCodeGeneration_RightHeavy_BatchSize2_I32ChildIdx", Test_SparseCodeGeneration_RightHeavy_BatchSize2_I32ChildIdx},
+    {"Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx", Test_SparseCodeGeneration_RightAndLeftHeavy_BatchSize2_I32ChildIdx},
+    {"Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1", Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1},
+    {"Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize2", Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize2},
+    {"Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize4", Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize4},
+    {"Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize1", Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize1},
+    {"Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize2", Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize2},
+    {"Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize4", Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize4},
+    {"Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize1", Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize1},
+    {"Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize2", Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize2},
+    {"Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize4", Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize4},
+    {"Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1_Float", Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize1_Float},
+    {"Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize2_Float", Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize2_Float},
+    {"Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize4_Float", Test_Sparse_RandomXGBoostJSONs_1Tree_BatchSize4_Float},
+    {"Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize1_Float", Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize1_Float},
+    {"Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize2_Float", Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize2_Float},
+    {"Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize4_Float", Test_Sparse_RandomXGBoostJSONs_2Trees_BatchSize4_Float},
+    {"Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize1_Float", Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize1_Float},
+    {"Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize2_Float", Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize2_Float},
+    {"Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize4_Float", Test_Sparse_RandomXGBoostJSONs_4Trees_BatchSize4_Float},
+    {"Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1", Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1},
+    {"Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape", Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int16TileShape},
+    {"Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape", Test_SparseTiledCodeGeneration_LeftHeavy_BatchSize1_Int8TileShape},
+    {"Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize", Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int8TileSize},
+    {"Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1", Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1},
+    {"Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize", Test_SparseTiledCodeGeneration_LeftAndRightHeavy_BatchSize1_Int16TileSize},
+    {"Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1", Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1},
+    {"Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape", Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int16TileShape},
+    {"Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape", Test_SparseTiledCodeGeneration_RightHeavy_BatchSize1_Int8TileShape},
+    {"Test_SparseUniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4", Test_SparseUniformTiling_RandomXGBoostJSONs_2Trees_BatchSize4},
+    {"Test_SparseUniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4", Test_SparseUniformTiling_RandomXGBoostJSONs_4Trees_BatchSize4},
+    {"Test_SparseScalar_Abalone", Test_SparseScalar_Abalone},
+    {"Test_SparseTileSize2_Abalone", Test_SparseTileSize2_Abalone},
+    {"Test_SparseTileSize3_Abalone", Test_SparseTileSize3_Abalone},
+    {"Test_SparseTileSize4_Abalone", Test_SparseTileSize4_Abalone},
+    {"Test_SparseTileSize8_Abalone", Test_SparseTileSize8_Abalone},
+    {"Test_SparseScalar_Airline", Test_SparseScalar_Airline},
+    {"Test_SparseTileSize2_Airline", Test_SparseTileSize2_Airline},
+    {"Test_SparseTileSize3_Airline", Test_SparseTileSize3_Airline},
+    {"Test_SparseTileSize4_Airline", Test_SparseTileSize4_Airline},
+    {"Test_SparseTileSize8_Airline", Test_SparseTileSize8_Airline},
+    {"Test_SparseScalar_AirlineOHE", Test_SparseScalar_AirlineOHE},
+    {"Test_SparseTileSize2_AirlineOHE", Test_SparseTileSize2_AirlineOHE},
+    {"Test_SparseTileSize3_AirlineOHE", Test_SparseTileSize3_AirlineOHE},
+    {"Test_SparseTileSize4_AirlineOHE", Test_SparseTileSize4_AirlineOHE},
+    {"Test_SparseTileSize8_AirlineOHE", Test_SparseTileSize8_AirlineOHE},
+    {"Test_SparseScalar_Bosch", Test_SparseScalar_Bosch},
+    {"Test_SparseTileSize2_Bosch", Test_SparseTileSize2_Bosch},
+    {"Test_SparseTileSize3_Bosch", Test_SparseTileSize3_Bosch},
+    {"Test_SparseTileSize4_Bosch", Test_SparseTileSize4_Bosch},
+    {"Test_SparseTileSize8_Bosch", Test_SparseTileSize8_Bosch},
+    {"Test_SparseTileSize8_CovType_Int8Type", Test_SparseTileSize8_CovType_Int8Type},
+    {"Test_SparseScalar_CovType_Int8Type", Test_SparseScalar_CovType_Int8Type},
+    {"Test_SparseScalar_Letters_Int8Type", Test_SparseScalar_Letters_Int8Type},
+    {"Test_SparseTileSize8_Letters_Int8Type", Test_SparseTileSize8_Letters_Int8Type},
+    {"Test_SparseScalar_Epsilon", Test_SparseScalar_Epsilon},
+    {"Test_SparseTileSize2_Epsilon", Test_SparseTileSize2_Epsilon},
+    {"Test_SparseTileSize3_Epsilon", Test_SparseTileSize3_Epsilon},
+    {"Test_SparseTileSize4_Epsilon", Test_SparseTileSize4_Epsilon},
+    {"Test_SparseTileSize8_Epsilon", Test_SparseTileSize8_Epsilon},
+    {"Test_SparseScalar_Higgs", Test_SparseScalar_Higgs},
+    {"Test_SparseTileSize2_Higgs", Test_SparseTileSize2_Higgs},
+    {"Test_SparseTileSize3_Higgs", Test_SparseTileSize3_Higgs},
+    {"Test_SparseTileSize4_Higgs", Test_SparseTileSize4_Higgs},
+    {"Test_SparseTileSize8_Higgs", Test_SparseTileSize8_Higgs},
+    {"Test_SparseScalar_Year", Test_SparseScalar_Year},
+    {"Test_SparseTileSize2_Year", Test_SparseTileSize2_Year},
+    {"Test_SparseTileSize3_Year", Test_SparseTileSize3_Year},
+    {"Test_SparseTileSize4_Year", Test_SparseTileSize4_Year},
+    {"Test_SparseTileSize8_Year", Test_SparseTileSize8_Year},
+    {"Test_TileSize8_Abalone_TestInputs", Test_TileSize8_Abalone_TestInputs},
+    {"Test_TileSize8_Airline_TestInputs", Test_TileSize8_Airline_TestInputs},
+    {"Test_TileSize8_AirlineOHE_TestInputs", Test_TileSize8_AirlineOHE_TestInputs},
+    {"Test_TileSize8_Epsilon_TestInputs", Test_TileSize8_Epsilon_TestInputs},
+    {"Test_TileSize8_Higgs_TestInputs", Test_TileSize8_Higgs_TestInputs},
+    {"Test_TileSize8_Year_TestInputs", Test_TileSize8_Year_TestInputs},
+    {"Test_TileSize8_CovType_TestInputs", Test_TileSize8_CovType_TestInputs},
+    {"Test_CodeGeneration_LeftHeavy_BatchSize2_XGBoostSchedule", Test_CodeGeneration_LeftHeavy_BatchSize2_XGBoostSchedule},
+    {"Test_CodeGeneration_RightHeavy_BatchSize2_XGBoostSchedule", Test_CodeGeneration_RightHeavy_BatchSize2_XGBoostSchedule},
+    {"Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_XGBoostSchedule", Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_XGBoostSchedule},
+    {"Test_CodeGeneration_LeftHeavy_BatchSize8_CacheInputSchedule", Test_CodeGeneration_LeftHeavy_BatchSize8_CacheInputSchedule},
+    {"Test_CodeGeneration_RightHeavy_BatchSize2_CacheInputSchedule", Test_CodeGeneration_RightHeavy_BatchSize2_CacheInputSchedule},
+    {"Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_CacheInputSchedule", Test_CodeGeneration_AddRightAndLeftHeavyTrees_BatchSize2_CacheInputSchedule},
+    {"Test_Scalar_Abalone_OneTreeAtATimeSchedule", Test_Scalar_Abalone_OneTreeAtATimeSchedule},
+    {"Test_TileSize2_Abalone_OneTreeAtATimeSchedule", Test_TileSize2_Abalone_OneTreeAtATimeSchedule},
+    {"Test_TileSize3_Abalone_OneTreeAtATimeSchedule", Test_TileSize3_Abalone_OneTreeAtATimeSchedule},
+    {"Test_TileSize4_Abalone_OneTreeAtATimeSchedule", Test_TileSize4_Abalone_OneTreeAtATimeSchedule},
+    {"Test_TileSize8_Abalone_OneTreeAtATimeSchedule", Test_TileSize8_Abalone_OneTreeAtATimeSchedule},
+    {"Test_Scalar_Airline_OneTreeAtATimeSchedule", Test_Scalar_Airline_OneTreeAtATimeSchedule},
+    {"Test_TileSize2_Airline_OneTreeAtATimeSchedule", Test_TileSize2_Airline_OneTreeAtATimeSchedule},
+    {"Test_TileSize3_Airline_OneTreeAtATimeSchedule", Test_TileSize3_Airline_OneTreeAtATimeSchedule},
+    {"Test_TileSize4_Airline_OneTreeAtATimeSchedule", Test_TileSize4_Airline_OneTreeAtATimeSchedule},
+    {"Test_TileSize8_Airline_OneTreeAtATimeSchedule", Test_TileSize8_Airline_OneTreeAtATimeSchedule},
+    {"Test_Scalar_AirlineOHE_OneTreeAtATimeSchedule", Test_Scalar_AirlineOHE_OneTreeAtATimeSchedule},
+    {"Test_TileSize2_AirlineOHE_OneTreeAtATimeSchedule", Test_TileSize2_AirlineOHE_OneTreeAtATimeSchedule},
+    {"Test_TileSize3_AirlineOHE_OneTreeAtATimeSchedule", Test_TileSize3_AirlineOHE_OneTreeAtATimeSchedule},
+    {"Test_TileSize4_AirlineOHE_OneTreeAtATimeSchedule", Test_TileSize4_AirlineOHE_OneTreeAtATimeSchedule},
+    {"Test_TileSize8_AirlineOHE_OneTreeAtATimeSchedule", Test_TileSize8_AirlineOHE_OneTreeAtATimeSchedule},
+    {"Test_Scalar_Bosch_OneTreeAtATimeSchedule", Test_Scalar_Bosch_OneTreeAtATimeSchedule},
+    {"Test_TileSize2_Bosch_OneTreeAtATimeSchedule", Test_TileSize2_Bosch_OneTreeAtATimeSchedule},
+    {"Test_TileSize3_Bosch_OneTreeAtATimeSchedule", Test_TileSize3_Bosch_OneTreeAtATimeSchedule},
+    {"Test_TileSize4_Bosch_OneTreeAtATimeSchedule", Test_TileSize4_Bosch_OneTreeAtATimeSchedule},
+    {"Test_TileSize8_Bosch_OneTreeAtATimeSchedule", Test_TileSize8_Bosch_OneTreeAtATimeSchedule},
+    {"Test_Scalar_CovType_OneTreeAtATimeSchedule", Test_Scalar_CovType_OneTreeAtATimeSchedule},
+    {"Test_TileSize8_CovType_OneTreeAtATimeSchedule", Test_TileSize8_CovType_OneTreeAtATimeSchedule},
+    {"Test_Scalar_Epsilon_OneTreeAtATimeSchedule", Test_Scalar_Epsilon_OneTreeAtATimeSchedule},
+    {"Test_TileSize2_Epsilon_OneTreeAtATimeSchedule", Test_TileSize2_Epsilon_OneTreeAtATimeSchedule},
+    {"Test_TileSize3_Epsilon_OneTreeAtATimeSchedule", Test_TileSize3_Epsilon_OneTreeAtATimeSchedule},
+    {"Test_TileSize4_Epsilon_OneTreeAtATimeSchedule", Test_TileSize4_Epsilon_OneTreeAtATimeSchedule},
+    {"Test_TileSize8_Epsilon_OneTreeAtATimeSchedule", Test_TileSize8_Epsilon_OneTreeAtATimeSchedule},
+    {"Test_Scalar_Higgs_OneTreeAtATimeSchedule", Test_Scalar_Higgs_OneTreeAtATimeSchedule},
+    {"Test_TileSize2_Higgs_OneTreeAtATimeSchedule", Test_TileSize2_Higgs_OneTreeAtATimeSchedule},
+    {"Test_TileSize3_Higgs_OneTreeAtATimeSchedule", Test_TileSize3_Higgs_OneTreeAtATimeSchedule},
+    {"Test_TileSize4_Higgs_OneTreeAtATimeSchedule", Test_TileSize4_Higgs_OneTreeAtATimeSchedule},
+    {"Test_TileSize8_Higgs_OneTreeAtATimeSchedule", Test_TileSize8_Higgs_OneTreeAtATimeSchedule},
+    {"Test_Scalar_Year_OneTreeAtATimeSchedule", Test_Scalar_Year_OneTreeAtATimeSchedule},
+    {"Test_TileSize2_Year_OneTreeAtATimeSchedule", Test_TileSize2_Year_OneTreeAtATimeSchedule},
+    {"Test_TileSize3_Year_OneTreeAtATimeSchedule", Test_TileSize3_Year_OneTreeAtATimeSchedule},
+    {"Test_TileSize4_Year_OneTreeAtATimeSchedule", Test_TileSize4_Year_OneTreeAtATimeSchedule},
+    {"Test_TileSize8_Year_OneTreeAtATimeSchedule", Test_TileSize8_Year_OneTreeAtATimeSchedule},
+    {"Test_TileSize8_Abalone_TestInputs_TiledSchedule", Test_TileSize8_Abalone_TestInputs_TiledSchedule},
+    {"Test_TileSize8_AirlineOHE_TestInputs_TiledSchedule", Test_TileSize8_AirlineOHE_TestInputs_TiledSchedule},
+    {"Test_TileSize8_Airline_TestInputs_TiledSchedule", Test_TileSize8_Airline_TestInputs_TiledSchedule},
+    {"Test_TileSize8_Epsilon_TestInputs_TiledSchedule", Test_TileSize8_Epsilon_TestInputs_TiledSchedule},
+    {"Test_TileSize8_Higgs_TestInputs_TiledSchedule", Test_TileSize8_Higgs_TestInputs_TiledSchedule},
+    {"Test_TileSize8_Year_TestInputs_TiledSchedule", Test_TileSize8_Year_TestInputs_TiledSchedule},
+    {"Test_SparseTileSize8_Letters_TiledSchedule", Test_SparseTileSize8_Letters_TiledSchedule},
+
+        // Sparse code gen tests with loops interchanged
+    {"Test_SparseScalar_Abalone_OneTreeAtATimeSchedule", Test_SparseScalar_Abalone_OneTreeAtATimeSchedule},
+    {"Test_SparseTileSize8_Abalone_OneTreeAtATimeSchedule", Test_SparseTileSize8_Abalone_OneTreeAtATimeSchedule},
+    {"Test_SparseScalar_Airline_OneTreeAtATimeSchedule", Test_SparseScalar_Airline_OneTreeAtATimeSchedule},
+    {"Test_SparseTileSize8_Airline_OneTreeAtATimeSchedule", Test_SparseTileSize8_Airline_OneTreeAtATimeSchedule},
+    {"Test_SparseScalar_AirlineOHE_OneTreeAtATimeSchedule", Test_SparseScalar_AirlineOHE_OneTreeAtATimeSchedule},
+    {"Test_SparseTileSize8_AirlineOHE_OneTreeAtATimeSchedule", Test_SparseTileSize8_AirlineOHE_OneTreeAtATimeSchedule},
+    {"Test_SparseScalar_Bosch_OneTreeAtATimeSchedule", Test_SparseScalar_Bosch_OneTreeAtATimeSchedule},
+    {"Test_SparseTileSize8_Bosch_OneTreeAtATimeSchedule", Test_SparseTileSize8_Bosch_OneTreeAtATimeSchedule},
+    {"Test_SparseScalar_CovType_OneTreeAtATimeSchedule", Test_SparseScalar_CovType_OneTreeAtATimeSchedule},
+    {"Test_SparseTileSize8_CovType_OneTreeAtATimeSchedule", Test_SparseTileSize8_CovType_OneTreeAtATimeSchedule},
+    {"Test_SparseScalar_Letters_OneTreeAtATimeSchedule", Test_SparseScalar_Letters_OneTreeAtATimeSchedule},
+    {"Test_SparseTileSize8_Letters_OneTreeAtATimeSchedule", Test_SparseTileSize8_Letters_OneTreeAtATimeSchedule},
+    {"Test_SparseTileSize8_Letters_TiledSchedule", Test_SparseTileSize8_Letters_TiledSchedule},
+    {"Test_SparseScalar_Epsilon_OneTreeAtATimeSchedule", Test_SparseScalar_Epsilon_OneTreeAtATimeSchedule},
+    {"Test_SparseTileSize8_Epsilon_OneTreeAtATimeSchedule", Test_SparseTileSize8_Epsilon_OneTreeAtATimeSchedule},
+    {"Test_SparseScalar_Higgs_OneTreeAtATimeSchedule", Test_SparseScalar_Higgs_OneTreeAtATimeSchedule},
+    {"Test_SparseTileSize8_Higgs_OneTreeAtATimeSchedule", Test_SparseTileSize8_Higgs_OneTreeAtATimeSchedule},
+    {"Test_SparseScalar_Year_OneTreeAtATimeSchedule", Test_SparseScalar_Year_OneTreeAtATimeSchedule},
+    {"Test_SparseTileSize8_Year_OneTreeAtATimeSchedule", Test_SparseTileSize8_Year_OneTreeAtATimeSchedule},
+
+    // Sparse code gen tests with loops tiled
+    {"Test_SparseTileSize8_Abalone_TestInputs_TiledSchedule", Test_SparseTileSize8_Abalone_TestInputs_TiledSchedule},
+    {"Test_SparseTileSize8_AirlineOHE_TestInputs_TiledSchedule", Test_SparseTileSize8_AirlineOHE_TestInputs_TiledSchedule},
+    {"Test_SparseTileSize8_Airline_TestInputs_TiledSchedule", Test_SparseTileSize8_Airline_TestInputs_TiledSchedule},
+    {"Test_SparseTileSize8_Epsilon_TestInputs_TiledSchedule", Test_SparseTileSize8_Epsilon_TestInputs_TiledSchedule},
+    {"Test_SparseTileSize8_Higgs_TestInputs_TiledSchedule", Test_SparseTileSize8_Higgs_TestInputs_TiledSchedule},
+    {"Test_SparseTileSize8_Year_TestInputs_TiledSchedule", Test_SparseTileSize8_Year_TestInputs_TiledSchedule},
+
+    // Stats tests
+    {"Test_AbaloneStatGenerationAndReading", Test_AbaloneStatGenerationAndReading},
+    {"Test_AirlineStatGenerationAndReading", Test_AirlineStatGenerationAndReading},
+    {"Test_AirlineOHEStatGenerationAndReading", Test_AirlineOHEStatGenerationAndReading},
+    {"Test_CovtypeStatGenerationAndReading", Test_CovtypeStatGenerationAndReading},
+    {"Test_EpsilonStatGenerationAndReading", Test_EpsilonStatGenerationAndReading},
+    {"Test_HiggsStatGenerationAndReading", Test_HiggsStatGenerationAndReading},
+    {"Test_YearStatGenerationAndReading", Test_YearStatGenerationAndReading},
+
+    // Sparse Probabilistic Tiling Tests
+    {"Test_SparseProbabilisticTiling_TileSize8_Abalone", Test_SparseProbabilisticTiling_TileSize8_Abalone},
+    {"Test_SparseProbabilisticTiling_TileSize8_Airline", Test_SparseProbabilisticTiling_TileSize8_Airline},
+    {"Test_SparseProbabilisticTiling_TileSize8_AirlineOHE", Test_SparseProbabilisticTiling_TileSize8_AirlineOHE},
+    {"Test_SparseProbabilisticTiling_TileSize8_Covtype", Test_SparseProbabilisticTiling_TileSize8_Covtype},
+    {"Test_SparseProbabilisticTiling_TileSize8_Epsilon", Test_SparseProbabilisticTiling_TileSize8_Epsilon},
+    {"Test_SparseProbabilisticTiling_TileSize8_Higgs", Test_SparseProbabilisticTiling_TileSize8_Higgs},
+    {"Test_SparseProbabilisticTiling_TileSize8_Year", Test_SparseProbabilisticTiling_TileSize8_Year},
+
+    // Tiled tree padding tests
+    {"Test_PadTiledTree_BalancedTree_TileSize2", Test_PadTiledTree_BalancedTree_TileSize2},
+    {"Test_PadTiledTree_BalancedTree_TileSize2_2", Test_PadTiledTree_BalancedTree_TileSize2_2},
+    {"Test_PadTiledTree_BalancedTree_TileSize3", Test_PadTiledTree_BalancedTree_TileSize3},
+    {"Test_RandomXGBoostJSONs_1Tree_BatchSize4_EqualDepth_TileSize8", Test_RandomXGBoostJSONs_1Tree_BatchSize4_EqualDepth_TileSize8},
+    {"Test_RandomXGBoostJSONs_2Trees_BatchSize4_EqualDepth_TileSize8", Test_RandomXGBoostJSONs_2Trees_BatchSize4_EqualDepth_TileSize8},
+    {"Test_RandomXGBoostJSONs_4Trees_BatchSize4_EqualDepth_TileSize8", Test_RandomXGBoostJSONs_4Trees_BatchSize4_EqualDepth_TileSize8},
+    {"Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth", Test_TileSize8_Abalone_TestInputs_MakeLeavesSameDepth},
+    {"Test_TileSize8_AirlineOHE_TestInputs_MakeLeavesSameDepth", Test_TileSize8_AirlineOHE_TestInputs_MakeLeavesSameDepth},
+    {"Test_TileSize8_Airline_TestInputs_MakeLeavesSameDepth", Test_TileSize8_Airline_TestInputs_MakeLeavesSameDepth},
+    {"Test_TileSize8_Epsilon_TestInputs_MakeLeavesSameDepth", Test_TileSize8_Epsilon_TestInputs_MakeLeavesSameDepth},
+    {"Test_TileSize8_Higgs_TestInputs_MakeLeavesSameDepth", Test_TileSize8_Higgs_TestInputs_MakeLeavesSameDepth},
+    {"Test_TileSize8_Year_TestInputs_MakeLeavesSameDepth", Test_TileSize8_Year_TestInputs_MakeLeavesSameDepth},
+    {"Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth", Test_TileSize8_CovType_TestInputs_MakeLeavesSameDepth},
+    {"Test_TileSize8_Abalone_TestInputs_ReorderTrees", Test_TileSize8_Abalone_TestInputs_ReorderTrees},
+
+    // // Split Schedule
+    {"Test_TileSize8_Abalone_TestInputs_SwapAndSplitTreeIndex", Test_TileSize8_Abalone_TestInputs_SwapAndSplitTreeIndex},
+    {"Test_TileSize8_AirlineOHE_TestInputs_SwapAndSplitTreeIndex", Test_TileSize8_AirlineOHE_TestInputs_SwapAndSplitTreeIndex},
+    {"Test_TileSize8_Airline_TestInputs_SwapAndSplitTreeIndex", Test_TileSize8_Airline_TestInputs_SwapAndSplitTreeIndex},
+    {"Test_TileSize8_Epsilon_TestInputs_SwapAndSplitTreeIndex", Test_TileSize8_Epsilon_TestInputs_SwapAndSplitTreeIndex},
+    {"Test_TileSize8_Higgs_TestInputs_SwapAndSplitTreeIndex", Test_TileSize8_Higgs_TestInputs_SwapAndSplitTreeIndex},
+    {"Test_TileSize8_Year_TestInputs_SwapAndSplitTreeIndex", Test_TileSize8_Year_TestInputs_SwapAndSplitTreeIndex},
+
+#ifdef OMP_SUPPORT
+    {"Test_TileSize8_Abalone_TestInputs_ParallelBatch", Test_TileSize8_Abalone_TestInputs_ParallelBatch},
+    {"Test_TileSize8_Airline_TestInputs_ParallelBatch", Test_TileSize8_Airline_TestInputs_ParallelBatch},
+    {"Test_TileSize8_AirlineOHE_TestInputs_ParallelBatch", Test_TileSize8_AirlineOHE_TestInputs_ParallelBatch},
+    {"Test_TileSize8_Covtype_TestInputs_ParallelBatch", Test_TileSize8_Covtype_TestInputs_ParallelBatch},
+    {"Test_TileSize8_Letters_TestInputs_ParallelBatch", Test_TileSize8_Letters_TestInputs_ParallelBatch},
+    {"Test_TileSize8_Epsilon_TestInputs_ParallelBatch", Test_TileSize8_Epsilon_TestInputs_ParallelBatch},
+    {"Test_TileSize8_Higgs_TestInputs_ParallelBatch", Test_TileSize8_Higgs_TestInputs_ParallelBatch},
+    {"Test_TileSize8_Year_TestInputs_ParallelBatch", Test_TileSize8_Year_TestInputs_ParallelBatch},
+#endif // OMP_SUPPORT
+
+  // Pipelining + Unrolling tests
+    {"Test_RandomXGBoostJSONs_1Tree_BatchSize8_TileSize2_4Pipelined", Test_RandomXGBoostJSONs_1Tree_BatchSize8_TileSize2_4Pipelined},
+    {"Test_RandomXGBoostJSONs_4Trees_BatchSize4_4Pipelined", Test_RandomXGBoostJSONs_4Trees_BatchSize4_4Pipelined},
+    {"Test_TileSize3_Letters_2Pipelined_Int8Type", Test_TileSize3_Letters_2Pipelined_Int8Type},
+    {"Test_TileSize4_Letters_3Pipelined_Int8Type", Test_TileSize4_Letters_3Pipelined_Int8Type},
+    {"Test_TileSize8_Letters_5Pipelined_Int8Type", Test_TileSize8_Letters_5Pipelined_Int8Type},
+    {"Test_SparseTileSize8_4Pipelined_Bosch", Test_SparseTileSize8_4Pipelined_Bosch},
+    {"Test_TileSize8_Abalone_4Pipelined_TestInputs", Test_TileSize8_Abalone_4Pipelined_TestInputs},
+    {"Test_TileSize8_CovType_4Pipelined_TestInputs", Test_TileSize8_CovType_4Pipelined_TestInputs},
+    {"Test_SparseTileSize8_Pipeline4_Airline", Test_SparseTileSize8_Pipeline4_Airline},
+    {"Test_SparseTileSize8_Pipelined4_AirlineOHE", Test_SparseTileSize8_Pipelined4_AirlineOHE},
+    {"Test_SparseTileSize8_Pipelined_Year", Test_SparseTileSize8_Pipelined_Year},
+    {"Test_SparseTileSize8_Pipelined_Higgs", Test_SparseTileSize8_Pipelined_Higgs},
+    {"Test_SparseTileSize8_Pipelined_Epsilon", Test_SparseTileSize8_Pipelined_Epsilon},
+
+    {"Test_TileSize8_Abalone_4PipelinedTrees_TestInputs", Test_TileSize8_Abalone_4PipelinedTrees_TestInputs},
+    {"Test_TileSize8_Abalone_PipelinedTreesPeeling_TestInputs", Test_TileSize8_Abalone_PipelinedTreesPeeling_TestInputs},
+
+    // Hybrid Tiling
+    {"Test_WalkPeeling_BalancedTree_TileSize2", Test_WalkPeeling_BalancedTree_TileSize2},
+    {"Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4", Test_HybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4},
+    {"Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4", Test_HybridTilingAndPeeling_RandomXGBoostJSONs_1Tree_FloatBatchSize4},
+    {"Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4", Test_HybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4},
+    {"Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4", Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_2Tree_FloatBatchSize4},
+    {"Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4", Test_UniformAndHybridTilingAndPeeling_RandomXGBoostJSONs_4Tree_FloatBatchSize4},
+    {"Test_PeeledHybridProbabilisticTiling_TileSize8_Year", Test_PeeledHybridProbabilisticTiling_TileSize8_Year},
+    {"Test_PeeledHybridProbabilisticTiling_TileSize8_Letters", Test_PeeledHybridProbabilisticTiling_TileSize8_Letters},
+    {"Test_PeeledHybridProbabilisticTiling_TileSize8_Epsilon", Test_PeeledHybridProbabilisticTiling_TileSize8_Epsilon},
+    {"Test_PeeledHybridProbabilisticTiling_TileSize8_Higgs", Test_PeeledHybridProbabilisticTiling_TileSize8_Higgs},
+    {"Test_PeeledHybridProbabilisticTiling_TileSize8_AirlineOHE", Test_PeeledHybridProbabilisticTiling_TileSize8_AirlineOHE},
+    {"Test_PeeledHybridProbabilisticTiling_TileSize8_Covtype", Test_PeeledHybridProbabilisticTiling_TileSize8_Covtype},
+    {"Test_PeeledHybridProbabilisticTiling_TileSize8_Airline", Test_PeeledHybridProbabilisticTiling_TileSize8_Airline},
+    {"Test_PeeledHybridProbabilisticTiling_TileSize8_Abalone", Test_PeeledHybridProbabilisticTiling_TileSize8_Abalone},
+
+    #ifdef TREEBEARD_GPU_SUPPORT
+   // GPU model buffer initialization tests (scalar)
+    {"Test_GPUModelInit_LeftHeavy_Scalar_DoubleInt", Test_GPUModelInit_LeftHeavy_Scalar_DoubleInt},
+    {"Test_GPUModelInit_RightHeavy_Scalar_DoubleInt", Test_GPUModelInit_RightHeavy_Scalar_DoubleInt},
+    {"Test_GPUModelInit_Balanced_Scalar_DoubleInt", Test_GPUModelInit_Balanced_Scalar_DoubleInt},
+    {"Test_GPUModelInit_LeftAndRightHeavy_Scalar_DoubleInt", Test_GPUModelInit_LeftAndRightHeavy_Scalar_DoubleInt},
+    {"Test_GPUModelInit_LeftHeavy_Scalar_FloatInt", Test_GPUModelInit_LeftHeavy_Scalar_FloatInt},
+    {"Test_GPUModelInit_RightHeavy_Scalar_FloatInt", Test_GPUModelInit_RightHeavy_Scalar_FloatInt},
+    {"Test_GPUModelInit_Balanced_Scalar_FloatInt", Test_GPUModelInit_Balanced_Scalar_FloatInt},
+    {"Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt", Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt},
+    {"Test_GPUModelInit_LeftHeavy_Scalar_FloatInt16", Test_GPUModelInit_LeftHeavy_Scalar_FloatInt16},
+    {"Test_GPUModelInit_RightHeavy_Scalar_FloatInt16", Test_GPUModelInit_RightHeavy_Scalar_FloatInt16},
+    {"Test_GPUModelInit_Balanced_Scalar_FloatInt16", Test_GPUModelInit_Balanced_Scalar_FloatInt16},
+    {"Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt16", Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt16},
+
+    {"Test_GPUModelInit_LeftHeavy_Reorg_DoubleInt", Test_GPUModelInit_LeftHeavy_Reorg_DoubleInt},
+    {"Test_GPUModelInit_RightHeavy_Reorg_DoubleInt", Test_GPUModelInit_RightHeavy_Reorg_DoubleInt},
+    {"Test_GPUModelInit_Balanced_Reorg_DoubleInt", Test_GPUModelInit_Balanced_Reorg_DoubleInt},
+    {"Test_GPUModelInit_LeftAndRightHeavy_Reorg_DoubleInt", Test_GPUModelInit_LeftAndRightHeavy_Reorg_DoubleInt},
+    {"Test_GPUModelInit_LeftHeavy_Reorg_FloatInt", Test_GPUModelInit_LeftHeavy_Reorg_FloatInt},
+    {"Test_GPUModelInit_RightHeavy_Reorg_FloatInt", Test_GPUModelInit_RightHeavy_Reorg_FloatInt},
+    {"Test_GPUModelInit_Balanced_Reorg_FloatInt", Test_GPUModelInit_Balanced_Reorg_FloatInt},
+    {"Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt", Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt},
+    {"Test_GPUModelInit_LeftHeavy_Reorg_FloatInt16", Test_GPUModelInit_LeftHeavy_Reorg_FloatInt16},
+    {"Test_GPUModelInit_RightHeavy_Reorg_FloatInt16", Test_GPUModelInit_RightHeavy_Reorg_FloatInt16},
+    {"Test_GPUModelInit_Balanced_Reorg_FloatInt16", Test_GPUModelInit_Balanced_Reorg_FloatInt16},
+    {"Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt16", Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt16},
+
+    // Basic Array Scalar GPU Codegen Tests
+    {"Test_GPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32", Test_GPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32},
+    {"Test_GPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32", Test_GPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32},
+    {"Test_GPUCodeGeneration_Balanced_DoubleInt32_BatchSize32", Test_GPUCodeGeneration_Balanced_DoubleInt32_BatchSize32},
+    {"Test_GPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32", Test_GPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32},
+    {"Test_GPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32", Test_GPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32},
+    {"Test_GPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32", Test_GPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32},
+    {"Test_GPUCodeGeneration_Balanced_FloatInt16_BatchSize32", Test_GPUCodeGeneration_Balanced_FloatInt16_BatchSize32},
+    {"Test_GPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32", Test_GPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32},
+
+    // Basic scalar sparse GPU codegen tests
+    {"Test_SparseGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32", Test_SparseGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32},
+    {"Test_SparseGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32", Test_SparseGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32},
+    {"Test_SparseGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32", Test_SparseGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32},
+    {"Test_SparseGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32", Test_SparseGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32},
+    {"Test_SparseGPUCodeGeneration_LeftHeavy_FloatInt16_ChI16_BatchSize32", Test_SparseGPUCodeGeneration_LeftHeavy_FloatInt16_ChI16_BatchSize32},
+    {"Test_SparseGPUCodeGeneration_RightHeavy_FloatInt16_ChI16_BatchSize32", Test_SparseGPUCodeGeneration_RightHeavy_FloatInt16_ChI16_BatchSize32},
+    {"Test_SparseGPUCodeGeneration_Balanced_FloatInt16_ChI16_BatchSize32", Test_SparseGPUCodeGeneration_Balanced_FloatInt16_ChI16_BatchSize32},
+    {"Test_SparseGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_ChI16_BatchSize32", Test_SparseGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_ChI16_BatchSize32},
+
+    // Basic reorg forest tests
+    {"Test_ReorgGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32", Test_ReorgGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32},
+    {"Test_ReorgGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32", Test_ReorgGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32},
+    {"Test_ReorgGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32", Test_ReorgGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32},
+    {"Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32", Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32},
+    {"Test_ReorgGPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32", Test_ReorgGPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32},
+    {"Test_ReorgGPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32", Test_ReorgGPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32},
+    {"Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32", Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32},
+    {"Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32", Test_ReorgGPUCodeGeneration_LeftRightAndBalanced_FloatInt16_BatchSize32},
+
+    // Basic GPU caching tests
+    {"Test_SimpleSharedMem_LeftRightAndBalanced", Test_SimpleSharedMem_LeftRightAndBalanced},
+    {"Test_SimpleSharedMem_LeftHeavy", Test_SimpleSharedMem_LeftHeavy},
+    {"Test_SimpleSharedMem_LeftHeavy_F32I16", Test_SimpleSharedMem_LeftHeavy_F32I16},
+    {"Test_SimpleSharedMem_LeftRightAndBalanced_F32I16", Test_SimpleSharedMem_LeftRightAndBalanced_F32I16},
+
+    {"Test_SimpleSharedMem_LeftHeavy_ReorgRep", Test_SimpleSharedMem_LeftHeavy_ReorgRep},
+    {"Test_SimpleSharedMem_LeftRightAndBalanced_Reorg", Test_SimpleSharedMem_LeftRightAndBalanced_Reorg},
+    {"Test_SimpleSharedMem_LeftHeavy_ReorgRep_F32I16", Test_SimpleSharedMem_LeftHeavy_ReorgRep_F32I16},
+    {"Test_SimpleSharedMem_LeftRightAndBalanced_Reorg_F32I16", Test_SimpleSharedMem_LeftRightAndBalanced_Reorg_F32I16},
+
+    {"Test_SimpleSharedMem_LeftHeavy_SparseRep", Test_SimpleSharedMem_LeftHeavy_SparseRep},
+    {"Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep", Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep},
+    {"Test_SimpleSharedMem_LeftHeavy_SparseRep_F32I16", Test_SimpleSharedMem_LeftHeavy_SparseRep_F32I16},
+    {"Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep_F32I16", Test_SimpleSharedMem_LeftRightAndBalanced_SparseRep_F32I16},
+    {"Test_InputSharedMem_LeftHeavy", Test_InputSharedMem_LeftHeavy},
+    {"Test_InputSharedMem_RightHeavy", Test_InputSharedMem_RightHeavy},
+    {"Test_InputSharedMem_LeftRightAndBalanced", Test_InputSharedMem_LeftRightAndBalanced},
+
+    // Simple GPU Tiling tests
+    {"Test_TiledSparseGPU_LeftHeavy_DblI32_B32_TSz2", Test_TiledSparseGPU_LeftHeavy_DblI32_B32_TSz2},
+    {"Test_TiledSparseGPU_RightHeavy_DblI32_B32_TSz2", Test_TiledSparseGPU_RightHeavy_DblI32_B32_TSz2},
+    {"Test_TiledSparseGPU_Balanced_DblI32_B32_TSz2", Test_TiledSparseGPU_Balanced_DblI32_B32_TSz2},
+    {"Test_TiledSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2", Test_TiledSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2},
+    {"Test_TiledSparseGPU_LeftHeavy_FltI16_B32_TSz2", Test_TiledSparseGPU_LeftHeavy_FltI16_B32_TSz2},
+    {"Test_TiledSparseGPU_RightHeavy_FltI16_B32_TSz2", Test_TiledSparseGPU_RightHeavy_FltI16_B32_TSz2},
+    {"Test_TiledSparseGPU_Balanced_FltI16_B32_TSz2", Test_TiledSparseGPU_Balanced_FltI16_B32_TSz2},
+    {"Test_TiledSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2", Test_TiledSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2},
+
+    {"Test_TiledArrayGPU_LeftHeavy_DblI32_B32_TSz2", Test_TiledArrayGPU_LeftHeavy_DblI32_B32_TSz2},
+    {"Test_TiledArrayGPU_RightHeavy_DblI32_B32_TSz2", Test_TiledArrayGPU_RightHeavy_DblI32_B32_TSz2},
+    {"Test_TiledArrayGPU_Balanced_DblI32_B32_TSz2", Test_TiledArrayGPU_Balanced_DblI32_B32_TSz2},
+    {"Test_TiledArrayGPU_LeftAndRightHeavy_DblI32_B32_TSz2", Test_TiledArrayGPU_LeftAndRightHeavy_DblI32_B32_TSz2},
+    {"Test_TiledArrayGPU_LeftHeavy_FltI16_B32_TSz2", Test_TiledArrayGPU_LeftHeavy_FltI16_B32_TSz2},
+    {"Test_TiledArrayGPU_RightHeavy_FltI16_B32_TSz2", Test_TiledArrayGPU_RightHeavy_FltI16_B32_TSz2},
+    {"Test_TiledArrayGPU_Balanced_FltI16_B32_TSz2", Test_TiledArrayGPU_Balanced_FltI16_B32_TSz2},
+    {"Test_TiledArrayGPU_LeftAndRightHeavy_FltI16_B32_TSz2", Test_TiledArrayGPU_LeftAndRightHeavy_FltI16_B32_TSz2},
+
+    // Tiling + Caching
+    {"Test_TiledCachedArrayGPU_LeftHeavy_DblI32_B32_TSz2", Test_TiledCachedArrayGPU_LeftHeavy_DblI32_B32_TSz2},
+    {"Test_TiledCachedArrayGPU_RightHeavy_DblI32_B32_TSz2", Test_TiledCachedArrayGPU_RightHeavy_DblI32_B32_TSz2},
+    {"Test_TiledCachedArrayGPU_Balanced_DblI32_B32_TSz2", Test_TiledCachedArrayGPU_Balanced_DblI32_B32_TSz2},
+    {"Test_TiledCachedArrayGPU_LeftAndRightHeavy_DblI32_B32_TSz2", Test_TiledCachedArrayGPU_LeftAndRightHeavy_DblI32_B32_TSz2},
+    {"Test_TiledCachedArrayGPU_LeftRightAndBalanced_DblI32_B32_TSz2", Test_TiledCachedArrayGPU_LeftRightAndBalanced_DblI32_B32_TSz2},
+    {"Test_TiledCachedArrayGPU_LeftHeavy_FltI16_B32_TSz2", Test_TiledCachedArrayGPU_LeftHeavy_FltI16_B32_TSz2},
+    {"Test_TiledCachedArrayGPU_RightHeavy_FltI16_B32_TSz2", Test_TiledCachedArrayGPU_RightHeavy_FltI16_B32_TSz2},
+    {"Test_TiledCachedArrayGPU_Balanced_FltI16_B32_TSz2", Test_TiledCachedArrayGPU_Balanced_FltI16_B32_TSz2},
+    {"Test_TiledCachedArrayGPU_LeftAndRightHeavy_FltI16_B32_TSz2", Test_TiledCachedArrayGPU_LeftAndRightHeavy_FltI16_B32_TSz2},
+    {"Test_TiledCachedArrayGPU_LeftRightAndBalanced_FltI16_B32_TSz2", Test_TiledCachedArrayGPU_LeftRightAndBalanced_FltI16_B32_TSz2},
+
+    {"Test_TiledCachedSparseGPU_LeftHeavy_DblI32_B32_TSz2", Test_TiledCachedSparseGPU_LeftHeavy_DblI32_B32_TSz2},
+    {"Test_TiledCachedSparseGPU_RightHeavy_DblI32_B32_TSz2", Test_TiledCachedSparseGPU_RightHeavy_DblI32_B32_TSz2},
+    {"Test_TiledCachedSparseGPU_Balanced_DblI32_B32_TSz2", Test_TiledCachedSparseGPU_Balanced_DblI32_B32_TSz2},
+    {"Test_TiledCachedSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2", Test_TiledCachedSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2},
+    {"Test_TiledCachedSparseGPU_LeftHeavy_FltI16_B32_TSz2", Test_TiledCachedSparseGPU_LeftHeavy_FltI16_B32_TSz2},
+    {"Test_TiledCachedSparseGPU_RightHeavy_FltI16_B32_TSz2", Test_TiledCachedSparseGPU_RightHeavy_FltI16_B32_TSz2},
+    {"Test_TiledCachedSparseGPU_Balanced_FltI16_B32_TSz2", Test_TiledCachedSparseGPU_Balanced_FltI16_B32_TSz2},
+    {"Test_TiledCachedSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2", Test_TiledCachedSparseGPU_LeftAndRightHeavy_FltI16_B32_TSz2},
+    {"Test_TiledCachedSparseGPU_LeftRightAndBalanced_DblI32_B32_TSz2", Test_TiledCachedSparseGPU_LeftRightAndBalanced_DblI32_B32_TSz2},
+    {"Test_TiledCachedSparseGPU_LeftRightAndBalanced_FltI16_B32_TSz2", Test_TiledCachedSparseGPU_LeftRightAndBalanced_FltI16_B32_TSz2},
+
+    // GPU Synthetic XGB tests -- scalar
+    {"Test_GPU_1TreeXGB_Array_Scalar", Test_GPU_1TreeXGB_Array_Scalar},
+    {"Test_GPU_2TreeXGB_Array_Scalar", Test_GPU_2TreeXGB_Array_Scalar},
+    {"Test_GPU_4TreeXGB_Array_Scalar", Test_GPU_4TreeXGB_Array_Scalar},
+    {"Test_GPU_1TreeXGB_Array_Scalar_f32i16", Test_GPU_1TreeXGB_Array_Scalar_f32i16},
+    {"Test_GPU_2TreeXGB_Array_Scalar_f32i16", Test_GPU_2TreeXGB_Array_Scalar_f32i16},
+    {"Test_GPU_4TreeXGB_Array_Scalar_f32i16", Test_GPU_4TreeXGB_Array_Scalar_f32i16},
+    {"Test_GPU_1TreeXGB_Sparse_Scalar", Test_GPU_1TreeXGB_Sparse_Scalar},
+    {"Test_GPU_2TreeXGB_Sparse_Scalar", Test_GPU_2TreeXGB_Sparse_Scalar},
+    {"Test_GPU_4TreeXGB_Sparse_Scalar", Test_GPU_4TreeXGB_Sparse_Scalar},
+    {"Test_GPU_1TreeXGB_Sparse_Scalar_f32i16", Test_GPU_1TreeXGB_Sparse_Scalar_f32i16},
+    {"Test_GPU_2TreeXGB_Sparse_Scalar_f32i16", Test_GPU_2TreeXGB_Sparse_Scalar_f32i16},
+    {"Test_GPU_4TreeXGB_Sparse_Scalar_f32i16", Test_GPU_4TreeXGB_Sparse_Scalar_f32i16},
+    {"Test_GPU_1TreeXGB_Reorg_Scalar", Test_GPU_1TreeXGB_Reorg_Scalar},
+    {"Test_GPU_2TreeXGB_Reorg_Scalar", Test_GPU_2TreeXGB_Reorg_Scalar},
+    {"Test_GPU_4TreeXGB_Reorg_Scalar", Test_GPU_4TreeXGB_Reorg_Scalar},
+    {"Test_GPU_1TreeXGB_Reorg_Scalar_f32i16", Test_GPU_1TreeXGB_Reorg_Scalar_f32i16},
+    {"Test_GPU_2TreeXGB_Reorg_Scalar_f32i16", Test_GPU_2TreeXGB_Reorg_Scalar_f32i16},
+    {"Test_GPU_4TreeXGB_Reorg_Scalar_f32i16", Test_GPU_4TreeXGB_Reorg_Scalar_f32i16},
+
+    // GPU Synthetic XGB tests -- tile4
+    {"Test_GPU_1TreeXGB_Sparse_Tile4", Test_GPU_1TreeXGB_Sparse_Tile4},
+    {"Test_GPU_2TreeXGB_Sparse_Tile4", Test_GPU_2TreeXGB_Sparse_Tile4},
+    {"Test_GPU_4TreeXGB_Sparse_Tile4", Test_GPU_4TreeXGB_Sparse_Tile4},
+    {"Test_GPU_1TreeXGB_Sparse_Tile4_f32i16", Test_GPU_1TreeXGB_Sparse_Tile4_f32i16},
+    {"Test_GPU_2TreeXGB_Sparse_Tile4_f32i16", Test_GPU_2TreeXGB_Sparse_Tile4_f32i16},
+    {"Test_GPU_4TreeXGB_Sparse_Tile4_f32i16", Test_GPU_4TreeXGB_Sparse_Tile4_f32i16},
+    {"Test_GPU_1TreeXGB_Array_Tile4", Test_GPU_1TreeXGB_Array_Tile4},
+    {"Test_GPU_2TreeXGB_Array_Tile4", Test_GPU_2TreeXGB_Array_Tile4},
+    {"Test_GPU_4TreeXGB_Array_Tile4", Test_GPU_4TreeXGB_Array_Tile4},
+    {"Test_GPU_1TreeXGB_Array_Tile4_f32i16", Test_GPU_1TreeXGB_Array_Tile4_f32i16},
+    {"Test_GPU_2TreeXGB_Array_Tile4_f32i16", Test_GPU_2TreeXGB_Array_Tile4_f32i16},
+    {"Test_GPU_4TreeXGB_Array_Tile4_f32i16", Test_GPU_4TreeXGB_Array_Tile4_f32i16},
+
+    // GPU Synthetic XGB tests -- Shared Forest -- Scalar
+    {"Test_GPU_SharedForest_1TreeXGB_Reorg_Scalar", Test_GPU_SharedForest_1TreeXGB_Reorg_Scalar},
+    {"Test_GPU_SharedForest_2TreeXGB_Reorg_Scalar", Test_GPU_SharedForest_2TreeXGB_Reorg_Scalar},
+    // {"Test_GPU_SharedForest_4TreeXGB_Reorg_Scalar", Test_GPU_SharedForest_4TreeXGB_Reorg_Scalar}, // Commented out
+    {"Test_GPU_SharedForest_1TreeXGB_Reorg_Scalar_f32i16", Test_GPU_SharedForest_1TreeXGB_Reorg_Scalar_f32i16},
+    {"Test_GPU_SharedForest_2TreeXGB_Reorg_Scalar_f32i16", Test_GPU_SharedForest_2TreeXGB_Reorg_Scalar_f32i16},
+    {"Test_GPU_SharedForest_4TreeXGB_Reorg_Scalar_f32i16", Test_GPU_SharedForest_4TreeXGB_Reorg_Scalar_f32i16},
+
+    {"Test_GPU_SharedForest_1TreeXGB_Array_Scalar", Test_GPU_SharedForest_1TreeXGB_Array_Scalar},
+    // {"Test_GPU_SharedForest_2TreeXGB_Array_Scalar", Test_GPU_SharedForest_2TreeXGB_Array_Scalar}, // Commented out
+    // {"Test_GPU_SharedForest_4TreeXGB_Array_Scalar", Test_GPU_SharedForest_4TreeXGB_Array_Scalar}, // Commented out
+    {"Test_GPU_SharedForest_1TreeXGB_Array_Scalar_f32i16", Test_GPU_SharedForest_1TreeXGB_Array_Scalar_f32i16},
+    {"Test_GPU_SharedForest_2TreeXGB_Array_Scalar_f32i16", Test_GPU_SharedForest_2TreeXGB_Array_Scalar_f32i16},
+    // {"Test_GPU_SharedForest_4TreeXGB_Array_Scalar_f32i16", Test_GPU_SharedForest_4TreeXGB_Array_Scalar_f32i16}, // Commented out
+
+    {"Test_GPU_SharedForest_1TreeXGB_Sparse_Scalar", Test_GPU_SharedForest_1TreeXGB_Sparse_Scalar},
+    {"Test_GPU_SharedForest_2TreeXGB_Sparse_Scalar", Test_GPU_SharedForest_2TreeXGB_Sparse_Scalar},
+    {"Test_GPU_SharedForest_4TreeXGB_Sparse_Scalar", Test_GPU_SharedForest_4TreeXGB_Sparse_Scalar},
+    {"Test_GPU_SharedForest_1TreeXGB_Sparse_Scalar_f32i16", Test_GPU_SharedForest_1TreeXGB_Sparse_Scalar_f32i16},
+    {"Test_GPU_SharedForest_2TreeXGB_Sparse_Scalar_f32i16", Test_GPU_SharedForest_2TreeXGB_Sparse_Scalar_f32i16},
+    {"Test_GPU_SharedForest_4TreeXGB_Sparse_Scalar_f32i16", Test_GPU_SharedForest_4TreeXGB_Sparse_Scalar_f32i16},
+
+    // GPU Synthetic XGB tests -- Cache Partial Forest -- Scalar
+    // NOTE: These schedules are different than Tahoe's partial shared forest schedule
+    {"Test_GPU_CachePartialForest1Tree_2TreeXGB_Sparse_Scalar", Test_GPU_CachePartialForest1Tree_2TreeXGB_Sparse_Scalar},
+    {"Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar", Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar},
+    {"Test_GPU_CachePartialForest2Trees_2TreeXGB_Sparse_Scalar_f32i16", Test_GPU_CachePartialForest2Trees_2TreeXGB_Sparse_Scalar_f32i16},
+    {"Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar_f32i16", Test_GPU_CachePartialForest2Trees_4TreeXGB_Sparse_Scalar_f32i16},
+
+    {"Test_GPU_CachePartialForest1Tree_2TreeXGB_Reorg_Scalar", Test_GPU_CachePartialForest1Tree_2TreeXGB_Reorg_Scalar},
+    {"Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar", Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar},
+    {"Test_GPU_CachePartialForest2Trees_2TreeXGB_Reorg_Scalar_f32i16", Test_GPU_CachePartialForest2Trees_2TreeXGB_Reorg_Scalar_f32i16},
+    {"Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar_f32i16", Test_GPU_CachePartialForest2Trees_4TreeXGB_Reorg_Scalar_f32i16},
+
+    // Adding the new test entries
+    {"Test_GPU_CachePartialForest1Tree_2TreeXGB_Array_Scalar", Test_GPU_CachePartialForest1Tree_2TreeXGB_Array_Scalar},
+    {"Test_GPU_CachePartialForest1Tree_4TreeXGB_Array_Scalar", Test_GPU_CachePartialForest1Tree_4TreeXGB_Array_Scalar},
+    {"Test_GPU_CachePartialForest2Trees_2TreeXGB_Array_Scalar_f32i16", Test_GPU_CachePartialForest2Trees_2TreeXGB_Array_Scalar_f32i16},
+    {"Test_GPU_CachePartialForest2Trees_4TreeXGB_Array_Scalar_f32i16", Test_GPU_CachePartialForest2Trees_4TreeXGB_Array_Scalar_f32i16},
+    {"Test_ScalarSparseGPU_TwiceLeftRightBalanced_TahoeShdInpMultiRow_FltI16_B32", Test_ScalarSparseGPU_TwiceLeftRightBalanced_TahoeShdInpMultiRow_FltI16_B32},
+    {"Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInpMultiRow_FltI16_B32", Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInpMultiRow_FltI16_B32},
+    {"Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInp_FltI16_B32", Test_ScalarSparseGPU_LeftRightAndBalanced_TahoeShdInp_FltI16_B32},
+    {"Test_ScalarSparseGPU_TwiceLeftRightBalanced_IterShdPartialForest_FltI16_B32", Test_ScalarSparseGPU_TwiceLeftRightBalanced_IterShdPartialForest_FltI16_B32},
+    {"Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Sparse_Scalar", Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Sparse_Scalar},
+    {"Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Sparse_Scalar", Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Sparse_Scalar},
+    {"Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Sparse_Scalar_f32i16", Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Sparse_Scalar_f32i16},
+    {"Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Sparse_Scalar_f32i16", Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Sparse_Scalar_f32i16},
+    {"Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Array_Scalar", Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Array_Scalar},
+    {"Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Array_Scalar", Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Array_Scalar},
+    {"Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Array_Scalar_f32i16", Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Array_Scalar_f32i16},
+    {"Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Array_Scalar_f32i16", Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Array_Scalar_f32i16},
+    {"Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Reorg_Scalar", Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Reorg_Scalar},
+    {"Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Reorg_Scalar", Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Reorg_Scalar},
+    {"Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Reorg_Scalar_f32i16", Test_GPU_TahoeSharedDataStrategy_2TreeXGB_Reorg_Scalar_f32i16},
+    {"Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Reorg_Scalar_f32i16", Test_GPU_TahoeSharedDataStrategy_4TreeXGB_Reorg_Scalar_f32i16},
+    {"Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Array_Scalar_f32i16", Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Array_Scalar_f32i16},
+    {"Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Scalar", Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Scalar},
+    {"Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Scalar_f32i16", Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Scalar_f32i16},
+    {"Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Reorg_Scalar", Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Reorg_Scalar},
+    {"Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Reorg_Scalar_f32i16", Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Reorg_Scalar_f32i16},
+    // GPU Tree parallelization tests - Tile size 4
+    {"Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Tile4", Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Tile4},
+    {"Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Tile4_f32i16", Test_GPU_iterativeCachedPartialForestStrategy_4TreeXGB_Sparse_Tile4_f32i16},
+    {"Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SharedReduce_FltI16_B64", Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SharedReduce_FltI16_B64},
+    {"Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SpecializedTreeLoop_FltI16_B64", Test_ScalarSparseGPU_TwiceLeftRightBalanced_iterCachedPartialForest_NoCache_SpecializedTreeLoop_FltI16_B64},
+    // Tree Parallelization Multi-class tests
+    {"Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache", Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache},
+    {"Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedTrees", Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedTrees},
+    {"Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedRows", Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleCachedRows},
+    {"Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleBasic", Test_ScalarSparseGPU_TwiceLeftRightBalanced_AutoScheduleBasic},
+    {"Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache_SharedReduce", Test_GPUCodeGeneration_Covtype_SparseRep_f32i16_B32_iterativeCachedPartialForestStrategy_NoCache_SharedReduce}
+#endif // TREEBEARD_GPU_SUPPORT  
+    
+    //————————————— Add more missing tests from the TEST_LIST_ENTRY here ——————————————————————————//
+};
+
 
 #define RUN_ALL_TESTS
 
@@ -2962,6 +3526,36 @@ void RunTestsImpl(TestDescriptor *testsToRun, size_t numberOfTests) {
   std::cout << std::endl
             << "Total time taken : " << totalTime << " seconds." << std::endl
             << std::endl;
+}
+
+
+// Function to create a TestDescriptor dynamically
+#define RED   "\033[31m"
+#define RESET "\033[0m"
+
+TestDescriptor createTestDescriptor(const std::string &testName) {
+    auto it = testFuncMap.find(testName);
+    if (it != testFuncMap.end()) {
+        // Test found in the map, return the TestDescriptor
+        return {testName, it->second};
+    } else {
+        // Print the error message in red and abort the program
+        std::cerr << RED << "Error: "<< RESET <<"Test not found: " + testName  << std::endl;
+        std::abort();  // Stops the program immediately
+    }
+}
+
+void RunIndividualTests(const std::string &individualTestName) {
+  // Create the TestDescriptor dynamically
+  TestDescriptor testDesc = createTestDescriptor(individualTestName);
+
+  // You can now use the test descriptor to run the test
+  TestArgs_t args;
+  bool pass = RunTest(testDesc, args, 1);
+  std::cout << underline
+            << (pass ? boldGreen + "\nTest Passed."
+                     : boldRed + "\nTest Failed.")
+            << reset;
 }
 
 void RunTests() { RunTestsImpl(testList, numTests); }
