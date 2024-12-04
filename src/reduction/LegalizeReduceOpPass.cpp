@@ -27,6 +27,7 @@
 #include "LIRLoweringHelpers.h"
 #include "Logger.h"
 #include "OpLoweringUtils.h"
+#include "CompileUtils.h"
 
 using namespace mlir;
 
@@ -879,7 +880,12 @@ struct LegalizeReductions
 void legalizeReductions(mlir::MLIRContext &context, mlir::ModuleOp module) {
   // llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR
+  
   mlir::PassManager pm(&context);
+  
+  // Call the function to enable IR printing if PRINT_AFTER_ALL is set
+  TreeBeard::EnablePrintIRAfter(context, pm);
+
   mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
   optPM.addPass(std::make_unique<LegalizeReductions>());
 
@@ -892,7 +898,11 @@ void legalizeReductions(mlir::MLIRContext &context, mlir::ModuleOp module) {
 void lowerLinalgToLoops(mlir::MLIRContext &context, mlir::ModuleOp module) {
   // llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR
+
   mlir::PassManager pm(&context);
+  // Call the function to enable IR printing if PRINT_AFTER_ALL is set
+  TreeBeard::EnablePrintIRAfter(context, pm);
+
   mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
   optPM.addPass(createConvertLinalgToLoopsPass());
 

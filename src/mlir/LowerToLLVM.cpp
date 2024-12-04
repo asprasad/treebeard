@@ -57,6 +57,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "CompileUtils.h"
 
 using namespace mlir;
 
@@ -186,7 +187,12 @@ void LowerToLLVM(mlir::MLIRContext &context, mlir::ModuleOp module,
                  std::shared_ptr<IRepresentation> representation) {
   // llvm::DebugFlag = true;
   // Lower from low-level IR to LLVM IR
+  
   mlir::PassManager pm(&context);
+
+  // Call the function to enable IR printing if PRINT_AFTER_ALL is set
+  TreeBeard::EnablePrintIRAfter(context, pm);
+  
   pm.addPass(memref::createExpandStridedMetadataPass());
   pm.addPass(
       std::make_unique<DecisionForestToLLVMLoweringPass>(representation));

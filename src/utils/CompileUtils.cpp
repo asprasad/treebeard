@@ -324,4 +324,24 @@ CompilerOptions::CompilerOptions(const std::string &configJSONFilePath)
   SetFieldFromJSONIfPresent(configJSON, "numberOfCores", numberOfCores);
 }
 
+void EnablePrintIRAfter(mlir::MLIRContext &context, mlir::PassManager &pm) {
+  // Check if the environment variable PRINT_AFTER_ALL is set
+  const char *printAfterAllEnv = std::getenv("PRINT_AFTER_ALL");
+  bool printAfterAll = printAfterAllEnv && std::string(printAfterAllEnv) == "true";
+
+  if (printAfterAll) {
+    context.disableMultithreading();
+    
+    // Enable IR printing for debugging
+    pm.enableIRPrinting(
+        [=](mlir::Pass *a, mlir::Operation *b) { return false; }, // Don't print before passes
+        [=](mlir::Pass *a, mlir::Operation *b) { return true; },  // Print after every pass
+        true,  // Print at module scope
+        false  // Print after every pass, regardless of changes
+    );
+  }
+}
+
+
+
 } // namespace TreeBeard

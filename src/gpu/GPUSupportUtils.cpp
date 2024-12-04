@@ -27,6 +27,7 @@
 #include "TreebeardContext.h"
 
 #include "GPUSupportUtils.h"
+#include "CompileUtils.h"
 
 using namespace mlir;
 
@@ -416,7 +417,12 @@ bool isThreadLoop(scf::ParallelOp parallelOp) {
 }
 
 void GreedilyMapParallelLoopsToGPU(mlir::ModuleOp module) {
-  mlir::PassManager pm(module.getContext());
+  auto *context =  module.getContext();
+  mlir::PassManager pm(context);
+
+  // Call the function to enable IR printing if PRINT_AFTER_ALL is set
+  TreeBeard::EnablePrintIRAfter(*context, pm);
+
   mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
   optPM.addPass(createGpuMapParallelLoopsPass());
 
@@ -428,6 +434,10 @@ void GreedilyMapParallelLoopsToGPU(mlir::ModuleOp module) {
 void ConvertParallelLoopsToGPU(mlir::MLIRContext &context,
                                mlir::ModuleOp module) {
   mlir::PassManager pm(&context);
+  
+  // Call the function to enable IR printing if PRINT_AFTER_ALL is set
+  TreeBeard::EnablePrintIRAfter(context, pm);
+
   mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
   // optPM.addPass(std::make_unique<MakeGPULoopsPerfectlyNestedPass>());
   optPM.addPass(createParallelLoopToGpuPass());
@@ -441,7 +451,12 @@ void ConvertParallelLoopsToGPU(mlir::MLIRContext &context,
 }
 
 void OutlineGPUKernels(mlir::MLIRContext &context, mlir::ModuleOp module) {
+
   mlir::PassManager pm(&context);
+
+  // Call the function to enable IR printing if PRINT_AFTER_ALL is set
+  TreeBeard::EnablePrintIRAfter(context, pm);
+  
   pm.addPass(createGpuKernelOutliningPass());
 
   if (mlir::failed(pm.run(module))) {
@@ -451,6 +466,10 @@ void OutlineGPUKernels(mlir::MLIRContext &context, mlir::ModuleOp module) {
 
 void RunCanonicalizerPass(mlir::MLIRContext &context, mlir::ModuleOp module) {
   mlir::PassManager pm(&context);
+
+  // Call the function to enable IR printing if PRINT_AFTER_ALL is set
+  TreeBeard::EnablePrintIRAfter(context, pm);
+  
   mlir::GreedyRewriteConfig config;
   std::vector<std::string> disabledPatterns = {
       "(anonymous namespace)::MergeNestedParallelLoops"};

@@ -7,6 +7,8 @@
 #include "TreebeardContext.h"
 #include "forestcreator.h"
 #include "xgboostparser.h"
+#include "mlir/Pass/PassManager.h"
+
 
 namespace TreeBeard {
 inline mlir::ModuleOp BuildHIRModule(TreebeardContext &tbContext,
@@ -138,6 +140,7 @@ void RunInferenceUsingSO(const std::string &soPath,
                          const std::string &modelGlobalsJSONPath,
                          const std::string &csvPath,
                          const CompilerOptions &options);
+void EnablePrintIRAfter(mlir::MLIRContext &context, mlir::PassManager &pm);
 } // namespace TreeBeard
 
 #endif // _COMPILEUTILS_H_

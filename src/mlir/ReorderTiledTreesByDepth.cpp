@@ -21,6 +21,7 @@
 #include <queue>
 
 #include "Logger.h"
+#include "CompileUtils.h"
 
 using namespace mlir;
 
@@ -483,6 +484,10 @@ void DoReorderTreesByDepth(mlir::MLIRContext &context, mlir::ModuleOp module,
                            int32_t pipelineSize, int32_t numCores,
                            int32_t parallelTreeBatches) {
   mlir::PassManager pm(&context);
+
+  // Call the function to enable IR printing if PRINT_AFTER_ALL is set
+  TreeBeard::EnablePrintIRAfter(context, pm);
+  
   pm.addPass(std::make_unique<ReorderTreesByDepthPass>());
   // TODO pipelineSize needs to be added to CompilerOptions
   pm.addPass(std::make_unique<SplitTreeLoopByDepth>(pipelineSize, numCores,

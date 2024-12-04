@@ -69,6 +69,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "CompileUtils.h"
 
 using namespace mlir;
 
@@ -560,8 +561,13 @@ void LowerGPUToLLVM(
     TreeBeard::GPUCompileInfo &compileInfo) {
   InitializeGPUTarget(compileInfo);
   // llvm::DebugFlag = true;
-  // Lower from high-level IR to mid-level IR
+  // Lower from high-level IR to mid-level IR  
+
   mlir::PassManager pm(&context);
+  
+  // Call the function to enable IR printing if PRINT_AFTER_ALL is set
+   TreeBeard::EnablePrintIRAfter(context, pm);
+
   // pm.addPass(createConvertSCFToCFPass());
   pm.addPass(createGpuKernelOutliningPass());
   // pm.addPass(std::make_unique<PrintModulePass>());

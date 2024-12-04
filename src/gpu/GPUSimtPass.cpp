@@ -28,6 +28,8 @@
 #include "TraverseTreeTileOpLowering.h"
 #include "TreeTilingUtils.h"
 #include "schedule.h"
+#include "CompileUtils.h"
+
 
 using namespace mlir;
 
@@ -160,7 +162,12 @@ void ConvertTraverseToSimtTraverse(mlir::MLIRContext &context,
                                    mlir::ModuleOp module) {
   // llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR
+
   mlir::PassManager pm(&context);
+  
+  // Call the function to enable IR printing if PRINT_AFTER_ALL is set
+  TreeBeard::EnablePrintIRAfter(context, pm);
+
   pm.addPass(std::make_unique<ConvertTraverseToCooperativeTraverse>());
 
   if (mlir::failed(pm.run(module))) {

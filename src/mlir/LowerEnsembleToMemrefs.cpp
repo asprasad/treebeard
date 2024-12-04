@@ -27,6 +27,7 @@
 #include "TraverseTreeTileOpLowering.h"
 #include "TreeTilingUtils.h"
 #include "schedule.h"
+#include "CompileUtils.h"
 
 using namespace mlir::decisionforest::helpers;
 
@@ -961,6 +962,10 @@ void LowerEnsembleToMemrefs(mlir::MLIRContext &context, mlir::ModuleOp module,
   representation->InitRepresentation();
 
   mlir::PassManager pm(&context);
+  
+  // Call the function to enable IR printing if PRINT_AFTER_ALL is set
+  TreeBeard::EnablePrintIRAfter(context, pm);
+  
   pm.addPass(std::make_unique<MidLevelIRToMemrefLoweringPass>(serializer,
                                                               representation));
 
@@ -978,7 +983,12 @@ void LowerGPUEnsembleToMemrefs(
   // llvm::DebugFlag = true;
   representation->InitRepresentation();
   // Lower from high-level IR to mid-level IR
+  
   mlir::PassManager pm(&context);
+
+  // Call the function to enable IR printing if PRINT_AFTER_ALL is set
+  TreeBeard::EnablePrintIRAfter(context, pm);
+  
   pm.addPass(std::make_unique<MidLevelIRToGPUMemrefLoweringPass>(
       serializer, representation));
 

@@ -20,6 +20,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include <cassert>
 #include <queue>
+#include "CompileUtils.h"
 
 namespace mlir {
 namespace decisionforest {
@@ -246,6 +247,10 @@ void DoUniformTiling(mlir::MLIRContext &context, mlir::ModuleOp module,
                      int32_t tileSize, int32_t tileShapeBitWidth,
                      bool makeAllLeavesSameDepth) {
   mlir::PassManager pm(&context);
+  
+  // Call the function to enable IR printing if PRINT_AFTER_ALL is set
+  TreeBeard::EnablePrintIRAfter(context, pm);
+
   pm.addPass(std::make_unique<UniformTilingPass>(tileSize, tileShapeBitWidth,
                                                  makeAllLeavesSameDepth));
 
@@ -257,6 +262,10 @@ void DoUniformTiling(mlir::MLIRContext &context, mlir::ModuleOp module,
 void padTreesToMakeAllLeavesSameDepth(mlir::MLIRContext &context,
                                       mlir::ModuleOp module) {
   mlir::PassManager pm(&context);
+  
+  // Call the function to enable IR printing if PRINT_AFTER_ALL is set
+  TreeBeard::EnablePrintIRAfter(context, pm);
+
   mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
   optPM.addPass(std::make_unique<PadTreesToMakeAllLeavesSameDepthPass>());
 

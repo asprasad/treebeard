@@ -9,6 +9,8 @@
 #include "json/xgboostparser.h"
 #include <iostream>
 #include <string>
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/InitLLVM.h"
 
 namespace TreeBeard {
 namespace test {
@@ -16,6 +18,19 @@ void TestTileStringGen();
 void generateRandomXGBoostModels(const std::string &dirName);
 } // namespace test
 } // namespace TreeBeard
+
+// Commmand line options
+
+using namespace llvm;
+static cl::opt<bool> printAfterAll("print-treebeard-ir-after-all",
+    cl::desc("Print IR after each pass"), cl::init(false));
+
+static cl::opt<bool> individual("individual", cl::desc("Enable individual mode"), cl::init(false));
+
+static cl::opt<std::string> testName("testname", cl::desc("Test name"),
+    cl::value_desc("name"), cl::init(""), cl::Hidden);
+
+
 
 bool EqualsString(char *arg, const std::string &str) {
   return (std::string(arg) == str);
@@ -387,6 +402,21 @@ bool GenerateRandomXGBoostBenchmarksIfNeeded(int argc, char *argv[]) {
 }
 
 int main(int argc, char *argv[]) {
+  cl::ParseCommandLineOptions(argc, argv, "TreeBread Runner");
+
+  // Check if 'printAfterAll' is used without 'individual'
+  if (printAfterAll && !individual) {
+    llvm::errs() << "Error: 'print-treebeard-ir-after-all' can only be used with "
+                    "'individual' flag.\n";
+    return 1;
+  }
+
+  // Check if 'testName' is used without 'individual'
+  if (!testName.empty() && !individual) {
+    llvm::errs() << "Error: 'testname' can only be used with 'individual' flag.\n";
+    return 1;
+  }
+
   SetInsertDebugHelpers(argc, argv);
   SetInsertPrintVectors(argc, argv);
   SetPerfNotificationListener(argc, argv);
@@ -406,7 +436,21 @@ int main(int argc, char *argv[]) {
     return 0;
   else if (GenerateRandomXGBoostBenchmarksIfNeeded(argc, argv))
     return 0;
-  else {
+  else if (individual) {
+
+    // If printAfterAll is true, set the environment variable
+    if (printAfterAll) {
+      setenv("PRINT_AFTER_ALL", "true", 1); // Set the environment variable
+    }
+
+    std::string individualTestName = testName;
+    TreeBeard::test::RunIndividualTests(individualTestName);
+
+    // Unset the environment variable after the tests are run
+    if (printAfterAll) {
+      unsetenv("PRINT_AFTER_ALL"); // Unset the environment variable
+    }
+  } else {
     std::cout
         << "TreeBeard: A compiler for gradient boosting tree inference.\n";
     TreeBeard::test::RunTests();

@@ -29,6 +29,7 @@
 #include "LIRLoweringHelpers.h"
 #include "Logger.h"
 #include "OpLoweringUtils.h"
+#include "CompileUtils.h"
 
 using namespace mlir;
 
@@ -391,6 +392,10 @@ void runConvertToCooperativeReducePass(mlir::MLIRContext &context,
                                        mlir::ModuleOp module) {
   // llvm::DebugFlag = true;
   mlir::PassManager pm(&context);
+
+  // Call the function to enable IR printing if PRINT_AFTER_ALL is set
+  TreeBeard::EnablePrintIRAfter(context, pm);
+  
   auto &nestedPM = pm.nest<func::FuncOp>();
   nestedPM.addPass(
       std::make_unique<ConvertReductionsToCooperativeReductions>());

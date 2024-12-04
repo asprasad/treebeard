@@ -1464,7 +1464,8 @@ void LowerFromHighLevelToMidLevelIR(mlir::MLIRContext &context,
                                     mlir::ModuleOp module) {
   // llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR
-  mlir::PassManager pm(&context);
+
+  mlir::PassManager pm(&context);  
   pm.addPass(std::make_unique<HighLevelIRToMidLevelIRLoweringPass>());
   AddWalkDecisionTreeOpLoweringPass(pm);
 
