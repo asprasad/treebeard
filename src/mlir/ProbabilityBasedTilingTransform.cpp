@@ -20,6 +20,7 @@
 #include "Logger.h"
 #include "OpLoweringUtils.h"
 #include "TiledTree.h"
+#include "CompileUtils.h"
 
 namespace mlir {
 namespace decisionforest {
@@ -241,6 +242,10 @@ namespace decisionforest
 {
 void DoProbabilityBasedTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth) {
   mlir::PassManager pm(&context);
+
+  // Call the function to enable IR printing if PRINT_AFTER_ALL is set
+  TreeBeard::EnablePrintIRAfter(context, pm);
+  
   pm.addPass(std::make_unique<ProbabilityBasedTilingPass>(tileSize, tileShapeBitWidth));
 
   if (mlir::failed(pm.run(module))) {
@@ -248,8 +253,12 @@ void DoProbabilityBasedTiling(mlir::MLIRContext& context, mlir::ModuleOp module,
   }
 }
 
-void DoHybridTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth) {
+void DoHybridTiling(mlir::MLIRContext& context, mlir::ModuleOp module, int32_t tileSize, int32_t tileShapeBitWidth) {  
   mlir::PassManager pm(&context);
+
+  // Call the function to enable IR printing if PRINT_AFTER_ALL is set
+  TreeBeard::EnablePrintIRAfter(context, pm);
+  
   pm.addPass(std::make_unique<ProbabilityBasedTilingPass>(tileSize, tileShapeBitWidth, true, 0.20));
 
   if (mlir::failed(pm.run(module))) {

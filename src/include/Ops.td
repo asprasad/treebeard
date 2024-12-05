@@ -57,6 +57,10 @@ def TiledNumericalNodeType :
     DialectType<DecisionForestDialect, CPred<"$_self.isa<TiledNumericalNodeType>()">,
     "TiledNumericalNodeType">;
 
+def ReorgMemrefElementType : 
+    DialectType<DecisionForestDialect, CPred<"$_self.isa<ReorgMemrefElementType>()">,
+    "ReorgMemrefElementType">;
+
 //-------   Attributes   ----------------------
 
 def DecisionTreeAttr : Attr<
@@ -102,6 +106,17 @@ def UnrollLoopAttr : Attr<
   let returnType = [{ ::mlir::decisionforest::UnrollLoopAttribute }];
   
   let constBuilderCall = "::mlir::decisionforest::UnrollLoopAttribute::get()";
+  let convertFromStorage = "$_self";
+}
+
+def ReductionTypeAttr: Attr<
+  CPred<"$_self.isa<::mlir::decisionforest::ReductionTypeAttribute>()">,
+  "Reduction type attribute"> {
+
+  let storageType = [{ ::mlir::decisionforest::ReductionTypeAttribute }];
+  let returnType = [{ ::mlir::decisionforest::ReductionTypeAttribute }];
+  
+  let constBuilderCall = "::mlir::decisionforest::ReductionTypeAttribute::get()";
   let convertFromStorage = "$_self";
 }
 
@@ -154,7 +169,8 @@ def WalkDecisionTreeOp : DecisionForest_Op<"walk_decision_tree"> {
   let description = "Operation to walk the decision tree and generate a prediction."
                     "Takes input data and tree as input and produces prediction as output.";
 
-  let arguments = (ins Arith_CmpFPredicateAttr:$predicate, 
+  let arguments = (ins Arith_CmpFPredicateAttr:$predicate,
+                       I64Attr:$unrollSteps, 
                        TreeType:$tree,
                        InputDataType:$data);
 
@@ -188,6 +204,160 @@ def WalkDecisionTreePeeledOp : DecisionForest_Op<"walkDecisionTreePeeled"> {
   let results = (outs LeafNodeValueType);
 } 
 
+// ----- Reduction Ops ------
+def ReductionValueType : AnyTypeOf<[I8, F16, F32, F64]>;
+def TargetMemrefType : AnyTypeOf<[I8MemRef, F16MemRef, F32MemRef, F64MemRef]>;
+
+def ReduceOp : DecisionForest_Op<"reduce"> {
+  let summary = "Accumulate a value into a memref.";
+  let description = "Accumulate a floating point value into an element of a memref"
+                    "specified by the indices.";
+
+  let arguments = (ins ReductionTypeAttr:$reductionType,
+                       TargetMemrefType:$targetMemref,
+                       Variadic<Index>:$indices,
+                       ReductionValueType:$value,
+                       F64Attr:$initialValue);
+}
+
+def AtomicReduceOp : DecisionForest_Op<"atomic_reduce"> {
+  let summary = "Atomically accumulate a value into a memref.";
+  let description = "Atomically accumulate a floating point value into an element of a memref"
+                    "specified by the indices.";
+
+  let arguments = (ins ReductionTypeAttr:$reductionType,
+                       TargetMemrefType:$targetMemref,
+                       Variadic<Index>:$indices,
+                       ReductionValueType:$value,
+                       F64Attr:$initialValue);
+}
+
+def ReduceDimensionInplaceOp : DecisionForest_Op<"reduce_dimension_inplace", [AttrSizedOperandSegments]> {
+  let summary = "Reduce the specified dimension of a memref inplace.";
+  let description = "Reduce the specified dimension of a memref inplace."
+                    "The reduced value is stored at index 0 of the specified dimension."
+                    "The (pre, post)ReductionDimension* indices are used to determine which subset of the memref to reduce.";
+
+  let arguments = (ins ReductionTypeAttr:$reductionType,
+                       TargetMemrefType:$targetMemref,
+                       Variadic<Index>:$preReductionDimensionStart,
+                       Variadic<Index>:$preReductionDimensionEnd,
+                       Variadic<Index>:$targetMemrefOffsets,
+                       Index:$reductionDimension,
+                       Variadic<Index>:$postReductionDimensionStart,
+                       Variadic<Index>:$postReductionDimensionEnd);
+}
+
+def ReduceDimensionOp : DecisionForest_Op<"reduce_dimension", [AttrSizedOperandSegments]> {
+  let summary = "Reduce the specified dimension of a memref and store result in target.";
+  let description = "Reduce the specified dimension of a memref and store result in the target memref."
+                    "The op copies reduced values to the target memref. Reduced dimesions is the list" 
+                    "The (pre, post)ReductionDimension* indices are used to determine which subset of the memref to reduce."
+                    "The mappedDimensions are used to the indices of the target memref."
+                    "For eached mapped dimension, the corresponding source memref is mapped 1:1.";
+
+  let arguments = (ins ReductionTypeAttr:$reductionType,
+                       TargetMemrefType:$targetMemref,
+                       TargetMemrefType:$sourceMemref,
+                       Variadic<Index>:$targetMemrefOffsets,
+                       Variadic<Index>:$mappedDimensions,
+                       Variadic<Index>:$preReductionDimensionStart,
+                       Variadic<Index>:$preReductionDimensionEnd,
+                       Index:$reductionDimension,
+                       Variadic<Index>:$postReductionDimensionStart,
+                       Variadic<Index>:$postReductionDimensionEnd,
+                       F64Attr:$initialValue);
+}
+
+def CooperativeReduceInplaceOp : DecisionForest_Op<"cooperative_reduce_dimension_inplace", [AttrSizedOperandSegments]> {
+  let summary = "Reduce the specified dimension of a memref inplace.";
+  let description = "Reduce the specified dimension of a memref inplace."
+                    "The reduced value is stored at index 0 of the specified dimension."
+                    "Use the threads specified in the arguments to cooperatively reduce.";
+
+  let arguments = (ins TargetMemrefType:$targetMemref,
+                       Variadic<Index>:$preReductionDimensionStart,
+                       Variadic<Index>:$preReductionDimensionEnd,
+                       Variadic<Index>:$targetMemrefOffsets,
+                       Index:$reductionDimension,
+                       Variadic<Index>:$postReductionDimensionStart,
+                       Variadic<Index>:$postReductionDimensionEnd,
+                       Index:$blockXStart, Index:$blockYStart, Index:$blockZStart,
+                       Index:$blockXEnd, Index:$blockYEnd, Index:$blockZEnd);
+}
+
+def CooperativeReduceDimensionOp : DecisionForest_Op<"cooperative_reduce_dimension", [AttrSizedOperandSegments]> {
+  let summary = "Reduce the specified dimension of a memref and store result in target.";
+  let description = "Reduce the specified dimension of a memref and store result in the target memref."
+                    "The op copies reduced values to the target memre. Reduced dimesions is the list" 
+                    "of dimensions that have been previously reduced (i.e. the set of dimensions where"
+                    "we should index with a 0).";
+
+  let arguments = (ins ReductionTypeAttr:$reductionType,
+                       TargetMemrefType:$targetMemref,
+                       TargetMemrefType:$sourceMemref,
+                       Variadic<Index>:$targetMemrefOffsets,
+                       Index:$reductionDimension,
+                       Variadic<Index>:$reducedDimensions,
+                       Variadic<Index>:$rangeStart,
+                       Variadic<Index>:$rangeEnd,
+                       Index:$blockXStart, Index:$blockYStart, Index:$blockZStart,
+                       Index:$blockXEnd, Index:$blockYEnd, Index:$blockZEnd,
+                       F64Attr:$initialValue);
+}
+
+def CooperativeReduceArgMaxOp : DecisionForest_Op<"coopertivate_argmax", [AttrSizedOperandSegments]> {
+  let summary = "Reduce the specified dimension of a memref and store result in target.";
+  let description = "Reduce the specified dimension of a memref and store result in the target memref."
+                    "The op copies reduced values to the target memref. Reduced dimesions is the list" 
+                    "The (pre, post)ReductionDimension* indices are used to determine which subset of the memref to reduce."
+                    "The mappedDimensions are used to the indices of the target memref."
+                    "For eached mapped dimension, the corresponding source memref is mapped 1:1.";
+
+  let arguments = (ins ReductionTypeAttr:$reductionType,
+                       TargetMemrefType:$targetMemref,
+                       TargetMemrefType:$sourceMemref,
+                       Variadic<Index>:$targetMemrefOffsets,
+                       Variadic<Index>:$mappedDimensions,
+                       Variadic<Index>:$preReductionDimensionStart,
+                       Variadic<Index>:$preReductionDimensionEnd,
+                       Index:$reductionDimension,
+                       Variadic<Index>:$postReductionDimensionStart,
+                       Variadic<Index>:$postReductionDimensionEnd,
+                       Index:$blockXStart, Index:$blockYStart, Index:$blockZStart,
+                       Index:$blockXEnd, Index:$blockYEnd, Index:$blockZEnd);
+}
+
+def AtomicReduceDimensionOp : DecisionForest_Op<"atomic_reduce_dimension", [AttrSizedOperandSegments]> {
+  let summary = "Reduce the specified dimension of a memref and store result in target.";
+  let description = "Reduce the specified dimension of a memref and store result in the target memref."
+                    "The op copies reduced values to the target memref. Reduced dimesions is the list" 
+                    "The (pre, post)ReductionDimension* indices are used to determine which subset of the memref to reduce."
+                    "The mappedDimensions are used to the indices of the target memref."
+                    "For eached mapped dimension, the corresponding source memref is mapped 1:1.";
+
+  let arguments = (ins ReductionTypeAttr:$reductionType,
+                       TargetMemrefType:$targetMemref,
+                       TargetMemrefType:$sourceMemref,
+                       Variadic<Index>:$mappedDimensions,
+                       Variadic<Index>:$preReductionDimensionStart,
+                       Variadic<Index>:$preReductionDimensionEnd,
+                       Index:$reductionDimension,
+                       Index:$reductionDimensionIndex,
+                       Variadic<Index>:$postReductionDimensionStart,
+                       Variadic<Index>:$postReductionDimensionEnd,
+                       F64Attr:$initialValue);
+}
+
+def InitializeMemrefOp : DecisionForest_Op<"initialize_memref"> {
+  let summary = "Initialize all elements of a memref with the specified initial value";
+  let description = "Initialize all elements of a memref with the specified initial value";
+
+  let arguments = (ins TargetMemrefType:$targetMemref,
+                       F64Attr:$initialValue);
+
+}
+
 // ----- Mid-level IR Ops ------
 
 def ThresholdValueType : AnyTypeOf<[F16, F32, F64]>;
@@ -204,7 +374,7 @@ def TreeConstantOp : DecisionForest_Op<"tree", [Pure]> {
   let results = (outs TreeType);
 }
 
-def EnsembleConstantOp : DecisionForest_Op<"ensemble", [Pure]> {
+def EnsembleConstantOp : DecisionForest_Op<"ensemble"> {
   let summary = "Ensemble constant operation";
   let description = "Represents a constant whose value is the full forest. Takes no arguments and gives an ensemble value out.";
   let arguments = (ins DecisionForestAttr:$forest);
@@ -223,7 +393,7 @@ def GetTreeFromEnsembleOp : DecisionForest_Op<"getTree", [Pure]> {
 def CacheTreesFromEnsembleOp : DecisionForest_Op<"cacheTrees", [Pure]> {
   let summary = "Cache trees from the forest.";
   let description = "Cache a subset of trees from the forest. Takes three arguments -- an ensemble, and two integers to represent the range of trees to cache. Returns an ensemble value.";
-  let arguments = (ins TreeEnsembleType:$forest, Index:$startTreeIndex, Index:$endTreeIndex);
+  let arguments = (ins TreeEnsembleType:$forest, Index:$startTreeIndex, Index:$endTreeIndex, I64Attr:$cacheID);
 
   let results = (outs TreeEnsembleType);
 }
@@ -231,7 +401,7 @@ def CacheTreesFromEnsembleOp : DecisionForest_Op<"cacheTrees", [Pure]> {
 def CacheInputRowsOp : DecisionForest_Op<"cacheRows", [Pure]> {
   let summary = "Cache rows from the input.";
   let description = "Cache a subset of rows from the input. Takes three arguments -- input memref, and two integers to represent the range of rows to cache. Returns a memref value.";
-  let arguments = (ins InputDataType:$data, Index:$startIndex, Index:$endIndex);
+  let arguments = (ins InputDataType:$data, Index:$startIndex, Index:$endIndex, I64Attr:$cacheID);
 
   let results = (outs InputDataType);
 }
@@ -311,8 +481,8 @@ def CooperativeTraverseTreeTileOp : DecisionForest_Op<"cooperativeTraverseTileOp
   let summary = "Multiple threads cooperate to traverse a set of tiles";
   let description = "Traverse different (tile, row) pairs cooperatively across GPU threads";
   let arguments = (ins Arith_CmpFPredicateAttr:$predicate,
-                       TreeType:$trees,
-                       NodeType:$nodes,
+                       TreeType:$tree,
+                       NodeType:$node,
                        Variadic<InputDataType>:$data);
 
   let results = (outs NodeType);
@@ -330,8 +500,8 @@ def TiledNumericalNodeMemRef  : MemRefOf<[TiledNumericalNodeType]>;
 def TileOfThresholdTypes : AnyTypeOf<[ThresholdValueType, VectorOf<[ThresholdValueType]>]>;
 def TileOfFeatureIndices : AnyTypeOf<[FeatureIndexType, VectorOf<[FeatureIndexType]>]>;
 
-def ThresholdMemrefType : AnyTypeOf<[MemRefOf<[TiledNumericalNodeType]>, MemRefOf<[ThresholdValueType]>]>;
-def FeatureIndexMemrefType : AnyTypeOf<[MemRefOf<[TiledNumericalNodeType]>, MemRefOf<[FeatureIndexType]>]>;
+def ThresholdMemrefType : AnyTypeOf<[MemRefOf<[TiledNumericalNodeType]>, MemRefOf<[ThresholdValueType]>, MemRefOf<[ReorgMemrefElementType]>]>;
+def FeatureIndexMemrefType : AnyTypeOf<[MemRefOf<[TiledNumericalNodeType]>, MemRefOf<[FeatureIndexType]>, MemRefOf<[ReorgMemrefElementType]>]>;
 def TileShapeMemrefType : AnyTypeOf<[MemRefOf<[TiledNumericalNodeType]>, MemRefOf<[FeatureIndexType]>]>;
 
 // ----- Low-level IR Ops ------
@@ -382,6 +552,16 @@ def NodeToIndexOp : DecisionForest_Op<"nodeToIndex", [Pure]> {
   let results = (outs Index);
 }
 
+def CacheOpBeginOp : DecisionForest_Op<"cacheOpBegin"> {
+  let summary = "Sync at start of a cache op.";
+  let description = "Sync at start of a cache op.";
+}
+
+def CacheOpEndOp : DecisionForest_Op<"cacheOpEnd"> {
+  let summary = "Sync at end of a cache op.";
+  let description = "Sync at end of a cache op.";
+}
+
 // ----- Representation Specific Low-level IR Ops ------
 
 // Array-based representation
@@ -423,6 +603,28 @@ def GetModelMemrefSizeOp : DecisionForest_Op<"getModelMemrefSizeOp", [Pure]> {
   let results = (outs I32);
 }
 
+def GetModelMemrefElementSizeOp : DecisionForest_Op<"getModelMemrefElementSize", [Pure]> {
+  let summary = "Gets the size (in bytes) of the argument model memref's elements.";
+  let description = "Gets the size (in bytes) of the argument model memref's elements. Takes into account the actual size of the tile on the target to which we are compiling.";
+  let arguments = (ins TiledNumericalNodeMemRef:$modelMemref);
+
+  let results = (outs Index);
+}
+
+def ReinterpretToI32AndLoadElement : DecisionForest_Op<"reinterpretAndLoadI32", [Pure]> {
+  let summary = "Reinterpret memref to i32 and load the i32 specified by the index.";
+  let description = "Reinterpret memref to i32 and load the i32 specified by the index.";
+  let arguments = (ins TiledNumericalNodeMemRef:$modelMemref, Index:$index);
+
+  let results = (outs I32);
+}
+
+def ReinterpretToI32AndStoreElement : DecisionForest_Op<"reinterpretAndStoreI32"> {
+  let summary = "Reinterpret memref to i32 and load the i32 specified by the index.";
+  let description = "Reinterpret memref to i32 and load the i32 specified by the index.";
+  let arguments = (ins I32:$value, TiledNumericalNodeMemRef:$modelMemref, Index:$index);
+}
+
 // ----- Debugging IR Ops ------
 def PrintTreePredictionOp : DecisionForest_Op<"printTreePrediction", []> {
   let arguments = (ins F64:$treePrediction, Index:$treeIndex);
@@ -451,5 +653,22 @@ def PrintIsLeafOp : DecisionForest_Op<"printIsLeaf", []> {
 def PrintVectorOp : DecisionForest_Op<"printVector", []> {
   let arguments = (ins I32:$kind, I32:$bitWidth, I32:$vectorSize, Variadic<AnyType>:$elements);
 }
+
+def PrintfOp : DecisionForest_Op<"printf", [MemoryEffects<[MemWrite]>]> {
+  let summary = "printf for debugging";
+  let description = [{
+    `printf` takes a literal format string `format` and an arbitrary number of
+    scalar arguments that should be printed.
+
+    The format string is a C-style printf string, subject to any restrictions
+    imposed by one's target platform.
+  }];
+  let arguments = (ins StrAttr:$format,
+                   Variadic<AnyTypeOf<[AnyInteger, Index, AnyFloat]>>:$args);
+  let assemblyFormat = [{
+    $format attr-dict ($args^ `:` type($args))?
+  }];
+}
+
 
 #endif // TREE_HEAVY_OPS

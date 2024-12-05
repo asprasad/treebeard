@@ -191,6 +191,112 @@ public:
     }
 };
 
+//===----------------------------------------------------------------------===//
+// Reorg forest memref types
+//===----------------------------------------------------------------------===//
+
+struct ReorgMemrefElementTypeKey {
+    Type elementType;
+    int32_t numTrees;
+    bool operator==(const ReorgMemrefElementTypeKey& that) const {
+        return this->elementType == that.elementType && this->numTrees == that.numTrees;
+    }
+};
+
+struct ReorgMemrefElementTypeStorage : public TypeStorage {
+    ReorgMemrefElementTypeStorage(Type elemType, int32_t numTrees)
+        : m_elemType(elemType), m_numTrees(numTrees)
+    {}
+
+    /// The hash key for this storage is a pair of the integer and type params.
+    using KeyTy = ReorgMemrefElementTypeKey;
+
+    /// Define the comparison function for the key type.
+    bool operator==(const KeyTy &key) const {
+        KeyTy myKey{m_elemType, m_numTrees};
+        return key == myKey;
+    }
+
+    static llvm::hash_code hashKey(const KeyTy &key) {
+        return llvm::hash_combine(key.elementType, key.numTrees);
+    }
+
+    static KeyTy getKey(Type elemType, int32_t numTrees) {
+        return KeyTy{elemType, numTrees};
+    }
+
+    /// Define a construction method for creating a new instance of this storage.
+    static ReorgMemrefElementTypeStorage *construct(TypeStorageAllocator &allocator,
+                                                    const KeyTy &key) {
+    return new (allocator.allocate<ReorgMemrefElementTypeStorage>())
+        ReorgMemrefElementTypeStorage(key.elementType, key.numTrees);
+    }
+
+    /// The parametric data held by the storage class.
+    Type m_elemType;
+    int32_t m_numTrees;
+public:
+    void print(mlir::DialectAsmPrinter &printer) { 
+        printer << "ReorgMemrefElementType(" << m_elemType << ", " << m_numTrees << ")";
+    }
+};
+
+class ReorgMemrefElementType : public mlir::Type::TypeBase<ReorgMemrefElementType, mlir::Type,
+                                                           ReorgMemrefElementTypeStorage, DataLayoutTypeInterface::Trait, MemRefElementTypeInterface::Trait> {
+public:
+    using Base::Base;
+
+    static ReorgMemrefElementType get(mlir::Type elemType, int32_t numTrees) {
+        mlir::MLIRContext *ctx = elemType.getContext();
+        return Base::get(ctx, elemType, numTrees);
+    }
+
+    mlir::Type getElementType() const { return getImpl()->m_elemType; }
+    int32_t getNumTrees() const { return getImpl()->m_numTrees; }
+    void print(mlir::DialectAsmPrinter &printer) { getImpl()->print(printer); }
+
+    // InterfaceMethod<
+    //   /*description=*/"Returns the size of this type in bits.",
+    //   /*retTy=*/"unsigned",
+    //   /*methodName=*/"getTypeSizeInBits",
+    //   /*args=*/(ins "const ::mlir::DataLayout &":$dataLayout,
+    //                 "::mlir::DataLayoutEntryListRef":$params)
+    // >,
+    unsigned getTypeSizeInBits(const DataLayout &layout,
+                               DataLayoutEntryListRef params) const {
+        // TODO We need to take care of padding here so the alignment for whatever we store second is satisfied!
+        unsigned size = layout.getTypeSizeInBits(getElementType());
+        return size;
+    }
+    // InterfaceMethod<
+    //   /*description=*/"Returns the ABI-required alignment for this type, "
+    //                   "in bytes",
+    //   /*retTy=*/"unsigned",
+    //   /*methodName=*/"getABIAlignment",
+    //   /*args=*/(ins "const ::mlir::DataLayout &":$dataLayout,
+    //                 "::mlir::DataLayoutEntryListRef":$params)
+    // >,
+    unsigned getABIAlignment(const DataLayout &layout,
+                            DataLayoutEntryListRef params) const {
+        unsigned alignment = layout.getTypeABIAlignment(getElementType());
+        return alignment;
+    }
+    // InterfaceMethod<
+    //   /*description=*/"Returns the preferred alignemnt for this type, "
+    //                   "in bytes.",
+    //   /*retTy=*/"unsigned",
+    //   /*methodName=*/"getPreferredAlignment",
+    //   /*args=*/(ins "const ::mlir::DataLayout &":$dataLayout,
+    //                 "::mlir::DataLayoutEntryListRef":$params)
+    // >
+    unsigned getPreferredAlignment(const DataLayout &layout,
+                            DataLayoutEntryListRef params) const {
+        unsigned alignment = layout.getTypePreferredAlignment(getElementType());
+        return alignment;
+    }
+
+};
+
 } // decisionforest
 } // mlir
 

@@ -28,7 +28,7 @@ std::shared_ptr<ForestCreator> SpecializeInputElementType(mlir::MLIRContext& con
                                                       ReturnType,
                                                       FeatureIndexType,
                                                       NodeIndexType,
-                                                      float>>(context, 
+                                                      double>>(context, 
                                                             modelJsonPath,
                                                             tbContext.serializer,
                                                             options.statsProfileCSVPath,

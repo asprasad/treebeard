@@ -6,7 +6,8 @@ RandomTreeGenerator.cpp
 CompileUtils.cpp
 StatsUtils.cpp
 XGBoostJSONParserConstructor.cpp
-TreebeardContext.cpp)
+TreebeardContext.cpp
+GPUCompileUtils.cpp)
 
 target_sources(treebeard-runtime 
 PRIVATE
@@ -16,4 +17,5 @@ RandomTreeGenerator.cpp
 CompileUtils.cpp
 StatsUtils.cpp
 XGBoostJSONParserConstructor.cpp
-TreebeardContext.cpp)
+TreebeardContext.cpp
+GPUCompileUtils.cpp)
