@@ -101,6 +101,13 @@ public:
     /// Inherit some necessary constructors from 'TypeBase'.
     using Base::Base;
 
+    static llvm::StringRef getName() {
+        return "TiledNumericalNodeType";
+    }
+
+    // Static member for 'name', if the static method approach is not used
+    static constexpr const char *name = "TiledNumericalNodeType";
+
     /// Create an instance of a `NumericalNodeType` with the given element types. There
     /// *must* be atleast one element type.
     static TiledNumericalNodeType get(mlir::Type thresholdType, mlir::Type indexType, int32_t tileSize) {
@@ -154,12 +161,12 @@ public:
     //   /*args=*/(ins "const ::mlir::DataLayout &":$dataLayout,
     //                 "::mlir::DataLayoutEntryListRef":$params)
     // >,
-    unsigned getTypeSizeInBits(const DataLayout &layout,
+    llvm::TypeSize getTypeSizeInBits(const DataLayout &layout,
                                DataLayoutEntryListRef params) const {
         // TODO We need to take care of padding here so the alignment for whatever we store second is satisfied!
         unsigned thresholdSize = layout.getTypeSizeInBits(getThresholdElementType());
         unsigned indexSize = layout.getTypeSizeInBits(getIndexElementType());
-        return (thresholdSize+indexSize) * getTileSize();
+        return llvm::TypeSize::getFixed((thresholdSize+indexSize) * getTileSize());
     }
     // InterfaceMethod<
     //   /*description=*/"Returns the ABI-required alignment for this type, "
@@ -246,6 +253,14 @@ class ReorgMemrefElementType : public mlir::Type::TypeBase<ReorgMemrefElementTyp
 public:
     using Base::Base;
 
+    // Add the static method to get the name of the type.
+     static llvm::StringRef getName() {
+        return "ReorgMemrefElementType";
+    }
+    
+    // Add the static method to get the name of the type.
+    static constexpr const char *name = "ReorgMemrefElementType";
+
     static ReorgMemrefElementType get(mlir::Type elemType, int32_t numTrees) {
         mlir::MLIRContext *ctx = elemType.getContext();
         return Base::get(ctx, elemType, numTrees);
@@ -262,11 +277,11 @@ public:
     //   /*args=*/(ins "const ::mlir::DataLayout &":$dataLayout,
     //                 "::mlir::DataLayoutEntryListRef":$params)
     // >,
-    unsigned getTypeSizeInBits(const DataLayout &layout,
+    llvm::TypeSize getTypeSizeInBits(const DataLayout &layout,
                                DataLayoutEntryListRef params) const {
         // TODO We need to take care of padding here so the alignment for whatever we store second is satisfied!
         unsigned size = layout.getTypeSizeInBits(getElementType());
-        return size;
+        return llvm::TypeSize::getFixed(size);
     }
     // InterfaceMethod<
     //   /*description=*/"Returns the ABI-required alignment for this type, "
@@ -296,7 +311,6 @@ public:
     }
 
 };
-
 } // decisionforest
 } // mlir
 

@@ -357,7 +357,7 @@ struct ConvertReductionsToCooperativeReductions
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry
-        .insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect,
+        .insert<mlir::affine::AffineDialect, memref::MemRefDialect, scf::SCFDialect,
                 decisionforest::DecisionForestDialect, arith::ArithDialect>();
   }
 
@@ -365,7 +365,7 @@ struct ConvertReductionsToCooperativeReductions
     ConversionTarget target(getContext());
 
     target.addLegalDialect<
-        AffineDialect, memref::MemRefDialect, scf::SCFDialect,
+        mlir::affine::AffineDialect, memref::MemRefDialect, scf::SCFDialect,
         decisionforest::DecisionForestDialect, vector::VectorDialect,
         math::MathDialect, arith::ArithDialect, func::FuncDialect,
         gpu::GPUDialect>();

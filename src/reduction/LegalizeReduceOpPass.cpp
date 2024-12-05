@@ -841,7 +841,7 @@ struct LegalizeReductions
                          OperationPass<mlir::func::FuncOp>> {
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, tensor::TensorDialect,
+    registry.insert<mlir::affine::AffineDialect, memref::MemRefDialect, tensor::TensorDialect,
                     scf::SCFDialect, decisionforest::DecisionForestDialect,
                     arith::ArithDialect, linalg::LinalgDialect>();
   }
@@ -850,7 +850,7 @@ struct LegalizeReductions
     ConversionTarget target(getContext());
     std::map<void *, Value> privatizationMap;
 
-    target.addLegalDialect<AffineDialect, memref::MemRefDialect,
+    target.addLegalDialect<mlir::affine::AffineDialect, memref::MemRefDialect,
                            tensor::TensorDialect, scf::SCFDialect,
                            decisionforest::DecisionForestDialect,
                            math::MathDialect, arith::ArithDialect,

@@ -415,9 +415,10 @@ void createConstantGlobalOp(ConversionPatternRewriter &rewriter,
     assert(false && "Unsupported type");
   }
 
-  mlir::ArrayRef<T> dataArrayRef(data.data(), data.size());
-  auto dataElementsAttribute = DenseElementsAttr::get(
-      memref::getTensorTypeFromMemRefType(type), dataArrayRef);
+  auto tensorType = memref::getTensorTypeFromMemRefType(type).cast<TensorType>(); 
+  llvm::ArrayRef<T> dataArrayRef(data);
+  // Create DenseElementsAttr with the correct tensor type and data array
+  auto dataElementsAttribute = DenseElementsAttr::get(tensorType, dataArrayRef);
   rewriter.create<memref::GlobalOp>(location, memrefName,
                                     rewriter.getStringAttr("private"), type,
                                     dataElementsAttribute, true, IntegerAttr());

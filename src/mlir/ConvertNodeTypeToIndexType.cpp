@@ -84,7 +84,7 @@ struct IndexToNodeOpLowering : public ConversionPattern {
 struct ConvertNodeTypeToIndexTypePass : public PassWrapper<ConvertNodeTypeToIndexTypePass, OperationPass<mlir::ModuleOp>> {
   
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, tensor::TensorDialect, scf::SCFDialect>();
+    registry.insert<mlir::affine::AffineDialect, memref::MemRefDialect, tensor::TensorDialect, scf::SCFDialect>();
   }
   
   void VisitOp(Operation* op, OpBuilder& builder) {
@@ -140,7 +140,7 @@ struct ConvertNodeTypeToIndexTypePass : public PassWrapper<ConvertNodeTypeToInde
   void runOnOperation() final {
     ConversionTarget target(getContext());
 
-    target.addLegalDialect<AffineDialect, memref::MemRefDialect, tensor::TensorDialect, 
+    target.addLegalDialect<mlir::affine::AffineDialect, memref::MemRefDialect, tensor::TensorDialect, 
                            scf::SCFDialect, decisionforest::DecisionForestDialect,
                            math::MathDialect, arith::ArithDialect, func::FuncDialect>();
 

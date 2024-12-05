@@ -37,7 +37,7 @@ const int32_t kChildIndexElementNumberInTile = 3;
 Type generateGetElementPtr(Operation *op, ArrayRef<Value> operands,
                            ConversionPatternRewriter &rewriter,
                            Type elementMLIRType, int64_t elementNumber,
-                           TypeConverter *typeConverter, Value &elementPtr) {
+                           const LLVMTypeConverter *typeConverter, Value &elementPtr) {
   const int32_t kTreeMemrefOperandNum = 0;
   const int32_t kIndexOperandNum = 1;
   const int32_t kElementIndexOperandNum = 3;
@@ -48,8 +48,9 @@ Type generateGetElementPtr(Operation *op, ArrayRef<Value> operands,
   auto alignedPtrType =
       memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct]
           .cast<LLVM::LLVMPointerType>();
-  auto tileType = alignedPtrType.getElementType().cast<LLVM::LLVMStructType>();
-
+  // auto tileType = alignedPtrType.getElementType().cast<LLVM::LLVMStructType>();
+  auto tileType = memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct]
+                      .cast<LLVM::LLVMStructType>();
   auto indexVal = operands[kIndexOperandNum];
   auto indexType = indexVal.getType();
   assert(indexType.isa<IntegerType>());
@@ -69,7 +70,7 @@ Type generateGetElementPtr(Operation *op, ArrayRef<Value> operands,
       location, indexType, static_cast<Value>(extractMemrefOffset),
       static_cast<Value>(indexVal));
   auto elementPtrType =
-      LLVM::LLVMPointerType::get(elementType, alignedPtrType.getAddressSpace());
+      LLVM::LLVMPointerType::get(&typeConverter->getContext(), alignedPtrType.getAddressSpace());
   auto elemIndexConst = rewriter.create<LLVM::ConstantOp>(
       location, rewriter.getI32Type(),
       rewriter.getIntegerAttr(rewriter.getI32Type(), elementNumber));
@@ -81,6 +82,7 @@ Type generateGetElementPtr(Operation *op, ArrayRef<Value> operands,
            "struct.");
     elementPtr = rewriter.create<LLVM::GEPOp>(
         location, elementPtrType,
+        memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct],
         static_cast<Value>(extractMemrefBufferPointer),
         ValueRange({static_cast<Value>(actualIndex),
                     static_cast<Value>(elemIndexConst)}));
@@ -97,6 +99,7 @@ Type generateGetElementPtr(Operation *op, ArrayRef<Value> operands,
     auto elemIndex = operands[kElementIndexOperandNum];
     elementPtr = rewriter.create<LLVM::GEPOp>(
         location, elementPtrType,
+        memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct],
         static_cast<Value>(extractMemrefBufferPointer),
         ValueRange({static_cast<Value>(actualIndex),
                     static_cast<Value>(elemIndexConst), elemIndex}));
@@ -109,7 +112,7 @@ Type generateGetElementPtr(Operation *op, ArrayRef<Value> operands,
 void generateLoadStructElement(Operation *op, ArrayRef<Value> operands,
                                ConversionPatternRewriter &rewriter,
                                int64_t elementNumber,
-                               TypeConverter *typeConverter) {
+                               const LLVMTypeConverter *typeConverter) {
 
   auto location = op->getLoc();
   Value elementPtr;
@@ -127,7 +130,7 @@ void generateLoadStructElement(Operation *op, ArrayRef<Value> operands,
 void generateStoreStructElement(Operation *op, ArrayRef<Value> operands,
                                 ConversionPatternRewriter &rewriter,
                                 Type elementMLIRType, int64_t elementNumber,
-                                TypeConverter *typeConverter,
+                                const LLVMTypeConverter *typeConverter,
                                 Value elementVal) {
 
   auto location = op->getLoc();
@@ -141,7 +144,7 @@ void generateStoreStructElement(Operation *op, ArrayRef<Value> operands,
 
 Type generateGetElementPtrForI32Ops(Operation *op, ArrayRef<Value> operands,
                                     ConversionPatternRewriter &rewriter,
-                                    TypeConverter *typeConverter,
+                                    const LLVMTypeConverter *typeConverter,
                                     Value &elementPtr, Value memrefVal,
                                     Value indexVal) {
   auto location = op->getLoc();
@@ -175,14 +178,15 @@ Type generateGetElementPtrForI32Ops(Operation *op, ArrayRef<Value> operands,
   auto actualIndex = indexVal;
 
   auto elementPtrType =
-      LLVM::LLVMPointerType::get(elementType, alignedPtrType.getAddressSpace());
+      LLVM::LLVMPointerType::get(&typeConverter->getContext(), alignedPtrType.getAddressSpace());
 
   auto bufferPtrCastToI32Ptr = rewriter.create<LLVM::BitcastOp>(
       location, elementPtrType, extractMemrefBufferPointer);
 
-  elementPtr = rewriter.create<LLVM::GEPOp>(location, elementPtrType,
-                                            bufferPtrCastToI32Ptr,
-                                            ValueRange({actualIndex}));
+  elementPtr = rewriter.create<LLVM::GEPOp>(
+      location, elementPtrType,
+      memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct],
+      bufferPtrCastToI32Ptr, ValueRange({actualIndex}));
   return elementType;
 }
 
@@ -199,7 +203,7 @@ struct LoadTileThresholdOpLowering : public ConversionPattern {
     assert(operands.size() == 3 || operands.size() == 4);
     generateLoadStructElement(op, operands, rewriter,
                               kThresholdElementNumberInTile,
-                              getTypeConverter());
+                              static_cast<const LLVMTypeConverter *>(getTypeConverter()));
     return mlir::success();
   }
 };
@@ -217,7 +221,7 @@ struct LoadTileFeatureIndicesOpLowering : public ConversionPattern {
     assert(operands.size() == 3 || operands.size() == 4);
     generateLoadStructElement(op, operands, rewriter,
                               kFeatureIndexElementNumberInTile,
-                              getTypeConverter());
+                              static_cast<const LLVMTypeConverter *>(getTypeConverter()));
     return mlir::success();
   }
 };
@@ -235,7 +239,7 @@ struct LoadTileShapeOpLowering : public ConversionPattern {
     assert(operands.size() == 3);
     generateLoadStructElement(op, operands, rewriter,
                               kTileShapeElementNumberInTile,
-                              getTypeConverter());
+                              static_cast<const LLVMTypeConverter *>(getTypeConverter()));
     return mlir::success();
   }
 };
@@ -255,7 +259,7 @@ struct LoadChildIndexOpLowering : public ConversionPattern {
                   ConversionPatternRewriter &rewriter) const final {
     assert(operands.size() == 2);
     generateLoadStructElement(op, operands, rewriter, m_childIndexElementNumber,
-                              getTypeConverter());
+                              static_cast<const LLVMTypeConverter *>(getTypeConverter()));
     return mlir::success();
   }
 };
@@ -272,7 +276,7 @@ struct ReinterpretToI32AndLoadElementLowering : public ConversionPattern {
                   ConversionPatternRewriter &rewriter) const final {
     Value elementPtr;
     auto elementType = generateGetElementPtrForI32Ops(
-        op, operands, rewriter, getTypeConverter(), elementPtr, operands[0],
+        op, operands, rewriter, static_cast<const LLVMTypeConverter *>(getTypeConverter()), elementPtr, operands[0],
         operands[1]);
     auto elementVal = rewriter.create<LLVM::LoadOp>(
         op->getLoc(), elementType, static_cast<Value>(elementPtr));
@@ -295,7 +299,7 @@ struct ReinterpretToI32AndStoreElementLowering : public ConversionPattern {
                   ConversionPatternRewriter &rewriter) const final {
     Value elementPtr;
     /*auto elementType =*/generateGetElementPtrForI32Ops(
-        op, operands, rewriter, getTypeConverter(), elementPtr, operands[1],
+        op, operands, rewriter, static_cast<const LLVMTypeConverter *>(getTypeConverter()), elementPtr, operands[1],
         operands[2]);
     // Store the element
     rewriter.create<LLVM::StoreOp>(op->getLoc(), operands[0], elementPtr);
@@ -318,17 +322,17 @@ struct InitTileOpLowering : public ConversionPattern {
     decisionforest::InitTileOpAdaptor tileOpAdaptor(operands);
     generateStoreStructElement(
         op, operands, rewriter, tileOpAdaptor.getThresholds().getType(), 0,
-        getTypeConverter(), tileOpAdaptor.getThresholds());
+        static_cast<const LLVMTypeConverter *>(getTypeConverter()), tileOpAdaptor.getThresholds());
     generateStoreStructElement(
         op, operands, rewriter, tileOpAdaptor.getFeatureIndices().getType(), 1,
-        getTypeConverter(), tileOpAdaptor.getFeatureIndices());
+        static_cast<const LLVMTypeConverter *>(getTypeConverter()), tileOpAdaptor.getFeatureIndices());
     auto modelMemrefType = op->getOperand(0).getType().cast<MemRefType>();
     auto tileType = modelMemrefType.getElementType()
                         .cast<decisionforest::TiledNumericalNodeType>();
     if (tileType.getTileSize() > 1)
       generateStoreStructElement(
           op, operands, rewriter, tileOpAdaptor.getTileShapeID().getType(), 2,
-          getTypeConverter(), tileOpAdaptor.getTileShapeID());
+          static_cast<const LLVMTypeConverter *>(getTypeConverter()), tileOpAdaptor.getTileShapeID());
     rewriter.eraseOp(op);
     return mlir::success();
   }
@@ -348,26 +352,26 @@ struct InitSparseTileOpLowering : public ConversionPattern {
     decisionforest::InitSparseTileOpAdaptor tileOpAdaptor(operands);
     generateStoreStructElement(
         op, operands, rewriter, tileOpAdaptor.getThresholds().getType(), 0,
-        getTypeConverter(), tileOpAdaptor.getThresholds());
+        static_cast<const LLVMTypeConverter *>(getTypeConverter()), tileOpAdaptor.getThresholds());
     generateStoreStructElement(
         op, operands, rewriter, tileOpAdaptor.getFeatureIndices().getType(), 1,
-        getTypeConverter(), tileOpAdaptor.getFeatureIndices());
+        static_cast<const LLVMTypeConverter *>(getTypeConverter()), tileOpAdaptor.getFeatureIndices());
     auto modelMemrefType = op->getOperand(0).getType().cast<MemRefType>();
     auto tileType = modelMemrefType.getElementType()
                         .cast<decisionforest::TiledNumericalNodeType>();
     if (tileType.getTileSize() > 1) {
       generateStoreStructElement(
           op, operands, rewriter, tileOpAdaptor.getTileShapeID().getType(), 2,
-          getTypeConverter(), tileOpAdaptor.getTileShapeID());
+          static_cast<const LLVMTypeConverter *>(getTypeConverter()), tileOpAdaptor.getTileShapeID());
       generateStoreStructElement(
           op, operands, rewriter, tileOpAdaptor.getChildIndex().getType(), 3,
-          getTypeConverter(), tileOpAdaptor.getChildIndex());
+          static_cast<const LLVMTypeConverter *>(getTypeConverter()), tileOpAdaptor.getChildIndex());
     } else {
       // When tile size is 1, we don't store the tile shape, so child index is
       // element 2.
       generateStoreStructElement(
           op, operands, rewriter, tileOpAdaptor.getChildIndex().getType(), 2,
-          getTypeConverter(), tileOpAdaptor.getChildIndex());
+          static_cast<const LLVMTypeConverter *>(getTypeConverter()), tileOpAdaptor.getChildIndex());
     }
 
     rewriter.eraseOp(op);
@@ -412,9 +416,13 @@ struct GetModelMemrefSizeOpLowering : public ConversionPattern {
         location, indexType, static_cast<Value>(extractMemrefOffset),
         static_cast<Value>(indexVal));
 
+    auto elementPtrType = LLVM::LLVMPointerType::get(
+        &static_cast<const LLVMTypeConverter *>(typeConverter)->getContext(), alignedPtrType.getAddressSpace());
     auto endPtr = rewriter.create<LLVM::GEPOp>(
-        location, alignedPtrType,
-        static_cast<Value>(extractMemrefBufferPointer),
+        location, elementPtrType,
+        memrefStructType
+            .getBody()[kAlignedPointerIndexInMemrefStruct], static_cast<Value>(
+                extractMemrefBufferPointer),
         ValueRange({static_cast<Value>(actualIndex)}));
 
     auto buffPtrInt = rewriter.create<LLVM::PtrToIntOp>(
@@ -460,9 +468,13 @@ struct GetModelMemrefElemSizeOpLowering : public ConversionPattern {
         location, alignedPtrType, operands[kTreeMemrefOperandNum],
         rewriter.getDenseI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
 
+    auto elementPtrType = LLVM::LLVMPointerType::get(
+        &static_cast<const LLVMTypeConverter *>(typeConverter)->getContext(), alignedPtrType.getAddressSpace());
     auto endPtr = rewriter.create<LLVM::GEPOp>(
-        location, alignedPtrType,
-        static_cast<Value>(extractMemrefBufferPointer),
+        location, elementPtrType,
+        memrefStructType
+            .getBody()[kAlignedPointerIndexInMemrefStruct], static_cast<Value>(
+                extractMemrefBufferPointer),
         ValueRange({static_cast<Value>(indexVal)}));
 
     auto buffPtrInt = rewriter.create<LLVM::PtrToIntOp>(

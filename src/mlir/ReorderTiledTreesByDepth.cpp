@@ -23,6 +23,11 @@
 #include "Logger.h"
 #include "CompileUtils.h"
 
+namespace affine = mlir::affine;
+namespace memref = mlir::memref;
+namespace scf = mlir::scf;
+namespace math = mlir::math;
+
 using namespace mlir;
 
 namespace mlir {
@@ -151,8 +156,8 @@ struct ReorderTreesByDepthPass
                          OperationPass<mlir::ModuleOp>> {
   ReorderTreesByDepthPass() {}
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect,
-                    math::MathDialect>();
+    registry.insert<mlir::affine::AffineDialect, memref::MemRefDialect, scf::SCFDialect,
+                    mlir::math::MathDialect>();
   }
   void runOnOperation() final {
     RewritePatternSet patterns(&getContext());
@@ -461,8 +466,8 @@ struct SplitTreeLoopByDepth
       : m_pipelineSize(pipelineSize), m_numCores(numCores),
         m_parallelTreeBatches(parallelTreeBatches) {}
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect,
-                    math::MathDialect>();
+    registry.insert<mlir::affine::AffineDialect, memref::MemRefDialect, scf::SCFDialect,
+                    mlir::math::MathDialect>();
   }
   void runOnOperation() final {
     RewritePatternSet patterns(&getContext());

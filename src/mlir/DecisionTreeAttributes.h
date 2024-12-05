@@ -99,6 +99,12 @@ class DecisionTreeAttribute : public ::mlir::Attribute::AttrBase<DecisionTreeAtt
 public:
     /// Inherit some necessary constructors from 'AttrBase'.
     using Base::Base;
+    static llvm::StringRef getName() {
+        return "DecisionTreeAttribute";
+    }
+
+    // Static member for 'name', if the static method approach is not used
+    static constexpr const char *name = "DecisionTreeAttribute";
     // using ValueType = APInt;
     static DecisionTreeAttribute get(Type type,  DecisionForest& forest, int64_t index) {
         return Base::get(type.getContext(), type, forest, index);
@@ -122,7 +128,12 @@ class DecisionForestAttribute : public ::mlir::Attribute::AttrBase<DecisionFores
 public:
     /// Inherit some necessary constructors from 'AttrBase'.
     using Base::Base;
+    static llvm::StringRef getName() {
+        return "DecisionForestAttribute";
+    }
 
+    // Static member for 'name', if the static method approach is not used
+    static constexpr const char *name = "DecisionForestAttribute";
     static DecisionForestAttribute get(Type type, DecisionForest& value) {
         return Base::get(type.getContext(), type, value);
     }

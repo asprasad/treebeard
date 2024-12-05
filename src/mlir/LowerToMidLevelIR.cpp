@@ -1423,7 +1423,7 @@ struct HighLevelIRToMidLevelIRLoweringPass
     : public PassWrapper<HighLevelIRToMidLevelIRLoweringPass,
                          OperationPass<mlir::ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect>();
+    registry.insert<mlir::affine::AffineDialect, memref::MemRefDialect, scf::SCFDialect>();
   }
   void runOnOperation() final {
     ConversionTarget target(getContext());

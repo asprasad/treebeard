@@ -133,8 +133,16 @@ class NodeType : public Type::TypeBase<NodeType, mlir::Type, TypeStorage>
 public:
     /// Inherit some necessary constructors from 'TypeBase'.
     using Base::Base;
+     // Add the static method to get the name of the type.
+     static llvm::StringRef getName() {
+        return "NodeType";
+    }
+    
+    // Static member for 'name', if the static method approach is not used
+    static constexpr const char *name = "NodeType";
     virtual void print(mlir::DialectAsmPrinter &printer) { printer << "NodeType"; }   
 };
+
 
 class NumericalNodeType : public mlir::Type::TypeBase<NumericalNodeType, NodeType,
                                                       NumericalNodeTypeStorage> {
@@ -318,6 +326,14 @@ class TreeType : public mlir::Type::TypeBase<TreeType, mlir::Type,
 public:
     using Base::Base;
 
+    // Add the static method to get the name of the type.
+   static llvm::StringRef getName() {
+        return "TreeType";
+    }
+    
+    // Static member for 'name', if the static method approach is not used
+    static constexpr const char *name = "TreeType";
+
     static TreeType get(Type resultType, int32_t tileSize, Type thresholdType, Type featureIndexType) {
         mlir::MLIRContext *ctx = resultType.getContext();
         return Base::get(ctx, resultType, tileSize, thresholdType, featureIndexType);
@@ -343,7 +359,6 @@ public:
 
     void print(mlir::DialectAsmPrinter &printer) { getImpl()->print(printer); }
 };
-
 //===----------------------------------------------------------------------===//
 // Tree Ensemble Type
 //===----------------------------------------------------------------------===//
@@ -447,6 +462,15 @@ public:
     /// Inherit some necessary constructors from 'TypeBase'.
     using Base::Base;
 
+
+    // Add the static method to get the name of the type.
+    static llvm::StringRef getName() {
+        return "TreeEnsembleType";
+    }
+    
+    // Static member for 'name', if the static method approach is not used
+    static constexpr const char *name = "TreeEnsembleType";
+
     static TreeEnsembleType get(Type resultType, size_t numTrees, Type rowType, ReductionType reductionType, Type treeType) {
         mlir::MLIRContext *ctx = resultType.getContext();
         return Base::get(ctx, resultType, numTrees, rowType, reductionType, treeType);
@@ -488,7 +512,6 @@ public:
     bool isSubsetEnsemble() const { return getImpl()->m_ensembleSubset; }
     void print(mlir::DialectAsmPrinter &printer) { getImpl()->print(printer); }
 };
-
 } // end namespace decisionforest
 } // end namespace mlir
 

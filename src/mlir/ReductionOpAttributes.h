@@ -63,6 +63,12 @@ class ReductionAttrType
 public:
   /// Inherit some necessary constructors from 'TypeBase'.
   using Base::Base;
+  static llvm::StringRef getName() {
+        return "ReductionAttrType";
+  }
+
+  // Static member for 'name', if the static method approach is not used
+  static constexpr const char *name = "ReductionAttrType";
   void print(mlir::DialectAsmPrinter &printer) {
     printer << "ReductionAttrType";
   }
@@ -74,6 +80,12 @@ class ReductionTypeAttribute
 public:
   /// Inherit some necessary constructors from 'AttrBase'.
   using Base::Base;
+  static llvm::StringRef getName() {
+        return "ReductionTypeAttribute";
+  }
+
+  // Static member for 'name', if the static method approach is not used
+  static constexpr const char *name = "ReductionTypeAttribute";
   // using ValueType = APInt;
   static ReductionTypeAttribute get(Type type, Reduction reductionType) {
     return Base::get(type.getContext(), type, reductionType);

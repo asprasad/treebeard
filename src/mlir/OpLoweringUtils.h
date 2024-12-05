@@ -7,24 +7,31 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/Support/Casting.h"
 
-template <typename T> T AssertOpIsOfType(mlir::Operation *operation) {
-  T typedOp = llvm::dyn_cast<T>(operation);
-  assert(typedOp);
-  return typedOp;
+template <typename T>
+T AssertOpIsOfType(mlir::Operation *operation) {
+    T typedOp = llvm::dyn_cast<T>(operation);
+    if (!typedOp) {
+        llvm::errs() << "Operation type mismatch: expected " << T::getOperationName() << "\n";
+        operation->dump(); // Print information about the actual operation type
+        assert(false && "Operation is not of the expected type.");
+    }
+    return typedOp;
 }
 
-inline bool isContantInt(mlir::Value val, int64_t &value) {
-  auto definingOp = val.getDefiningOp();
-  llvm::APInt constIntVal;
-  mlir::detail::constant_int_op_binder binder(&constIntVal);
-  bool match = binder.match(definingOp);
-  value = constIntVal.getLimitedValue();
-  return match;
+
+inline bool isConstantInt(mlir::Value val, int64_t &value) {
+  llvm::APInt intVal;
+  if (mlir::matchPattern(val, mlir::m_ConstantInt(&intVal))) {
+    value = intVal.getSExtValue();  // Extracts the int64_t value
+    return true;
+  }
+  return false;
 }
+
 
 inline int64_t GetConstantIntValueFromMLIRValue(mlir::Value val) {
   int64_t value;
-  auto match = isContantInt(val, value);
+  auto match = isConstantInt(val, value);
   assert(match);
   return value;
 }

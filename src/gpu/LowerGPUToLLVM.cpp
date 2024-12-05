@@ -90,7 +90,7 @@ FlatSymbolRefAttr getOrInsertCacheOpSyncFunc(std::string &functionName,
   rewriter.setInsertionPointToStart(module.getBody());
   auto func = rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), functionName,
                                                 functionType);
-  auto entryBlock = func.addEntryBlock();
+  auto entryBlock = func.addEntryBlock(rewriter);
   rewriter.setInsertionPointToStart(entryBlock);
 
   rewriter.create<gpu::BarrierOp>(module.getLoc());
@@ -204,9 +204,10 @@ public:
 
       populateMemorySpaceConversion(typeConverter);
 
-      gpu::populateMemorySpaceLoweringPatterns(typeConverter, patterns);
+      // gpu::populateMemorySpaceLoweringPatterns(typeConverter, patterns);
       ConversionTarget target(getContext());
-      gpu::populateLowerMemorySpaceOpLegality(target);
+      // gpu::populateLowerMemorySpaceOpLegality(target);
+      m->dump();
       if (failed(applyFullConversion(m, target, std::move(patterns))))
         return signalPassFailure();
     }
@@ -274,7 +275,7 @@ struct LowerGpuOpsToNVVMOpsPass
     // memory allocations, so drop private annotations. NVVM uses address
     // space 3 for shared memory. NVVM uses the default address space to
     // represent global memory.
-    gpu::populateMemorySpaceAttributeTypeConversions(
+    mlir::populateGpuMemorySpaceAttributeConversions(
         typeConverter, [](gpu::AddressSpace space) -> unsigned {
           switch (space) {
           case gpu::AddressSpace::Global:
@@ -297,7 +298,7 @@ struct LowerGpuOpsToNVVMOpsPass
     cf::populateControlFlowToLLVMConversionPatterns(converter, llvmPatterns);
     populateFuncToLLVMConversionPatterns(converter, llvmPatterns);
     populateVectorToLLVMConversionPatterns(converter, llvmPatterns);
-    populateMemRefToLLVMConversionPatterns(converter, llvmPatterns);
+    populateFinalizeMemRefToLLVMConversionPatterns(converter, llvmPatterns);
     populateMathToLLVMConversionPatterns(converter, llvmPatterns);
     populateGpuToNVVMConversionPatterns(converter, llvmPatterns);
     populateGpuWMMAToNVVMConversionPatterns(converter, llvmPatterns);
@@ -345,7 +346,7 @@ public:
   }
 
   void populateMemorySpaceConversion(TypeConverter typeConverter) override {
-    gpu::populateMemorySpaceAttributeTypeConversions(
+    mlir::populateGpuMemorySpaceAttributeConversions(
         typeConverter, [](gpu::AddressSpace space) {
           switch (space) {
           case gpu::AddressSpace::Global:
@@ -376,7 +377,7 @@ public:
     populateVectorToLLVMConversionPatterns(converter, llvmPatterns);
     cf::populateControlFlowToLLVMConversionPatterns(converter, llvmPatterns);
     populateFuncToLLVMConversionPatterns(converter, llvmPatterns);
-    populateMemRefToLLVMConversionPatterns(converter, llvmPatterns);
+    populateFinalizeMemRefToLLVMConversionPatterns(converter, llvmPatterns);
     populateGpuToROCDLConversionPatterns(converter, llvmPatterns, m_runtime);
 
     return LogicalResult::success();
@@ -391,8 +392,9 @@ public:
     // Manually rewrite known block size attributes so the LLVMIR translation
     // infrastructure can pick them up.
     module.walk([ctx = module.getContext()](LLVM::LLVMFuncOp op) {
+      OperationName llvmFuncOpName(LLVM::LLVMFuncOp::getOperationName(), ctx);
       if (auto blockSizes =
-              op->removeAttr(gpu::GPUFuncOp::getKnownBlockSizeAttrName())
+              op->removeAttr(gpu::GPUFuncOp::getKnownBlockSizeAttrName(llvmFuncOpName))
                   .dyn_cast_or_null<DenseI32ArrayAttr>()) {
         op->setAttr(ROCDL::ROCDLDialect::getReqdWorkGroupSizeAttrName(),
                     blockSizes);
@@ -481,10 +483,10 @@ public:
   void runOnOperation() override;
 
 private:
-  Option<std::string> gpuBinaryAnnotation{
-      *this, "gpu-binary-annotation",
-      llvm::cl::desc("Annotation attribute string for GPU binary"),
-      llvm::cl::init(gpu::getDefaultGpuBinaryAnnotation())};
+  // Option<std::string> gpuBinaryAnnotation{
+  //     *this, "gpu-binary-annotation",
+  //     llvm::cl::desc("Annotation attribute string for GPU binary"),
+  //     llvm::cl::init(gpu::getDefaultGpuBinaryAnnotation())};
 };
 
 void GpuToLLVMConversionPass::runOnOperation() {
@@ -501,12 +503,12 @@ void GpuToLLVMConversionPass::runOnOperation() {
   mlir::arith::populateArithToLLVMConversionPatterns(converter, patterns);
   mlir::cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
   populateVectorToLLVMConversionPatterns(converter, patterns);
-  populateMemRefToLLVMConversionPatterns(converter, patterns);
+  populateFinalizeMemRefToLLVMConversionPatterns(converter, patterns);
   populateFuncToLLVMConversionPatterns(converter, patterns);
   populateMathToLLVMConversionPatterns(converter, patterns);
   populateAsyncStructuralTypeConversionsAndLegality(converter, patterns,
                                                     target);
-  populateGpuToLLVMConversionPatterns(converter, patterns, gpuBinaryAnnotation);
+  populateGpuToLLVMConversionPatterns(converter, patterns /*, gpuBinaryAnnotation */);
   populateAffineToStdConversionPatterns(patterns);
   populateMathToLLVMConversionPatterns(converter, patterns);
   decisionforest::populateDebugOpLoweringPatterns(patterns, converter);
@@ -519,7 +521,7 @@ void GpuToLLVMConversionPass::runOnOperation() {
 struct PrintModulePass
     : public PassWrapper<PrintModulePass, OperationPass<ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect,
+    registry.insert<LLVM::LLVMDialect, scf::SCFDialect, mlir::affine::AffineDialect,
                     memref::MemRefDialect, arith::ArithDialect,
                     vector::VectorDialect, omp::OpenMPDialect>();
   }
@@ -592,12 +594,33 @@ void LowerGPUToLLVM(
   // pm.addPass(std::make_unique<PrintModulePass>());
   pm.addPass(createReconcileUnrealizedCastsPass());
   // pm.addPass(std::make_unique<PrintModulePass>());
+GpuModuleToBinaryPassOptions gpuModuleToBinaryPassOptions;
 #ifdef TREEBEARD_NV_GPU_SUPPORT
-  pm.addNestedPass<gpu::GPUModuleOp>(
-      createGpuSerializeToCubinPass("nvptx64-nvidia-cuda", "sm_35", "+ptx60"));
+ // Set up options for NVIDIA GPU
+  GpuNVVMAttachTargetOptions nvvmTargetOptions;
+
+  // Assign the specified values to gpuModuleToBinaryPassOptions
+  nvvmTargetOptions.triple = "nvptx64-nvidia-cuda";   // Set the triple value
+  nvvmTargetOptions.chip = "sm_35";                   // Set the chip value
+  nvvmTargetOptions.features = "+ptx60";               // Set the features value
+  nvvmTargetOptions.optLevel = 3;                      // Set the optimization level to 3
+  pm.addPass(createGpuNVVMAttachTarget(nvvmTargetOptions));
+  
+  pm.addNestedPass<gpu::GPUModuleOp>(createGpuModuleToBinaryPass(gpuModuleToBinaryPassOptions));
+  // pm.addNestedPass<gpu::GPUModuleOp>(
+  //     createGpuModuleToBinaryPass("nvptx64-nvidia-cuda", "sm_35", "+ptx60"));
 #elif defined(TREEBEARD_AMD_GPU_SUPPORT)
-  pm.addNestedPass<gpu::GPUModuleOp>(createGpuSerializeToHsacoPass(
-      "amdgcn-amd-amdhsa", TREEBEARD_AMD_GPU_CHIPSET, "", 3 /*opt level*/));
+    // Set up options for AMD GPU
+  GpuROCDLAttachTargetOptions amdTargetOptions;
+  amdTargetOptions.triple = "amdgcn-amd-amdhsa";          // Hardcoded for AMD
+  amdTargetOptions.chip = TREEBEARD_AMD_GPU_CHIPSET;     // Use your defined constant
+  amdTargetOptions.features = "";                       // Set any required features if needed
+  amdTargetOptions.optLevel = 3;                        // Set the optimization level to 3 for AMD
+  pm.addPass(createGpuROCDLAttachTarget(amdTargetOptions));
+
+  pm.addNestedPass<gpu::GPUModuleOp>(createGpuModuleToBinaryPass(gpuModuleToBinaryPassOptions));
+  // pm.addNestedPass<gpu::GPUModuleOp>(createGpuModuleToBinaryPass(
+  //     "amdgcn-amd-amdhsa", TREEBEARD_AMD_GPU_CHIPSET, "", 3 /*opt level*/));
 #endif // GPU support
 
   // pm.addPass(std::make_unique<PrintModulePass>());
@@ -605,6 +628,8 @@ void LowerGPUToLLVM(
   pm.addPass(std::make_unique<GpuToLLVMConversionPass>(representation));
   pm.addPass(createReconcileUnrealizedCastsPass());
   // pm.addPass(std::make_unique<PrintModulePass>());
+
+  // module->dump();
 
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to LLVM failed.\n";

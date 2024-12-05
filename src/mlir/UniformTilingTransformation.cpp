@@ -205,7 +205,7 @@ struct UniformTilingPass
       : m_tileSize(tileSize), m_tileShapeBitWidth(tileShapeBitWidth),
         m_makeAllLeavesSameDepth(makeAllLeavesSameDepth) {}
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect,
+    registry.insert<mlir::affine::AffineDialect, memref::MemRefDialect, scf::SCFDialect,
                     math::MathDialect>();
   }
   void runOnOperation() final {
@@ -225,7 +225,7 @@ struct PadTreesToMakeAllLeavesSameDepthPass
                          OperationPass<mlir::func::FuncOp>> {
   PadTreesToMakeAllLeavesSameDepthPass() {}
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect,
+    registry.insert<mlir::affine::AffineDialect, memref::MemRefDialect, scf::SCFDialect,
                     math::MathDialect>();
   }
   void runOnOperation() final {

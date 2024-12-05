@@ -35,7 +35,9 @@ Type GetMemrefElementType(Value memrefOperand) {
   auto alignedPtrType =
       memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct]
           .cast<LLVM::LLVMPointerType>();
-  auto memrefElemType = alignedPtrType.getElementType();
+  //   auto memrefElemType = alignedPtrType.getElementType();
+  auto memrefElemType =
+      memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct];
   return memrefElemType;
 }
 
@@ -48,8 +50,8 @@ Value GenerateGetElementPtr(Location location,
   auto alignedPtrType =
       memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct]
           .cast<LLVM::LLVMPointerType>();
-  auto memrefElemType = alignedPtrType.getElementType();
-
+//   auto memrefElemType = alignedPtrType.getElementType();
+  auto memrefElemType = memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct];
   auto indexType = indexVal.getType();
   assert(indexType.isa<IntegerType>());
 
@@ -66,9 +68,9 @@ Value GenerateGetElementPtr(Location location,
       location, indexType, static_cast<Value>(extractMemrefOffset),
       static_cast<Value>(indexVal));
 
-  auto elementPtrType = LLVM::LLVMPointerType::get(memrefElemType);
+  auto elementPtrType = LLVM::LLVMPointerType::get(rewriter.getContext());
   auto elementPtr = rewriter.create<LLVM::GEPOp>(
-      location, elementPtrType, static_cast<Value>(extractMemrefBufferPointer),
+      location, elementPtrType,  memrefElemType, static_cast<Value>(extractMemrefBufferPointer),
       ValueRange({static_cast<Value>(actualIndex)}));
 
   return elementPtr;

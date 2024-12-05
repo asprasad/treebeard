@@ -95,6 +95,12 @@ ConstructGPUModuleFromTreebeardContext(TreebeardContext &tbContext) {
   const CompilerOptions &options = tbContext.options;
   auto &forestCreator = *tbContext.forestConstructor;
 
+  const char *individualtestEnv = std::getenv("INDIVIDUAL_RUN");
+  bool individualtest = individualtestEnv && std::string(individualtestEnv) == "true";
+
+  if(individualtest)
+    tbContext.context.disableMultithreading();
+
   // Build the HIR MLIR module from the input file
   auto module = BuildHIRModule(tbContext, forestCreator);
   // module->dump();

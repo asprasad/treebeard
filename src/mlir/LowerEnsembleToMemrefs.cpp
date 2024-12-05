@@ -326,8 +326,8 @@ struct GetTreeOpLowering : public ConversionPattern {
     assert(operands.size() == 2);
     if (!getTreeOp)
       return mlir::failure();
-    m_representation->GenerateTreeMemref(rewriter, op, operands[0],
-                                         operands[1]);
+    m_representation->GenerateTreeMemref(rewriter, op, op->getOperand(0),
+                                         op->getOperand(1));
     rewriter.eraseOp(op);
     return mlir::success();
   }
@@ -453,6 +453,12 @@ struct GPUGetRootOpLowering : public ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     auto getRootOp = AssertOpIsOfType<mlir::decisionforest::GetRootOp>(op);
+    // Temporary vector to hold the operands
+    SmallVector<mlir::Value, 4> tempOperands(op->getOperands().begin(),
+                                             op->getOperands().end());
+    // Assign the temporary vector to the ArrayRef
+    operands = tempOperands;
+
     Value treeValue = operands[0];
 
 #ifdef TREEBEARD_GPU_USE_SHMEM_NODE_INDEX
@@ -494,6 +500,12 @@ struct IsLeafOpLowering : public ConversionPattern {
       return mlir::failure();
 
     auto location = op->getLoc();
+    // Temporary vector to hold the operands
+    SmallVector<mlir::Value, 4> tempOperands(op->getOperands().begin(),
+                                             op->getOperands().end());
+
+    // Assign the temporary vector to the ArrayRef
+    operands = tempOperands;
 
     auto treeMemref = m_representation->GetThresholdsMemref(operands[0]);
     auto treeMemrefType = treeMemref.getType().cast<MemRefType>();
@@ -643,6 +655,12 @@ struct GetLeafValueOpLowering : public ConversionPattern {
     if (!getLeafVal)
       return mlir::failure();
     auto location = op->getLoc();
+    // Temporary vector to hold the operands
+    SmallVector<mlir::Value, 4> tempOperands(op->getOperands().begin(),
+                                             op->getOperands().end());
+
+    // Assign the temporary vector to the ArrayRef
+    operands = tempOperands;
 
     auto treeMemref = m_representation->GetThresholdsMemref(operands[0]);
     auto nodeIndex = rewriter.create<decisionforest::NodeToIndexOp>(
@@ -717,7 +735,7 @@ struct GetLeafTileValueOpLowering : public ConversionPattern {
           auto doubleVectorType =
               mlir::VectorType::get({tileSize}, rewriter.getF64Type());
           vectorVal = rewriter.create<arith::ExtFOp>(location, doubleVectorType,
-                                                     loadThresholdOp);
+                                                     static_cast<Value>(loadThresholdOp));
         }
         InsertPrintVectorOp(rewriter, location, 0, 64, tileSize, vectorVal);
       }
@@ -825,7 +843,7 @@ struct MidLevelIRToMemrefLoweringPass
       : m_serializer(serializer), m_representation(representation) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect>();
+    registry.insert<mlir::affine::AffineDialect, memref::MemRefDialect, scf::SCFDialect>();
   }
   void runOnOperation() final {
     // [BUG!!] TODO Since MLIR runs this pass multi-threaded, if multiple passes
@@ -835,7 +853,7 @@ struct MidLevelIRToMemrefLoweringPass
     ConversionTarget target(getContext());
 
     target.addLegalDialect<
-        AffineDialect, memref::MemRefDialect, scf::SCFDialect,
+        mlir::affine::AffineDialect, memref::MemRefDialect, scf::SCFDialect,
         decisionforest::DecisionForestDialect, vector::VectorDialect,
         math::MathDialect, arith::ArithDialect, func::FuncDialect,
         gpu::GPUDialect>();
@@ -890,7 +908,7 @@ struct MidLevelIRToGPUMemrefLoweringPass
       : m_serializer(serializer), m_representation(representation) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect>();
+    registry.insert<mlir::affine::AffineDialect, memref::MemRefDialect, scf::SCFDialect>();
   }
   void runOnOperation() final {
     // [BUG!!] TODO Since MLIR runs this pass multi-threaded, if multiple passes
@@ -898,7 +916,7 @@ struct MidLevelIRToGPUMemrefLoweringPass
     ConversionTarget target(getContext());
 
     target.addLegalDialect<
-        AffineDialect, memref::MemRefDialect, scf::SCFDialect,
+        mlir::affine::AffineDialect, memref::MemRefDialect, scf::SCFDialect,
         decisionforest::DecisionForestDialect, vector::VectorDialect,
         math::MathDialect, arith::ArithDialect, func::FuncDialect,
         gpu::GPUDialect>();

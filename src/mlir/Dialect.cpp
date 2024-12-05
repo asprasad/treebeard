@@ -49,9 +49,10 @@ void DecisionForestDialect::initialize() {
 #define GET_OP_LIST
 #include "Ops.cpp.inc"
       >();
-  addTypes<TreeEnsembleType, TreeType, NodeType, LeafNodeType,
-           NumericalNodeType, TiledNumericalNodeType, ReorgMemrefElementType,
-           ScheduleType, ReductionAttrType>();
+  // addTypes<TreeEnsembleType, TreeType, NodeType, LeafNodeType,
+  //          NumericalNodeType, TiledNumericalNodeType, ReorgMemrefElementType,
+  //          ScheduleType, ReductionAttrType>();
+  addTypes<TreeType,TreeEnsembleType, ScheduleType, ReductionAttrType, NodeType, TiledNumericalNodeType>();
   addAttributes<DecisionTreeAttribute, DecisionForestAttribute,
                 ScheduleAttribute, UnrollLoopAttribute,
                 ReductionTypeAttribute>();

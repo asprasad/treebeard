@@ -116,7 +116,7 @@ public:
     ConversionTarget target(getContext());
 
     target.addLegalDialect<
-        AffineDialect, memref::MemRefDialect, scf::SCFDialect,
+        mlir::affine::AffineDialect, memref::MemRefDialect, scf::SCFDialect,
         decisionforest::DecisionForestDialect, vector::VectorDialect,
         math::MathDialect, arith::ArithDialect, func::FuncDialect,
         gpu::GPUDialect>();
@@ -216,7 +216,7 @@ public:
     ConversionTarget target(getContext());
 
     target.addLegalDialect<
-        AffineDialect, memref::MemRefDialect, scf::SCFDialect,
+        mlir::affine::AffineDialect, memref::MemRefDialect, scf::SCFDialect,
         decisionforest::DecisionForestDialect, vector::VectorDialect,
         math::MathDialect, arith::ArithDialect, func::FuncDialect,
         gpu::GPUDialect>();

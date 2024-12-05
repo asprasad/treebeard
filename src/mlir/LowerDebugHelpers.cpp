@@ -56,8 +56,8 @@ static Value getOrCreateGlobalString(Location loc, OpBuilder &builder,
   Value cst0 = builder.create<LLVM::ConstantOp>(loc, builder.getI64Type(),
                                                 builder.getIndexAttr(0));
   return builder.create<LLVM::GEPOp>(
-      loc,
-      LLVM::LLVMPointerType::get(IntegerType::get(builder.getContext(), 8)),
+      loc,LLVM::LLVMPointerType::get(builder.getContext()),
+      IntegerType::get(builder.getContext(), 8),
       globalPtr, ArrayRef<Value>({cst0, cst0}));
 }
 
@@ -72,7 +72,7 @@ static FlatSymbolRefAttr getOrInsertPrintf(PatternRewriter &rewriter,
   // Create a function declaration for printf, the signature is:
   //   * `i32 (i8*, ...)`
   auto llvmI32Ty = IntegerType::get(context, 32);
-  auto llvmI8PtrTy = LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
+  auto llvmI8PtrTy = LLVM::LLVMPointerType::get(context);
   auto llvmFnType = LLVM::LLVMFunctionType::get(llvmI32Ty, llvmI8PtrTy,
                                                 /*isVarArg=*/true);
 
@@ -316,7 +316,10 @@ struct PrintTreeToDOTFileOpLowering : public ConversionPattern {
 
     // Get a pointer to first tile in this tree
     auto elementPtr = rewriter.create<LLVM::GEPOp>(
-        location, alignedPtrType,
+        location,
+        LLVM::LLVMPointerType::get(rewriter.getContext(),
+                                   alignedPtrType.getAddressSpace()),
+        memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct],
         static_cast<Value>(extractMemrefBufferPointer),
         ValueRange({static_cast<Value>(extractMemrefOffset)}));
 
@@ -363,7 +366,7 @@ struct PrintInputRowOpLowering : public ConversionPattern {
     // Create a function declaration for PrintInputRow, the signature is:
     //   * `i64 (TileType*, i64, i64)`
     auto llvmI64Ty = IntegerType::get(context, 64);
-    auto llvmF64PtrTy = LLVM::LLVMPointerType::get(FloatType::getF64(context));
+    auto llvmF64PtrTy = LLVM::LLVMPointerType::get(context);
     auto llvmFnType = LLVM::LLVMFunctionType::get(
         llvmI64Ty, {llvmF64PtrTy, llvmI64Ty, llvmI64Ty});
 
@@ -378,7 +381,7 @@ struct PrintInputRowOpLowering : public ConversionPattern {
     // Create a function declaration for PrintInputRow, the signature is:
     //   * `i64 (TileType*, i64, i64)`
     auto llvmI64Ty = IntegerType::get(context, 64);
-    auto llvmF64PtrTy = LLVM::LLVMPointerType::get(FloatType::getF32(context));
+    auto llvmF64PtrTy = LLVM::LLVMPointerType::get(context);
     auto llvmFnType = LLVM::LLVMFunctionType::get(
         llvmI64Ty, {llvmF64PtrTy, llvmI64Ty, llvmI64Ty});
 
@@ -416,7 +419,10 @@ struct PrintInputRowOpLowering : public ConversionPattern {
 
     // Get a pointer to the first element of this row
     auto elementPtr = rewriter.create<LLVM::GEPOp>(
-        location, alignedPtrType,
+        location,
+        LLVM::LLVMPointerType::get(rewriter.getContext(),
+                                   alignedPtrType.getAddressSpace()),
+        memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct],
         static_cast<Value>(extractMemrefBufferPointer),
         ValueRange({static_cast<Value>(extractMemrefOffset)}));
 
@@ -426,14 +432,14 @@ struct PrintInputRowOpLowering : public ConversionPattern {
         location, indexType, operands[kRowMemrefOperandNum],
         rewriter.getDenseI64ArrayAttr({kLengthIndexInMemrefStruct, 1}));
 
-    if (alignedPtrType.getElementType().isF64()) {
+    if (elementPtr.getElemType().isF64()) {
       auto printFunctionRef = getOrInsertPrintRow(rewriter, parentModule);
       // int64_t PrintInputRow(double *treeBuf, int64_t length, int64_t
       // rowIndex)
       rewriter.create<func::CallOp>(
           op->getLoc(), printFunctionRef, rewriter.getI64Type(),
           ArrayRef<Value>({elementPtr, extractMemrefLength, indexVal}));
-    } else if (alignedPtrType.getElementType().isF32()) {
+    } else if (elementPtr.getElemType().isF32()) {
       auto printFunctionRef = getOrInsertPrintRowFloat(rewriter, parentModule);
       // int64_t PrintInputRow_Float(float *treeBuf, int64_t length, int64_t
       // rowIndex)
@@ -548,7 +554,7 @@ void InsertPrintElementAddressIfNeeded(ConversionPatternRewriter &rewriter,
   //      actualIndex, int32_t elementIndex, void *elemPtr)
   auto llvmI64Ty = IntegerType::get(context, 64);
   auto llvmI32Ty = IntegerType::get(context, 32);
-  auto llvmI32PtrTy = LLVM::LLVMPointerType::get(llvmI32Ty);
+  auto llvmI32PtrTy = LLVM::LLVMPointerType::get(context);
   auto llvmFnType = LLVM::LLVMFunctionType::get(
       llvmI64Ty, {llvmI32PtrTy, llvmI64Ty, llvmI64Ty, llvmI32Ty, llvmI32PtrTy});
 

@@ -80,7 +80,7 @@ struct DecisionForestToLLVMLoweringPass
       : m_representation(representation) {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect,
+    registry.insert<LLVM::LLVMDialect, scf::SCFDialect, mlir::affine::AffineDialect,
                     memref::MemRefDialect, arith::ArithDialect,
                     vector::VectorDialect, omp::OpenMPDialect>();
   }
@@ -101,12 +101,16 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
   target.addIllegalDialect<arith::ArithDialect, vector::VectorDialect,
                            math::MathDialect>();
 
-  auto &context = getContext();
+   // Register MemRef to LLVM interface in the context's dialect registry
+  DialectRegistry registry;
+  mlir::registerConvertMemRefToLLVMInterface(registry);
+  mlir::MLIRContext context(registry);
   LLVMTypeConverter typeConverter(&context, options);
+  context.appendDialectRegistry(registry);
 
   RewritePatternSet patterns(&context);
   populateAffineToStdConversionPatterns(patterns);
-  populateMemRefToLLVMConversionPatterns(typeConverter, patterns);
+  populateFinalizeMemRefToLLVMConversionPatterns(typeConverter, patterns);
   populateVectorToLLVMConversionPatterns(typeConverter, patterns, false);
   populateMathToLLVMConversionPatterns(typeConverter, patterns);
   arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
@@ -133,7 +137,7 @@ struct LowerOMPToLLVMPass
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry
-        .insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect,
+        .insert<LLVM::LLVMDialect, scf::SCFDialect, mlir::affine::AffineDialect,
                 memref::MemRefDialect, arith::ArithDialect,
                 vector::VectorDialect, omp::OpenMPDialect, func::FuncDialect>();
   }
@@ -150,7 +154,7 @@ struct LowerOMPToLLVMPass
     RewritePatternSet patterns(&getContext());
     arith::populateArithToLLVMConversionPatterns(converter, patterns);
     cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
-    populateMemRefToLLVMConversionPatterns(converter, patterns);
+    populateFinalizeMemRefToLLVMConversionPatterns(converter, patterns);
     populateFuncToLLVMConversionPatterns(converter, patterns);
     populateOpenMPToLLVMConversionPatterns(converter, patterns);
 
@@ -167,7 +171,7 @@ struct LowerOMPToLLVMPass
 struct PrintModulePass
     : public PassWrapper<PrintModulePass, OperationPass<ModuleOp>> {
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<LLVM::LLVMDialect, scf::SCFDialect, AffineDialect,
+    registry.insert<LLVM::LLVMDialect, scf::SCFDialect, mlir::affine::AffineDialect,
                     memref::MemRefDialect, arith::ArithDialect,
                     vector::VectorDialect, omp::OpenMPDialect>();
   }
@@ -198,7 +202,7 @@ void LowerToLLVM(mlir::MLIRContext &context, mlir::ModuleOp module,
       std::make_unique<DecisionForestToLLVMLoweringPass>(representation));
   pm.addPass(createConvertSCFToOpenMPPass());
   // pm.addPass(std::make_unique<PrintModulePass>());
-  pm.addPass(createMemRefToLLVMConversionPass());
+  // pm.addPass(createMemRefToLLVMConversionPass());
   pm.addPass(createConvertSCFToCFPass());
   pm.addPass(std::make_unique<LowerOMPToLLVMPass>(representation));
   pm.addPass(createReconcileUnrealizedCastsPass());
@@ -229,7 +233,7 @@ void dumpAssembly(const llvm::Module *llvmModule) {
     auto CPU = "generic";
     auto Features = "";
     llvm::TargetOptions opt;
-    auto RM = Optional<llvm::Reloc::Model>();
+    std::optional<llvm::Reloc::Model> RM;
 
     auto tm = target->createTargetMachine(llvmModule->getTargetTriple(), CPU,
                                           Features, opt, RM);
@@ -271,8 +275,21 @@ int dumpLLVMIR(mlir::ModuleOp module, bool dumpAsm) {
     return -1;
   }
 
-  mlir::ExecutionEngine::setupTargetTriple(llvmModule.get());
+    // Create target machine and configure the LLVM Module
+  auto tmBuilderOrError = llvm::orc::JITTargetMachineBuilder::detectHost();
+  if (!tmBuilderOrError) {
+    llvm::errs() << "Could not create JITTargetMachineBuilder\n";
+    return -1;
+  }
 
+  auto tmOrError = tmBuilderOrError->createTargetMachine();
+  if (!tmOrError) {
+    llvm::errs() << "Could not create TargetMachine\n";
+    return -1;
+  }
+
+  mlir::ExecutionEngine::setupTargetTripleAndDataLayout(llvmModule.get(),
+                                                        tmOrError.get().get());
   if (dumpAsm) {
     dumpAssembly(llvmModule.get());
   }
@@ -296,7 +313,21 @@ int dumpLLVMIRToFile(mlir::ModuleOp module, const std::string &filename) {
     llvm::errs() << "Failed to emit LLVM IR\n";
     return -1;
   }
-  ExecutionEngine::setupTargetTriple(llvmModule.get());
+      // Create target machine and configure the LLVM Module
+  auto tmBuilderOrError = llvm::orc::JITTargetMachineBuilder::detectHost();
+  if (!tmBuilderOrError) {
+    llvm::errs() << "Could not create JITTargetMachineBuilder\n";
+    return -1;
+  }
+
+  auto tmOrError = tmBuilderOrError->createTargetMachine();
+  if (!tmOrError) {
+    llvm::errs() << "Could not create TargetMachine\n";
+    return -1;
+  }
+
+  mlir::ExecutionEngine::setupTargetTripleAndDataLayout(llvmModule.get(),
+                                                        tmOrError.get().get());
   std::error_code ec;
   llvm::raw_fd_ostream filestream(filename, ec);
   filestream << *llvmModule;

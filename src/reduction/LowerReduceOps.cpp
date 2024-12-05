@@ -26,7 +26,7 @@ using namespace mlir;
 int64_t getConstantStepBetweenValues(mlir::Value start, mlir::Value end) {
   int64_t endValConst;
   int64_t startValConst;
-  if (isContantInt(end, endValConst)) {
+  if (isConstantInt(end, endValConst)) {
     startValConst = GetConstantIntValueFromMLIRValue(start);
     return endValConst - startValConst;
   } else {
@@ -111,8 +111,8 @@ void generateArgMax(OpBuilder &rewriter, Location location,
       location, sourceMemrefType, static_cast<Value>(sourceMemref),
       sourceIndices);
 
-  auto maxValue = reductionLoop.getLoopBody().getArgument(1);
-  auto maxIndex = reductionLoop.getLoopBody().getArgument(2);
+  auto maxValue = reductionLoop.getBody()->getArgument(1);
+  auto maxIndex = reductionLoop.getBody()->getArgument(2);
 
   auto compareResult = rewriter.create<arith::CmpFOp>(
       location, mlir::arith::CmpFPredicate::OGT, maxValue, currentValue);
@@ -122,14 +122,13 @@ void generateArgMax(OpBuilder &rewriter, Location location,
       true);
   {
     auto thenBodyBuilder = ifElse.getThenBodyBuilder();
-    thenBodyBuilder.create<scf::YieldOp>(location,
-                                         ValueRange({maxValue, maxIndex}));
+    thenBodyBuilder.create<mlir::scf::YieldOp>(location, ValueRange{maxValue, maxIndex});
   }
   {
     auto elseBodyBuilder = ifElse.getElseBodyBuilder();
     elseBodyBuilder.create<scf::YieldOp>(
         location,
-        ValueRange({static_cast<Value>(currentValue), static_cast<Value>(k)}));
+        ValueRange{static_cast<Value>(currentValue), static_cast<Value>(k)});
   }
 
   rewriter.create<scf::YieldOp>(location, ifElse.getResults());
@@ -499,7 +498,7 @@ LogicalResult generateSimpleReductionLoopNest(
       auto loadVal = rewriter.create<vector::LoadOp>(location, vectorType,
                                                      sourceMemref, loopIVs);
 
-      auto accumulator = reductionLoop.getLoopBody().getArgument(1);
+      auto accumulator = reductionLoop.getBody()->getArgument(1);
       auto addVal = rewriter.create<arith::AddFOp>(
           location, loadVal.getResult(), accumulator);
       rewriter.create<scf::YieldOp>(location, addVal.getResult());
@@ -510,7 +509,7 @@ LogicalResult generateSimpleReductionLoopNest(
       auto loadVal =
           rewriter.create<memref::LoadOp>(location, sourceMemref, loopIVs);
 
-      auto accumulator = reductionLoop.getLoopBody().getArgument(1);
+      auto accumulator = reductionLoop.getBody()->getArgument(1);
       auto addVal = rewriter.create<arith::AddFOp>(
           location, loadVal.getResult(), accumulator);
       rewriter.create<scf::YieldOp>(location, addVal.getResult());

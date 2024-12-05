@@ -212,7 +212,7 @@ struct ReorderTreesByDepthPass
                          OperationPass<mlir::func::FuncOp>> {
   ReorderTreesByDepthPass() {}
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect,
+    registry.insert<mlir::affine::AffineDialect, memref::MemRefDialect, scf::SCFDialect,
                     math::MathDialect>();
   }
   void runOnOperation() final {
@@ -481,7 +481,7 @@ struct SplitTreeLoopByDepth
   SplitTreeLoopByDepth(const TreeBeard::GPUAutoScheduleOptions &options)
       : m_options(options) {}
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect,
+    registry.insert<mlir::affine::AffineDialect, memref::MemRefDialect, scf::SCFDialect,
                     math::MathDialect>();
   }
   void runOnOperation() final {

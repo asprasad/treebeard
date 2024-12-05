@@ -133,7 +133,7 @@ struct ConvertTraverseToCooperativeTraverse
   ConvertTraverseToCooperativeTraverse() {}
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect,
+    registry.insert<mlir::affine::AffineDialect, memref::MemRefDialect, scf::SCFDialect,
                     decisionforest::DecisionForestDialect>();
   }
 
@@ -141,7 +141,7 @@ struct ConvertTraverseToCooperativeTraverse
     ConversionTarget target(getContext());
 
     target.addLegalDialect<
-        AffineDialect, memref::MemRefDialect, scf::SCFDialect,
+        mlir::affine::AffineDialect, memref::MemRefDialect, scf::SCFDialect,
         decisionforest::DecisionForestDialect, vector::VectorDialect,
         math::MathDialect, arith::ArithDialect, func::FuncDialect,
         gpu::GPUDialect>();

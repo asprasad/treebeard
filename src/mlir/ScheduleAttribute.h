@@ -78,6 +78,12 @@ class ScheduleType : public mlir::Type::TypeBase<ScheduleType, mlir::Type, TypeS
 public:
     /// Inherit some necessary constructors from 'TypeBase'.
     using Base::Base;
+    static llvm::StringRef getName() {
+        return "ScheduleType";
+    }
+
+    // Static member for 'name', if the static method approach is not used
+    static constexpr const char *name = "ScheduleType";
     void print(mlir::DialectAsmPrinter &printer) { printer << "ScheduleType"; }   
 };
 
@@ -87,6 +93,12 @@ class ScheduleAttribute : public ::mlir::Attribute::AttrBase<ScheduleAttribute, 
 public:
     /// Inherit some necessary constructors from 'AttrBase'.
     using Base::Base;
+    static llvm::StringRef getName() {
+        return "ScheduleAttribute";
+     }
+
+    // Static member for 'name', if the static method approach is not used
+    static constexpr const char *name = "ScheduleAttribute";
     // using ValueType = APInt;
     static ScheduleAttribute get(Type type,  mlir::decisionforest::Schedule* schedule) {
         return Base::get(type.getContext(), type, schedule);
@@ -105,6 +117,12 @@ class UnrollLoopAttribute : public ::mlir::Attribute::AttrBase<UnrollLoopAttribu
 public:
     /// Inherit some necessary constructors from 'AttrBase'.
     using Base::Base;
+    static llvm::StringRef getName() {
+        return "UnrollLoopAttribute";
+    }
+
+    // Static member for 'name', if the static method approach is not used
+    static constexpr const char *name = "UnrollLoopAttribute";
     // using ValueType = APInt;
     static UnrollLoopAttribute get(Type type,  int32_t unrollFactor) {
         return Base::get(type.getContext(), type, unrollFactor);
@@ -117,6 +135,7 @@ public:
         os << "UnrollFactor = { " << unrollFactor << " }";
     }
 };
+
 
 } // decisionforest
 } // mlir

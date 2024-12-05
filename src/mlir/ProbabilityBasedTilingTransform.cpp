@@ -22,6 +22,11 @@
 #include "TiledTree.h"
 #include "CompileUtils.h"
 
+namespace affine = mlir::affine;
+namespace memref = mlir::memref;
+namespace scf = mlir::scf;
+namespace math = mlir::math;
+
 namespace mlir {
 namespace decisionforest {
 
@@ -222,7 +227,7 @@ struct ProbabilityBasedTilingPass : public PassWrapper<ProbabilityBasedTilingPas
     : m_tileSize(tileSize), m_tileShapeBitWidth(tileShapeBitWidth), m_hybrid(hybrid), m_tilingThreshold(tilingThreshold)
   { }
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<AffineDialect, memref::MemRefDialect, scf::SCFDialect, math::MathDialect>();
+    registry.insert<mlir::affine::AffineDialect, memref::MemRefDialect, scf::SCFDialect, math::MathDialect>();
   }
   void runOnOperation() final {
     RewritePatternSet patterns(&getContext());

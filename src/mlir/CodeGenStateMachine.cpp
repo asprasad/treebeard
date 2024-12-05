@@ -306,7 +306,7 @@ bool VectorTraverseTileCodeGenerator::EmitNext(
         auto doubleVectorType =
             mlir::VectorType::get({m_tileSize}, rewriter.getF64Type());
         vectorVal = rewriter.create<arith::ExtFOp>(location, doubleVectorType,
-                                                   m_loadThresholdOp);
+                                                   static_cast<Value>(m_loadThresholdOp));
       }
       InsertPrintVectorOp(rewriter, location, 0 /*fp kind*/, 64, m_tileSize,
                           vectorVal);
@@ -427,8 +427,8 @@ bool VectorTraverseTileCodeGenerator::EmitNext(
       if (!featuresVectorType.getElementType().isF64()) {
         auto doubleVectorType =
             mlir::VectorType::get({m_tileSize}, rewriter.getF64Type());
-        vectorVal = rewriter.create<arith::ExtFOp>(location, doubleVectorType,
-                                                   m_features);
+        vectorVal = rewriter.create<arith::ExtFOp>(location, rewriter.getF64Type(),
+                                                   static_cast<Value>(m_features));
       }
 
       InsertPrintVectorOp(rewriter, location, 0 /*fp kind*/,
