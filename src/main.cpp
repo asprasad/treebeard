@@ -438,6 +438,8 @@ int main(int argc, char *argv[]) {
     return 0;
   else if (individual) {
 
+    setenv("MLIR_DISABLE_MULTITHREADS", "true", 1); // Before initializing MLIRContext
+
     // If printAfterAll is true, set the environment variable
     if (printAfterAll) {
       setenv("PRINT_AFTER_ALL", "true", 1); // Set the environment variable
@@ -450,6 +452,9 @@ int main(int argc, char *argv[]) {
     if (printAfterAll) {
       unsetenv("PRINT_AFTER_ALL"); // Unset the environment variable
     }
+
+     unsetenv("MLIR_DISABLE_MULTITHREADS"); // Unset the environment variable
+
   } else {
     std::cout
         << "TreeBeard: A compiler for gradient boosting tree inference.\n";

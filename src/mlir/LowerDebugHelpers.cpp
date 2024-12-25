@@ -319,7 +319,7 @@ struct PrintTreeToDOTFileOpLowering : public ConversionPattern {
         location,
         LLVM::LLVMPointerType::get(rewriter.getContext(),
                                    alignedPtrType.getAddressSpace()),
-        memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct],
+        op->getResult(0).getType(),
         static_cast<Value>(extractMemrefBufferPointer),
         ValueRange({static_cast<Value>(extractMemrefOffset)}));
 
@@ -422,7 +422,7 @@ struct PrintInputRowOpLowering : public ConversionPattern {
         location,
         LLVM::LLVMPointerType::get(rewriter.getContext(),
                                    alignedPtrType.getAddressSpace()),
-        memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct],
+        op->getResult(0).getType(),
         static_cast<Value>(extractMemrefBufferPointer),
         ValueRange({static_cast<Value>(extractMemrefOffset)}));
 

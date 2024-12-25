@@ -118,6 +118,7 @@ GPUInferenceRunner::CreateExecutionEngine(mlir::ModuleOp module) {
       nullptr, {}, std::nullopt, executionEngineLibs};
   options.enablePerfNotificationListener = EnablePerfNotificationListener;
   auto maybeEngine = mlir::ExecutionEngine::create(module, options);
+  llvm::errs()<<*module<<"\n";
   assert(maybeEngine && "failed to construct an execution engine");
   return maybeEngine;
 }

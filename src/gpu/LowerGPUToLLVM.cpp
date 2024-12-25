@@ -13,12 +13,16 @@
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
 #include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
+#include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/OpenMPToLLVM/ConvertOpenMPToLLVM.h"
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Conversion/SCFToOpenMP/SCFToOpenMP.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
+#include "mlir/Dialect/Async/IR/Async.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -70,6 +74,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "CompileUtils.h"
+
 
 using namespace mlir;
 
@@ -175,6 +180,9 @@ public:
   // Run re-writes that do not require a special type converter.
   virtual void populateMemorySpaceConversion(TypeConverter typeConverter) = 0;
 
+    // Run re-writes that do not require a special type converter.
+  void populateLowerMemorySpaceOpLegality(ConversionTarget &target);
+
   // Add rewrites that require the custom type converter
   virtual LogicalResult populateTargetSpecificRewritesAndConversions(
       RewritePatternSet &set, LLVMTypeConverter &typeConverter) = 0;
@@ -206,8 +214,10 @@ public:
 
       // gpu::populateMemorySpaceLoweringPatterns(typeConverter, patterns);
       ConversionTarget target(getContext());
-      // gpu::populateLowerMemorySpaceOpLegality(target);
-      m->dump();
+      // populateLowerMemorySpaceOpLegality(target);
+      target.markUnknownOpDynamicallyLegal(
+        [&](Operation *op) { return true; });
+
       if (failed(applyFullConversion(m, target, std::move(patterns))))
         return signalPassFailure();
     }
@@ -268,6 +278,10 @@ struct LowerGpuOpsToNVVMOpsPass
   void getDependentDialects(::mlir::DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect>();
     registry.insert<NVVM::NVVMDialect>();
+  }
+
+   void populateLowerMemorySpaceOpLegality(ConversionTarget &target) {
+      target.markUnknownOpDynamicallyLegal([](Operation *) { return true; });
   }
 
   void populateMemorySpaceConversion(TypeConverter typeConverter) override {
@@ -479,6 +493,7 @@ public:
   GpuToLLVMConversionPass(const GpuToLLVMConversionPass &other)
       : GpuToLLVMConversionPassBase(other),
         m_representation(other.m_representation) {}
+
   // Run the dialect converter on the module.
   void runOnOperation() override;
 
@@ -490,13 +505,25 @@ private:
 };
 
 void GpuToLLVMConversionPass::runOnOperation() {
-  LLVMTypeConverter converter(&getContext());
-  RewritePatternSet patterns(&getContext());
-  LLVMConversionTarget target(getContext());
+  MLIRContext *context = &getContext();
+  LowerToLLVMOptions options(context);
+  options.useBarePtrCallConv = false;
+  RewritePatternSet patterns(context);
+  ConversionTarget target(*context);
+  target.addLegalDialect<LLVM::LLVMDialect>();
+  LLVMTypeConverter converter(context, options);
 
-  target.addIllegalDialect<gpu::GPUDialect>();
+  // target.addIllegalDialect<gpu::GPUDialect>();
   target.addIllegalDialect<decisionforest::DecisionForestDialect,
                            math::MathDialect>();
+
+  // Preserve GPU modules and binaries. Modules are preserved as they can be
+  // converted later by `gpu-module-to-binary`.
+  target.addLegalOp<gpu::GPUModuleOp, gpu::BinaryOp>();
+  // Accept as legal LaunchFuncOps if the operands have been lowered.
+  target.addDynamicallyLegalOp<gpu::LaunchFuncOp>(
+      [&](gpu::LaunchFuncOp op) -> bool { return converter.isLegal(op); });
+
 
   m_representation->AddTypeConversions(getContext(), converter);
 
@@ -592,9 +619,11 @@ void LowerGPUToLLVM(
 #endif // GPU support
 
   // pm.addPass(std::make_unique<PrintModulePass>());
+  pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
+  pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
   pm.addPass(createReconcileUnrealizedCastsPass());
   // pm.addPass(std::make_unique<PrintModulePass>());
-GpuModuleToBinaryPassOptions gpuModuleToBinaryPassOptions;
+  GpuModuleToBinaryPassOptions gpuModuleToBinaryPassOptions;
 #ifdef TREEBEARD_NV_GPU_SUPPORT
  // Set up options for NVIDIA GPU
   GpuNVVMAttachTargetOptions nvvmTargetOptions;
@@ -604,8 +633,9 @@ GpuModuleToBinaryPassOptions gpuModuleToBinaryPassOptions;
   nvvmTargetOptions.chip = "sm_35";                   // Set the chip value
   nvvmTargetOptions.features = "+ptx60";               // Set the features value
   nvvmTargetOptions.optLevel = 3;                      // Set the optimization level to 3
+
   pm.addPass(createGpuNVVMAttachTarget(nvvmTargetOptions));
-  
+  gpuModuleToBinaryPassOptions.compilationTarget = "fatbin";
   pm.addNestedPass<gpu::GPUModuleOp>(createGpuModuleToBinaryPass(gpuModuleToBinaryPassOptions));
   // pm.addNestedPass<gpu::GPUModuleOp>(
   //     createGpuModuleToBinaryPass("nvptx64-nvidia-cuda", "sm_35", "+ptx60"));
@@ -624,8 +654,10 @@ GpuModuleToBinaryPassOptions gpuModuleToBinaryPassOptions;
 #endif // GPU support
 
   // pm.addPass(std::make_unique<PrintModulePass>());
-  pm.addPass(createConvertSCFToCFPass());
   pm.addPass(std::make_unique<GpuToLLVMConversionPass>(representation));
+  pm.addPass(createConvertSCFToCFPass());
+  pm.addPass(createCanonicalizerPass());
+  pm.addPass(createCSEPass());
   pm.addPass(createReconcileUnrealizedCastsPass());
   // pm.addPass(std::make_unique<PrintModulePass>());
 
@@ -635,7 +667,7 @@ GpuModuleToBinaryPassOptions gpuModuleToBinaryPassOptions;
     llvm::errs() << "Lowering to LLVM failed.\n";
   }
   // module->dump();
-  // llvm::DebugFlag = false;
+  llvm::DebugFlag = false;
 }
 } // namespace decisionforest
 } // namespace mlir

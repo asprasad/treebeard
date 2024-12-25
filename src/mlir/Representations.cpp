@@ -42,15 +42,17 @@ Type generateGetElementPtr(Operation *op, ArrayRef<Value> operands,
   const int32_t kIndexOperandNum = 1;
   const int32_t kElementIndexOperandNum = 3;
   auto location = op->getLoc();
-
   auto memrefType = operands[kTreeMemrefOperandNum].getType();
   auto memrefStructType = memrefType.cast<LLVM::LLVMStructType>();
   auto alignedPtrType =
       memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct]
           .cast<LLVM::LLVMPointerType>();
-  // auto tileType = alignedPtrType.getElementType().cast<LLVM::LLVMStructType>();
-  auto tileType = memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct]
-                      .cast<LLVM::LLVMStructType>();
+   auto modelMemrefType = op->getOperand(0).getType().cast<MemRefType>();
+   auto tileType = modelMemrefType.getElementType()
+                        .cast<decisionforest::TiledNumericalNodeType>();  
+  auto convertedTileType = typeConverter->convertType(tileType);
+  // auto tileType = memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct]
+  //                     .cast<LLVM::LLVMStructType>();
   auto indexVal = operands[kIndexOperandNum];
   auto indexType = indexVal.getType();
   assert(indexType.isa<IntegerType>());
@@ -59,12 +61,12 @@ Type generateGetElementPtr(Operation *op, ArrayRef<Value> operands,
 
   // Extract the memref's aligned pointer
   auto extractMemrefBufferPointer = rewriter.create<LLVM::ExtractValueOp>(
-      location, alignedPtrType, operands[kTreeMemrefOperandNum],
-      rewriter.getDenseI64ArrayAttr(kAlignedPointerIndexInMemrefStruct));
+      location, operands[kTreeMemrefOperandNum],
+      kAlignedPointerIndexInMemrefStruct);
 
   auto extractMemrefOffset = rewriter.create<LLVM::ExtractValueOp>(
-      location, indexType, operands[kTreeMemrefOperandNum],
-      rewriter.getDenseI64ArrayAttr(kOffsetIndexInMemrefStruct));
+      location, operands[kTreeMemrefOperandNum],
+      kOffsetIndexInMemrefStruct);
 
   auto actualIndex = rewriter.create<LLVM::AddOp>(
       location, indexType, static_cast<Value>(extractMemrefOffset),
@@ -77,12 +79,12 @@ Type generateGetElementPtr(Operation *op, ArrayRef<Value> operands,
 
   if (operands.size() != 4 || !operands[kElementIndexOperandNum]) {
     // Get a pointer to i'th tile's threshold
-    assert(elementType == tileType.getBody()[elementNumber] &&
-           "The result type should be the same as the element type in the "
-           "struct.");
+    // assert(elementType == tileType.getBody()[elementNumber] &&
+    //        "The result type should be the same as the element type in the "
+    //        "struct.");
     elementPtr = rewriter.create<LLVM::GEPOp>(
         location, elementPtrType,
-        memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct],
+        convertedTileType,
         static_cast<Value>(extractMemrefBufferPointer),
         ValueRange({static_cast<Value>(actualIndex),
                     static_cast<Value>(elemIndexConst)}));
@@ -99,7 +101,7 @@ Type generateGetElementPtr(Operation *op, ArrayRef<Value> operands,
     auto elemIndex = operands[kElementIndexOperandNum];
     elementPtr = rewriter.create<LLVM::GEPOp>(
         location, elementPtrType,
-        memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct],
+        convertedTileType,
         static_cast<Value>(extractMemrefBufferPointer),
         ValueRange({static_cast<Value>(actualIndex),
                     static_cast<Value>(elemIndexConst), elemIndex}));
@@ -183,9 +185,14 @@ Type generateGetElementPtrForI32Ops(Operation *op, ArrayRef<Value> operands,
   auto bufferPtrCastToI32Ptr = rewriter.create<LLVM::BitcastOp>(
       location, elementPtrType, extractMemrefBufferPointer);
 
+  auto modelMemrefType = op->getOperand(0).getType().cast<MemRefType>();
+  auto tileType = modelMemrefType.getElementType()
+                        .cast<decisionforest::TiledNumericalNodeType>();  
+  auto convertedTileType = typeConverter->convertType(tileType);
+
   elementPtr = rewriter.create<LLVM::GEPOp>(
       location, elementPtrType,
-      memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct],
+      convertedTileType,
       bufferPtrCastToI32Ptr, ValueRange({actualIndex}));
   return elementType;
 }
@@ -418,11 +425,15 @@ struct GetModelMemrefSizeOpLowering : public ConversionPattern {
 
     auto elementPtrType = LLVM::LLVMPointerType::get(
         &static_cast<const LLVMTypeConverter *>(typeConverter)->getContext(), alignedPtrType.getAddressSpace());
+
+    auto modelMemrefType = op->getOperand(0).getType().cast<MemRefType>();
+    auto tileType = modelMemrefType.getElementType()
+                        .cast<decisionforest::TiledNumericalNodeType>();  
+    auto convertedTileType = typeConverter->convertType(tileType);    
     auto endPtr = rewriter.create<LLVM::GEPOp>(
         location, elementPtrType,
-        memrefStructType
-            .getBody()[kAlignedPointerIndexInMemrefStruct], static_cast<Value>(
-                extractMemrefBufferPointer),
+        convertedTileType,
+        static_cast<Value>(extractMemrefBufferPointer),
         ValueRange({static_cast<Value>(actualIndex)}));
 
     auto buffPtrInt = rewriter.create<LLVM::PtrToIntOp>(
@@ -470,11 +481,14 @@ struct GetModelMemrefElemSizeOpLowering : public ConversionPattern {
 
     auto elementPtrType = LLVM::LLVMPointerType::get(
         &static_cast<const LLVMTypeConverter *>(typeConverter)->getContext(), alignedPtrType.getAddressSpace());
+    auto modelMemrefType = op->getOperand(0).getType().cast<MemRefType>();
+    auto tileType = modelMemrefType.getElementType()
+                        .cast<decisionforest::TiledNumericalNodeType>();  
+    auto convertedTileType = typeConverter->convertType(tileType); 
     auto endPtr = rewriter.create<LLVM::GEPOp>(
         location, elementPtrType,
-        memrefStructType
-            .getBody()[kAlignedPointerIndexInMemrefStruct], static_cast<Value>(
-                extractMemrefBufferPointer),
+        convertedTileType,
+        static_cast<Value>(extractMemrefBufferPointer),
         ValueRange({static_cast<Value>(indexVal)}));
 
     auto buffPtrInt = rewriter.create<LLVM::PtrToIntOp>(
