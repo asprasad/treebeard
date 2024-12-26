@@ -20,6 +20,8 @@
 #include "mlir/Conversion/SCFToControlFlow/SCFToControlFlow.h"
 #include "mlir/Conversion/SCFToOpenMP/SCFToOpenMP.h"
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
+#include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
+#include "mlir/Conversion/IndexToLLVM/IndexToLLVM.h"
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 
@@ -600,7 +602,18 @@ void LowerGPUToLLVM(
   // pm.addPass(createConvertSCFToCFPass());
   pm.addPass(createGpuKernelOutliningPass());
   // pm.addPass(std::make_unique<PrintModulePass>());
+  pm.addPass(createConvertVectorToSCFPass());
+  pm.addPass(createConvertSCFToCFPass());
+  pm.addPass(createConvertFuncToLLVMPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
+  pm.addPass(createLowerAffinePass());
+  pm.addPass(createArithToLLVMConversionPass());
+  ConvertIndexToLLVMPassOptions convertIndexToLLVMPassOpt;
+  convertIndexToLLVMPassOpt.indexBitwidth = 64;
+  pm.addPass(createConvertIndexToLLVMPass(convertIndexToLLVMPassOpt));
+  pm.addPass(createCanonicalizerPass());
+  pm.addPass(createCSEPass());
+  
   // pm.addPass(createMemRefToLLVMPass());
   pm.addNestedPass<gpu::GPUModuleOp>(
       createConvertGlobalsToWorkgroupAllocationsPass());
@@ -623,6 +636,7 @@ void LowerGPUToLLVM(
   pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
   pm.addPass(createReconcileUnrealizedCastsPass());
   // pm.addPass(std::make_unique<PrintModulePass>());
+  pm.addPass(std::make_unique<GpuToLLVMConversionPass>(representation));
   GpuModuleToBinaryPassOptions gpuModuleToBinaryPassOptions;
 #ifdef TREEBEARD_NV_GPU_SUPPORT
  // Set up options for NVIDIA GPU
@@ -654,11 +668,12 @@ void LowerGPUToLLVM(
 #endif // GPU support
 
   // pm.addPass(std::make_unique<PrintModulePass>());
-  pm.addPass(std::make_unique<GpuToLLVMConversionPass>(representation));
+  pm.addPass(createConvertMathToLLVMPass());
   pm.addPass(createConvertSCFToCFPass());
   pm.addPass(createCanonicalizerPass());
   pm.addPass(createCSEPass());
   pm.addPass(createReconcileUnrealizedCastsPass());
+
   // pm.addPass(std::make_unique<PrintModulePass>());
 
   // module->dump();
