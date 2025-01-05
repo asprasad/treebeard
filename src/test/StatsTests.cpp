@@ -42,6 +42,8 @@ decisionforest::DecisionForest ConstructForestAndRunInference(const std::string&
   // std::cerr << "Running inference\n";
   for (size_t i=0  ; i<csvReader.NumberOfRows() ; ++i ) {
     auto row = csvReader.GetRowOfType<double>(i);
+    if(row.size() <= 1)
+      continue;
     row.pop_back();
     decisionForest->Predict(row);
   }

@@ -19,6 +19,8 @@ void ComputeForestInferenceStatsImpl(const std::string& modelJSONPath, const std
   // std::cerr << "Running inference\n";
   for (size_t i=0  ; i<csvReader.NumberOfRows() ; ++i ) {
     auto row = csvReader.GetRowOfType<double>(i);
+    if(row.size() <= 1)
+      continue;
     row.pop_back();
     decisionForest->Predict(row);
     // if (i % (csvReader.NumberOfRows()/25) == 0)

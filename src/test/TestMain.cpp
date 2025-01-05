@@ -18,6 +18,8 @@
 #include <chrono>
 #include <sstream>
 #include <vector>
+#include "mlir/Target/LLVMIR/Dialect/All.h"
+
 
 
 using namespace mlir::decisionforest;
@@ -1172,6 +1174,8 @@ bool Test_ForestCodeGen_BatchSize1(
   mlir::decisionforest::LowerToLLVM(context, module, representation);
   // module->dump();
   // mlir::decisionforest::dumpLLVMIR(module);
+  DialectRegistry registry;
+  registerAllToLLVMIRTranslations(registry);
   decisionforest::InferenceRunner inferenceRunner(serializer, module, 1, 64,
                                                   32);
 
@@ -1642,6 +1646,8 @@ bool Test_SplitSchedule(TestArgs_t &args) {
 
 
 std::map<std::string, TestFunc_t> testFuncMap = {
+    {"Test_CodeGeneration_LeftHeavy_BatchSize1", Test_CodeGeneration_LeftHeavy_BatchSize1},
+    {"Test_CodeGeneration_LeftHeavy_BatchSize2", Test_CodeGeneration_LeftHeavy_BatchSize2},
     {"Test_TiledCodeGeneration_LeftHeavy_BatchSize1", Test_TiledCodeGeneration_LeftHeavy_BatchSize1},
     {"Test_TiledCodeGeneration_RightHeavy_BatchSize1", Test_TiledCodeGeneration_RightHeavy_BatchSize1},
     {"Test_TiledCodeGeneration_BalancedTree_BatchSize1", Test_TiledCodeGeneration_BalancedTree_BatchSize1},
@@ -3508,6 +3514,7 @@ void RunTestsImpl(TestDescriptor *testsToRun, size_t numberOfTests) {
     mlir::decisionforest::ForestJSONReader::GetInstance().SetChildIndexBitWidth(
         -1);
 
+    std::cout << "Running Test "<<i<<" : "<< testsToRun[i].m_testName << std::endl << std::endl;
     bool pass = RunTest(testsToRun[i], args, i + 1);
     numPassed += pass ? 1 : 0;
     overallPass = overallPass && pass;

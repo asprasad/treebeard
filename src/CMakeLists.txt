@@ -18,7 +18,7 @@ set(TREEBEARD_DEPENDENCY_LIBS
 
         # MLIRIR
         # MLIRLLVMIR
-        # MLIRLLVMToLLVMIRTranslation
+        MLIRLLVMToLLVMIRTranslation
         # MLIRParser
         # MLIRPass
         # MLIRSideEffectInterfaces
@@ -29,6 +29,8 @@ set(TREEBEARD_DEPENDENCY_LIBS
         # MLIRSCFTransforms
         # MLIRLinalgTransforms
         MLIROpenMPToLLVMIRTranslation
+        MLIRToLLVMIRTranslationRegistration
+        MLIRBuiltinToLLVMIRTranslation
 )
 add_llvm_executable(treebeard
         main.cpp)

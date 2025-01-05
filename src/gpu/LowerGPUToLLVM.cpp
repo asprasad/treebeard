@@ -11,6 +11,8 @@
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
+#include "mlir/Conversion/NVGPUToNVVM/NVGPUToNVVM.h"
+#include "mlir/Conversion/NVVMToLLVM/NVVMToLLVM.h"
 #include "mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
@@ -51,6 +53,7 @@
 #include "mlir/ExecutionEngine/ExecutionEngine.h"
 #include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Transforms/Passes.h"
 
@@ -76,6 +79,58 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "CompileUtils.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
+#include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
+#include "mlir/IR/DialectImplementation.h"
+#include "mlir/Conversion/LLVMCommon/LoweringOptions.h"
+#include "mlir/InitAllDialects.h"
+#include "mlir/Parser/Parser.h"
+#include "mlir/Target/LLVM/NVVM/Target.h"
+#include "mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
+#include "mlir/IR/TypeUtilities.h"
+#include "mlir/Conversion/UBToLLVM/UBToLLVM.h"
+#include "mlir/Dialect/Linalg/TransformOps/DialectExtension.h"
+#include "mlir/Conversion/ComplexToLLVM/ComplexToLLVM.h"
+#include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMIRToLLVMTranslation.h"
+
+
+#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
+
+#include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
+#include "mlir/Conversion/AsyncToLLVM/AsyncToLLVM.h"
+#include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMPass.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
+#include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
+#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
+#include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
+#include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h"
+#include "mlir/Dialect/Async/IR/Async.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
+
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Error.h"
+#include "mlir/Target/LLVMIR/Dialect/All.h"
+#include "llvm/Support/FormatVariadic.h"
+
+
+
+#define DEBUG_TYPE "gpu-to-llvm"
+
+
+// ---------------------------------------//
 
 
 using namespace mlir;
@@ -280,6 +335,10 @@ struct LowerGpuOpsToNVVMOpsPass
   void getDependentDialects(::mlir::DialectRegistry &registry) const override {
     registry.insert<memref::MemRefDialect>();
     registry.insert<NVVM::NVVMDialect>();
+    registry.insert<gpu::GPUDialect>();
+    NVVM::registerNVVMTargetInterfaceExternalModels(registry);
+    registerNVVMDialectTranslation(registry);
+    registerLLVMDialectTranslation(registry);
   }
 
    void populateLowerMemorySpaceOpLegality(ConversionTarget &target) {
@@ -318,7 +377,7 @@ struct LowerGpuOpsToNVVMOpsPass
     populateMathToLLVMConversionPatterns(converter, llvmPatterns);
     populateGpuToNVVMConversionPatterns(converter, llvmPatterns);
     populateGpuWMMAToNVVMConversionPatterns(converter, llvmPatterns);
-
+    populateGpuSubgroupReduceOpLoweringPattern(converter, llvmPatterns);
     return LogicalResult::success();
   }
 
@@ -469,8 +528,17 @@ public:
 
   /// Return the dialect that must be loaded in the context before this pass.
   void getDependentDialects(::mlir::DialectRegistry &registry) const override {
-
-    registry.insert<LLVM::LLVMDialect>();
+    // Base::getDependentDialects(registry);
+    arith::registerConvertArithToLLVMInterface(registry);
+    registerConvertComplexToLLVMInterface(registry);
+    cf::registerConvertControlFlowToLLVMInterface(registry);
+    registerConvertFuncToLLVMInterface(registry);
+    index::registerConvertIndexToLLVMInterface(registry);
+    registerConvertMathToLLVMInterface(registry);
+    registerConvertMemRefToLLVMInterface(registry);
+    registerConvertNVVMToLLVMInterface(registry);
+    ub::registerConvertUBToLLVMInterface(registry);
+    // mlir::registerGPUDialectTranslation(registry);
   }
 
   /// Explicitly declare the TypeID for this class. We declare an explicit
@@ -496,6 +564,10 @@ public:
       : GpuToLLVMConversionPassBase(other),
         m_representation(other.m_representation) {}
 
+  void getDependentDialects(DialectRegistry &registry) const final {
+    Base::getDependentDialects(registry);
+    registerConvertToLLVMDependentDialectLoading(registry);
+  }
   // Run the dialect converter on the module.
   void runOnOperation() override;
 
@@ -518,6 +590,16 @@ void GpuToLLVMConversionPass::runOnOperation() {
   // target.addIllegalDialect<gpu::GPUDialect>();
   target.addIllegalDialect<decisionforest::DecisionForestDialect,
                            math::MathDialect>();
+
+
+  // Populate all patterns from all dialects that implement the
+  // `ConvertToLLVMPatternInterface` interface.
+  for (Dialect *dialect : context->getLoadedDialects()) {
+    auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+    if (!iface)
+      continue;
+    iface->populateConvertToLLVMConversionPatterns(target, converter, patterns);
+  }
 
   // Preserve GPU modules and binaries. Modules are preserved as they can be
   // converted later by `gpu-module-to-binary`.
@@ -586,6 +668,16 @@ void InitializeGPUTarget(TreeBeard::GPUCompileInfo &compileInfo) {
 #endif // GPU support
 }
 
+void registerTranslations(MLIRContext& context) {
+  DialectRegistry registry;
+  registerBuiltinDialectTranslation(registry);
+  registerAllGPUToLLVMIRTranslations(registry);
+  // registerGPUDialectTranslation(registry);
+  registerNVVMDialectTranslation(registry);
+  registerLLVMDialectTranslation(registry);
+  context.appendDialectRegistry(registry);
+}
+
 void LowerGPUToLLVM(
     mlir::MLIRContext &context, mlir::ModuleOp module,
     std::shared_ptr<decisionforest::IRepresentation> representation,
@@ -599,13 +691,35 @@ void LowerGPUToLLVM(
   // Call the function to enable IR printing if PRINT_AFTER_ALL is set
    TreeBeard::EnablePrintIRAfter(context, pm);
 
+  pm.addPass(createConvertNVGPUToNVVMPass());
   // pm.addPass(createConvertSCFToCFPass());
   pm.addPass(createGpuKernelOutliningPass());
   // pm.addPass(std::make_unique<PrintModulePass>());
   pm.addPass(createConvertVectorToSCFPass());
   pm.addPass(createConvertSCFToCFPass());
+  pm.addPass(createConvertNVVMToLLVMPass());
   pm.addPass(createConvertFuncToLLVMPass());
   pm.addPass(memref::createExpandStridedMetadataPass());
+#ifdef TREEBEARD_NV_GPU_SUPPORT
+ // Set up options for NVIDIA GPU
+  GpuNVVMAttachTargetOptions nvvmTargetOptions;
+
+  // Assign the specified values to gpuModuleToBinaryPassOptions
+  nvvmTargetOptions.triple = "nvptx64-nvidia-cuda";   // Set the triple value
+  nvvmTargetOptions.chip = "sm_50";                   // Set the chip value
+  nvvmTargetOptions.features = "+ptx60";               // Set the features value
+  nvvmTargetOptions.optLevel = 3;                      // Set the optimization level to 3
+  pm.addPass(createGpuNVVMAttachTarget(nvvmTargetOptions));
+#elif defined(TREEBEARD_AMD_GPU_SUPPORT)
+    // Set up options for AMD GPU
+  GpuROCDLAttachTargetOptions amdTargetOptions;
+  amdTargetOptions.triple = "amdgcn-amd-amdhsa";          // Hardcoded for AMD
+  amdTargetOptions.chip = TREEBEARD_AMD_GPU_CHIPSET;     // Use your defined constant
+  amdTargetOptions.features = "";                       // Set any required features if needed
+  amdTargetOptions.optLevel = 3;                        // Set the optimization level to 3 for AMD
+  pm.addPass(createGpuROCDLAttachTarget(amdTargetOptions));
+#endif
+
   pm.addPass(createLowerAffinePass());
   pm.addPass(createArithToLLVMConversionPass());
   ConvertIndexToLLVMPassOptions convertIndexToLLVMPassOpt;
@@ -634,39 +748,13 @@ void LowerGPUToLLVM(
   // pm.addPass(std::make_unique<PrintModulePass>());
   pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
   pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
-  pm.addPass(createReconcileUnrealizedCastsPass());
+  pm.addNestedPass<gpu::GPUModuleOp>(createReconcileUnrealizedCastsPass());
   // pm.addPass(std::make_unique<PrintModulePass>());
   pm.addPass(std::make_unique<GpuToLLVMConversionPass>(representation));
   GpuModuleToBinaryPassOptions gpuModuleToBinaryPassOptions;
-#ifdef TREEBEARD_NV_GPU_SUPPORT
- // Set up options for NVIDIA GPU
-  GpuNVVMAttachTargetOptions nvvmTargetOptions;
-
-  // Assign the specified values to gpuModuleToBinaryPassOptions
-  nvvmTargetOptions.triple = "nvptx64-nvidia-cuda";   // Set the triple value
-  nvvmTargetOptions.chip = "sm_35";                   // Set the chip value
-  nvvmTargetOptions.features = "+ptx60";               // Set the features value
-  nvvmTargetOptions.optLevel = 3;                      // Set the optimization level to 3
-
-  pm.addPass(createGpuNVVMAttachTarget(nvvmTargetOptions));
   gpuModuleToBinaryPassOptions.compilationTarget = "fatbin";
-  pm.addNestedPass<gpu::GPUModuleOp>(createGpuModuleToBinaryPass(gpuModuleToBinaryPassOptions));
-  // pm.addNestedPass<gpu::GPUModuleOp>(
-  //     createGpuModuleToBinaryPass("nvptx64-nvidia-cuda", "sm_35", "+ptx60"));
-#elif defined(TREEBEARD_AMD_GPU_SUPPORT)
-    // Set up options for AMD GPU
-  GpuROCDLAttachTargetOptions amdTargetOptions;
-  amdTargetOptions.triple = "amdgcn-amd-amdhsa";          // Hardcoded for AMD
-  amdTargetOptions.chip = TREEBEARD_AMD_GPU_CHIPSET;     // Use your defined constant
-  amdTargetOptions.features = "";                       // Set any required features if needed
-  amdTargetOptions.optLevel = 3;                        // Set the optimization level to 3 for AMD
-  pm.addPass(createGpuROCDLAttachTarget(amdTargetOptions));
-
-  pm.addNestedPass<gpu::GPUModuleOp>(createGpuModuleToBinaryPass(gpuModuleToBinaryPassOptions));
-  // pm.addNestedPass<gpu::GPUModuleOp>(createGpuModuleToBinaryPass(
-  //     "amdgcn-amd-amdhsa", TREEBEARD_AMD_GPU_CHIPSET, "", 3 /*opt level*/));
-#endif // GPU support
-
+  registerTranslations(context);
+  pm.addPass(createGpuModuleToBinaryPass(gpuModuleToBinaryPassOptions));
   // pm.addPass(std::make_unique<PrintModulePass>());
   pm.addPass(createConvertMathToLLVMPass());
   pm.addPass(createConvertSCFToCFPass());

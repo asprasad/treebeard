@@ -52,7 +52,7 @@ void DecisionForestDialect::initialize() {
   // addTypes<TreeEnsembleType, TreeType, NodeType, LeafNodeType,
   //          NumericalNodeType, TiledNumericalNodeType, ReorgMemrefElementType,
   //          ScheduleType, ReductionAttrType>();
-  addTypes<TreeType,TreeEnsembleType, ScheduleType, ReductionAttrType, NodeType, TiledNumericalNodeType>();
+  addTypes<TreeType,TreeEnsembleType, ScheduleType, ReorgMemrefElementType, ReductionAttrType, NodeType, TiledNumericalNodeType>();
   addAttributes<DecisionTreeAttribute, DecisionForestAttribute,
                 ScheduleAttribute, UnrollLoopAttribute,
                 ReductionTypeAttribute>();

@@ -58,6 +58,11 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
 #include "CompileUtils.h"
+#include "mlir/Target/LLVMIR/Dialect/All.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
+#include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
+#include "mlir/Conversion/IndexToLLVM/IndexToLLVM.h"
+
 
 using namespace mlir;
 
@@ -96,10 +101,9 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
   target.addLegalOp<ModuleOp, func::FuncOp, func::ReturnOp, func::CallOp>();
   target.addLegalDialect<scf::SCFDialect, omp::OpenMPDialect>();
   // target.addLegalDialect<gpu::GPUDialect, NVVM::NVVMDialect>();
-  target.addIllegalDialect<decisionforest::DecisionForestDialect,
-                           memref::MemRefDialect>();
-  target.addIllegalDialect<arith::ArithDialect, vector::VectorDialect,
-                           math::MathDialect>();
+  // // target.addIllegalDialect<decisionforest::DecisionForestDialect>();
+  // target.addIllegalDialect<vector::VectorDialect,
+  //                          math::MathDialect>();
 
    // Register MemRef to LLVM interface in the context's dialect registry
   DialectRegistry registry;
@@ -107,15 +111,16 @@ void DecisionForestToLLVMLoweringPass::runOnOperation() {
   mlir::MLIRContext context(registry);
   LLVMTypeConverter typeConverter(&context, options);
   context.appendDialectRegistry(registry);
+  mlir::registerAllToLLVMIRTranslations(registry);
 
   RewritePatternSet patterns(&context);
+  m_representation->AddTypeConversions(context, typeConverter);
+  m_representation->AddLLVMConversionPatterns(typeConverter, patterns);
   populateAffineToStdConversionPatterns(patterns);
   populateFinalizeMemRefToLLVMConversionPatterns(typeConverter, patterns);
   populateVectorToLLVMConversionPatterns(typeConverter, patterns, false);
   populateMathToLLVMConversionPatterns(typeConverter, patterns);
   arith::populateArithToLLVMConversionPatterns(typeConverter, patterns);
-  m_representation->AddTypeConversions(context, typeConverter);
-  m_representation->AddLLVMConversionPatterns(typeConverter, patterns);
   decisionforest::populateDebugOpLoweringPatterns(patterns, typeConverter);
 
   auto module = getOperation();
@@ -146,17 +151,25 @@ struct LowerOMPToLLVMPass
     LowerToLLVMOptions options(&getContext());
     auto module = getOperation();
     auto &context = getContext();
+    mlir::DialectRegistry registry;
+    mlir::registerAllToLLVMIRTranslations(registry);
+
 
     LLVMTypeConverter converter(&getContext(), options);
     m_representation->AddTypeConversions(context, converter);
 
     // Convert to OpenMP operations with LLVM IR dialect
     RewritePatternSet patterns(&getContext());
+    m_representation->AddLLVMConversionPatterns(converter, patterns);
     arith::populateArithToLLVMConversionPatterns(converter, patterns);
     cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
     populateFinalizeMemRefToLLVMConversionPatterns(converter, patterns);
     populateFuncToLLVMConversionPatterns(converter, patterns);
     populateOpenMPToLLVMConversionPatterns(converter, patterns);
+    populateAffineToStdConversionPatterns(patterns);
+    populateVectorToLLVMConversionPatterns(converter, patterns, false);
+    populateMathToLLVMConversionPatterns(converter, patterns);
+    decisionforest::populateDebugOpLoweringPatterns(patterns, converter);
 
     LLVMConversionTarget target(getContext());
     target.addLegalOp<omp::TerminatorOp, omp::TaskyieldOp, omp::FlushOp,
@@ -193,6 +206,12 @@ void LowerToLLVM(mlir::MLIRContext &context, mlir::ModuleOp module,
   // Lower from low-level IR to LLVM IR
   
   mlir::PassManager pm(&context);
+  mlir::DialectRegistry registry;
+  // registerAllToLLVMIRTranslations(registry);
+  // registerBuiltinDialectTranslation(registry);
+  mlir::registerBuiltinDialectTranslation(context);
+  mlir::registerLLVMDialectTranslation(context);
+
 
   // Call the function to enable IR printing if PRINT_AFTER_ALL is set
   TreeBeard::EnablePrintIRAfter(context, pm);
@@ -200,12 +219,19 @@ void LowerToLLVM(mlir::MLIRContext &context, mlir::ModuleOp module,
   pm.addPass(memref::createExpandStridedMetadataPass());
   pm.addPass(
       std::make_unique<DecisionForestToLLVMLoweringPass>(representation));
+  pm.addPass(createConvertSCFToCFPass());
   pm.addPass(createConvertSCFToOpenMPPass());
   // pm.addPass(std::make_unique<PrintModulePass>());
   // pm.addPass(createMemRefToLLVMConversionPass());
-  pm.addPass(createConvertSCFToCFPass());
   pm.addPass(std::make_unique<LowerOMPToLLVMPass>(representation));
   pm.addPass(createReconcileUnrealizedCastsPass());
+  ConvertIndexToLLVMPassOptions convertIndexToLLVMPassOpt;
+  convertIndexToLLVMPassOpt.indexBitwidth = 64;
+  pm.addPass(createConvertIndexToLLVMPass(convertIndexToLLVMPassOpt));
+  pm.addPass(createCanonicalizerPass());
+  pm.addPass(createCSEPass());
+  pm.addPass(createReconcileUnrealizedCastsPass());
+
 
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Lowering to LLVM failed.\n";

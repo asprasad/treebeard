@@ -26,6 +26,7 @@ static cl::opt<bool> printAfterAll("print-treebeard-ir-after-all",
     cl::desc("Print IR after each pass"), cl::init(false));
 
 static cl::opt<bool> individual("individual", cl::desc("Enable individual mode"), cl::init(false));
+static cl::opt<bool> sanity("sanity", cl::desc("Enable individual mode"), cl::init(false));
 
 static cl::opt<std::string> testName("testname", cl::desc("Test name"),
     cl::value_desc("name"), cl::init(""), cl::Hidden);
@@ -455,6 +456,9 @@ int main(int argc, char *argv[]) {
 
      unsetenv("MLIR_DISABLE_MULTITHREADS"); // Unset the environment variable
 
+  }else if(sanity){
+    std::cout<<"Treebread: Running sanity tests\n";
+    TreeBeard::test::RunSanityTests();
   } else {
     std::cout
         << "TreeBeard: A compiler for gradient boosting tree inference.\n";
