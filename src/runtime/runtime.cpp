@@ -176,6 +176,8 @@ extern "C" void Set_tilingType(intptr_t options, int32_t val) {
 // ===-------------------------------------------------------------=== //
 // GPU Auto-scheduling options API
 // ===-------------------------------------------------------------=== //
+#ifdef TREEBEARD_GPU_SUPPORT
+
 extern "C" intptr_t CreateGPUAutoScheduleOptions() {
   return reinterpret_cast<intptr_t>(new TreeBeard::GPUAutoScheduleOptions);
 }
@@ -204,6 +206,8 @@ GPU_AUTOSCHEDULE_OPTION_SETTER(cacheTrees, int32_t);
 GPU_AUTOSCHEDULE_OPTION_SETTER(unrollTreeWalks, int32_t);
 GPU_AUTOSCHEDULE_OPTION_SETTER(treeWalkInterleaveFactor, int32_t);
 GPU_AUTOSCHEDULE_OPTION_SETTER(sharedMemoryReduce, int32_t);
+
+#endif // TREEBEARD_GPU_SUPPORT
 
 // ===-------------------------------------------------------------=== //
 // Compilation API
@@ -310,6 +314,8 @@ extern "C" int32_t IsPeeledCodeGenForProbabilityBasedTilingEnabled() {
   return mlir::decisionforest::PeeledCodeGenForProbabiltyBasedTiling;
 }
 
+#ifdef TREEBEARD_GPU_SUPPORT
+
 extern "C" void SetEnableMeasureGpuKernelTime(bool val) {
   mlir::decisionforest::measureGpuKernelTime = val;
 }
@@ -317,6 +323,8 @@ extern "C" void SetEnableMeasureGpuKernelTime(bool val) {
 extern "C" void SetNumberOfKernelRuns(int32_t val) {
   mlir::decisionforest::numberOfKernelRuns = val;
 }
+
+#endif // TREEBEARD_GPU_SUPPORT
 
 // ===-------------------------------------------------------------=== //
 // Representation API
@@ -362,6 +370,7 @@ extern "C" intptr_t ConstructTreebeardContext(const char *modelPath,
   return reinterpret_cast<intptr_t>(tbContext);
 }
 
+#if TREEBEARD_GPU_SUPPORT
 extern "C" intptr_t ConstructTreebeardContextFromGPUAutoscheduleOptions(
     const char *modelPath, const char *modelGlobalsJSONPath, intptr_t options,
     intptr_t gpuScheduleOptions) {
@@ -374,6 +383,7 @@ extern "C" intptr_t ConstructTreebeardContextFromGPUAutoscheduleOptions(
       gpuScheduleOptionsPtr);
   return reinterpret_cast<intptr_t>(tbContext);
 }
+#endif // TREEBEARD_GPU_SUPPORT
 
 extern "C" void DestroyTreebeardContext(intptr_t tbContext) {
   TreeBeard::TreebeardContext *tbContextPtr =
@@ -440,6 +450,8 @@ extern "C" void *ConstructInferenceRunnerFromHIR(void *tbContext) {
   return reinterpret_cast<void *>(inferenceRunner);
 }
 
+#ifdef TREEBEARD_GPU_SUPPORT
+
 extern "C" void *ConstructGPUInferenceRunnerFromHIR(void *tbContext) {
   TreeBeard::TreebeardContext *tbContextPtr =
       reinterpret_cast<TreeBeard::TreebeardContext *>(tbContext);
@@ -464,6 +476,8 @@ extern "C" void *ConstructGPUInferenceRunnerFromTBContext(void *tbContext) {
       tbContextPtr->options.featureIndexTypeWidth);
   return reinterpret_cast<void *>(inferenceRunner);
 }
+
+#endif // TREEBEARD_GPU_SUPPORT
 
 // ===-------------------------------------------------------------=== //
 // Predefined Schedule Manipulation API
@@ -735,18 +749,22 @@ void IndexVariable_SetGPUThreadDim(intptr_t indexVarPtr, int32_t construct,
   indexVar->SetGPUDimension(gpuConstruct, gpuDim);
 }
 
+#ifdef TREEBEARD_GPU_SUPPORT
 int64_t GetGPUKernelExecutionTime(intptr_t inferenceRunnerInt) {
   auto inferenceRunner =
       reinterpret_cast<TreeBeard::test::GPUInferenceRunnerForTest *>(
           inferenceRunnerInt);
   return inferenceRunner->GetKernelExecutionTime();
 }
+#endif // TREEBEARD_GPU_SUPPORT
 
 } // extern "C"
 
 // ===-------------------------------------------------------------=== //
 // Auto-scheduling heuristic API
 // ===-------------------------------------------------------------=== //
+
+#if TREEBEARD_GPU_SUPPORT
 
 extern "C" void *findBestGPUScheduleAndCompileModel(void *tbContext) {
   bool oldMeasureKernelTimeValue = mlir::decisionforest::measureGpuKernelTime;
@@ -778,3 +796,5 @@ extern "C" void *findBestGPUScheduleAndCompileModel(void *tbContext) {
   mlir::decisionforest::measureGpuKernelTime = oldMeasureKernelTimeValue;
   return reinterpret_cast<void *>(inferenceRunner);
 }
+
+#endif // TREEBEARD_GPU_SUPPORT

@@ -1,6 +1,4 @@
-// Implementation of a transformation to uniformly tile all trees in a forest.
-// The "uniform" represents that assumption that all edge probabilities are the
-// same. The tile size also needs to be constant across trees.
+#ifdef TREEBEARD_GPU_SUPPORT
 
 #include "Dialect.h"
 // #include "Passes.h"
@@ -27,8 +25,8 @@
 #include "TreebeardContext.h"
 #include "xgboostparser.h"
 
-#include "GPUBenchmarkUtils.h"
 #include "CompileUtils.h"
+#include "GPUBenchmarkUtils.h"
 
 using namespace mlir;
 using namespace TreeBeard::test;
@@ -988,7 +986,7 @@ void DoGPUAutoSchedule(mlir::MLIRContext &context, mlir::ModuleOp module,
 
   // Call the function to enable IR printing if PRINT_AFTER_ALL is set
   TreeBeard::EnablePrintIRAfter(context, pm);
-  
+
   mlir::OpPassManager &optPM = pm.nest<mlir::func::FuncOp>();
   optPM.addPass(std::make_unique<ReorderTreesByDepthPass>());
   // TODO pipelineSize needs to be added to CompilerOptions
@@ -1008,3 +1006,5 @@ GPUAutoSchedulerResults findBestGPUSchedule(const std::string &benchmark,
 }
 
 } // namespace TreeBeard
+
+#endif // TREEBEARD_GPU_SUPPORT

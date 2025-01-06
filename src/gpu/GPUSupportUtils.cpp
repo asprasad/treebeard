@@ -26,14 +26,13 @@
 
 #include "TreebeardContext.h"
 
-#include "GPUSupportUtils.h"
 #include "CompileUtils.h"
+#include "GPUSupportUtils.h"
 
 using namespace mlir;
 
 namespace mlir {
 namespace decisionforest {
-StringRef getMappingAttrName() { return "mapping"; }
 
 FlatSymbolRefAttr getOrInsertFunction(std::string &functionName,
                                       mlir::FunctionType functionType,
@@ -390,34 +389,10 @@ struct MakeGPULoopsPerfectlyNestedPass
 bool measureGpuKernelTime = false;
 int numberOfKernelRuns = 1;
 
-gpu::ParallelLoopDimMappingAttr getMappingAttr(scf::ParallelOp parallelOp) {
-  auto mappingAttr = parallelOp->getAttr(getMappingAttrName());
-  if (!mappingAttr)
-    return nullptr;
-  auto mappingArrayAttr = mappingAttr.cast<ArrayAttr>();
-  return mappingArrayAttr[0].cast<gpu::ParallelLoopDimMappingAttr>();
-}
-
-bool isThreadBlockLoop(scf::ParallelOp parallelOp) {
-  auto mappingAttr = getMappingAttr(parallelOp);
-  if (!mappingAttr)
-    return false;
-  return mappingAttr.getProcessor() == gpu::Processor::BlockX ||
-         mappingAttr.getProcessor() == gpu::Processor::BlockY ||
-         mappingAttr.getProcessor() == gpu::Processor::BlockZ;
-}
-
-bool isThreadLoop(scf::ParallelOp parallelOp) {
-  auto mappingAttr = getMappingAttr(parallelOp);
-  if (!mappingAttr)
-    return false;
-  return mappingAttr.getProcessor() == gpu::Processor::ThreadX ||
-         mappingAttr.getProcessor() == gpu::Processor::ThreadY ||
-         mappingAttr.getProcessor() == gpu::Processor::ThreadZ;
-}
+gpu::ParallelLoopDimMappingAttr getMappingAttr(scf::ParallelOp parallelOp);
 
 void GreedilyMapParallelLoopsToGPU(mlir::ModuleOp module) {
-  auto *context =  module.getContext();
+  auto *context = module.getContext();
   mlir::PassManager pm(context);
 
   // Call the function to enable IR printing if PRINT_AFTER_ALL is set
@@ -434,7 +409,7 @@ void GreedilyMapParallelLoopsToGPU(mlir::ModuleOp module) {
 void ConvertParallelLoopsToGPU(mlir::MLIRContext &context,
                                mlir::ModuleOp module) {
   mlir::PassManager pm(&context);
-  
+
   // Call the function to enable IR printing if PRINT_AFTER_ALL is set
   TreeBeard::EnablePrintIRAfter(context, pm);
 
@@ -456,27 +431,11 @@ void OutlineGPUKernels(mlir::MLIRContext &context, mlir::ModuleOp module) {
 
   // Call the function to enable IR printing if PRINT_AFTER_ALL is set
   TreeBeard::EnablePrintIRAfter(context, pm);
-  
+
   pm.addPass(createGpuKernelOutliningPass());
 
   if (mlir::failed(pm.run(module))) {
     llvm::errs() << "Running GPU Outlining pass failed.\n";
-  }
-}
-
-void RunCanonicalizerPass(mlir::MLIRContext &context, mlir::ModuleOp module) {
-  mlir::PassManager pm(&context);
-
-  // Call the function to enable IR printing if PRINT_AFTER_ALL is set
-  TreeBeard::EnablePrintIRAfter(context, pm);
-  
-  mlir::GreedyRewriteConfig config;
-  std::vector<std::string> disabledPatterns = {
-      "(anonymous namespace)::MergeNestedParallelLoops"};
-  pm.addPass(createCanonicalizerPass(config, disabledPatterns));
-
-  if (mlir::failed(pm.run(module))) {
-    llvm::errs() << "Canonicalizer pass failed.\n";
   }
 }
 

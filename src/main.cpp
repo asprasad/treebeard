@@ -6,11 +6,11 @@
 #include "TreebeardContext.h"
 #include "include/TreeTilingUtils.h"
 #include "mlir/ExecutionHelpers.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/InitLLVM.h"
 #include "json/xgboostparser.h"
 #include <iostream>
 #include <string>
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/InitLLVM.h"
 
 namespace TreeBeard {
 namespace test {
@@ -23,14 +23,16 @@ void generateRandomXGBoostModels(const std::string &dirName);
 
 using namespace llvm;
 static cl::opt<bool> printAfterAll("print-treebeard-ir-after-all",
-    cl::desc("Print IR after each pass"), cl::init(false));
+                                   cl::desc("Print IR after each pass"),
+                                   cl::init(false));
 
-static cl::opt<bool> individual("individual", cl::desc("Enable individual mode"), cl::init(false));
+static cl::opt<bool> individual("individual",
+                                cl::desc("Enable individual mode"),
+                                cl::init(false));
 
 static cl::opt<std::string> testName("testname", cl::desc("Test name"),
-    cl::value_desc("name"), cl::init(""), cl::Hidden);
-
-
+                                     cl::value_desc("name"), cl::init(""),
+                                     cl::Hidden);
 
 bool EqualsString(char *arg, const std::string &str) {
   return (std::string(arg) == str);
@@ -69,6 +71,7 @@ void SetInsertPrintVectors(int argc, char *argv[]) {
 }
 
 bool RunXGBoostBenchmarksIfNeeded(int argc, char *argv[]) {
+#ifdef TREEBEARD_GPU_SUPPORT
   for (int32_t i = 0; i < argc; ++i) {
     if (std::string(argv[i]).find(std::string("--xgboostBench")) !=
         std::string::npos) {
@@ -81,6 +84,7 @@ bool RunXGBoostBenchmarksIfNeeded(int argc, char *argv[]) {
       return true;
     }
   }
+#endif // TREEBEARD_GPU_SUPPORT
   return false;
 }
 
@@ -406,14 +410,16 @@ int main(int argc, char *argv[]) {
 
   // Check if 'printAfterAll' is used without 'individual'
   if (printAfterAll && !individual) {
-    llvm::errs() << "Error: 'print-treebeard-ir-after-all' can only be used with "
-                    "'individual' flag.\n";
+    llvm::errs()
+        << "Error: 'print-treebeard-ir-after-all' can only be used with "
+           "'individual' flag.\n";
     return 1;
   }
 
   // Check if 'testName' is used without 'individual'
   if (!testName.empty() && !individual) {
-    llvm::errs() << "Error: 'testname' can only be used with 'individual' flag.\n";
+    llvm::errs()
+        << "Error: 'testname' can only be used with 'individual' flag.\n";
     return 1;
   }
 

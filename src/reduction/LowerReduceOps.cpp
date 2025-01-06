@@ -12,14 +12,17 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
 
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "mlir/Transforms/Passes.h"
+
 #include "llvm/Target/TargetMachine.h"
 
 #include "TreebeardContext.h"
 
+#include "CompileUtils.h"
 #include "GPUSupportUtils.h"
 #include "LIRLoweringHelpers.h"
 #include "LowerReduceOps.h"
-#include "CompileUtils.h"
 
 using namespace mlir;
 
@@ -41,9 +44,52 @@ int64_t getConstantStepBetweenValues(mlir::Value start, mlir::Value end) {
 namespace mlir {
 namespace decisionforest {
 
-// Defined in GPURepresentations.cpp
 mlir::gpu::KernelDim3 GetThreadID(mlir::Operation *op);
 mlir::gpu::KernelDim3 GetBlockID(mlir::Operation *op);
+
+mlir::gpu::KernelDim3 GetThreadID(mlir::Operation *op) {
+  auto owningGPULaunchOp = op->getParentOfType<gpu::LaunchOp>();
+  assert(owningGPULaunchOp);
+  auto threadNum = owningGPULaunchOp.getThreadIds();
+  return threadNum;
+}
+
+// Function to get the thread block ID of the current thread
+mlir::gpu::KernelDim3 GetBlockID(mlir::Operation *op) {
+  auto owningGPULaunchOp = op->getParentOfType<gpu::LaunchOp>();
+  assert(owningGPULaunchOp);
+  auto blockNum = owningGPULaunchOp.getBlockIds();
+  return blockNum;
+}
+
+StringRef getMappingAttrName() { return "mapping"; }
+
+gpu::ParallelLoopDimMappingAttr getMappingAttr(scf::ParallelOp parallelOp) {
+  auto mappingAttr = parallelOp->getAttr(getMappingAttrName());
+  if (!mappingAttr)
+    return nullptr;
+  auto mappingArrayAttr = mappingAttr.cast<ArrayAttr>();
+  return mappingArrayAttr[0].cast<gpu::ParallelLoopDimMappingAttr>();
+}
+
+bool isThreadBlockLoop(scf::ParallelOp parallelOp) {
+  auto mappingAttr = getMappingAttr(parallelOp);
+  if (!mappingAttr)
+    return false;
+  return mappingAttr.getProcessor() == gpu::Processor::BlockX ||
+         mappingAttr.getProcessor() == gpu::Processor::BlockY ||
+         mappingAttr.getProcessor() == gpu::Processor::BlockZ;
+}
+
+bool isThreadLoop(scf::ParallelOp parallelOp) {
+  auto mappingAttr = getMappingAttr(parallelOp);
+  if (!mappingAttr)
+    return false;
+  return mappingAttr.getProcessor() == gpu::Processor::ThreadX ||
+         mappingAttr.getProcessor() == gpu::Processor::ThreadY ||
+         mappingAttr.getProcessor() == gpu::Processor::ThreadZ;
+}
+
 int64_t GetNumberOfThreadsInThreadBlock(gpu::LaunchOp gpuLaunchOp);
 
 // Defined in CodeGenStateMachine.cpp
@@ -756,6 +802,7 @@ generateLocalThreadId(Location location, ConversionPatternRewriter &rewriter,
   return std::make_tuple(localThreadId, numThreads, xSize * ySize);
 }
 
+#ifdef TREEBEARD_GPU_SUPPORT
 struct CooperativeReduceDimensionOpLowering : public ConversionPattern {
 
   CooperativeReduceDimensionOpLowering(MLIRContext *ctx)
@@ -1429,6 +1476,7 @@ struct InitializeMemrefLowering : public ConversionPattern {
     return mlir::success();
   }
 };
+#endif // TREEBEARD_GPU_SUPPORT
 
 struct LowerReductionOps
     : public PassWrapper<LowerReductionOps, OperationPass<mlir::func::FuncOp>> {
@@ -1456,12 +1504,14 @@ struct LowerReductionOps
                         decisionforest::InitializeMemrefOp>();
 
     RewritePatternSet patterns(&getContext());
-    patterns
-        .add<ReduceOpLowering, ReduceInplaceOpLowering,
-             ReduceDimensionOpLowering, CooperativeReduceDimensionOpLowering,
-             CooperativeInplaceReduceDimensionOpLowering,
-             CooperativeArgMaxReduceOpLowering, AtomicReduceDimensionOpLowering,
-             InitializeMemrefLowering>(&getContext());
+    patterns.add<ReduceOpLowering, ReduceInplaceOpLowering,
+                 ReduceDimensionOpLowering,
+#ifdef TREEBEARD_GPU_SUPPORT
+                 CooperativeReduceDimensionOpLowering,
+                 CooperativeInplaceReduceDimensionOpLowering,
+                 CooperativeArgMaxReduceOpLowering, InitializeMemrefLowering,
+#endif // TREEBEARD_GPU_SUPPORT
+                 AtomicReduceDimensionOpLowering>(&getContext());
 
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
@@ -1474,11 +1524,27 @@ struct LowerReductionOps
 namespace mlir {
 namespace decisionforest {
 
+void RunCanonicalizerPass(mlir::MLIRContext &context, mlir::ModuleOp module) {
+  mlir::PassManager pm(&context);
+
+  // Call the function to enable IR printing if PRINT_AFTER_ALL is set
+  TreeBeard::EnablePrintIRAfter(context, pm);
+
+  mlir::GreedyRewriteConfig config;
+  std::vector<std::string> disabledPatterns = {
+      "(anonymous namespace)::MergeNestedParallelLoops"};
+  pm.addPass(createCanonicalizerPass(config, disabledPatterns));
+
+  if (mlir::failed(pm.run(module))) {
+    llvm::errs() << "Canonicalizer pass failed.\n";
+  }
+}
+
 void lowerReduceToMemref(mlir::MLIRContext &context, mlir::ModuleOp module) {
   // llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR
   mlir::PassManager pm(&context);
-  
+
   // Call the function to enable IR printing if PRINT_AFTER_ALL is set
   TreeBeard::EnablePrintIRAfter(context, pm);
 
