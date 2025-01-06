@@ -1,3 +1,5 @@
+#if TREEBEARD_GPU_SUPPORT
+
 #include "Dialect.h"
 #include <iostream>
 #include <mutex>
@@ -25,11 +27,11 @@
 #include "TreeTilingUtils.h"
 #include "TreebeardContext.h"
 
+#include "CompileUtils.h"
 #include "GPUSupportUtils.h"
 #include "LIRLoweringHelpers.h"
 #include "Logger.h"
 #include "OpLoweringUtils.h"
-#include "CompileUtils.h"
 
 using namespace mlir;
 
@@ -395,7 +397,7 @@ void runConvertToCooperativeReducePass(mlir::MLIRContext &context,
 
   // Call the function to enable IR printing if PRINT_AFTER_ALL is set
   TreeBeard::EnablePrintIRAfter(context, pm);
-  
+
   auto &nestedPM = pm.nest<func::FuncOp>();
   nestedPM.addPass(
       std::make_unique<ConvertReductionsToCooperativeReductions>());
@@ -414,3 +416,5 @@ void convertToCooperativeReduceAndCanonicalize(mlir::MLIRContext &context,
 
 } // namespace decisionforest
 } // namespace mlir
+
+#endif // TREEBEARD_GPU_SUPPORT

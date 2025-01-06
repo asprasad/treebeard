@@ -255,21 +255,6 @@ void GenerateModelMemrefInitializerImpl(const std::string &funcName,
   module.push_back(initModelMemrefFunc);
 }
 
-mlir::gpu::KernelDim3 GetThreadID(mlir::Operation *op) {
-  auto owningGPULaunchOp = op->getParentOfType<gpu::LaunchOp>();
-  assert(owningGPULaunchOp);
-  auto threadNum = owningGPULaunchOp.getThreadIds();
-  return threadNum;
-}
-
-// Function to get the thread block ID of the current thread
-mlir::gpu::KernelDim3 GetBlockID(mlir::Operation *op) {
-  auto owningGPULaunchOp = op->getParentOfType<gpu::LaunchOp>();
-  assert(owningGPULaunchOp);
-  auto blockNum = owningGPULaunchOp.getBlockIds();
-  return blockNum;
-}
-
 int32_t getMemrefFlatSize(Value memref) {
   auto memrefType = memref.getType().cast<MemRefType>();
   int32_t size = 1;

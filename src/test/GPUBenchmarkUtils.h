@@ -1,6 +1,8 @@
 #ifndef _GPUTESTUTILS_H_
 #define _GPUTESTUTILS_H_
 
+#ifdef TREEBEARD_GPU_SUPPORT
+
 #include "DecisionForest.h"
 #include "ExecutionHelpers.h"
 #include "schedule.h"
@@ -468,5 +470,7 @@ GPUTimes BenchmarkIfNoSharedMemOverflow(ForestCreator &forestCreator,
 
 } // namespace test
 } // namespace TreeBeard
+
+#endif // TREEBEARD_GPU_SUPPORT
 
 #endif // _GPUTESTUTILS_H_

@@ -1,6 +1,8 @@
 #ifndef GPU_TEST_UTILS_H
 #define GPU_TEST_UTILS_H
 
+#ifdef TREEBEARD_GPU_SUPPORT
+
 #include "dlfcn.h"
 
 #include "ForestTestUtils.h"
@@ -56,5 +58,7 @@ struct NoOpDeleter {
 
 } // namespace test
 } // namespace TreeBeard
+
+#endif // TREEBEARD_GPU_SUPPORT
 
 #endif // GPU_TEST_UTILS_H
