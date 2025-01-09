@@ -751,6 +751,9 @@ void LowerGPUToLLVM(
   pm.addNestedPass<gpu::GPUModuleOp>(createReconcileUnrealizedCastsPass());
   // pm.addPass(std::make_unique<PrintModulePass>());
   pm.addPass(std::make_unique<GpuToLLVMConversionPass>(representation));
+  pm.addPass(createCanonicalizerPass());
+  pm.addPass(createCSEPass());
+  pm.addPass(createReconcileUnrealizedCastsPass());
   GpuModuleToBinaryPassOptions gpuModuleToBinaryPassOptions;
   gpuModuleToBinaryPassOptions.compilationTarget = "fatbin";
   registerTranslations(context);

@@ -43,7 +43,7 @@ Type GetMemrefElementType(Value memrefOperand) {
 
 Value GenerateGetElementPtr(Location location,
                             ConversionPatternRewriter &rewriter,
-                            Value memrefOperand, Value indexVal) {
+                            Value memrefOperand, Value indexVal, const LLVMTypeConverter *typeConverter) {
 
   auto memrefType = memrefOperand.getType();
   auto memrefStructType = memrefType.cast<LLVM::LLVMStructType>();
@@ -51,7 +51,11 @@ Value GenerateGetElementPtr(Location location,
       memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct]
           .cast<LLVM::LLVMPointerType>();
 //   auto memrefElemType = alignedPtrType.getElementType();
-  auto memrefElemType = memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct];
+//   auto memrefElemType = memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct];
+  auto modelMemrefType = memrefOperand.getDefiningOp()->getOperand(0).getType().cast<MemRefType>();
+  auto tileType = modelMemrefType.getElementType()
+                      .cast<decisionforest::ReorgMemrefElementType>();
+  auto convertedTileType = typeConverter->convertType(tileType);
   auto indexType = indexVal.getType();
   assert(indexType.isa<IntegerType>());
 
@@ -70,7 +74,7 @@ Value GenerateGetElementPtr(Location location,
 
   auto elementPtrType = LLVM::LLVMPointerType::get(rewriter.getContext());
   auto elementPtr = rewriter.create<LLVM::GEPOp>(
-      location, elementPtrType,  memrefElemType, static_cast<Value>(extractMemrefBufferPointer),
+      location, elementPtrType,  convertedTileType, static_cast<Value>(extractMemrefBufferPointer),
       ValueRange({static_cast<Value>(actualIndex)}));
 
   return elementPtr;
@@ -79,7 +83,7 @@ Value GenerateGetElementPtr(Location location,
 Value GenerateMemrefLoadForLoadFromTile(ConversionPatternRewriter &rewriter,
                                         mlir::Location location, Value buffer,
                                         Value nodeIndex, Value treeIndex,
-                                        int32_t numTrees) {
+                                        int32_t numTrees, const LLVMTypeConverter *typeConverter) {
   // First generate the index into the buffer
   //  index = nodeIndex*numTrees + treeIndex
   auto numTreesConst = rewriter.create<LLVM::ConstantOp>(
@@ -91,12 +95,14 @@ Value GenerateMemrefLoadForLoadFromTile(ConversionPatternRewriter &rewriter,
 
   // Then generate the memref load
   auto elementPtr =
-      GenerateGetElementPtr(location, rewriter, buffer, memrefIndex);
+      GenerateGetElementPtr(location, rewriter, buffer, memrefIndex, typeConverter);
   // Load the element
   auto elementType = GetMemrefElementType(buffer);
   auto elementVal = rewriter.create<LLVM::LoadOp>(
-      location, elementType, static_cast<Value>(elementPtr));
-  return static_cast<Value>(elementVal);
+        location,
+        static_cast<LLVM::GEPOp>(elementPtr.getDefiningOp()).getElemType(),
+        static_cast<Value>(elementPtr));
+    return static_cast<Value>(elementVal);
 }
 
 struct LoadTileThresholdOpLowering : public ConversionPattern {
@@ -124,7 +130,7 @@ struct LoadTileThresholdOpLowering : public ConversionPattern {
     auto numTrees = treeMemrefElementType.getNumTrees();
     auto threshold =
         GenerateMemrefLoadForLoadFromTile(rewriter, op->getLoc(), operands[0],
-                                          operands[1], operands[2], numTrees);
+                                          operands[1], operands[2], numTrees, static_cast<const LLVMTypeConverter *>(getTypeConverter()));
     rewriter.replaceOp(op, static_cast<Value>(threshold));
     return mlir::success();
   }
@@ -155,7 +161,7 @@ struct LoadTileFeatureIndicesOpLowering : public ConversionPattern {
     auto numTrees = treeMemrefElementType.getNumTrees();
     auto featureIndex =
         GenerateMemrefLoadForLoadFromTile(rewriter, op->getLoc(), operands[0],
-                                          operands[1], operands[2], numTrees);
+                                          operands[1], operands[2], numTrees,  static_cast<const LLVMTypeConverter *>(getTypeConverter()));
     rewriter.replaceOp(op, static_cast<Value>(featureIndex));
     return mlir::success();
   }

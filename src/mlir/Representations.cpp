@@ -185,14 +185,22 @@ Type generateGetElementPtrForI32Ops(Operation *op, ArrayRef<Value> operands,
   auto bufferPtrCastToI32Ptr = rewriter.create<LLVM::BitcastOp>(
       location, elementPtrType, extractMemrefBufferPointer);
 
-  auto modelMemrefType = op->getOperand(0).getType().cast<MemRefType>();
-  auto tileType = modelMemrefType.getElementType()
+  Type elementTy = nullptr;
+  if (auto modelMemrefType = op->getOperand(0).getType().dyn_cast_or_null<MemRefType>()) {
+    auto tileType = modelMemrefType.getElementType()
                         .cast<decisionforest::TiledNumericalNodeType>();  
-  auto convertedTileType = typeConverter->convertType(tileType);
-
+    elementTy = typeConverter->convertType(tileType);
+  } else if (op->getOperand(0).getType().isInteger(32)) {
+    // Handle the case where the type is i32
+    elementTy = op->getOperand(0).getType();
+  } else {
+    // Handle the case where the type is neither MemRefType nor i32
+    op->emitError("Operand is neither a MemRefType nor an i32 type");
+  }
+  assert(elementTy);
   elementPtr = rewriter.create<LLVM::GEPOp>(
       location, elementPtrType,
-      convertedTileType,
+      elementTy,
       bufferPtrCastToI32Ptr, ValueRange({actualIndex}));
   return elementType;
 }
