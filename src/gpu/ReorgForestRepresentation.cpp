@@ -42,7 +42,7 @@ Type GetMemrefElementType(Value memrefOperand) {
 }
 
 Value GenerateGetElementPtr(Location location,
-                            ConversionPatternRewriter &rewriter,
+                            ConversionPatternRewriter &rewriter, Operation *op,
                             Value memrefOperand, Value indexVal, const LLVMTypeConverter *typeConverter) {
 
   auto memrefType = memrefOperand.getType();
@@ -52,7 +52,7 @@ Value GenerateGetElementPtr(Location location,
           .cast<LLVM::LLVMPointerType>();
 //   auto memrefElemType = alignedPtrType.getElementType();
 //   auto memrefElemType = memrefStructType.getBody()[kAlignedPointerIndexInMemrefStruct];
-  auto modelMemrefType = memrefOperand.getDefiningOp()->getOperand(0).getType().cast<MemRefType>();
+  auto modelMemrefType = op->getOperand(0).getType().cast<MemRefType>();
   auto tileType = modelMemrefType.getElementType()
                       .cast<decisionforest::ReorgMemrefElementType>();
   auto convertedTileType = typeConverter->convertType(tileType);
@@ -81,7 +81,7 @@ Value GenerateGetElementPtr(Location location,
 }
 
 Value GenerateMemrefLoadForLoadFromTile(ConversionPatternRewriter &rewriter,
-                                        mlir::Location location, Value buffer,
+                                        mlir::Location location, Operation *op, Value buffer,
                                         Value nodeIndex, Value treeIndex,
                                         int32_t numTrees, const LLVMTypeConverter *typeConverter) {
   // First generate the index into the buffer
@@ -95,7 +95,7 @@ Value GenerateMemrefLoadForLoadFromTile(ConversionPatternRewriter &rewriter,
 
   // Then generate the memref load
   auto elementPtr =
-      GenerateGetElementPtr(location, rewriter, buffer, memrefIndex, typeConverter);
+      GenerateGetElementPtr(location, rewriter, op, buffer, memrefIndex, typeConverter);
   // Load the element
   auto elementType = GetMemrefElementType(buffer);
   auto elementVal = rewriter.create<LLVM::LoadOp>(
@@ -129,7 +129,7 @@ struct LoadTileThresholdOpLowering : public ConversionPattern {
             .cast<decisionforest::ReorgMemrefElementType>();
     auto numTrees = treeMemrefElementType.getNumTrees();
     auto threshold =
-        GenerateMemrefLoadForLoadFromTile(rewriter, op->getLoc(), operands[0],
+        GenerateMemrefLoadForLoadFromTile(rewriter, op->getLoc(), op, operands[0],
                                           operands[1], operands[2], numTrees, static_cast<const LLVMTypeConverter *>(getTypeConverter()));
     rewriter.replaceOp(op, static_cast<Value>(threshold));
     return mlir::success();
@@ -160,7 +160,7 @@ struct LoadTileFeatureIndicesOpLowering : public ConversionPattern {
             .cast<decisionforest::ReorgMemrefElementType>();
     auto numTrees = treeMemrefElementType.getNumTrees();
     auto featureIndex =
-        GenerateMemrefLoadForLoadFromTile(rewriter, op->getLoc(), operands[0],
+        GenerateMemrefLoadForLoadFromTile(rewriter, op->getLoc(), op, operands[0],
                                           operands[1], operands[2], numTrees,  static_cast<const LLVMTypeConverter *>(getTypeConverter()));
     rewriter.replaceOp(op, static_cast<Value>(featureIndex));
     return mlir::success();
