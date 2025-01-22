@@ -694,6 +694,8 @@ struct ReduceOpLegalizationPattern : public ConversionPattern {
         auto &lastOp = loop.getBody()->back();
         if (llvm::dyn_cast<scf::YieldOp>(&lastOp))
           rewriter.setInsertionPoint(&lastOp);
+        else if(llvm::dyn_cast_or_null<scf::ReduceOp>(&lastOp))
+          rewriter.setInsertionPoint(&lastOp);          
         else
           rewriter.setInsertionPointToEnd(loop.getBody());
       } else
