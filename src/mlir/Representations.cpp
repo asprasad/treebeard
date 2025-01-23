@@ -223,6 +223,25 @@ struct LoadTileThresholdOpLowering : public ConversionPattern {
   }
 };
 
+struct LoadTileThresholdOpSPIRVLowering : public ConversionPattern {
+  LoadTileThresholdOpSPIRVLowering(SPIRVTypeConverter  &typeConverter, MLIRContext *ctx)
+      : ConversionPattern(
+           typeConverter,
+           mlir::decisionforest::LoadTileThresholdsOp::getOperationName(),
+                          1 /*benefit*/, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    llvm::errs()<<"Hello Vijeth\n";
+    assert(operands.size() == 3 || operands.size() == 4);
+    // generateLoadStructElement(op, operands, rewriter,
+    //                           kThresholdElementNumberInTile,
+    //                           static_cast<const SPIRVTypeConverter  *>(getTypeConverter()));
+    return mlir::success();
+  }
+};
+
 struct LoadTileFeatureIndicesOpLowering : public ConversionPattern {
   LoadTileFeatureIndicesOpLowering(LLVMTypeConverter &typeConverter)
       : ConversionPattern(
@@ -1085,6 +1104,28 @@ void ArrayBasedRepresentation::AddTypeConversions(
   });
 }
 
+void ArrayBasedRepresentation::AddTypeConversions(
+    mlir::MLIRContext &context, SPIRVTypeConverter &typeConverter) {
+  typeConverter.addConversion([&](decisionforest::TiledNumericalNodeType type) {
+    // Retrieve field types
+    auto thresholdType = type.getThresholdFieldType();
+    auto indexType = type.getIndexFieldType();
+
+    // SPIR-V type construction logic
+    if (type.getTileSize() == 1) {
+      // Construct a SPIR-V struct type for a single-tile node
+      return spirv::StructType::get(
+          {thresholdType, indexType});
+    } else {
+      // Retrieve additional type for multi-tile nodes
+      auto tileShapeIDType = type.getTileShapeType();
+      return spirv::StructType::get(
+          {thresholdType, indexType, tileShapeIDType});
+    }
+  });
+}
+
+
 void ArrayBasedRepresentation::AddLLVMConversionPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<LoadTileFeatureIndicesOpLowering, LoadTileThresholdOpLowering,
@@ -1092,6 +1133,11 @@ void ArrayBasedRepresentation::AddLLVMConversionPatterns(
                GetModelMemrefSizeOpLowering, GetModelMemrefElemSizeOpLowering,
                ReinterpretToI32AndLoadElementLowering,
                ReinterpretToI32AndStoreElementLowering>(converter);
+}
+
+void ArrayBasedRepresentation::AddSPIRVConversionPatterns(
+    SPIRVTypeConverter  &converter, RewritePatternSet &patterns) {
+  patterns.add<LoadTileThresholdOpSPIRVLowering>(converter, patterns.getContext());
 }
 
 void ArrayBasedRepresentation::LowerCacheRowsOp(
@@ -1776,6 +1822,29 @@ void SparseRepresentation::AddTypeConversions(
     }
   });
 }
+
+void SparseRepresentation::AddTypeConversions(
+    mlir::MLIRContext &context, SPIRVTypeConverter &typeConverter) {
+  typeConverter.addConversion([&](decisionforest::TiledNumericalNodeType type) {
+    // Retrieve field types
+    auto thresholdType = type.getThresholdFieldType();
+    auto indexType = type.getIndexFieldType();
+    auto childIndexType = type.getChildIndexType();
+    auto tileShapeIDType = type.getTileShapeType();
+
+    // SPIR-V type construction logic
+    if (type.getTileSize() == 1) {
+      // Construct SPIR-V struct for single-tile node
+      return spirv::StructType::get(
+          {thresholdType, indexType, childIndexType});
+    } else {
+      // Construct SPIR-V struct for multi-tile node
+      return spirv::StructType::get(
+          {thresholdType, indexType, tileShapeIDType, childIndexType});
+    }
+  });
+}
+
 
 void SparseRepresentation::AddLLVMConversionPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns) {

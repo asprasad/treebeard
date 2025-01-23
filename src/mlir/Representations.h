@@ -8,6 +8,7 @@
 
 #include "TreebeardContext.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 
 namespace mlir {
 namespace decisionforest {
@@ -74,8 +75,13 @@ public:
 
   virtual void AddTypeConversions(mlir::MLIRContext &context,
                                   LLVMTypeConverter &typeConverter) = 0;
+
+  virtual void AddTypeConversions(mlir::MLIRContext &context,
+                                  SPIRVTypeConverter &typeConverter) {}
   virtual void AddLLVMConversionPatterns(LLVMTypeConverter &converter,
                                          RewritePatternSet &patterns) = 0;
+  virtual void AddSPIRVConversionPatterns(SPIRVTypeConverter  &converter,
+                                         RewritePatternSet &patterns) {}                                       
 
   // Caching
   virtual void LowerCacheTreeOp(
@@ -207,9 +213,12 @@ public:
 
   void AddTypeConversions(mlir::MLIRContext &context,
                           LLVMTypeConverter &typeConverter) override;
+  void AddTypeConversions(mlir::MLIRContext &context,
+                          SPIRVTypeConverter  &typeConverter);                        
   void AddLLVMConversionPatterns(LLVMTypeConverter &converter,
                                  RewritePatternSet &patterns) override;
-
+  void AddSPIRVConversionPatterns(SPIRVTypeConverter &converter,
+                                 RewritePatternSet &patterns);
   void LowerCacheTreeOp(
       ConversionPatternRewriter &rewriter, mlir::Operation *op,
       ArrayRef<Value> operands,
@@ -347,7 +356,9 @@ public:
   mlir::Value GetTreeIndex(Value tree) override;
 
   void AddTypeConversions(mlir::MLIRContext &context,
-                          LLVMTypeConverter &typeConverter) override;
+                          LLVMTypeConverter &typeConverter);
+  void AddTypeConversions(mlir::MLIRContext &context,
+                          SPIRVTypeConverter &typeConverter);                        
   void AddLLVMConversionPatterns(LLVMTypeConverter &converter,
                                  RewritePatternSet &patterns) override;
 

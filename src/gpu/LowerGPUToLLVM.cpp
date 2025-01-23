@@ -125,6 +125,19 @@
 #include "mlir/Target/LLVMIR/Dialect/All.h"
 #include "llvm/Support/FormatVariadic.h"
 
+#include "mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h"
+#include "mlir/Conversion/ArithToSPIRV/ArithToSPIRV.h"
+#include "mlir/Conversion/FuncToSPIRV/FuncToSPIRV.h"
+#include "mlir/Conversion/GPUToSPIRV/GPUToSPIRV.h"
+#include "mlir/Conversion/MemRefToSPIRV/MemRefToSPIRV.h"
+#include "mlir/Conversion/SCFToSPIRV/SCFToSPIRV.h"
+#include "mlir/Conversion/VectorToSPIRV/VectorToSPIRV.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
+#include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
+#include "mlir/Conversion/ControlFlowToSPIRV/ControlFlowToSPIRVPass.h"
+#include "mlir/Conversion/ControlFlowToSPIRV/ControlFlowToSPIRV.h"
+#include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 
 
 #define DEBUG_TYPE "gpu-to-llvm"
@@ -208,6 +221,75 @@ struct CacheOpEndOpLowering : public ConversionPattern {
   }
 };
 
+
+namespace {
+/// Pass to set the spirv.entry_point_abi attribute
+struct SetSpirvEntryPointABIPass
+    : public PassWrapper<SetSpirvEntryPointABIPass,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(SetSpirvEntryPointABIPass)
+
+  StringRef getArgument() const final { return "set-spirv-entry-point-abi"; }
+  StringRef getDescription() const final {
+    return "Set the spirv.entry_point_abi attribute on GPU kernel functions "
+           "within the module.";
+  }
+  void getDependentDialects(DialectRegistry &registry) const override {
+    registry.insert<spirv::SPIRVDialect>();
+  }
+  SetSpirvEntryPointABIPass() = default;
+  SetSpirvEntryPointABIPass(const SetSpirvEntryPointABIPass &) {}
+  void runOnOperation() override;
+
+private:
+  Pass::ListOption<int32_t> workgroupSize{
+      *this, "workgroup-size",
+      llvm::cl::desc(
+          "Workgroup size to use for all gpu.func kernels in the module, "
+          "specified with x-dimension first, y-dimension next, and z-dimension "
+          "last. Unspecified dimensions will be set to 1.")};
+  Pass::Option<int> subgroupSize{
+      *this, "subgroup-size",
+      llvm::cl::desc(
+          "Subgroup size to use for all gpu.func kernels in the module."),
+      llvm::cl::init(0)};
+  Pass::Option<int> targetWidth{
+      *this, "target-width",
+      llvm::cl::desc(
+          "Specify the component width of floating-point instructions."),
+      llvm::cl::init(0)};
+};
+} // namespace
+
+void SetSpirvEntryPointABIPass::runOnOperation() {
+  gpu::GPUModuleOp gpuModule = getOperation();
+  MLIRContext *context = &getContext();
+  StringRef attrName = spirv::getEntryPointABIAttrName();
+
+  // Iterate over GPU functions in the module
+  for (gpu::GPUFuncOp gpuFunc : gpuModule.getOps<gpu::GPUFuncOp>()) {
+    // Skip non-kernel functions or those that already have the attribute
+    if (!gpu::GPUDialect::isKernel(gpuFunc) ||
+        gpuFunc->getDiscardableAttr(attrName))
+      continue;
+
+    // Determine workgroup size
+    SmallVector<int32_t, 3> workgroupSizeVec(workgroupSize.begin(),
+                                             workgroupSize.end());
+    workgroupSizeVec.resize(3, 1); // Fill unspecified dimensions with 1
+
+    // Set the spirv.entry_point_abi attribute
+    gpuFunc->setAttr(
+        attrName,
+        spirv::getEntryPointABIAttr(
+            context, workgroupSizeVec,
+            (subgroupSize == 0) ? std::nullopt : std::optional<int>(subgroupSize),
+            (targetWidth == 0) ? std::nullopt : std::optional<int>(targetWidth)));
+  }
+} // namespace mlir
+
+
+
 template <typename DerivedT>
 class LowerGpuOpsToTargetBase : public ::mlir::OperationPass<gpu::GPUModuleOp> {
   std::shared_ptr<decisionforest::IRepresentation> m_representation;
@@ -251,6 +333,141 @@ public:
   configureTargetConversionLegality(LLVMConversionTarget &target) = 0;
 
   void runOnOperation() override {
+
+  #if defined(TREEBEARD_NV_GPU_SUPPORT)
+    MLIRContext *context = &getContext();
+    auto module = getOperation();
+    
+
+    // {
+    //   RewritePatternSet patterns(module.getContext());
+    //   TypeConverter typeConverter;
+    //   typeConverter.addConversion([](Type t) { return t; });
+
+    //   populateMemorySpaceConversion(typeConverter);
+
+    //   // gpu::populateMemorySpaceLoweringPatterns(typeConverter, patterns);
+    //   ConversionTarget target(getContext());
+    //   // populateLowerMemorySpaceOpLegality(target);
+    //   target.markUnknownOpDynamicallyLegal(
+    //     [&](Operation *op) { return true; });
+
+    //   if (failed(applyFullConversion(module, target, std::move(patterns))))
+    //     return signalPassFailure();
+    // }
+
+    SmallVector<Operation *, 1> gpuModules;
+    OpBuilder builder(context);
+
+    auto targetEnvSupportsKernelCapability = [](gpu::GPUModuleOp moduleOp) {
+      Operation *gpuModule = moduleOp.getOperation();
+      auto targetAttr = spirv::lookupTargetEnvOrDefault(gpuModule);
+      spirv::TargetEnv targetEnv(targetAttr);
+      return targetEnv.allows(spirv::Capability::Kernel);
+    };
+
+    module.walk([&](gpu::GPUModuleOp moduleOp) {
+      // Clone each GPU kernel module for conversion, given that the GPU
+      // launch op still needs the original GPU kernel module.
+      // For Vulkan Shader capabilities, we insert the newly converted SPIR-V
+      // module right after the original GPU module, as that's the expectation
+      // of the in-tree Vulkan runner. For OpenCL Kernel capabilities, we insert
+      // the newly converted SPIR-V module inside the original GPU module, as
+      // that's the expectaion of the normal GPU compilation pipeline.
+      if (targetEnvSupportsKernelCapability(moduleOp)) {
+        builder.setInsertionPoint(moduleOp.getBody(),
+                                  moduleOp.getBody()->begin());
+      } else {
+        builder.setInsertionPoint(moduleOp.getOperation());
+      }
+      gpuModules.push_back(builder.clone(*moduleOp.getOperation()));
+    });
+
+    // Run conversion for each module independently as they can have different
+    // TargetEnv attributes.
+    for (Operation *gpuModule : gpuModules) {
+      spirv::TargetEnvAttr targetAttr =
+          spirv::lookupTargetEnvOrDefault(gpuModule);
+
+      // Map MemRef memory space to SPIR-V storage class first if requested.
+      bool mapMemorySpace=true;
+      if (mapMemorySpace) {
+        spirv::MemorySpaceToStorageClassMap memorySpaceMap =
+            targetEnvSupportsKernelCapability(
+                dyn_cast<gpu::GPUModuleOp>(gpuModule))
+                ? spirv::mapMemorySpaceToOpenCLStorageClass
+                : spirv::mapMemorySpaceToVulkanStorageClass;
+        spirv::MemorySpaceToStorageClassConverter converter(memorySpaceMap);
+        spirv::convertMemRefTypesAndAttrs(gpuModule, converter);
+
+        // Check if there are any illegal ops remaining.
+        std::unique_ptr<ConversionTarget> target =
+            spirv::getMemorySpaceToStorageClassTarget(*context);
+        gpuModule->walk([&target, this](Operation *childOp) {
+          if (target->isIllegal(childOp)) {
+            childOp->emitOpError("failed to legalize memory space");
+            signalPassFailure();
+            return WalkResult::interrupt();
+          }
+          return WalkResult::advance();
+        });
+      }
+
+      std::unique_ptr<ConversionTarget> target =
+          SPIRVConversionTarget::get(targetAttr);
+
+      SPIRVConversionOptions options;
+      options.use64bitIndex = true;
+      SPIRVTypeConverter typeConverter(targetAttr, options);
+      populateMMAToSPIRVCoopMatrixTypeConversion(typeConverter);
+
+      RewritePatternSet patterns(context);
+      populateGPUToSPIRVPatterns(typeConverter, patterns);
+      populateGpuWMMAToSPIRVCoopMatrixKHRConversionPatterns(typeConverter,
+                                                            patterns);
+
+      // TODO: Change SPIR-V conversion to be progressive and remove the
+      // following patterns.
+      ScfToSPIRVContext scfContext;
+      populateSCFToSPIRVPatterns(typeConverter, scfContext, patterns);
+      mlir::arith::populateArithToSPIRVPatterns(typeConverter, patterns);
+      populateMemRefToSPIRVPatterns(typeConverter, patterns);
+      populateFuncToSPIRVPatterns(typeConverter, patterns);
+      populateVectorToSPIRVPatterns(typeConverter, patterns);
+
+      LLVMConversionTarget targetllvm(getContext());
+      configureTargetConversionLegality(targetllvm);
+      targetllvm.addIllegalDialect<decisionforest::DecisionForestDialect,
+                             math::MathDialect>();
+      // targetllvm.addLegalOp<decisionforest::LoadTileFeatureIndicesOp, decisionforest::LoadTileThresholdsOp>();                         
+      m_representation->AddTypeConversions(*module.getContext(), typeConverter);
+      m_representation->AddSPIRVConversionPatterns(typeConverter, patterns);
+
+      if (failed(applyPartialConversion(gpuModule, *target, std::move(patterns))))
+        return signalPassFailure();
+    }
+
+    // For OpenCL, the gpu.func op in the original gpu.module op needs to be
+    // replaced with an empty func.func op with the same arguments as the
+    // gpu.func op. The func.func op needs gpu.kernel attribute set.
+    module.walk([&](gpu::GPUModuleOp moduleOp) {
+      if (targetEnvSupportsKernelCapability(moduleOp)) {
+        moduleOp.walk([&](gpu::GPUFuncOp funcOp) {
+          builder.setInsertionPoint(funcOp);
+          auto newFuncOp = builder.create<func::FuncOp>(
+              funcOp.getLoc(), funcOp.getName(), funcOp.getFunctionType());
+          auto entryBlock = newFuncOp.addEntryBlock();
+          builder.setInsertionPointToEnd(entryBlock);
+          builder.create<func::ReturnOp>(funcOp.getLoc());
+          newFuncOp->setAttr(gpu::GPUDialect::getKernelFuncAttrName(),
+                             builder.getUnitAttr());
+          funcOp.erase();
+        });
+      }
+    });
+    return;
+#endif // GPU support
+
     gpu::GPUModuleOp m = getOperation();
 
     // This just lowers gpu.allreduce to a bunch of simpler ops from the
@@ -336,6 +553,7 @@ struct LowerGpuOpsToNVVMOpsPass
     registry.insert<memref::MemRefDialect>();
     registry.insert<NVVM::NVVMDialect>();
     registry.insert<gpu::GPUDialect>();
+    registry.insert<spirv::SPIRVDialect>();
     NVVM::registerNVVMTargetInterfaceExternalModels(registry);
     registerNVVMDialectTranslation(registry);
     registerLLVMDialectTranslation(registry);
@@ -683,7 +901,7 @@ void LowerGPUToLLVM(
     std::shared_ptr<decisionforest::IRepresentation> representation,
     TreeBeard::GPUCompileInfo &compileInfo) {
   InitializeGPUTarget(compileInfo);
-  // llvm::DebugFlag = true;
+  llvm::DebugFlag = true;
   // Lower from high-level IR to mid-level IR  
 
   mlir::PassManager pm(&context);
@@ -691,51 +909,59 @@ void LowerGPUToLLVM(
   // Call the function to enable IR printing if PRINT_AFTER_ALL is set
    TreeBeard::EnablePrintIRAfter(context, pm);
 
-  pm.addPass(createConvertNVGPUToNVVMPass());
-  // pm.addPass(createConvertSCFToCFPass());
+//   pm.addPass(createConvertNVGPUToNVVMPass());
+//   // pm.addPass(createConvertSCFToCFPass());
   pm.addPass(createGpuKernelOutliningPass());
-  // pm.addPass(std::make_unique<PrintModulePass>());
-  pm.addPass(createConvertVectorToSCFPass());
-  pm.addPass(createConvertSCFToCFPass());
-  pm.addPass(createConvertNVVMToLLVMPass());
-  pm.addPass(createConvertFuncToLLVMPass());
-  pm.addPass(memref::createExpandStridedMetadataPass());
-#ifdef TREEBEARD_NV_GPU_SUPPORT
- // Set up options for NVIDIA GPU
-  GpuNVVMAttachTargetOptions nvvmTargetOptions;
+//   // pm.addPass(std::make_unique<PrintModulePass>());
+//   pm.addPass(createConvertVectorToSCFPass());
+//   pm.addPass(createConvertSCFToCFPass());
+//   pm.addPass(createConvertNVVMToLLVMPass());
+//   pm.addPass(createConvertFuncToLLVMPass());
+//   pm.addPass(memref::createExpandStridedMetadataPass());
+// #ifdef TREEBEARD_NV_GPU_SUPPORT
+//  // Set up options for NVIDIA GPU
+//   GpuNVVMAttachTargetOptions nvvmTargetOptions;
 
-  // Assign the specified values to gpuModuleToBinaryPassOptions
-  nvvmTargetOptions.triple = "nvptx64-nvidia-cuda";   // Set the triple value
-  nvvmTargetOptions.chip = "sm_50";                   // Set the chip value
-  nvvmTargetOptions.features = "+ptx60";               // Set the features value
-  nvvmTargetOptions.optLevel = 3;                      // Set the optimization level to 3
-  pm.addPass(createGpuNVVMAttachTarget(nvvmTargetOptions));
-#elif defined(TREEBEARD_AMD_GPU_SUPPORT)
-    // Set up options for AMD GPU
-  GpuROCDLAttachTargetOptions amdTargetOptions;
-  amdTargetOptions.triple = "amdgcn-amd-amdhsa";          // Hardcoded for AMD
-  amdTargetOptions.chip = TREEBEARD_AMD_GPU_CHIPSET;     // Use your defined constant
-  amdTargetOptions.features = "";                       // Set any required features if needed
-  amdTargetOptions.optLevel = 3;                        // Set the optimization level to 3 for AMD
-  pm.addPass(createGpuROCDLAttachTarget(amdTargetOptions));
-#endif
+//   // Assign the specified values to gpuModuleToBinaryPassOptions
+//   nvvmTargetOptions.triple = "nvptx64-nvidia-cuda";   // Set the triple value
+//   nvvmTargetOptions.chip = "sm_50";                   // Set the chip value
+//   nvvmTargetOptions.features = "+ptx60";               // Set the features value
+//   nvvmTargetOptions.optLevel = 3;                      // Set the optimization level to 3
+//   pm.addPass(createGpuNVVMAttachTarget(nvvmTargetOptions));
+// #elif defined(TREEBEARD_AMD_GPU_SUPPORT)
+//     // Set up options for AMD GPU
+//   GpuROCDLAttachTargetOptions amdTargetOptions;
+//   amdTargetOptions.triple = "amdgcn-amd-amdhsa";          // Hardcoded for AMD
+//   amdTargetOptions.chip = TREEBEARD_AMD_GPU_CHIPSET;     // Use your defined constant
+//   amdTargetOptions.features = "";                       // Set any required features if needed
+//   amdTargetOptions.optLevel = 3;                        // Set the optimization level to 3 for AMD
+//   pm.addPass(createGpuROCDLAttachTarget(amdTargetOptions));
+// #endif
 
-  pm.addPass(createLowerAffinePass());
-  pm.addPass(createArithToLLVMConversionPass());
-  ConvertIndexToLLVMPassOptions convertIndexToLLVMPassOpt;
-  convertIndexToLLVMPassOpt.indexBitwidth = 64;
-  pm.addPass(createConvertIndexToLLVMPass(convertIndexToLLVMPassOpt));
-  pm.addPass(createCanonicalizerPass());
-  pm.addPass(createCSEPass());
+//   pm.addPass(createLowerAffinePass());
+//   pm.addPass(createArithToLLVMConversionPass());
+//   ConvertIndexToLLVMPassOptions convertIndexToLLVMPassOpt;
+//   convertIndexToLLVMPassOpt.indexBitwidth = 64;
+//   pm.addPass(createConvertIndexToLLVMPass(convertIndexToLLVMPassOpt));
+//   pm.addPass(createCanonicalizerPass());
+//   pm.addPass(createCSEPass());
   
-  // pm.addPass(createMemRefToLLVMPass());
-  pm.addNestedPass<gpu::GPUModuleOp>(
-      createConvertGlobalsToWorkgroupAllocationsPass());
-  pm.addPass(createDeleteSharedMemoryGlobalsPass(
-      compileInfo.sharedMemoryInBytes, representation));
-  pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
-  // pm.addPass(std::make_unique<PrintModulePass>());
+//   // pm.addPass(createMemRefToLLVMPass());
+//   pm.addNestedPass<gpu::GPUModuleOp>(
+//       createConvertGlobalsToWorkgroupAllocationsPass());
+//   pm.addPass(createDeleteSharedMemoryGlobalsPass(
+//       compileInfo.sharedMemoryInBytes, representation));
+//   pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
+//   // pm.addPass(std::make_unique<PrintModulePass>());
 #ifdef TREEBEARD_NV_GPU_SUPPORT
+  GpuSPIRVAttachTargetOptions spirvOptions;
+  std::vector<std::string> capabilities = {"Addresses", "Int64", "Float64", "Kernel"};
+  llvm::ArrayRef<std::string> spirvCaps(capabilities);
+  spirvOptions.spirvCapabilities = spirvCaps;
+
+  pm.addPass(createGpuSPIRVAttachTarget(spirvOptions));
+// Add the SetSpirvEntryPointABIPass
+  pm.addNestedPass<gpu::GPUModuleOp>(std::make_unique<SetSpirvEntryPointABIPass>());
   pm.addNestedPass<gpu::GPUModuleOp>(
       std::make_unique<LowerGpuOpsToNVVMOpsPass>(representation));
 #elif defined(TREEBEARD_AMD_GPU_SUPPORT)
@@ -745,25 +971,25 @@ void LowerGPUToLLVM(
                                                   representation));
 #endif // GPU support
 
-  // pm.addPass(std::make_unique<PrintModulePass>());
-  pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
-  pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
-  pm.addNestedPass<gpu::GPUModuleOp>(createReconcileUnrealizedCastsPass());
-  // pm.addPass(std::make_unique<PrintModulePass>());
-  pm.addPass(std::make_unique<GpuToLLVMConversionPass>(representation));
-  pm.addPass(createCanonicalizerPass());
-  pm.addPass(createCSEPass());
-  pm.addPass(createReconcileUnrealizedCastsPass());
-  GpuModuleToBinaryPassOptions gpuModuleToBinaryPassOptions;
-  gpuModuleToBinaryPassOptions.compilationTarget = "fatbin";
-  registerTranslations(context);
-  pm.addPass(createGpuModuleToBinaryPass(gpuModuleToBinaryPassOptions));
-  // pm.addPass(std::make_unique<PrintModulePass>());
-  pm.addPass(createConvertMathToLLVMPass());
-  pm.addPass(createConvertSCFToCFPass());
-  pm.addPass(createCanonicalizerPass());
-  pm.addPass(createCSEPass());
-  pm.addPass(createReconcileUnrealizedCastsPass());
+  // // pm.addPass(std::make_unique<PrintModulePass>());
+  // pm.addNestedPass<gpu::GPUModuleOp>(createCanonicalizerPass());
+  // pm.addNestedPass<gpu::GPUModuleOp>(createCSEPass());
+  // pm.addNestedPass<gpu::GPUModuleOp>(createReconcileUnrealizedCastsPass());
+  // // pm.addPass(std::make_unique<PrintModulePass>());
+  // pm.addPass(std::make_unique<GpuToLLVMConversionPass>(representation));
+  // pm.addPass(createCanonicalizerPass());
+  // pm.addPass(createCSEPass());
+  // pm.addPass(createReconcileUnrealizedCastsPass());
+  // GpuModuleToBinaryPassOptions gpuModuleToBinaryPassOptions;
+  // gpuModuleToBinaryPassOptions.compilationTarget = "fatbin";
+  // registerTranslations(context);
+  // pm.addPass(createGpuModuleToBinaryPass(gpuModuleToBinaryPassOptions));
+  // // pm.addPass(std::make_unique<PrintModulePass>());
+  // pm.addPass(createConvertMathToLLVMPass());
+  // pm.addPass(createConvertSCFToCFPass());
+  // pm.addPass(createCanonicalizerPass());
+  // pm.addPass(createCSEPass());
+  // pm.addPass(createReconcileUnrealizedCastsPass());
 
   // pm.addPass(std::make_unique<PrintModulePass>());
 
