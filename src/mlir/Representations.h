@@ -214,7 +214,7 @@ public:
   void AddTypeConversions(mlir::MLIRContext &context,
                           LLVMTypeConverter &typeConverter) override;
   void AddTypeConversions(mlir::MLIRContext &context,
-                          SPIRVTypeConverter  &typeConverter);                        
+                          SPIRVTypeConverter  &typeConverter) override;                        
   void AddLLVMConversionPatterns(LLVMTypeConverter &converter,
                                  RewritePatternSet &patterns) override;
   void AddSPIRVConversionPatterns(SPIRVTypeConverter &converter,

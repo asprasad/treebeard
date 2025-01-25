@@ -288,7 +288,29 @@ void SetSpirvEntryPointABIPass::runOnOperation() {
   }
 } // namespace mlir
 
+class GPUSPIRVTypeConverter : public SPIRVTypeConverter {
+public:
+  using TypeConverter::convertType;
 
+  explicit GPUSPIRVTypeConverter(spirv::TargetEnvAttr &targetAttr,
+                                 SPIRVConversionOptions &option)
+      : SPIRVTypeConverter(targetAttr, option), targetAttr(targetAttr),
+        options(option) {
+    addConversion([this](MemRefType memRefType) {
+      spirv::TargetEnvAttr &localTargetAttr = this->targetAttr;
+      SPIRVConversionOptions &localOptions = this->options;
+      SPIRVTypeConverter spirvTypeConverter (localTargetAttr, localOptions);
+      Type elementType = memRefType.getElementType();
+      auto convertedMemRefType = convertType(elementType);
+      llvm::errs() << "Hello Converter \n";
+      return convertedMemRefType;
+    });
+  }
+
+private:
+  spirv::TargetEnvAttr &targetAttr;
+  SPIRVConversionOptions &options;
+};
 
 template <typename DerivedT>
 class LowerGpuOpsToTargetBase : public ::mlir::OperationPass<gpu::GPUModuleOp> {
@@ -363,7 +385,12 @@ public:
       Operation *gpuModule = moduleOp.getOperation();
       auto targetAttr = spirv::lookupTargetEnvOrDefault(gpuModule);
       spirv::TargetEnv targetEnv(targetAttr);
-      return targetEnv.allows(spirv::Capability::Kernel);
+      ArrayRef<spirv::Capability> caps = {
+      spirv::Capability::Kernel, 
+      spirv::Capability::Float64, 
+      spirv::Capability::Int64
+      };  
+      return targetEnv.allows(caps);
     };
 
     module.walk([&](gpu::GPUModuleOp moduleOp) {
@@ -386,8 +413,17 @@ public:
     // Run conversion for each module independently as they can have different
     // TargetEnv attributes.
     for (Operation *gpuModule : gpuModules) {
-      spirv::TargetEnvAttr targetAttr =
-          spirv::lookupTargetEnvOrDefault(gpuModule);
+      auto triple = spirv::VerCapExtAttr::get(
+          spirv::Version::V_1_0,
+          {spirv::Capability::Shader, spirv::Capability::Kernel,
+           spirv::Capability::Addresses, spirv::Capability::Float64,
+           spirv::Capability::Int64},
+          ArrayRef<spirv::Extension>(), context);
+
+      spirv::TargetEnvAttr targetAttr = spirv::TargetEnvAttr::get(
+          triple, spirv::getDefaultResourceLimits(context),
+          spirv::ClientAPI::Unknown, spirv::Vendor::Intel,
+          spirv::DeviceType::Unknown, spirv::TargetEnvAttr::kUnknownDeviceID);
 
       // Map MemRef memory space to SPIR-V storage class first if requested.
       bool mapMemorySpace=true;
@@ -418,10 +454,11 @@ public:
 
       SPIRVConversionOptions options;
       options.use64bitIndex = true;
-      SPIRVTypeConverter typeConverter(targetAttr, options);
+      GPUSPIRVTypeConverter typeConverter(targetAttr, options);
       populateMMAToSPIRVCoopMatrixTypeConversion(typeConverter);
 
       RewritePatternSet patterns(context);
+      populateMemRefToSPIRVPatterns(typeConverter, patterns);
       populateGPUToSPIRVPatterns(typeConverter, patterns);
       populateGpuWMMAToSPIRVCoopMatrixKHRConversionPatterns(typeConverter,
                                                             patterns);
@@ -431,19 +468,18 @@ public:
       ScfToSPIRVContext scfContext;
       populateSCFToSPIRVPatterns(typeConverter, scfContext, patterns);
       mlir::arith::populateArithToSPIRVPatterns(typeConverter, patterns);
-      populateMemRefToSPIRVPatterns(typeConverter, patterns);
       populateFuncToSPIRVPatterns(typeConverter, patterns);
       populateVectorToSPIRVPatterns(typeConverter, patterns);
 
-      LLVMConversionTarget targetllvm(getContext());
-      configureTargetConversionLegality(targetllvm);
-      targetllvm.addIllegalDialect<decisionforest::DecisionForestDialect,
-                             math::MathDialect>();
+      // LLVMConversionTarget targetllvm(getContext());
+      // configureTargetConversionLegality(targetllvm);
+      // target.addIllegalDialect<decisionforest::DecisionForestDialect,
+      //                        math::MathDialect>();
       // targetllvm.addLegalOp<decisionforest::LoadTileFeatureIndicesOp, decisionforest::LoadTileThresholdsOp>();                         
       m_representation->AddTypeConversions(*module.getContext(), typeConverter);
       m_representation->AddSPIRVConversionPatterns(typeConverter, patterns);
 
-      if (failed(applyPartialConversion(gpuModule, *target, std::move(patterns))))
+      if (failed(applyFullConversion(gpuModule, *target, std::move(patterns))))
         return signalPassFailure();
     }
 
@@ -938,7 +974,7 @@ void LowerGPUToLLVM(
 //   pm.addPass(createGpuROCDLAttachTarget(amdTargetOptions));
 // #endif
 
-//   pm.addPass(createLowerAffinePass());
+  pm.addPass(createLowerAffinePass());
 //   pm.addPass(createArithToLLVMConversionPass());
 //   ConvertIndexToLLVMPassOptions convertIndexToLLVMPassOpt;
 //   convertIndexToLLVMPassOpt.indexBitwidth = 64;
