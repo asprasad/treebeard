@@ -303,7 +303,12 @@ public:
       SPIRVConversionOptions &localOptions = this->options;
       SPIRVTypeConverter spirvTypeConverter (localTargetAttr, localOptions);
       Type elementType = memRefType.getElementType();
-      auto convertedMemRefType = convertType(elementType);
+      auto TileType = elementType.dyn_cast_or_null<decisionforest::TiledNumericalNodeType>();
+      Type convertedMemRefType = nullptr;
+      if(TileType)
+        convertedMemRefType = convertType(elementType);
+      else
+        convertedMemRefType = spirvTypeConverter.convertType(memRefType);
       llvm::errs() << "Hello Converter \n";
       return convertedMemRefType;
     });
@@ -342,14 +347,32 @@ public:
     assert(adaptor.getSource() != nullptr && "source cannot be null");
     Value sourceMemRef = adaptor.getSource();
     Location loc = extractStridedMetadataOp.getLoc();
-  
+
     // Extract the structure type from the source.
     auto sourceType = adaptor.getSource().getType();
-    auto structType = cast<spirv::StructType>(sourceType);
+    auto ptrType = sourceType.dyn_cast<mlir::spirv::PointerType>();
+    if (!ptrType) {
+      llvm::errs() << "Expected a SPIR-V pointer type.\n";
+      return failure();
+    }
+
+    // Get the pointee type (array type in this case)
+    auto pointeeType = ptrType.getPointeeType();
+    auto arrayType = pointeeType.dyn_cast<mlir::spirv::ArrayType>();
+    if (!arrayType) {
+      llvm::errs() << "Expected a SPIR-V array type.\n";
+      return failure();
+    }
+
+    // Get the element type of the array
+    auto elementType = arrayType.getElementType();
+
+    // auto structType = cast<spirv::StructType>(sourceType);
 
     // Retrieve the element type at `kOffsetPosInMemRefDescriptor`.
-    Type indexType = structType.getElementType(kOffsetPosInMemRefDescriptor);
-
+    // Type indexType = structType.getElementType(kOffsetPosInMemRefDescriptor);
+    
+    Type indexType = elementType;
     // Retrieve source and rank.
     Value source = extractStridedMetadataOp.getSource();
     auto sourceMemRefType = cast<MemRefType>(source.getType());
@@ -360,13 +383,11 @@ public:
 
     // Base buffer: Extract base and aligned pointers from the descriptor.
     Value baseBuffer = rewriter.create<spirv::CompositeExtractOp>(
-        loc,
-        sourceMemRef, 
+        loc, sourceMemRef,
         llvm::ArrayRef<int32_t>(kAllocatedPtrPosInMemRefDescriptor));
 
     Value alignedBuffer = rewriter.create<spirv::CompositeExtractOp>(
-        loc,
-        sourceMemRef,
+        loc, sourceMemRef,
         llvm::ArrayRef<int32_t>(kAlignedPtrPosInMemRefDescriptor));
 
     // Handle static shape cases.
@@ -388,18 +409,15 @@ public:
 
     // Insert allocated and aligned pointers.
     value = rewriter.create<spirv::CompositeInsertOp>(
-        loc, baseBuffer, value,
-        kAllocatedPtrPosInMemRefDescriptor);
+        loc, baseBuffer, value, kAllocatedPtrPosInMemRefDescriptor);
     value = rewriter.create<spirv::CompositeInsertOp>(
-        loc, alignedBuffer, value,
-        kAlignedPtrPosInMemRefDescriptor);
+        loc, alignedBuffer, value, kAlignedPtrPosInMemRefDescriptor);
 
     // Insert offset.
     Value offsetVal = rewriter.create<spirv::ConstantOp>(
         loc, indexType, rewriter.getIndexAttr(offset));
     value = rewriter.create<spirv::CompositeInsertOp>(
-        loc, offsetVal, value,
-        kOffsetPosInMemRefDescriptor);
+        loc, offsetVal, value, kOffsetPosInMemRefDescriptor);
 
     // Fill in sizes and strides.
     for (unsigned i = 0, e = type.getRank(); i != e; ++i) {
@@ -407,8 +425,8 @@ public:
       Value sizeVal = rewriter.create<spirv::ConstantOp>(
           loc, indexType, rewriter.getIndexAttr(type.getDimSize(i)));
       llvm::ArrayRef<int32_t> indices = {kSizePosInMemRefDescriptor, i};
-      value = rewriter.create<spirv::CompositeInsertOp>(
-          loc, sizeVal, value, indices);
+      value = rewriter.create<spirv::CompositeInsertOp>(loc, sizeVal, value,
+                                                        indices);
 
       // Stride.
       Value strideVal = rewriter.create<spirv::ConstantOp>(
@@ -430,8 +448,7 @@ public:
     for (unsigned i = 0; i < rank; ++i) {
       Value extractedSize = rewriter.create<spirv::CompositeExtractOp>(
           loc, indexType, value,
-          rewriter.getI32ArrayAttr({kSizePosInMemRefDescriptor, i})
-          );
+          rewriter.getI32ArrayAttr({kSizePosInMemRefDescriptor, i}));
       results.push_back(extractedSize);
     }
 
@@ -439,8 +456,7 @@ public:
     for (unsigned i = 0; i < rank; ++i) {
       Value extractedStride = rewriter.create<spirv::CompositeExtractOp>(
           loc, indexType, value,
-          rewriter.getI32ArrayAttr({kStridePosInMemRefDescriptor, i})
-          );
+          rewriter.getI32ArrayAttr({kStridePosInMemRefDescriptor, i}));
       results.push_back(extractedStride);
     }
 
