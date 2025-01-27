@@ -138,6 +138,8 @@
 #include "mlir/Conversion/ControlFlowToSPIRV/ControlFlowToSPIRVPass.h"
 #include "mlir/Conversion/ControlFlowToSPIRV/ControlFlowToSPIRV.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
+#include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
+
 
 
 #define DEBUG_TYPE "gpu-to-llvm"
@@ -312,6 +314,142 @@ private:
   SPIRVConversionOptions &options;
 };
 
+static constexpr unsigned kAllocatedPtrPosInMemRefDescriptor = 0;
+static constexpr unsigned kAlignedPtrPosInMemRefDescriptor = 1;
+static constexpr unsigned kOffsetPosInMemRefDescriptor = 2;
+static constexpr unsigned kSizePosInMemRefDescriptor = 3;
+static constexpr unsigned kStridePosInMemRefDescriptor = 4;
+
+static constexpr unsigned kRankInUnrankedMemRefDescriptor = 0;
+static constexpr unsigned kPtrInUnrankedMemRefDescriptor = 1;
+
+class ExtractStridedMetadataOpSPIRVLowering
+    : public OpConversionPattern<memref::ExtractStridedMetadataOp> {
+public:
+  using OpConversionPattern<
+      memref::ExtractStridedMetadataOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::ExtractStridedMetadataOp extractStridedMetadataOp,
+                  OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    // Extract and validate the input type.
+    if (!llvm::isa<spirv::SPIRVType>(adaptor.getOperands().front().getType()))
+      return failure();
+
+    // Extract the source.
+    assert(adaptor.getSource() != nullptr && "source cannot be null");
+    Value sourceMemRef = adaptor.getSource();
+    Location loc = extractStridedMetadataOp.getLoc();
+  
+    // Extract the structure type from the source.
+    auto sourceType = adaptor.getSource().getType();
+    auto structType = cast<spirv::StructType>(sourceType);
+
+    // Retrieve the element type at `kOffsetPosInMemRefDescriptor`.
+    Type indexType = structType.getElementType(kOffsetPosInMemRefDescriptor);
+
+    // Retrieve source and rank.
+    Value source = extractStridedMetadataOp.getSource();
+    auto sourceMemRefType = cast<MemRefType>(source.getType());
+    int64_t rank = sourceMemRefType.getRank();
+
+    SmallVector<Value> results;
+    results.reserve(2 + rank * 2);
+
+    // Base buffer: Extract base and aligned pointers from the descriptor.
+    Value baseBuffer = rewriter.create<spirv::CompositeExtractOp>(
+        loc,
+        sourceMemRef, 
+        llvm::ArrayRef<int32_t>(kAllocatedPtrPosInMemRefDescriptor));
+
+    Value alignedBuffer = rewriter.create<spirv::CompositeExtractOp>(
+        loc,
+        sourceMemRef,
+        llvm::ArrayRef<int32_t>(kAlignedPtrPosInMemRefDescriptor));
+
+    // Handle static shape cases.
+    MemRefType type =
+        cast<MemRefType>(extractStridedMetadataOp.getBaseBuffer().getType());
+    assert(type.hasStaticShape() && "unexpected dynamic shape");
+
+    // Extract strides and offset.
+    auto [strides, offset] = getStridesAndOffset(type);
+    assert(!ShapedType::isDynamic(offset) && "expected static offset");
+    assert(!llvm::any_of(strides, ShapedType::isDynamic) &&
+           "expected static strides");
+
+    // Convert the type and construct the SPIR-V structure.
+    auto convertedType = (*getTypeConverter()).convertType(type);
+    assert(convertedType && "unexpected failure in memref type conversion");
+
+    Value value = rewriter.create<spirv::UndefOp>(loc, convertedType);
+
+    // Insert allocated and aligned pointers.
+    value = rewriter.create<spirv::CompositeInsertOp>(
+        loc, baseBuffer, value,
+        kAllocatedPtrPosInMemRefDescriptor);
+    value = rewriter.create<spirv::CompositeInsertOp>(
+        loc, alignedBuffer, value,
+        kAlignedPtrPosInMemRefDescriptor);
+
+    // Insert offset.
+    Value offsetVal = rewriter.create<spirv::ConstantOp>(
+        loc, indexType, rewriter.getIndexAttr(offset));
+    value = rewriter.create<spirv::CompositeInsertOp>(
+        loc, offsetVal, value,
+        kOffsetPosInMemRefDescriptor);
+
+    // Fill in sizes and strides.
+    for (unsigned i = 0, e = type.getRank(); i != e; ++i) {
+      // Size.
+      Value sizeVal = rewriter.create<spirv::ConstantOp>(
+          loc, indexType, rewriter.getIndexAttr(type.getDimSize(i)));
+      llvm::ArrayRef<int32_t> indices = {kSizePosInMemRefDescriptor, i};
+      value = rewriter.create<spirv::CompositeInsertOp>(
+          loc, sizeVal, value, indices);
+
+      // Stride.
+      Value strideVal = rewriter.create<spirv::ConstantOp>(
+          loc, indexType, rewriter.getIndexAttr(strides[i]));
+      value = rewriter.create<spirv::CompositeInsertOp>(
+          loc, strideVal, value,
+          llvm::ArrayRef<int32_t>({kStridePosInMemRefDescriptor, i}));
+    }
+
+    results.push_back(value);
+
+    // Offset.
+    Value extractedOffset = rewriter.create<spirv::CompositeExtractOp>(
+        loc, sourceMemRef,
+        llvm::ArrayRef<int32_t>(kOffsetPosInMemRefDescriptor));
+    results.push_back(extractedOffset);
+
+    // Extract sizes.
+    for (unsigned i = 0; i < rank; ++i) {
+      Value extractedSize = rewriter.create<spirv::CompositeExtractOp>(
+          loc, indexType, value,
+          rewriter.getI32ArrayAttr({kSizePosInMemRefDescriptor, i})
+          );
+      results.push_back(extractedSize);
+    }
+
+    // Extract strides.
+    for (unsigned i = 0; i < rank; ++i) {
+      Value extractedStride = rewriter.create<spirv::CompositeExtractOp>(
+          loc, indexType, value,
+          rewriter.getI32ArrayAttr({kStridePosInMemRefDescriptor, i})
+          );
+      results.push_back(extractedStride);
+    }
+
+    // Replace the original operation with the constructed results.
+    rewriter.replaceOp(extractStridedMetadataOp, results);
+    return success();
+  }
+};
+
 template <typename DerivedT>
 class LowerGpuOpsToTargetBase : public ::mlir::OperationPass<gpu::GPUModuleOp> {
   std::shared_ptr<decisionforest::IRepresentation> m_representation;
@@ -458,7 +596,6 @@ public:
       populateMMAToSPIRVCoopMatrixTypeConversion(typeConverter);
 
       RewritePatternSet patterns(context);
-      populateMemRefToSPIRVPatterns(typeConverter, patterns);
       populateGPUToSPIRVPatterns(typeConverter, patterns);
       populateGpuWMMAToSPIRVCoopMatrixKHRConversionPatterns(typeConverter,
                                                             patterns);
@@ -468,6 +605,7 @@ public:
       ScfToSPIRVContext scfContext;
       populateSCFToSPIRVPatterns(typeConverter, scfContext, patterns);
       mlir::arith::populateArithToSPIRVPatterns(typeConverter, patterns);
+      populateMemRefToSPIRVPatterns(typeConverter, patterns);
       populateFuncToSPIRVPatterns(typeConverter, patterns);
       populateVectorToSPIRVPatterns(typeConverter, patterns);
 
@@ -475,7 +613,8 @@ public:
       // configureTargetConversionLegality(targetllvm);
       // target.addIllegalDialect<decisionforest::DecisionForestDialect,
       //                        math::MathDialect>();
-      // targetllvm.addLegalOp<decisionforest::LoadTileFeatureIndicesOp, decisionforest::LoadTileThresholdsOp>();                         
+      // targetllvm.addLegalOp<decisionforest::LoadTileFeatureIndicesOp, decisionforest::LoadTileThresholdsOp>();  
+      patterns.add<ExtractStridedMetadataOpSPIRVLowering>(typeConverter, patterns.getContext());                       
       m_representation->AddTypeConversions(*module.getContext(), typeConverter);
       m_representation->AddSPIRVConversionPatterns(typeConverter, patterns);
 
@@ -953,7 +1092,7 @@ void LowerGPUToLLVM(
 //   pm.addPass(createConvertSCFToCFPass());
 //   pm.addPass(createConvertNVVMToLLVMPass());
 //   pm.addPass(createConvertFuncToLLVMPass());
-//   pm.addPass(memref::createExpandStridedMetadataPass());
+  pm.addPass(memref::createExpandStridedMetadataPass());
 // #ifdef TREEBEARD_NV_GPU_SUPPORT
 //  // Set up options for NVIDIA GPU
 //   GpuNVVMAttachTargetOptions nvvmTargetOptions;
