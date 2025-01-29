@@ -646,12 +646,27 @@ public:
     // Run conversion for each module independently as they can have different
     // TargetEnv attributes.
     for (Operation *gpuModule : gpuModules) {
+
+      auto capabilities = std::vector<spirv::Capability>(
+          {spirv::Capability::Kernel, spirv::Capability::Addresses,
+           spirv::Capability::Linkage, spirv::Capability::Int64,
+           spirv::Capability::Int16, spirv::Capability::Int8,
+           spirv::Capability::Float64, spirv::Capability::Float16,
+           spirv::Capability::VectorAnyINTEL,
+           spirv::Capability::VectorComputeINTEL,
+           spirv::Capability::Shader});
+
+      auto extensions = std::vector<spirv::Extension>(
+          {mlir::spirv::Extension::SPV_KHR_no_integer_wrap_decoration,
+           spirv::Extension::SPV_KHR_storage_buffer_storage_class,
+           spirv::Extension::SPV_KHR_variable_pointers,
+           spirv::Extension::SPV_INTEL_vector_compute,
+           spirv::Extension::SPV_EXT_shader_atomic_float_min_max});
+
       auto triple = spirv::VerCapExtAttr::get(
           spirv::Version::V_1_0,
-          {spirv::Capability::Shader, spirv::Capability::Kernel,
-           spirv::Capability::Addresses, spirv::Capability::Float64,
-           spirv::Capability::Int64},
-          ArrayRef<spirv::Extension>(), context);
+          capabilities,
+          extensions, context);
 
       spirv::TargetEnvAttr targetAttr = spirv::TargetEnvAttr::get(
           triple, spirv::getDefaultResourceLimits(context),
