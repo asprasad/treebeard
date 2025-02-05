@@ -26,6 +26,7 @@
 using namespace mlir;
 using namespace mlir::decisionforest::helpers;
 
+
 namespace {
 const int32_t kAlignedPointerIndexInMemrefStruct = 1;
 const int32_t kOffsetIndexInMemrefStruct = 2;
@@ -224,7 +225,7 @@ struct LoadTileThresholdOpLowering : public ConversionPattern {
 };
 
 struct LoadTileThresholdOpSPIRVLowering : public ConversionPattern {
-  LoadTileThresholdOpSPIRVLowering(SPIRVTypeConverter  &typeConverter, MLIRContext *ctx)
+  LoadTileThresholdOpSPIRVLowering(GPUSPIRVTypeConverter &typeConverter, MLIRContext *ctx)
       : ConversionPattern(
            typeConverter,
            mlir::decisionforest::LoadTileThresholdsOp::getOperationName(),
@@ -256,6 +257,26 @@ struct LoadTileFeatureIndicesOpLowering : public ConversionPattern {
     generateLoadStructElement(op, operands, rewriter,
                               kFeatureIndexElementNumberInTile,
                               static_cast<const LLVMTypeConverter *>(getTypeConverter()));
+    return mlir::success();
+  }
+};
+
+
+struct LoadTileFeatureIndicesOpSPIRVLowering : public ConversionPattern {
+  LoadTileFeatureIndicesOpSPIRVLowering(GPUSPIRVTypeConverter &typeConverter, MLIRContext *ctx)
+      : ConversionPattern(
+           typeConverter,
+           mlir::decisionforest::LoadTileFeatureIndicesOp::getOperationName(),
+                          1 /*benefit*/, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    llvm::errs()<<"Hello Vijeth\n";
+    assert(operands.size() == 3 || operands.size() == 4);
+    // generateLoadStructElement(op, operands, rewriter,
+    //                           kThresholdElementNumberInTile,
+    //                           static_cast<const SPIRVTypeConverter  *>(getTypeConverter()));
     return mlir::success();
   }
 };
@@ -1136,8 +1157,9 @@ void ArrayBasedRepresentation::AddLLVMConversionPatterns(
 }
 
 void ArrayBasedRepresentation::AddSPIRVConversionPatterns(
-    SPIRVTypeConverter  &converter, RewritePatternSet &patterns) {
-  patterns.add<LoadTileThresholdOpSPIRVLowering>(converter, patterns.getContext());
+    GPUSPIRVTypeConverter &converter, RewritePatternSet &patterns) {
+  patterns.add<LoadTileFeatureIndicesOpSPIRVLowering, 
+               LoadTileThresholdOpSPIRVLowering>(converter, patterns.getContext());
 }
 
 void ArrayBasedRepresentation::LowerCacheRowsOp(

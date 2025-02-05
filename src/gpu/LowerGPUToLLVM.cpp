@@ -290,34 +290,47 @@ void SetSpirvEntryPointABIPass::runOnOperation() {
   }
 } // namespace mlir
 
-class GPUSPIRVTypeConverter : public SPIRVTypeConverter {
-public:
-  using TypeConverter::convertType;
+// class GPUSPIRVTypeConverter : public SPIRVTypeConverter {
+// public:
+//   using TypeConverter::convertType;
 
-  explicit GPUSPIRVTypeConverter(spirv::TargetEnvAttr &targetAttr,
-                                 SPIRVConversionOptions &option)
-      : SPIRVTypeConverter(targetAttr, option), targetAttr(targetAttr),
-        options(option) {
-    addConversion([this](MemRefType memRefType) {
-      spirv::TargetEnvAttr &localTargetAttr = this->targetAttr;
-      SPIRVConversionOptions &localOptions = this->options;
-      SPIRVTypeConverter spirvTypeConverter (localTargetAttr, localOptions);
-      Type elementType = memRefType.getElementType();
-      auto TileType = elementType.dyn_cast_or_null<decisionforest::TiledNumericalNodeType>();
-      Type convertedMemRefType = nullptr;
-      if(TileType)
-        convertedMemRefType = convertType(elementType);
-      else
-        convertedMemRefType = spirvTypeConverter.convertType(memRefType);
-      llvm::errs() << "Hello Converter \n";
-      return convertedMemRefType;
-    });
-  }
+//   explicit GPUSPIRVTypeConverter(spirv::TargetEnvAttr &targetAttr,
+//                                  SPIRVConversionOptions &option)
+//       : SPIRVTypeConverter(targetAttr, option), targetAttr(targetAttr),
+//         options(option) {
+//     addConversion([this](MemRefType memRefType) {
+//       spirv::TargetEnvAttr &localTargetAttr = this->targetAttr;
+//       SPIRVConversionOptions &localOptions = this->options;
+//       SPIRVTypeConverter spirvTypeConverter (localTargetAttr, localOptions);
+//       Type elementType = memRefType.getElementType();
+//       auto TileType = elementType.dyn_cast_or_null<decisionforest::TiledNumericalNodeType>();
+//       if(TileType){
+//       unsigned int size = 1;
+//       int rank = memRefType.getRank();
+//       if(memRefType.getRank() > 1)
+//           size = memRefType.getDimSize(0);
+//       auto tileSize = TileType.getTileSize();
+//       llvm::errs()<<"MemRefType.getDimSize() : "<<size<<"\n";
+//       llvm::errs()<<"TileType.getTileSize() : "<<tileSize<<"\n";
+//       auto arrayType = spirv::ArrayType::get(TileType.getThresholdElementType(),
+//                                              size *
+//                                                  tileSize);
+//       Type convertedMemRefType = spirv::PointerType::get(arrayType, spirv::StorageClass::StorageBuffer);                                           
+//       return convertedMemRefType;
+//       }// Type convertedMemRefType = nullptr;
+//       // if(TileType)
+//       //   convertedMemRefType = convertType(elementType);
+//       // else
+//       //   convertedMemRefType = spirvTypeConverter.convertType(memRefType);
+//       // llvm::errs() << "Hello Converter \n";
+//       return spirvTypeConverter.convertType(memRefType);
+//     });
+//   }
 
-private:
-  spirv::TargetEnvAttr &targetAttr;
-  SPIRVConversionOptions &options;
-};
+// private:
+//   spirv::TargetEnvAttr &targetAttr;
+//   SPIRVConversionOptions &options;
+// };
 
 static constexpr unsigned kAllocatedPtrPosInMemRefDescriptor = 0;
 static constexpr unsigned kAlignedPtrPosInMemRefDescriptor = 1;
@@ -721,10 +734,10 @@ public:
 
       // LLVMConversionTarget targetllvm(getContext());
       // configureTargetConversionLegality(targetllvm);
-      // target.addIllegalDialect<decisionforest::DecisionForestDialect,
-      //                        math::MathDialect>();
+      // target.addIllegalDialect<decisionforest::DecisionForestDialect,math::MathDialect>();
       // targetllvm.addLegalOp<decisionforest::LoadTileFeatureIndicesOp, decisionforest::LoadTileThresholdsOp>();  
-      patterns.add<ExtractStridedMetadataOpSPIRVLowering>(typeConverter, patterns.getContext());                       
+      patterns.add<ExtractStridedMetadataOpSPIRVLowering>(typeConverter, patterns.getContext()); 
+      // patterns.add<LoadTileFeatureIndicesOpSPIRVLowering>(typeConverter, patterns.getContext());                      
       m_representation->AddTypeConversions(*module.getContext(), typeConverter);
       m_representation->AddSPIRVConversionPatterns(typeConverter, patterns);
 

@@ -11,7 +11,52 @@
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 
 namespace mlir {
+
+class GPUSPIRVTypeConverter : public SPIRVTypeConverter {
+public:
+  using TypeConverter::convertType;
+
+  explicit GPUSPIRVTypeConverter(spirv::TargetEnvAttr &targetAttr,
+                                 SPIRVConversionOptions &option)
+      : SPIRVTypeConverter(targetAttr, option), targetAttr(targetAttr),
+        options(option) {
+    addConversion([this](MemRefType memRefType) {
+      spirv::TargetEnvAttr &localTargetAttr = this->targetAttr;
+      SPIRVConversionOptions &localOptions = this->options;
+      SPIRVTypeConverter spirvTypeConverter(localTargetAttr, localOptions);
+      Type elementType = memRefType.getElementType();
+      auto TileType =
+          elementType
+              .dyn_cast_or_null<decisionforest::TiledNumericalNodeType>();
+      if (TileType) {
+        unsigned int size = 1;
+        int rank = memRefType.getRank();
+        if (memRefType.getRank() > 1)
+          size = memRefType.getDimSize(0);
+        auto tileSize = TileType.getTileSize();
+        llvm::errs() << "MemRefType.getDimSize() : " << size << "\n";
+        llvm::errs() << "TileType.getTileSize() : " << tileSize << "\n";
+        auto arrayType = spirv::ArrayType::get(
+            TileType.getThresholdElementType(), size * tileSize);
+        Type convertedMemRefType = spirv::PointerType::get(
+            arrayType, spirv::StorageClass::StorageBuffer);
+        return convertedMemRefType;
+      } // Type convertedMemRefType = nullptr;
+      // if(TileType)
+      //   convertedMemRefType = convertType(elementType);
+      // else
+      //   convertedMemRefType = spirvTypeConverter.convertType(memRefType);
+      // llvm::errs() << "Hello Converter \n";
+      return spirvTypeConverter.convertType(memRefType);
+    });
+  }
+
+private:
+  spirv::TargetEnvAttr &targetAttr;
+  SPIRVConversionOptions &options;
+};
 namespace decisionforest {
+
 
 class IRepresentation {
 public:
@@ -80,7 +125,7 @@ public:
                                   SPIRVTypeConverter &typeConverter) {}
   virtual void AddLLVMConversionPatterns(LLVMTypeConverter &converter,
                                          RewritePatternSet &patterns) = 0;
-  virtual void AddSPIRVConversionPatterns(SPIRVTypeConverter  &converter,
+  virtual void AddSPIRVConversionPatterns(GPUSPIRVTypeConverter &converter,
                                          RewritePatternSet &patterns) {}                                       
 
   // Caching
@@ -217,7 +262,7 @@ public:
                           SPIRVTypeConverter  &typeConverter) override;                        
   void AddLLVMConversionPatterns(LLVMTypeConverter &converter,
                                  RewritePatternSet &patterns) override;
-  void AddSPIRVConversionPatterns(SPIRVTypeConverter &converter,
+  void AddSPIRVConversionPatterns(GPUSPIRVTypeConverter &converter,
                                  RewritePatternSet &patterns);
   void LowerCacheTreeOp(
       ConversionPatternRewriter &rewriter, mlir::Operation *op,
