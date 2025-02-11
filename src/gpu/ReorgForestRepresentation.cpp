@@ -585,6 +585,14 @@ mlir::Value ReorgForestRepresentation::GenerateIsLeafTileOp(
 }
 
 void ReorgForestRepresentation::AddTypeConversions(
+    mlir::MLIRContext &context, SPIRVTypeConverter &typeConverter) {
+  typeConverter.addConversion([&](decisionforest::ReorgMemrefElementType type) {
+    auto elemType = type.getElementType();
+    return elemType;
+  });
+}
+
+void ReorgForestRepresentation::AddTypeConversions(
     mlir::MLIRContext &context, LLVMTypeConverter &typeConverter) {
   typeConverter.addConversion([&](decisionforest::ReorgMemrefElementType type) {
     auto elemType = type.getElementType();

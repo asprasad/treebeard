@@ -7,6 +7,8 @@
 #include "TreebeardContext.h"
 #include "json.hpp"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
+
 
 using json = nlohmann::json;
 
@@ -184,6 +186,8 @@ public:
 
   void AddTypeConversions(mlir::MLIRContext &context,
                           LLVMTypeConverter &typeConverter) override;
+  void AddTypeConversions(mlir::MLIRContext &context,
+                          SPIRVTypeConverter &typeConverter);
   void AddLLVMConversionPatterns(LLVMTypeConverter &converter,
                                  RewritePatternSet &patterns) override;
 

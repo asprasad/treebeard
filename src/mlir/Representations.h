@@ -28,25 +28,55 @@ public:
       auto TileType =
           elementType
               .dyn_cast_or_null<decisionforest::TiledNumericalNodeType>();
+      auto ReorgType =
+          elementType
+              .dyn_cast_or_null<decisionforest::ReorgMemrefElementType>();
       if (TileType) {
+        // Retrieve field types
+        auto thresholdType = TileType.getThresholdFieldType();
+        auto indexType = TileType.getIndexFieldType();
+        Type structType = nullptr;
+        // SPIR-V type construction logic
+        if (TileType.getTileSize() == 1) {
+          // Construct a SPIR-V struct type for a single-tile node
+          structType = spirv::StructType::get({thresholdType, indexType});
+        } else {
+          // Retrieve additional type for multi-tile nodes
+          auto tileShapeIDType = TileType.getTileShapeType();
+          structType = spirv::StructType::get(
+              {thresholdType, indexType, tileShapeIDType});
+        }
+
         unsigned int size = 1;
         int rank = memRefType.getRank();
-        if (memRefType.getRank() > 1)
+        if (memRefType.hasStaticShape() && rank) {
           size = memRefType.getDimSize(0);
-        auto tileSize = TileType.getTileSize();
-        llvm::errs() << "MemRefType.getDimSize() : " << size << "\n";
-        llvm::errs() << "TileType.getTileSize() : " << tileSize << "\n";
-        auto arrayType = spirv::ArrayType::get(
-            TileType.getThresholdElementType(), size * tileSize);
-        Type convertedMemRefType = spirv::PointerType::get(
-            arrayType, spirv::StorageClass::StorageBuffer);
-        return convertedMemRefType;
-      } // Type convertedMemRefType = nullptr;
-      // if(TileType)
-      //   convertedMemRefType = convertType(elementType);
-      // else
-      //   convertedMemRefType = spirvTypeConverter.convertType(memRefType);
-      // llvm::errs() << "Hello Converter \n";
+          auto tileSize = TileType.getTileSize();
+          auto arrayType = spirv::ArrayType::get(structType, size * tileSize);
+          Type convertedMemRefType = spirv::PointerType::get(
+              arrayType, spirv::StorageClass::StorageBuffer);
+          return convertedMemRefType;
+        } else {
+          Type convertedMemRefType = spirv::PointerType::get(
+              structType, spirv::StorageClass::StorageBuffer);
+          return convertedMemRefType;
+        }
+      }else if(ReorgType){
+        auto elemType = ReorgType.getElementType();
+        unsigned int size = 1;
+        int rank = memRefType.getRank();
+        if (memRefType.hasStaticShape() && rank) {
+          size = memRefType.getDimSize(0);
+          auto arrayType = spirv::ArrayType::get(elemType, size);
+          Type convertedMemRefType = spirv::PointerType::get(
+              arrayType, spirv::StorageClass::StorageBuffer);
+          return convertedMemRefType;
+        } else {
+          Type convertedMemRefType = spirv::PointerType::get(
+              elemType, spirv::StorageClass::StorageBuffer);
+          return convertedMemRefType;
+        }
+      }
       return spirvTypeConverter.convertType(memRefType);
     });
   }
