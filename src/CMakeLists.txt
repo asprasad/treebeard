@@ -1,5 +1,6 @@
 option(AMD_GPU_SUPPORT "Turn on AMD GPU support" OFF)
 option(NV_GPU_SUPPORT "Turn on NVIDIA GPU support" OFF)
+option(INTEL_GPU_SUPPORT "Turn on Intel GPU support" OFF)
 option(ENABLE_ONNX_PARSER "Turn on Treebeard ONNX parser" OFF)
 option(AMD_GPU_CHIPSET "AMD GPU architecture identifier" "")
 
@@ -41,7 +42,7 @@ add_definitions(-DTREEBEARD_SRC_DIR="${CMAKE_SOURCE_DIR}")
 add_definitions(-DLLVM_LIB_DIR="${LLVM_BUILD_DIRECTORY}")
 add_definitions(-DTREEBEARD_BUILD_DIR="${CMAKE_BINARY_DIR}")
 
-if(NV_GPU_SUPPORT OR AMD_GPU_SUPPORT)
+if(NV_GPU_SUPPORT OR AMD_GPU_SUPPORT OR INTEL_GPU_SUPPORT)
         add_definitions(-DTREEBEARD_GPU_SUPPORT=1)
 endif()
 
@@ -59,6 +60,8 @@ elseif(AMD_GPU_SUPPORT)
         endif()
 
         add_definitions(-DTREEBEARD_AMD_GPU_CHIPSET="${AMD_GPU_CHIPSET}")
+elseif(INTEL_GPU_SUPPORT)
+        add_definitions(-DTREEBEARD_INTEL_GPU_SUPPORT)
 endif()
 
 mlir_check_all_link_libraries(treebeard)

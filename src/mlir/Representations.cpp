@@ -120,8 +120,8 @@ void generateSPIRVLoadStructElement(Operation *op, ArrayRef<Value> operands,
 
   // Create a format string for printing (e.g., "Value: %d\n")
   
-  std::string formatStr = "Load_Value : %d\\n\\0"; // Change format as per data
-  generateSPIRVPrintfOp(rewriter, location, elementVal, owningmodule, formatStr);
+  // std::string formatStr = "Load_Value : %d\\n\\0"; // Change format as per data
+  // generateSPIRVPrintfOp(rewriter, location, elementVal, owningmodule, formatStr);
 }
 
 void generateSPIRVStoreStructElement(Operation *op, ArrayRef<Value> operands,

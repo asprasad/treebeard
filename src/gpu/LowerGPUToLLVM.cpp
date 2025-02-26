@@ -141,6 +141,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
 #include "mlir/Target/LLVMIR/Dialect/SPIRV/SPIRVToLLVMIRTranslation.h"
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h"
+#include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
 
 
 #define DEBUG_TYPE "gpu-to-llvm"
@@ -277,9 +278,7 @@ void SetSpirvEntryPointABIPass::runOnOperation() {
       continue;
 
     // Determine workgroup size
-    SmallVector<int32_t, 3> workgroupSizeVec(workgroupSize.begin(),
-                                             workgroupSize.end());
-    workgroupSizeVec.resize(3, 1); // Fill unspecified dimensions with 1
+    SmallVector<int32_t, 3> workgroupSizeVec = {};  // Explicit size
 
     // Set the spirv.entry_point_abi attribute
     gpuFunc->setAttr(
@@ -342,8 +341,10 @@ public:
       baseBuffer = source;
     } else {
       // If the source is a memref, convert it to a SPIR-V pointer.
+      auto attr = dyn_cast_or_null<spirv::StorageClassAttr>(memrefType.getMemorySpace());
+      spirv::StorageClass storageClass = attr.getValue();
       baseBuffer = rewriter.create<spirv::ConvertUToPtrOp>(
-          loc, spirv::PointerType::get(memrefType.getElementType(), spirv::StorageClass::StorageBuffer), source);
+          loc, spirv::PointerType::get(memrefType.getElementType(), storageClass), source);
     }
 
     results.push_back(baseBuffer);
@@ -488,8 +489,7 @@ public:
 
   void runOnOperation() override {
 
-// Change this later to INTEl_GPU_SUPPORT
-#if defined(TREEBEARD_NV_GPU_SUPPORT)
+#if defined(TREEBEARD_INTEL_GPU_SUPPORT)
     MLIRContext *context = &getContext();
     auto module = getOperation();
 
@@ -641,14 +641,12 @@ struct LowerGpuOpsToSPIRVPass
 
       auto extensions = std::vector<spirv::Extension>(
           {mlir::spirv::Extension::SPV_KHR_no_integer_wrap_decoration,
-           spirv::Extension::SPV_KHR_storage_buffer_storage_class,
-           spirv::Extension::SPV_KHR_variable_pointers,
            spirv::Extension::SPV_KHR_16bit_storage,
            spirv::Extension::SPV_INTEL_vector_compute,
            spirv::Extension::SPV_EXT_shader_atomic_float_min_max});
 
       auto triple = spirv::VerCapExtAttr::get(
-          spirv::Version::V_1_0,
+          spirv::Version::V_1_4,
           capabilities,
           extensions, context);
 
@@ -1023,7 +1021,7 @@ private:
 void GpuToLLVMConversionPass::runOnOperation() {
   MLIRContext *context = &getContext();
   LowerToLLVMOptions options(context);
-  options.useBarePtrCallConv = false;
+  options.useBarePtrCallConv = true;
   RewritePatternSet patterns(context);
   ConversionTarget target(*context);
   target.addLegalDialect<LLVM::LLVMDialect>();
@@ -1136,8 +1134,7 @@ void LowerGPUToLLVM(
   // Call the function to enable IR printing if PRINT_AFTER_ALL is set
    TreeBeard::EnablePrintIRAfter(context, pm);
 
-   // Change this later to INTEl_GPU_SUPPORT
-#ifdef TREEBEARD_NV_GPU_SUPPORT
+#ifdef TREEBEARD_INTEL_GPU_SUPPORT
    pm.addPass(createGpuKernelOutliningPass());
    pm.addPass(memref::createFoldMemRefAliasOpsPass());
    pm.addPass(memref::createExpandStridedMetadataPass());
@@ -1152,15 +1149,13 @@ void LowerGPUToLLVM(
 
    auto extensions = std::vector<std::string>(
        {"SPV_KHR_no_integer_wrap_decoration",
-        "SPV_KHR_storage_buffer_storage_class", "SPV_KHR_variable_pointers",
         "SPV_INTEL_vector_compute", "SPV_EXT_shader_atomic_float_min_max"});
 
    llvm::ArrayRef<std::string> spirvCaps(capabilities);
    llvm::ArrayRef<std::string> spirvExt(extensions);
    spirvOptions.spirvCapabilities = spirvCaps;
-   spirvOptions.spirvVersion = "v1.0";
+   spirvOptions.spirvVersion = "v1.4";
    spirvOptions.spirvExtensions = spirvExt;
-   spirvOptions.deviceVendor = "Intel";
 
    pm.addPass(createGpuSPIRVAttachTarget(spirvOptions));
    // Add the SetSpirvEntryPointABIPass
@@ -1175,13 +1170,18 @@ void LowerGPUToLLVM(
    // Add passes to the SPIR-V module level
    spirvModulePM.addPass(spirv::createSPIRVLowerABIAttributesPass());
    spirvModulePM.addPass(spirv::createSPIRVUpdateVCEPass());
+   
+   pm.nest<func::FuncOp>().addPass(LLVM::createRequestCWrappersPass());
    pm.addPass(createCanonicalizerPass());
    pm.addPass(createCSEPass());
    pm.addPass(createReconcileUnrealizedCastsPass());
    registerTranslations(context);
    pm.addPass(createGpuModuleToBinaryPass());
    pm.addPass(createConvertSCFToCFPass());
-   pm.addPass(createConvertFuncToLLVMPass());
+   ConvertFuncToLLVMPassOptions funcToLLVMOptions{};
+   funcToLLVMOptions.indexBitwidth = 64;
+   funcToLLVMOptions.useBarePtrCallConv = true;
+   pm.addPass(createConvertFuncToLLVMPass(funcToLLVMOptions));
    pm.addPass(createLowerAffinePass());
    pm.addPass(createArithToLLVMConversionPass());
    pm.addPass(createConvertMathToLLVMPass());
@@ -1217,7 +1217,7 @@ void LowerGPUToLLVM(
    pm.addPass(createDeleteSharedMemoryGlobalsPass(
        compileInfo.sharedMemoryInBytes, representation));
    pm.addNestedPass<gpu::GPUModuleOp>(createStripDebugInfoPass());
-#ifdef TREEBEARD_NV_GPU_SUPPORT_ACTUAL
+#ifdef TREEBEARD_NV_GPU_SUPPORT
    // Set up options for NVIDIA GPU
    GpuNVVMAttachTargetOptions nvvmTargetOptions;
 

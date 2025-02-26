@@ -20,6 +20,8 @@ public:
       spirv::TargetEnvAttr &localTargetAttr = this->targetAttr;
       SPIRVConversionOptions &localOptions = this->options;
       SPIRVTypeConverter spirvTypeConverter(localTargetAttr, localOptions);
+      auto attr = dyn_cast_or_null<spirv::StorageClassAttr>(memRefType.getMemorySpace());
+      spirv::StorageClass storageClass = attr.getValue();
       Type elementType = memRefType.getElementType();
       auto TileType =
           elementType
@@ -50,11 +52,11 @@ public:
           auto tileSize = TileType.getTileSize();
           auto arrayType = spirv::ArrayType::get(structType, size * tileSize);
           Type convertedMemRefType = spirv::PointerType::get(
-              arrayType, spirv::StorageClass::StorageBuffer);
+              arrayType, storageClass);
           return convertedMemRefType;
         } else {
           Type convertedMemRefType = spirv::PointerType::get(
-              structType, spirv::StorageClass::StorageBuffer);
+              structType, storageClass);
           return convertedMemRefType;
         }
       } else if (ReorgType) {
@@ -65,11 +67,11 @@ public:
           size = memRefType.getDimSize(0);
           auto arrayType = spirv::ArrayType::get(elemType, size);
           Type convertedMemRefType = spirv::PointerType::get(
-              arrayType, spirv::StorageClass::StorageBuffer);
+              arrayType, storageClass);
           return convertedMemRefType;
         } else {
           Type convertedMemRefType = spirv::PointerType::get(
-              elemType, spirv::StorageClass::StorageBuffer);
+              elemType, storageClass);
           return convertedMemRefType;
         }
       }

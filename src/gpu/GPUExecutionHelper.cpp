@@ -105,6 +105,11 @@ GPUInferenceRunner::CreateExecutionEngine(mlir::ModuleOp module) {
       std::string(LLVM_LIB_DIR) + std::string("lib/libmlir_rocm_runtime.so");
   assert(FileExists(libRocmRuntimePath));
   executionEngineLibs.push_back(libRocmRuntimePath);
+#elif defined(TREEBEARD_INTEL_GPU_SUPPORT)
+  std::string libSyclRuntimePath =
+  std::string(LLVM_LIB_DIR) + std::string("lib/libmlir_sycl_runtime.so");
+  assert(FileExists(libSyclRuntimePath));
+  executionEngineLibs.push_back(libSyclRuntimePath);
 #endif // TREEBEARD_AMD_GPU_SUPPORT
 
   std::string libMLIRRunnerUtilsPath =
