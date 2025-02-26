@@ -37,7 +37,7 @@ using TestException = std::runtime_error;
     bool predicateVal = predicate;                                             \
     if (!predicateVal) {                                                       \
       std::cout << "\nTest_ASSERT Failed : " << #predicate << std::endl;       \
-      assert(false);                                                           \
+     /*assert(false);*/                                                           \
       return false;                                                            \
     }                                                                          \
   }
@@ -150,6 +150,7 @@ void GenerateRandomModelJSONs(const std::string &dirname,
 
 void RunTests();
 void RunSanityTests();
+void RunGPUTests(); 
 void RunXGBoostBenchmarks();
 void RunXGBoostParallelBenchmarks();
 void RunXGBoostGPUBenchmarks();

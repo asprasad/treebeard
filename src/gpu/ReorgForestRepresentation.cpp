@@ -105,6 +105,35 @@ Value GenerateMemrefLoadForLoadFromTile(ConversionPatternRewriter &rewriter,
     return static_cast<Value>(elementVal);
 }
 
+Value GenerateSPIRVLoadForLoadFromTile(ConversionPatternRewriter &rewriter,
+                                       mlir::Location location, Operation *op,
+                                       Value buffer, Value nodeIndex,
+                                       Value treeIndex, int32_t numTrees) {
+  // 1. Index calculation: nodeIndex * numTrees + treeIndex
+  // Create SPIR-V constant for numTrees
+  auto numTreesConst = rewriter.create<spirv::ConstantOp>(
+      location, nodeIndex.getType(),
+      rewriter.getIntegerAttr(nodeIndex.getType(), numTrees));
+
+  // Multiply nodeIndex by numTrees
+  auto numTreesTimesNodeIndex = rewriter.create<spirv::IMulOp>(
+      location, nodeIndex.getType(), nodeIndex, numTreesConst);
+
+  // Add treeIndex to get final offset
+  auto memrefIndex = rewriter.create<spirv::IAddOp>(
+      location, treeIndex.getType(), treeIndex, numTreesTimesNodeIndex);
+
+  // 2. Generate access chain for buffer
+  auto elementPtr = rewriter.create<spirv::AccessChainOp>(
+      location, buffer, static_cast<Value>(memrefIndex));
+
+  // 3. Load from the accessed pointer
+  auto elementVal =
+      rewriter.create<spirv::LoadOp>(location, elementPtr);
+
+  return static_cast<Value>(elementVal);
+}
+
 struct LoadTileThresholdOpLowering : public ConversionPattern {
   decisionforest::ReorgForestRepresentation *m_representation;
   LoadTileThresholdOpLowering(
@@ -136,6 +165,38 @@ struct LoadTileThresholdOpLowering : public ConversionPattern {
   }
 };
 
+struct LoadTileThresholdOpSPIRVLowering : public ConversionPattern {
+  decisionforest::ReorgForestRepresentation *m_representation;
+  LoadTileThresholdOpSPIRVLowering(
+      GPUSPIRVTypeConverter &typeConverter,
+      decisionforest::ReorgForestRepresentation *representation,
+      MLIRContext *ctx)
+      : ConversionPattern(
+            typeConverter,
+            mlir::decisionforest::LoadTileThresholdsOp::getOperationName(),
+            1 /*benefit*/, ctx),
+        m_representation(representation) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    assert(operands.size() == 3);
+    auto loadTileThresholdOp =
+        AssertOpIsOfType<mlir::decisionforest::LoadTileThresholdsOp>(op);
+    auto treeMemrefType =
+        loadTileThresholdOp.getTreeMemref().getType().cast<MemRefType>();
+    auto treeMemrefElementType =
+        treeMemrefType.getElementType()
+            .cast<decisionforest::ReorgMemrefElementType>();
+    auto numTrees = treeMemrefElementType.getNumTrees();
+    auto threshold = GenerateSPIRVLoadForLoadFromTile(
+        rewriter, op->getLoc(), op, operands[0], operands[1], operands[2],
+        numTrees);
+    rewriter.replaceOp(op, static_cast<Value>(threshold));
+    return mlir::success();
+  }
+};
+
 struct LoadTileFeatureIndicesOpLowering : public ConversionPattern {
   decisionforest::ReorgForestRepresentation *m_representation;
   LoadTileFeatureIndicesOpLowering(
@@ -162,6 +223,39 @@ struct LoadTileFeatureIndicesOpLowering : public ConversionPattern {
     auto featureIndex =
         GenerateMemrefLoadForLoadFromTile(rewriter, op->getLoc(), op, operands[0],
                                           operands[1], operands[2], numTrees,  static_cast<const LLVMTypeConverter *>(getTypeConverter()));
+    rewriter.replaceOp(op, static_cast<Value>(featureIndex));
+    return mlir::success();
+  }
+};
+
+struct LoadTileFeatureIndicesOpSPIRVLowering : public ConversionPattern {
+  decisionforest::ReorgForestRepresentation *m_representation;
+  LoadTileFeatureIndicesOpSPIRVLowering(
+      GPUSPIRVTypeConverter &typeConverter,
+      decisionforest::ReorgForestRepresentation *representation,
+      MLIRContext *ctx)
+      : ConversionPattern(
+            typeConverter,
+            mlir::decisionforest::LoadTileFeatureIndicesOp::getOperationName(),
+            1 /*benefit*/, ctx),
+        m_representation(representation) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+
+    assert(operands.size() == 3);
+    auto loadTileFeatureIndexOp =
+        AssertOpIsOfType<mlir::decisionforest::LoadTileFeatureIndicesOp>(op);
+    auto treeMemrefType =
+        loadTileFeatureIndexOp.getTreeMemref().getType().cast<MemRefType>();
+    auto treeMemrefElementType =
+        treeMemrefType.getElementType()
+            .cast<decisionforest::ReorgMemrefElementType>();
+    auto numTrees = treeMemrefElementType.getNumTrees();
+    auto featureIndex = GenerateSPIRVLoadForLoadFromTile(
+        rewriter, op->getLoc(), op, operands[0], operands[1], operands[2],
+        numTrees);
     rewriter.replaceOp(op, static_cast<Value>(featureIndex));
     return mlir::success();
   }
@@ -604,6 +698,13 @@ void ReorgForestRepresentation::AddLLVMConversionPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<LoadTileFeatureIndicesOpLowering, LoadTileThresholdOpLowering>(
       converter, this);
+}
+
+void ReorgForestRepresentation::AddSPIRVConversionPatterns(
+  GPUSPIRVTypeConverter &converter, RewritePatternSet &patterns) {
+patterns.add<LoadTileFeatureIndicesOpSPIRVLowering,
+             LoadTileThresholdOpSPIRVLowering>(
+    converter, this, patterns.getContext());
 }
 
 mlir::Value

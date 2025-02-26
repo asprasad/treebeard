@@ -3454,6 +3454,7 @@ TestDescriptor sanityTestList[] = {
 const size_t numTests = sizeof(testList) / sizeof(testList[0]);
 const size_t numSanityTests =
     sizeof(sanityTestList) / sizeof(sanityTestList[0]);
+const size_t numGPUTests = sizeof(gpuTestList) / sizeof(gpuTestList[0]);
 // void PrintExceptionInfo(std::exception_ptr eptr) {
 // 	try {
 // 		if (eptr) {
@@ -3570,6 +3571,8 @@ void RunIndividualTests(const std::string &individualTestName) {
 void RunTests() { RunTestsImpl(testList, numTests); }
 
 void RunSanityTests() { RunTestsImpl(sanityTestList, numSanityTests); }
+
+void RunGPUTests() { RunTestsImpl(gpuTestList, numGPUTests); }
 
 } // namespace test
 } // namespace TreeBeard

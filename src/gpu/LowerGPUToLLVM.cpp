@@ -139,7 +139,8 @@
 #include "mlir/Conversion/ControlFlowToSPIRV/ControlFlowToSPIRV.h"
 #include "mlir/Dialect/SPIRV/IR/TargetAndABI.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVTypes.h"
-
+#include "mlir/Target/LLVMIR/Dialect/SPIRV/SPIRVToLLVMIRTranslation.h"
+#include "mlir/Dialect/SPIRV/Transforms/Passes.h"
 
 
 #define DEBUG_TYPE "gpu-to-llvm"
@@ -635,12 +636,14 @@ struct LowerGpuOpsToSPIRVPass
            spirv::Capability::Float64, spirv::Capability::Float16,
            spirv::Capability::VectorAnyINTEL,
            spirv::Capability::VectorComputeINTEL,
-           spirv::Capability::Shader});
+           spirv::Capability::Shader,
+           spirv::Capability::StorageBuffer16BitAccess});
 
       auto extensions = std::vector<spirv::Extension>(
           {mlir::spirv::Extension::SPV_KHR_no_integer_wrap_decoration,
            spirv::Extension::SPV_KHR_storage_buffer_storage_class,
            spirv::Extension::SPV_KHR_variable_pointers,
+           spirv::Extension::SPV_KHR_16bit_storage,
            spirv::Extension::SPV_INTEL_vector_compute,
            spirv::Extension::SPV_EXT_shader_atomic_float_min_max});
 
@@ -721,6 +724,7 @@ struct LowerGpuOpsToSPIRVPass
         SPIRVConversionOptions options;
         options.use64bitIndex = true;
         GPUSPIRVTypeConverter typeConverter(targetAttr, options);
+        spirvModule->setAttr(spirv::getTargetEnvAttrName(), targetAttr);
         patterns.add<UnrealizedConversionCastSPIRVLowering>(
             typeConverter, patterns.getContext());
         target.addLegalOp<gpu::GPUModuleOp>();
@@ -1114,6 +1118,8 @@ void registerTranslations(MLIRContext& context) {
   // registerGPUDialectTranslation(registry);
   registerNVVMDialectTranslation(registry);
   registerLLVMDialectTranslation(registry);
+  registerSPIRVDialectTranslation(registry);
+  spirv::registerSPIRVTargetInterfaceExternalModels(registry);
   context.appendDialectRegistry(registry);
 }
 
@@ -1134,9 +1140,10 @@ void LowerGPUToLLVM(
 #ifdef TREEBEARD_NV_GPU_SUPPORT
    pm.addPass(createGpuKernelOutliningPass());
    pm.addPass(memref::createFoldMemRefAliasOpsPass());
-   pm.addPass(mlir::createGpuDecomposeMemrefsPass());
    pm.addPass(memref::createExpandStridedMetadataPass());
    pm.addPass(createLowerAffinePass());
+   pm.addPass(mlir::createGpuDecomposeMemrefsPass());
+
 
    GpuSPIRVAttachTargetOptions spirvOptions;
    auto capabilities = std::vector<std::string>(
@@ -1161,9 +1168,32 @@ void LowerGPUToLLVM(
        std::make_unique<SetSpirvEntryPointABIPass>());
    pm.addNestedPass<gpu::GPUModuleOp>(
        std::make_unique<LowerGpuOpsToSPIRVPass>(representation));
-   pm.addNestedPass<spirv::ModuleOp>(createCanonicalizerPass());
-   pm.addNestedPass<spirv::ModuleOp>(createCSEPass());
-   pm.addNestedPass<spirv::ModuleOp>(createReconcileUnrealizedCastsPass());
+   // Nest into GPU module → SPIR-V module
+   OpPassManager &gpuModulePM = pm.nest<gpu::GPUModuleOp>();
+   OpPassManager &spirvModulePM = gpuModulePM.nest<spirv::ModuleOp>();
+
+   // Add passes to the SPIR-V module level
+   spirvModulePM.addPass(spirv::createSPIRVLowerABIAttributesPass());
+   spirvModulePM.addPass(spirv::createSPIRVUpdateVCEPass());
+   pm.addPass(createCanonicalizerPass());
+   pm.addPass(createCSEPass());
+   pm.addPass(createReconcileUnrealizedCastsPass());
+   registerTranslations(context);
+   pm.addPass(createGpuModuleToBinaryPass());
+   pm.addPass(createConvertSCFToCFPass());
+   pm.addPass(createConvertFuncToLLVMPass());
+   pm.addPass(createLowerAffinePass());
+   pm.addPass(createArithToLLVMConversionPass());
+   pm.addPass(createConvertMathToLLVMPass());
+   ConvertIndexToLLVMPassOptions convertIndexToLLVMPassOpt;
+   convertIndexToLLVMPassOpt.indexBitwidth = 64;
+   pm.addPass(createConvertIndexToLLVMPass(convertIndexToLLVMPassOpt));
+   pm.addPass(createCanonicalizerPass());
+   pm.addPass(createCSEPass());
+   pm.addPass(std::make_unique<GpuToLLVMConversionPass>(representation));
+   pm.addPass(createCanonicalizerPass());
+   pm.addPass(createCSEPass());
+   pm.addPass(createReconcileUnrealizedCastsPass());
 #elif
    // pm.addPass(createConvertSCFToCFPass());
    pm.addPass(createGpuKernelOutliningPass());
