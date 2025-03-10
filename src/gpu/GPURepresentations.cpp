@@ -237,18 +237,20 @@ void GenerateModelMemrefInitializerImpl(const std::string &funcName,
   // Wait and return
   builder.setInsertionPointAfter(gpuLaunch);
 
+  
   // Free all the allocated memrefs
   Value deallocAsyncToken = gpuLaunch.getAsyncToken();
-  for (auto memref : memrefsToFree) {
-    deallocAsyncToken =
-        builder
-            .create<gpu::DeallocOp>(location, asyncTokenType,
-                                    ValueRange{deallocAsyncToken}, memref)
-            .getAsyncToken();
-  }
+//   for (auto memref : memrefsToFree) {
+//     deallocAsyncToken =
+//         builder
+//             .create<gpu::DeallocOp>(location, asyncTokenType,
+//                                     ValueRange{deallocAsyncToken}, memref)
+//             .getAsyncToken();
+//   }
 
   // Wait for gpuLaunch/dealloc to finish.
-  builder.create<gpu::WaitOp>(location, Type(), ValueRange{deallocAsyncToken});
+  auto waitop = builder.create<gpu::WaitOp>(location, Type(), ValueRange{deallocAsyncToken});
+
 
   builder.create<mlir::func::ReturnOp>(
       location, static_cast<Value>(modelMemrefGPUAlloc.getMemref()));

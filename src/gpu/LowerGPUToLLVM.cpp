@@ -994,34 +994,40 @@ class GpuToLLVMConversionPass
     : public GpuToLLVMConversionPassBase<GpuToLLVMConversionPass> {
 
   std::shared_ptr<decisionforest::IRepresentation> m_representation;
+  bool m_kernelBarePtrCallConv;
 
 public:
   GpuToLLVMConversionPass(
-      std::shared_ptr<decisionforest::IRepresentation> representation)
-      : m_representation(representation) {}
+      std::shared_ptr<decisionforest::IRepresentation> representation,
+      bool kernelBarePtrCallConv = false)
+      : m_representation(representation),
+        m_kernelBarePtrCallConv(kernelBarePtrCallConv) {}
 
   GpuToLLVMConversionPass(const GpuToLLVMConversionPass &other)
       : GpuToLLVMConversionPassBase(other),
-        m_representation(other.m_representation) {}
+        m_representation(other.m_representation),
+        m_kernelBarePtrCallConv(other.m_kernelBarePtrCallConv) {}
 
   void getDependentDialects(DialectRegistry &registry) const final {
     Base::getDependentDialects(registry);
     registerConvertToLLVMDependentDialectLoading(registry);
   }
+
   // Run the dialect converter on the module.
   void runOnOperation() override;
 
 private:
-  // Option<std::string> gpuBinaryAnnotation{
-  //     *this, "gpu-binary-annotation",
-  //     llvm::cl::desc("Annotation attribute string for GPU binary"),
-  //     llvm::cl::init(gpu::getDefaultGpuBinaryAnnotation())};
+  Option<bool> kernelBarePtrCallConv{
+      *this, "kernel-bare-ptr-call-conv",
+      llvm::cl::desc("Enable bare pointer calling convention for GPU kernels"),
+      llvm::cl::init(false)};
 };
+
 
 void GpuToLLVMConversionPass::runOnOperation() {
   MLIRContext *context = &getContext();
   LowerToLLVMOptions options(context);
-  options.useBarePtrCallConv = true;
+  options.useBarePtrCallConv = false;
   RewritePatternSet patterns(context);
   ConversionTarget target(*context);
   target.addLegalDialect<LLVM::LLVMDialect>();
@@ -1060,7 +1066,7 @@ void GpuToLLVMConversionPass::runOnOperation() {
   populateMathToLLVMConversionPatterns(converter, patterns);
   populateAsyncStructuralTypeConversionsAndLegality(converter, patterns,
                                                     target);
-  populateGpuToLLVMConversionPatterns(converter, patterns /*, gpuBinaryAnnotation */);
+  populateGpuToLLVMConversionPatterns(converter, patterns, m_kernelBarePtrCallConv);
   populateAffineToStdConversionPatterns(patterns);
   populateMathToLLVMConversionPatterns(converter, patterns);
   decisionforest::populateDebugOpLoweringPatterns(patterns, converter);
@@ -1180,7 +1186,7 @@ void LowerGPUToLLVM(
    pm.addPass(createConvertSCFToCFPass());
    ConvertFuncToLLVMPassOptions funcToLLVMOptions{};
    funcToLLVMOptions.indexBitwidth = 64;
-   funcToLLVMOptions.useBarePtrCallConv = true;
+   funcToLLVMOptions.useBarePtrCallConv = false;
    pm.addPass(createConvertFuncToLLVMPass(funcToLLVMOptions));
    pm.addPass(createLowerAffinePass());
    pm.addPass(createArithToLLVMConversionPass());
@@ -1190,7 +1196,8 @@ void LowerGPUToLLVM(
    pm.addPass(createConvertIndexToLLVMPass(convertIndexToLLVMPassOpt));
    pm.addPass(createCanonicalizerPass());
    pm.addPass(createCSEPass());
-   pm.addPass(std::make_unique<GpuToLLVMConversionPass>(representation));
+   bool kernelBarePtrCallConv = true;
+   pm.addPass(std::make_unique<GpuToLLVMConversionPass>(representation, kernelBarePtrCallConv));
    pm.addPass(createCanonicalizerPass());
    pm.addPass(createCSEPass());
    pm.addPass(createReconcileUnrealizedCastsPass());

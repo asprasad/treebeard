@@ -127,7 +127,6 @@ int32_t GPUArraySparseSerializerBase::CallInitMethod() {
   if (!m_sparseRepresentation) {
     using InitModelPtr_t = ModelMemrefType (*)(ThresholdType *, ThresholdType *, int64_t, int64_t, int64_t, FeatureIndexType *, FeatureIndexType *, int64_t, int64_t, int64_t, TileShapeType *, TileShapeType *, int64_t, int64_t, int64_t);
     auto initModelPtr = GetFunctionAddress<InitModelPtr_t>("Init_Model");
-
     m_modelMemref = initModelPtr(thresholdsMemref.bufferPtr, thresholdsMemref.alignedPtr, thresholdsMemref.offset, thresholdsMemref.lengths[0], thresholdsMemref.strides[0],
                 featureIndexMemref.bufferPtr, featureIndexMemref.alignedPtr, featureIndexMemref.offset, featureIndexMemref.lengths[0], featureIndexMemref.strides[0],
                 tileShapeIDMemref.bufferPtr, tileShapeIDMemref.alignedPtr, tileShapeIDMemref.offset, tileShapeIDMemref.lengths[0], tileShapeIDMemref.strides[0]);
