@@ -142,6 +142,13 @@
 #include "mlir/Target/LLVMIR/Dialect/SPIRV/SPIRVToLLVMIRTranslation.h"
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h"
 #include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
+#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinTypes.h"
+#include "llvm/ADT/SmallVectorExtras.h"
+#include "llvm/Support/FormatVariadic.h"
 
 
 #define DEBUG_TYPE "gpu-to-llvm"
@@ -276,6 +283,11 @@ void SetSpirvEntryPointABIPass::runOnOperation() {
     if (!gpu::GPUDialect::isKernel(gpuFunc) ||
         gpuFunc->getDiscardableAttr(attrName))
       continue;
+
+    // Insert GPU printf at the entry
+    OpBuilder builder(&gpuFunc.front(), gpuFunc.front().begin());
+    builder.create<gpu::PrintfOp>(
+        gpuFunc.getLoc(), "Hello, this is " + gpuFunc.getName().str() + " Entry\n", ValueRange{});
 
     // Determine workgroup size
     SmallVector<int32_t, 3> workgroupSizeVec = {};  // Explicit size

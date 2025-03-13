@@ -146,6 +146,8 @@ ScalarTraverseTileCodeGenerator::ScalarTraverseTileCodeGenerator(
   m_cmpPredicateAttr = cmpPredicateAttr;
 }
 
+mlir::gpu::KernelDim3 GetThreadID(mlir::Operation *op);
+
 bool ScalarTraverseTileCodeGenerator::EmitNext(
     ConversionPatternRewriter &rewriter, Location &location) {
   auto featureIndexType = m_representation->GetIndexElementType();
@@ -167,6 +169,13 @@ bool ScalarTraverseTileCodeGenerator::EmitNext(
     m_loadThresholdOp = rewriter.create<decisionforest::LoadTileThresholdsOp>(
         location, thresholdType, m_representation->GetThresholdsMemref(m_tree),
         static_cast<Value>(m_nodeIndex), treeIndex);
+    auto threadId = GetThreadID(m_tree.getDefiningOp());
+    // rewriter.create<gpu::PrintfOp>(
+    //     location,
+    //     "ThreadID: (%ld, %ld, %ld), Starting Tree: %ld, Node Index: %ld, "
+    //     "LoadTileThresholdsOp 1st: %lf\n",
+    //     ValueRange{threadId.x, threadId.y, threadId.z, treeIndex, m_nodeIndex,
+    //                m_loadThresholdOp.getResult()});
     m_state = kLoadFeatureIndex;
   } break;
   case kLoadFeatureIndex: {
@@ -176,7 +185,13 @@ bool ScalarTraverseTileCodeGenerator::EmitNext(
             location, featureIndexType,
             m_representation->GetFeatureIndexMemref(m_tree),
             static_cast<Value>(m_nodeIndex), treeIndex);
-
+    auto threadId = GetThreadID(m_tree.getDefiningOp());
+    // rewriter.create<gpu::PrintfOp>(
+    //     location,
+    //     "ThreadID: (%ld, %ld, %ld), Starting Tree: %ld, Node Index: %ld, "
+    //     "LoadTileFeatureIndicesOp 2nd: %ld\n",
+    //     ValueRange{threadId.x, threadId.y, threadId.z, treeIndex, m_nodeIndex,
+    //                m_loadFeatureIndexOp});
     m_extraLoads = m_representation->GenerateExtraLoads(location, rewriter,
                                                         m_tree, m_nodeIndex);
     m_state = kLoadFeature;

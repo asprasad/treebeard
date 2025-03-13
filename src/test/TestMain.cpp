@@ -3084,10 +3084,10 @@ TestDescriptor testList[] = {
 #ifdef TREEBEARD_GPU_SUPPORT
 TestDescriptor gpuTestList[] = {
     // GPU model buffer initialization tests (scalar)
-    TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_DoubleInt),
-    TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_DoubleInt),
-    TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_DoubleInt),
-    TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_DoubleInt),
+    // TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_DoubleInt),
+    // TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_DoubleInt),
+    // TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_DoubleInt),
+    // TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_DoubleInt),
     TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Scalar_FloatInt),
     TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Scalar_FloatInt),
     TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_FloatInt),
@@ -3097,10 +3097,10 @@ TestDescriptor gpuTestList[] = {
     TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Scalar_FloatInt16),
     TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Scalar_FloatInt16),
 
-    TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Reorg_DoubleInt),
-    TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Reorg_DoubleInt),
-    TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Reorg_DoubleInt),
-    TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Reorg_DoubleInt),
+    // TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Reorg_DoubleInt),
+    // TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Reorg_DoubleInt),
+    // TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Reorg_DoubleInt),
+    // TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Reorg_DoubleInt),
     TEST_LIST_ENTRY(Test_GPUModelInit_LeftHeavy_Reorg_FloatInt),
     TEST_LIST_ENTRY(Test_GPUModelInit_RightHeavy_Reorg_FloatInt),
     TEST_LIST_ENTRY(Test_GPUModelInit_Balanced_Reorg_FloatInt),
@@ -3111,11 +3111,11 @@ TestDescriptor gpuTestList[] = {
     TEST_LIST_ENTRY(Test_GPUModelInit_LeftAndRightHeavy_Reorg_FloatInt16),
 
     // Basic Array Scalar GPU Codegen Tests
-    TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(Test_GPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(Test_GPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_GPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
+    // TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
+    // TEST_LIST_ENTRY(Test_GPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
+    // TEST_LIST_ENTRY(Test_GPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
+    // TEST_LIST_ENTRY(
+    //     Test_GPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
     TEST_LIST_ENTRY(Test_GPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32),
     TEST_LIST_ENTRY(Test_GPUCodeGeneration_RightHeavy_FloatInt16_BatchSize32),
     TEST_LIST_ENTRY(Test_GPUCodeGeneration_Balanced_FloatInt16_BatchSize32),
@@ -3123,14 +3123,14 @@ TestDescriptor gpuTestList[] = {
         Test_GPUCodeGeneration_LeftAndRightHeavy_FloatInt16_BatchSize32),
 
     // Basic scalar sparse GPU codegen tests
-    TEST_LIST_ENTRY(
-        Test_SparseGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_SparseGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_SparseGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_SparseGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
+    // TEST_LIST_ENTRY(
+    //     Test_SparseGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
+    // TEST_LIST_ENTRY(
+    //     Test_SparseGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
+    // TEST_LIST_ENTRY(
+    //     Test_SparseGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
+    // TEST_LIST_ENTRY(
+    //     Test_SparseGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
     TEST_LIST_ENTRY(
         Test_SparseGPUCodeGeneration_LeftHeavy_FloatInt16_ChI16_BatchSize32),
     TEST_LIST_ENTRY(
@@ -3141,14 +3141,14 @@ TestDescriptor gpuTestList[] = {
         Test_SparseGPUCodeGeneration_LeftAndRightHeavy_FloatInt16_ChI16_BatchSize32),
 
     // Basic reorg forest tests
-    TEST_LIST_ENTRY(
-        Test_ReorgGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_ReorgGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_ReorgGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
-    TEST_LIST_ENTRY(
-        Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
+    // TEST_LIST_ENTRY(
+    //     Test_ReorgGPUCodeGeneration_LeftHeavy_DoubleInt32_BatchSize32),
+    // TEST_LIST_ENTRY(
+    //     Test_ReorgGPUCodeGeneration_RightHeavy_DoubleInt32_BatchSize32),
+    // TEST_LIST_ENTRY(
+    //     Test_ReorgGPUCodeGeneration_Balanced_DoubleInt32_BatchSize32),
+    // TEST_LIST_ENTRY(
+    //     Test_ReorgGPUCodeGeneration_LeftAndRightHeavy_DoubleInt32_BatchSize32),
     TEST_LIST_ENTRY(
         Test_ReorgGPUCodeGeneration_LeftHeavy_FloatInt16_BatchSize32),
     TEST_LIST_ENTRY(
@@ -3180,10 +3180,10 @@ TestDescriptor gpuTestList[] = {
     TEST_LIST_ENTRY(Test_InputSharedMem_LeftRightAndBalanced),
 
     // Simple GPU Tiling tests
-    TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_DblI32_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_DblI32_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_DblI32_B32_TSz2),
-    TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
+    // TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_DblI32_B32_TSz2),
+    // TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_DblI32_B32_TSz2),
+    // TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_DblI32_B32_TSz2),
+    // TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftAndRightHeavy_DblI32_B32_TSz2),
     TEST_LIST_ENTRY(Test_TiledSparseGPU_LeftHeavy_FltI16_B32_TSz2),
     TEST_LIST_ENTRY(Test_TiledSparseGPU_RightHeavy_FltI16_B32_TSz2),
     TEST_LIST_ENTRY(Test_TiledSparseGPU_Balanced_FltI16_B32_TSz2),

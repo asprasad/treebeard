@@ -35,48 +35,112 @@ const int32_t kFeatureIndexElementNumberInTile = 1;
 const int32_t kTileShapeElementNumberInTile = 2;
 const int32_t kChildIndexElementNumberInTile = 3;
 
-std::string convertTypeToString(mlir::Type type) {
-  std::string typeStr;
-  llvm::raw_string_ostream os(typeStr);
-  type.print(os);
-  // The destructor of raw_string_ostream flushes the stream, so no need to call flush manually.
-  return typeStr;
-}
+// From intel IMEX Repo
+class PrintfOpPattern : public mlir::OpConversionPattern<mlir::gpu::PrintfOp> {
+public:
+  using mlir::OpConversionPattern<mlir::gpu::PrintfOp>::OpConversionPattern;
+  mlir::LogicalResult
+  matchAndRewrite(mlir::gpu::PrintfOp gpuPrintfOp, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto loc = gpuPrintfOp.getLoc();
 
-void generateSPIRVPrintfOp(OpBuilder &rewriter, Location location,
-                           Value elementVal, spirv::ModuleOp module,
-                           std::string formatStr) {
-  Type elementType = elementVal.getType();
+    auto funcOp = rewriter.getBlock()
+                      ->getParent()
+                      ->getParentOfType<mlir::spirv::FuncOp>();
 
-  auto insertPoint = rewriter.saveInsertionPoint();
-  OpBuilder::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPointToStart(module.getBody());
+    auto moduleOp = funcOp->getParentOfType<mlir::spirv::ModuleOp>();
 
-  // Create the format string global variable
-  auto formatType = spirv::PointerType::get(
-      spirv::ArrayType::get(rewriter.getIntegerType(8), formatStr.size()),
-      spirv::StorageClass::UniformConstant);
+    const char formatStringPrefix[] = "printfMsg";
+    unsigned stringNumber = 0;
+    mlir::SmallString<16> globalVarName;
+    mlir::spirv::GlobalVariableOp globalVar;
 
-  static int counter = 0;
+    // formulate spirv global variable name
+    do {
+      globalVarName.clear();
+      (formatStringPrefix + llvm::Twine(stringNumber++))
+          .toStringRef(globalVarName);
+    } while (moduleOp.lookupSymbol(globalVarName));
 
-  // Create the global variable for the format string
-  auto formatVar = rewriter.create<spirv::GlobalVariableOp>(
-      location, formatType,
-      rewriter.getStringAttr("_printf_format_" +
-                             convertTypeToString(elementType) +
-                             std::to_string(counter++) + "_" + formatStr));
+    auto i8Type = rewriter.getI8Type();
+    auto i32Type = rewriter.getI32Type();
 
-  rewriter.restoreInsertionPoint(insertPoint);
-  // Get address of the format string
-  auto addressOf = rewriter.create<spirv::AddressOfOp>(
-      location, formatVar.getType(), formatVar.getSymName());
+    unsigned scNum = 0;
+    auto createSpecConstant = [&](unsigned value) {
+      auto attr = rewriter.getI8IntegerAttr(value);
+      mlir::SmallString<16> specCstName;
+      (llvm::Twine(globalVarName) + "_sc" + llvm::Twine(scNum++))
+          .toStringRef(specCstName);
 
-  // Create the printf operation
-  rewriter.create<spirv::CLPrintfOp>(
-      location,
-      rewriter.getI32Type(), // Return type (ignored)
-      addressOf.getPointer(), ValueRange{elementVal});
-}
+      return rewriter.create<mlir::spirv::SpecConstantOp>(
+          loc, rewriter.getStringAttr(specCstName), attr);
+    };
+
+    // define GlobalVarOp with printf format string using SpecConstants
+    // and make composite of SpecConstants
+    {
+      mlir::Operation *parent =
+          mlir::SymbolTable::getNearestSymbolTable(gpuPrintfOp->getParentOp());
+
+      mlir::ConversionPatternRewriter::InsertionGuard guard(rewriter);
+
+      mlir::Block &entryBlock = *parent->getRegion(0).begin();
+      rewriter.setInsertionPointToStart(
+          &entryBlock); // insertion point at module level
+
+      // Create Constituents with SpecConstant to construct
+      // SpecConstantCompositeOp
+      llvm::SmallString<20> formatString(gpuPrintfOp.getFormat());
+      formatString.push_back('\0'); // Null terminate for C
+      mlir::SmallVector<mlir::Attribute, 4> constituents;
+      for (auto c : formatString) {
+        auto cSpecConstantOp = createSpecConstant(c);
+        constituents.push_back(mlir::SymbolRefAttr::get(cSpecConstantOp));
+      }
+
+      // Create specialization constant composite defined via spirv.SpecConstant
+      size_t contentSize = constituents.size();
+      auto globalType = mlir::spirv::ArrayType::get(i8Type, contentSize);
+      mlir::spirv::SpecConstantCompositeOp specCstComposite;
+      mlir::SmallString<16> specCstCompositeName;
+      (llvm::Twine(globalVarName) + "_scc").toStringRef(specCstCompositeName);
+      specCstComposite = rewriter.create<mlir::spirv::SpecConstantCompositeOp>(
+          loc, mlir::TypeAttr::get(globalType),
+          rewriter.getStringAttr(specCstCompositeName),
+          rewriter.getArrayAttr(constituents));
+
+      // Define GlobalVariable initialized from Constant Composite
+      globalVar = rewriter.create<mlir::spirv::GlobalVariableOp>(
+          loc,
+          mlir::spirv::PointerType::get(
+              globalType, mlir::spirv::StorageClass::UniformConstant),
+          globalVarName, mlir::FlatSymbolRefAttr::get(specCstComposite));
+    }
+
+    // Get SSA value of Global variable
+    mlir::Value globalPtr =
+        rewriter.create<mlir::spirv::AddressOfOp>(loc, globalVar);
+
+    mlir::Value fmtStr = rewriter.create<mlir::spirv::BitcastOp>(
+        loc,
+        mlir::spirv::PointerType::get(
+            i8Type, mlir::spirv::StorageClass::UniformConstant),
+        globalPtr);
+
+    // Get printf arguments
+    auto argsRange = adaptor.getArgs();
+    mlir::SmallVector<mlir::Value, 4> printfArgs;
+    printfArgs.reserve(argsRange.size() + 1);
+    printfArgs.append(argsRange.begin(), argsRange.end());
+
+    rewriter.create<mlir::spirv::CLPrintfOp>(loc, i32Type, fmtStr, printfArgs);
+
+    rewriter.eraseOp(gpuPrintfOp);
+
+    return mlir::success();
+  }
+};
+
 
 void generateSPIRVGetElementPtr(Operation *op, ArrayRef<Value> operands,
                                 ConversionPatternRewriter &rewriter,
@@ -1390,6 +1454,7 @@ void ArrayBasedRepresentation::AddSPIRVConversionPatterns(
                ReinterpretToI32AndLoadElementSPIRVLowering,
                ReinterpretToI32AndStoreElementSPIRVLowering>(
       converter, patterns.getContext());
+  patterns.add<PrintfOpPattern>(converter, patterns.getContext());
 }
 
 void ArrayBasedRepresentation::LowerCacheRowsOp(

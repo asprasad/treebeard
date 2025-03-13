@@ -206,10 +206,14 @@ void GenerateModelMemrefInitializerImpl(const std::string &funcName,
       builder.create<arith::ConstantIndexOp>(location, numBlocks);
   auto numThreadsPerBlockConst =
       builder.create<arith::ConstantIndexOp>(location, numThreadsPerBlock);
+  // Wait for all the transfers and allocs before the gpu.launch to finish
+  auto waitForTransfersAndAllocs = builder.create<gpu::WaitOp>(
+      location, Type(), ValueRange{currentAsyncToken});
+  currentAsyncToken = waitForTransfersAndAllocs.getAsyncToken();
   auto gpuLaunch = builder.create<gpu::LaunchOp>(
       location, numThreadBlocksConst, oneIndexConst, oneIndexConst,
       numThreadsPerBlockConst, oneIndexConst, oneIndexConst, nullptr,
-      asyncTokenType, currentAsyncToken);
+      nullptr, ValueRange{});
 
   builder.setInsertionPointToStart(&gpuLaunch.getBody().front());
 
@@ -239,7 +243,7 @@ void GenerateModelMemrefInitializerImpl(const std::string &funcName,
 
   
   // Free all the allocated memrefs
-  Value deallocAsyncToken = gpuLaunch.getAsyncToken();
+//   Value deallocAsyncToken = gpuLaunch.getAsyncToken();
 //   for (auto memref : memrefsToFree) {
 //     deallocAsyncToken =
 //         builder
@@ -249,7 +253,8 @@ void GenerateModelMemrefInitializerImpl(const std::string &funcName,
 //   }
 
   // Wait for gpuLaunch/dealloc to finish.
-  auto waitop = builder.create<gpu::WaitOp>(location, Type(), ValueRange{deallocAsyncToken});
+  auto waitop = builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()),
+  ValueRange{});
 
 
   builder.create<mlir::func::ReturnOp>(
