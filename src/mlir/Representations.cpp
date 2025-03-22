@@ -2177,7 +2177,7 @@ void SparseRepresentation::AddLLVMConversionPatterns(
 void SparseRepresentation::AddSPIRVConversionPatterns(
     GPUSPIRVTypeConverter &converter, RewritePatternSet &patterns) {
 
-  llvm_unreachable("Unsupported Op conversions");
+  // llvm_unreachable("Unsupported Op conversions");
   patterns.add<LoadTileFeatureIndicesOpSPIRVLowering,
                LoadTileThresholdOpSPIRVLowering, InitTileOpSPIRVLowering,
                ReinterpretToI32AndLoadElementSPIRVLowering,
@@ -2186,6 +2186,7 @@ void SparseRepresentation::AddSPIRVConversionPatterns(
       converter, patterns.getContext());
   auto childIndexElementNum = GetTileSize() == 1 ? 2 : 3;
   patterns.add<LoadChildIndexOpSPIRVLowering>(converter, patterns.getContext(), childIndexElementNum);
+  patterns.add<PrintfOpPattern>(converter, patterns.getContext());
 }
 
 mlir::Value SparseRepresentation::GetTreeIndex(Value tree) {

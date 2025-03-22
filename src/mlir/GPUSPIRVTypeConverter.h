@@ -33,16 +33,19 @@ public:
         // Retrieve field types
         auto thresholdType = TileType.getThresholdFieldType();
         auto indexType = TileType.getIndexFieldType();
+        auto childIndexType = TileType.getChildIndexType();
+        auto tileShapeIDType = TileType.getTileShapeType();
+
         Type structType = nullptr;
         // SPIR-V type construction logic
         if (TileType.getTileSize() == 1) {
           // Construct a SPIR-V struct type for a single-tile node
-          structType = spirv::StructType::get({thresholdType, indexType});
+          structType = spirv::StructType::get({thresholdType, indexType, childIndexType});
         } else {
           // Retrieve additional type for multi-tile nodes
           auto tileShapeIDType = TileType.getTileShapeType();
           structType = spirv::StructType::get(
-              {thresholdType, indexType, tileShapeIDType});
+              {thresholdType, indexType, tileShapeIDType, childIndexType});
         }
 
         unsigned int size = 1;
