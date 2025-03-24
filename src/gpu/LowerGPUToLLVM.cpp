@@ -1,7 +1,7 @@
 #ifdef TREEBEARD_GPU_SUPPORT
 
 #include <optional>
-
+#include "mlir/Dialect/GPU/TransformOps/GPUTransformOps.h"
 #include "mlir/Conversion/AMDGPUToROCDL/AMDGPUToROCDL.h"
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
@@ -393,6 +393,72 @@ public:
   }
 };
 
+FlatSymbolRefAttr getOrInsertSPIRVCacheOpSyncFunc(std::string &functionName,
+                                                  PatternRewriter &rewriter,
+                                                  gpu::GPUModuleOp module) {
+  auto *context = module.getContext();
+  if (module.lookupSymbol<spirv::FuncOp>(functionName))
+    return SymbolRefAttr::get(context, functionName);
+
+  // Define the function type: void function with no arguments
+  auto funcType = rewriter.getFunctionType({}, {});
+
+  PatternRewriter::InsertionGuard insertGuard(rewriter);
+  rewriter.setInsertionPointToStart(module.getBody());
+  auto func =
+      rewriter.create<spirv::FuncOp>(module.getLoc(), functionName, funcType);
+
+  // Create the entry block
+  auto &entryBlock = *func.addEntryBlock();
+  rewriter.setInsertionPointToStart(&entryBlock);
+
+  // Insert a control barrier
+  rewriter.create<gpu::BarrierOp>(module.getLoc());
+
+  // Return operation
+  rewriter.create<spirv::ReturnOp>(module.getLoc());
+  return SymbolRefAttr::get(context, functionName);
+}
+
+class CacheOpBeginOpSPIRVLowering : public OpConversionPattern<CacheOpBeginOp> {
+public:
+  using OpConversionPattern<CacheOpBeginOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(CacheOpBeginOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto parentModule = op->getParentOfType<gpu::GPUModuleOp>();
+    std::string functionName = "CacheOpBeginBarrierFunc";
+    auto syncFunctionRef =
+        getOrInsertSPIRVCacheOpSyncFunc(functionName, rewriter, parentModule);
+
+    rewriter.create<spirv::FunctionCallOp>(op->getLoc(), TypeRange{},
+                                           syncFunctionRef, ValueRange{});
+
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
+
+class CacheOpEndOpSPRIVLowering : public OpConversionPattern<CacheOpEndOp> {
+public:
+  using OpConversionPattern<CacheOpEndOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(CacheOpEndOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto parentModule = op->getParentOfType<gpu::GPUModuleOp>();
+    std::string functionName = "CacheOpEndBarrierFunc";
+    auto syncFunctionRef =
+        getOrInsertSPIRVCacheOpSyncFunc(functionName, rewriter, parentModule);
+
+    rewriter.create<spirv::FunctionCallOp>(op->getLoc(), TypeRange{},
+                                           syncFunctionRef, ValueRange{});
+
+    rewriter.eraseOp(op);
+    return mlir::success();
+  }
+};
 
 class UnrealizedConversionCastSPIRVLowering
     : public OpConversionPattern<UnrealizedConversionCastOp> {
@@ -443,6 +509,18 @@ public:
     return failure();
   }
 };
+
+/// Converts a MemRef type to an equivalent SPIR-V global variable type
+static Type
+convertGlobalMemrefTypeToSPIRV(MemRefType type,
+                               const SPIRVTypeConverter &typeConverter) {
+  Type elementType = typeConverter.convertType(type.getElementType());
+  Type arrayTy = elementType;
+  for (int64_t dim : llvm::reverse(type.getShape()))
+    arrayTy = spirv::ArrayType::get(arrayTy, dim);
+  return arrayTy;
+}
+
 
 template <typename DerivedT>
 class LowerGpuOpsToTargetBase : public ::mlir::OperationPass<gpu::GPUModuleOp> {
@@ -703,6 +781,7 @@ struct LowerGpuOpsToSPIRVPass
       RewritePatternSet &patterns, GPUSPIRVTypeConverter &typeConverter,
       MLIRContext *context, std::shared_ptr<decisionforest::IRepresentation> m_representation) override {
     populateMMAToSPIRVCoopMatrixTypeConversion(typeConverter);
+    populateGpuEliminateBarriersPatterns(patterns);
     populateGPUToSPIRVPatterns(typeConverter, patterns);
     populateGpuWMMAToSPIRVCoopMatrixKHRConversionPatterns(typeConverter,
                                                           patterns);
@@ -716,6 +795,8 @@ struct LowerGpuOpsToSPIRVPass
     patterns.add<ExtractStridedMetadataOpSPIRVLowering,
                  UnrealizedConversionCastSPIRVLowering>(typeConverter,
                                                         patterns.getContext());
+    patterns.add<CacheOpBeginOpSPIRVLowering>(typeConverter, patterns.getContext());
+    patterns.add<CacheOpEndOpSPRIVLowering>(typeConverter, patterns.getContext());
 
     return LogicalResult::success();
   }
