@@ -518,7 +518,9 @@ struct LoadChildIndexOpSPIRVLowering : public ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     assert(operands.size() == 2);
-    llvm_unreachable("LoadChildIndexOpSPIRVLowering not supported");
+    generateSPIRVLoadStructElement(op, operands, rewriter,
+                                   kFeatureIndexElementNumberInTile);
+    // llvm_unreachable("LoadChildIndexOpSPIRVLowering not supported");
     // generateLoadStructElement(op, operands, rewriter,
     // m_childIndexElementNumber,
     //                           static_cast<const LLVMTypeConverter
@@ -653,7 +655,10 @@ struct InitTileOpSPIRVLowering : public ConversionPattern {
     auto modelMemrefType = op->getOperand(0).getType().cast<MemRefType>();
     auto tileType = modelMemrefType.getElementType()
                         .cast<decisionforest::TiledNumericalNodeType>();
-    assert(tileType.getTileSize() <= 1);
+    if (tileType.getTileSize() > 1) {
+      llvm_unreachable(
+          "InitTileOpSPIRVLowering not supported for getTileSize() > 1 ");
+    }
     // if (tileType.getTileSize() > 1)
     //   generateStoreStructElement(
     //       op, operands, rewriter, tileOpAdaptor.getTileShapeID().getType(),
@@ -717,8 +722,21 @@ struct InitSparseTileOpSPIRVLowering : public ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     assert(operands.size() == 6);
-    llvm_unreachable(
-      "InitSparseTileOpSPIRVLowering not supported");
+    decisionforest::InitSparseTileOpAdaptor tileOpAdaptor(operands);
+    generateSPIRVStoreStructElement(op, operands, rewriter, 0, tileOpAdaptor.getThresholds());
+    generateSPIRVStoreStructElement(op, operands, rewriter, 1, tileOpAdaptor.getFeatureIndices());
+    auto modelMemrefType = op->getOperand(0).getType().cast<MemRefType>();
+    auto tileType = modelMemrefType.getElementType()
+                        .cast<decisionforest::TiledNumericalNodeType>();
+    if (tileType.getTileSize() > 1) {
+      llvm_unreachable("InitSparseTileOpSPIRVLowering not supported for getTileSize() > 1 ");
+    } else {
+      // When tile size is 1, we don't store the tile shape, so child index is
+      // element 2.
+      generateSPIRVStoreStructElement(op, operands, rewriter, 2,
+                                      tileOpAdaptor.getChildIndex());
+    }
+    rewriter.eraseOp(op);
     return mlir::success();
   }
 };
