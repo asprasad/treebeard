@@ -395,7 +395,7 @@ public:
 
 FlatSymbolRefAttr getOrInsertSPIRVCacheOpSyncFunc(std::string &functionName,
                                                   PatternRewriter &rewriter,
-                                                  gpu::GPUModuleOp module) {
+                                                  mlir::spirv::ModuleOp module) {
   auto *context = module.getContext();
   if (module.lookupSymbol<spirv::FuncOp>(functionName))
     return SymbolRefAttr::get(context, functionName);
@@ -427,7 +427,7 @@ public:
   LogicalResult
   matchAndRewrite(CacheOpBeginOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto parentModule = op->getParentOfType<gpu::GPUModuleOp>();
+    auto parentModule = op->getParentOfType<mlir::spirv::ModuleOp>();
     std::string functionName = "CacheOpBeginBarrierFunc";
     auto syncFunctionRef =
         getOrInsertSPIRVCacheOpSyncFunc(functionName, rewriter, parentModule);
@@ -447,7 +447,7 @@ public:
   LogicalResult
   matchAndRewrite(CacheOpEndOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto parentModule = op->getParentOfType<gpu::GPUModuleOp>();
+    auto parentModule = op->getParentOfType<mlir::spirv::ModuleOp>();
     std::string functionName = "CacheOpEndBarrierFunc";
     auto syncFunctionRef =
         getOrInsertSPIRVCacheOpSyncFunc(functionName, rewriter, parentModule);
@@ -460,19 +460,96 @@ public:
   }
 };
 
+class GlobalMemrefOpSPIRVLowering
+    : public OpConversionPattern<memref::GlobalOp> {
+public:
+  using OpConversionPattern<memref::GlobalOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::GlobalOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto globalOp = cast<memref::GlobalOp>(op);
+    MemRefType memRefType = cast<MemRefType>(globalOp.getType());
+
+    auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+    auto attr =
+        dyn_cast_or_null<spirv::StorageClassAttr>(memRefType.getMemorySpace());
+    spirv::StorageClass storageClass = attr.getValue();
+    Type arrayType = typeConverter.convertType(memRefType);
+
+    mlir::Operation *parent =
+        mlir::SymbolTable::getNearestSymbolTable(globalOp->getParentOp());
+
+    mlir::ConversionPatternRewriter::InsertionGuard guard(rewriter);
+
+    mlir::Block &entryBlock = *parent->getRegion(0).begin();
+    rewriter.setInsertionPointToStart(
+        &entryBlock); // insertion point at module level
+
+   // Determine initial value (FlatSymbolRefAttr for SPIR-V)
+   FlatSymbolRefAttr initialValueAttr = nullptr;
+
+    // Define SPIR-V Global Variable
+    auto newGlobalVar = rewriter.create<spirv::GlobalVariableOp>(
+      globalOp.getLoc(), arrayType, globalOp.getSymNameAttr(), initialValueAttr);
+
+    rewriter.replaceOp(op, newGlobalVar);
+    return mlir::success();
+  }
+};
+
+class GetGlobalMemrefOpLowering
+    : public OpConversionPattern<memref::GetGlobalOp> {
+public:
+  using OpConversionPattern<memref::GetGlobalOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(memref::GetGlobalOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto getGlobalOp = cast<memref::GetGlobalOp>(op);
+    MemRefType memRefType = cast<MemRefType>(getGlobalOp.getResult().getType());
+
+    auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+    auto attr =
+        dyn_cast_or_null<spirv::StorageClassAttr>(memRefType.getMemorySpace());
+    spirv::StorageClass storageClass = attr.getValue();
+    Type arrayType = typeConverter.convertType(memRefType);
+
+
+    Type ptrTy = spirv::PointerType::get(arrayType, storageClass);
+    // Get SSA value of Global variable
+    mlir::Value globalPtr = rewriter.create<mlir::spirv::AddressOfOp>(
+        op->getLoc(), arrayType, getGlobalOp.getName());
+
+    // Get the address of the first element in the array by creating a GEP with
+    // the address of the GV as the base, and (rank + 1) number of 0 indices.
+    Value i32Index = rewriter.create<spirv::ConstantOp>(
+      op->getLoc(), rewriter.getI32Type(),
+        rewriter.getI32IntegerAttr(0) // Index 1 for the i32 field
+    );
+
+    // Compute the pointer to the first element using spirv::AccessChainOp
+    SmallVector<Value, 2> indices = {i32Index, i32Index};
+    // auto gep =
+    //     rewriter.create<spirv::AccessChainOp>(op->getLoc(), globalPtr, i32Index);
+    rewriter.replaceOp(op, globalPtr);
+    return mlir::success();
+  }
+};
+
 class UnrealizedConversionCastSPIRVLowering
     : public OpConversionPattern<UnrealizedConversionCastOp> {
 public:
-  using OpConversionPattern<
-      UnrealizedConversionCastOp>::OpConversionPattern;
+  using OpConversionPattern<UnrealizedConversionCastOp>::OpConversionPattern;
 
-  LogicalResult matchAndRewrite(UnrealizedConversionCastOp op,
-                                OpAdaptor adaptor,
-                                ConversionPatternRewriter &rewriter) const override {
+  LogicalResult
+  matchAndRewrite(UnrealizedConversionCastOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
     // Get the input operand
     Value input = op.getOperand(0);
     Type inputType = input.getType();
     Type resultType = op.getResult(0).getType();
+    auto srcValue = adaptor.getOperands()[0];
 
     // Case 1: Handle pointer cast
     if (auto inputPtrType = inputType.dyn_cast<spirv::PointerType>()) {
@@ -502,6 +579,14 @@ public:
     if (inputType.isInteger(64) && resultType.isIndex()) {
       // Replace the cast with the input value directly
       rewriter.replaceOp(op, input);
+      return success();
+    }
+
+    // Case 3: (!decisionforest<ReorgMemrefElementType(f32, 4)>) ->
+    // !decisionforest<ReorgMemrefElementType(f32, 2)
+    if (auto inputPtrType =
+            inputType.dyn_cast<decisionforest::ReorgMemrefElementType>()) {
+      rewriter.replaceOp(op, srcValue);
       return success();
     }
 
@@ -727,7 +812,8 @@ struct LowerGpuOpsToSPIRVPass
            spirv::Capability::VectorAnyINTEL,
            spirv::Capability::VectorComputeINTEL,
            spirv::Capability::Shader,
-           spirv::Capability::StorageBuffer16BitAccess});
+           spirv::Capability::StorageBuffer16BitAccess,
+           spirv::Capability::GroupNonUniformShuffle});
 
       auto extensions = std::vector<spirv::Extension>(
           {mlir::spirv::Extension::SPV_KHR_no_integer_wrap_decoration,
@@ -782,10 +868,11 @@ struct LowerGpuOpsToSPIRVPass
       MLIRContext *context, std::shared_ptr<decisionforest::IRepresentation> m_representation) override {
     populateMMAToSPIRVCoopMatrixTypeConversion(typeConverter);
     populateGpuEliminateBarriersPatterns(patterns);
+    mlir::populateGpuShufflePatterns(patterns);
     populateGPUToSPIRVPatterns(typeConverter, patterns);
     populateGpuWMMAToSPIRVCoopMatrixKHRConversionPatterns(typeConverter,
                                                           patterns);
-
+    mlir::arith::populateArithExpandOpsPatterns(patterns);
     mlir::arith::populateArithToSPIRVPatterns(typeConverter, patterns);
     populateMemRefToSPIRVPatterns(typeConverter, patterns);
     populateFuncToSPIRVPatterns(typeConverter, patterns);
@@ -793,10 +880,13 @@ struct LowerGpuOpsToSPIRVPass
     // m_representation->AddTypeConversions(context, typeConverter);
     m_representation->AddSPIRVConversionPatterns(typeConverter, patterns);
     patterns.add<ExtractStridedMetadataOpSPIRVLowering,
-                 UnrealizedConversionCastSPIRVLowering>(typeConverter,
-                                                        patterns.getContext());
-    patterns.add<CacheOpBeginOpSPIRVLowering>(typeConverter, patterns.getContext());
-    patterns.add<CacheOpEndOpSPRIVLowering>(typeConverter, patterns.getContext());
+                 UnrealizedConversionCastSPIRVLowering,
+                 GlobalMemrefOpSPIRVLowering, GetGlobalMemrefOpLowering>(
+        typeConverter, patterns.getContext());
+    patterns.add<CacheOpBeginOpSPIRVLowering>(typeConverter,
+                                              patterns.getContext());
+    patterns.add<CacheOpEndOpSPRIVLowering>(typeConverter,
+                                            patterns.getContext());
 
     return LogicalResult::success();
   }
@@ -1294,6 +1384,7 @@ void LowerGPUToLLVM(
    pm.addPass(createCanonicalizerPass());
    pm.addPass(createCSEPass());
    pm.addPass(createReconcileUnrealizedCastsPass());
+   pm.addPass(createCanonicalizerPass());
 #elif
    // pm.addPass(createConvertSCFToCFPass());
    pm.addPass(createGpuKernelOutliningPass());

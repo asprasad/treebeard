@@ -247,11 +247,6 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
         gpuLaunchOp = launchOp;
       });
 
-      auto waitOp = builder.create<gpu::WaitOp>(
-          location, gpu::AsyncTokenType::get(module.getContext()),
-          ValueRange{});
-      Value waitToken = waitOp.getAsyncToken();
-
       llvm::DenseMap<Value, Value> cpuToGpuMemrefMap, gpuToCpuMemrefMap;
 
       // Generate input transfers.
@@ -260,13 +255,11 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
       // of them using the gpu::WaitOp
       for (auto &transferToGpu : requiresTransferToGpu) {
         auto inputAlloc = builder.create<gpu::AllocOp>(
-            location, transferToGpu.getType(), waitToken.getType(),
-            ValueRange{waitToken}, ValueRange{}, ValueRange{});
-        auto inputTransfer = builder.create<gpu::MemcpyOp>(
-            location, inputAlloc.getAsyncToken().getType(),
-            ValueRange{inputAlloc.getAsyncToken()}, inputAlloc.getMemref(),
-            static_cast<Value>(transferToGpu));
-        waitToken = inputTransfer.getAsyncToken();
+            location, transferToGpu.getType(), Type(),
+            ValueRange(), ValueRange(), ValueRange(), true);
+        auto inputTransfer = builder.create<memref::CopyOp>(
+            location, static_cast<Value>(transferToGpu),
+            inputAlloc.getMemref());
         cpuToGpuMemrefMap[transferToGpu] = inputAlloc.getMemref();
 
         if (requiresTransferFromGpu.contains(transferToGpu)) {
@@ -276,31 +269,24 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
 
       for (auto &allocAndMemsetOnGpu : requiresAllocAndMemsetOnGpu) {
         auto inputAlloc = builder.create<gpu::AllocOp>(
-            location, allocAndMemsetOnGpu.first.getType(), waitToken.getType(),
-            ValueRange{waitToken}, ValueRange{}, ValueRange{});
+            location, allocAndMemsetOnGpu.first.getType(), Type(),
+            ValueRange(), ValueRange(), ValueRange(), true);
 
-        auto fillOp = allocAndMemsetOnGpu.second;
-        auto inputTransfer = builder.create<gpu::MemsetOp>(
-            location, inputAlloc.getAsyncToken().getType(),
-            ValueRange{inputAlloc.getAsyncToken()}, inputAlloc.getMemref(),
-            fillOp.getOperand(0));
-        waitToken = inputTransfer.getAsyncToken();
+        // auto fillOp = allocAndMemsetOnGpu.second;
+        // auto inputTransfer = builder.create<gpu::MemsetOp>(
+        //     location, Type(), ValueRange(), inputAlloc.getMemref(),
+        //     fillOp.getOperand(0));
         cpuToGpuMemrefMap[allocAndMemsetOnGpu.first] = inputAlloc.getMemref();
       }
 
       // Wait for all the transfers and allocs before the gpu.launch to finish
-      /*auto waitForTransfersAndAllocs =*/builder.create<gpu::WaitOp>(
-          location, Type(), ValueRange{waitToken});
+      /*auto waitForTransfersAndAllocs =*/
 
       // Add the transfers as an async dependency to the gpu.launch op.
       // gpuLaunchOp.addAsyncDependency(waitToken);
 
       builder.setInsertionPointAfter(gpuLaunchOp.getOperation());
 
-      auto waitForGpuKernel = builder.create<gpu::WaitOp>(
-          location, gpu::AsyncTokenType::get(module.getContext()),
-          ValueRange{});
-      waitToken = waitForGpuKernel.getAsyncToken();
       // waitToken = gpuLaunchOp.getAsyncToken();
 
       // Copy out any values that are needed by the CPU.
@@ -308,9 +294,8 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
         auto cpuMemRef = cpuGpuPair.first;
         auto gpuMemRef = cpuGpuPair.second;
 
-        auto outputTransfer = builder.create<gpu::MemcpyOp>(
-            location, waitToken.getType(), waitToken, cpuMemRef, gpuMemRef);
-        waitToken = outputTransfer.getAsyncToken();
+        auto outputTransfer =
+            builder.create<memref::CopyOp>(location, gpuMemRef, cpuMemRef);
       }
 
       // auto waitForTransfers = builder.create<gpu::WaitOp>(location,
@@ -327,7 +312,6 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
       // }
 
       // wait for final dealloc.
-      builder.create<gpu::WaitOp>(location, Type(), waitToken);
 
       ReplaceCPUReferencesWithGPUMemref(cpuToGpuMemrefMap);
 

@@ -20,7 +20,8 @@ public:
       spirv::TargetEnvAttr &localTargetAttr = this->targetAttr;
       SPIRVConversionOptions &localOptions = this->options;
       SPIRVTypeConverter spirvTypeConverter(localTargetAttr, localOptions);
-      auto attr = dyn_cast_or_null<spirv::StorageClassAttr>(memRefType.getMemorySpace());
+      auto attr = dyn_cast_or_null<spirv::StorageClassAttr>(
+          memRefType.getMemorySpace());
       spirv::StorageClass storageClass = attr.getValue();
       Type elementType = memRefType.getElementType();
       auto TileType =
@@ -40,7 +41,8 @@ public:
         // SPIR-V type construction logic
         if (TileType.getTileSize() == 1) {
           // Construct a SPIR-V struct type for a single-tile node
-          structType = spirv::StructType::get({thresholdType, indexType, childIndexType});
+          structType = spirv::StructType::get(
+              {thresholdType, indexType, childIndexType});
         } else {
           // Retrieve additional type for multi-tile nodes
           auto tileShapeIDType = TileType.getTileShapeType();
@@ -54,12 +56,12 @@ public:
           size = memRefType.getDimSize(0);
           auto tileSize = TileType.getTileSize();
           auto arrayType = spirv::ArrayType::get(structType, size * tileSize);
-          Type convertedMemRefType = spirv::PointerType::get(
-              arrayType, storageClass);
+          Type convertedMemRefType =
+              spirv::PointerType::get(arrayType, storageClass);
           return convertedMemRefType;
         } else {
-          Type convertedMemRefType = spirv::PointerType::get(
-              structType, storageClass);
+          Type convertedMemRefType =
+              spirv::PointerType::get(structType, storageClass);
           return convertedMemRefType;
         }
       } else if (ReorgType) {
@@ -69,17 +71,24 @@ public:
         if (memRefType.hasStaticShape() && rank) {
           size = memRefType.getDimSize(0);
           auto arrayType = spirv::ArrayType::get(elemType, size);
-          Type convertedMemRefType = spirv::PointerType::get(
-              arrayType, storageClass);
+          Type convertedMemRefType =
+              spirv::PointerType::get(arrayType, storageClass);
           return convertedMemRefType;
         } else {
-          Type convertedMemRefType = spirv::PointerType::get(
-              elemType, storageClass);
+          Type convertedMemRefType =
+              spirv::PointerType::get(elemType, storageClass);
           return convertedMemRefType;
         }
       }
       return spirvTypeConverter.convertType(memRefType);
     });
+    addConversion(
+        [this](decisionforest::ReorgMemrefElementType reorgType) -> Type {
+          auto elemType = reorgType.getElementType();
+          spirv::StorageClass storageClass = spirv::StorageClass::Workgroup;
+          return elemType;
+          // return spirv::PointerType::get(elemType, storageClass);
+        });
   }
 
 private:

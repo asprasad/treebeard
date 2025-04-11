@@ -4,7 +4,7 @@ SCRIPTPATH=`dirname $SCRIPT`
 TREEBEARD_DIR=`dirname $SCRIPTPATH`
 echo "Using Treebeard rooted at : $TREEBEARD_DIR"
 
-BUILD_DIR="build"
+BUILD_DIR="debug_build"
 
 while getopts "m:" opt
 do

@@ -650,7 +650,7 @@ bool GPUVectorTraverseTileCodeGenerator::EmitNext(
     // Cast m_tileSizeConst to i32
     // auto tileSizeConstI32 = rewriter.create<arith::IndexCastOp>(
     //     location, rewriter.getI32Type(), m_tileSizeConst);
-    auto numThreads = std::min(
+    auto numThreads = std::max(
         32, static_cast<int32_t>(
                 decisionforest::GetNumberOfThreadsInThreadBlock(gpuLaunchOp)));
     auto width = rewriter.create<arith::ConstantIntOp>(location, numThreads,

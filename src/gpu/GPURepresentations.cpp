@@ -135,66 +135,58 @@ void GenerateModelMemrefInitializerImpl(const std::string &funcName,
 
   std::vector<Value> memrefsToFree;
   // Allocate the model memref
-  auto waitOp = builder.create<gpu::WaitOp>(
-      location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{});
-  auto modelMemrefGPUAlloc = builder.create<gpu::AllocOp>(
-      location, memrefType, waitOp.getAsyncToken().getType(),
-      ValueRange{waitOp.getAsyncToken()}, ValueRange{}, ValueRange{});
 
-  auto asyncTokenType = modelMemrefGPUAlloc.getAsyncToken().getType();
+  auto modelMemrefGPUAlloc = builder.create<gpu::AllocOp>(
+      location, memrefType, Type(),
+      ValueRange(), ValueRange(), ValueRange(), true);
+
+//   auto asyncTokenType = modelMemrefGPUAlloc.getAsyncToken().getType();
   // Allocate and transfer all the arguments
   auto allocThresholds = builder.create<gpu::AllocOp>(
-      location, thresholdArgType, asyncTokenType,
-      ValueRange{modelMemrefGPUAlloc.getAsyncToken()}, ValueRange{},
-      ValueRange{});
+      location, thresholdArgType, Type(),
+      ValueRange(), ValueRange(), ValueRange(), true);
 
   memrefsToFree.push_back(allocThresholds.getMemref());
-  auto transferThresholds = builder.create<gpu::MemcpyOp>(
-      location, asyncTokenType, ValueRange{allocThresholds.getAsyncToken()},
-      allocThresholds.getMemref(),
-      static_cast<Value>(initModelMemrefFunc.getArgument(0)));
+  auto transferThresholds = builder.create<memref::CopyOp>(
+      location, static_cast<Value>(initModelMemrefFunc.getArgument(0)),
+      allocThresholds.getMemref());
 
   auto allocFeatureIndices = builder.create<gpu::AllocOp>(
-      location, indexArgType, asyncTokenType,
-      ValueRange{transferThresholds.getAsyncToken()}, ValueRange{},
-      ValueRange{});
+      location, indexArgType, Type(),
+      ValueRange(), ValueRange(), ValueRange(), true);
   memrefsToFree.push_back(allocFeatureIndices.getMemref());
 
-  auto transferFeatureIndices = builder.create<gpu::MemcpyOp>(
-      location, asyncTokenType, ValueRange{allocFeatureIndices.getAsyncToken()},
-      allocFeatureIndices.getMemref(),
-      static_cast<Value>(initModelMemrefFunc.getArgument(1)));
+  auto transferFeatureIndices = builder.create<memref::CopyOp>(
+      location, static_cast<Value>(initModelMemrefFunc.getArgument(1)),
+      allocFeatureIndices.getMemref());
 
-  Value currentAsyncToken = transferFeatureIndices.getAsyncToken();
+//   Value currentAsyncToken = transferFeatureIndices.getAsyncToken();
   mlir::gpu::AllocOp allocTileShapeIds;
-  mlir::gpu::MemcpyOp transferTileShapeIds;
+  mlir::memref::CopyOp transferTileShapeIds;
   if (tileSize != 1) {
     allocTileShapeIds = builder.create<gpu::AllocOp>(
-        location, tileShapeIDArgType, asyncTokenType,
-        ValueRange{transferFeatureIndices.getAsyncToken()}, ValueRange{},
-        ValueRange{});
+        location, tileShapeIDArgType, Type(),
+        ValueRange(), ValueRange(), ValueRange(), true);
     memrefsToFree.push_back(allocTileShapeIds.getMemref());
 
-    transferTileShapeIds = builder.create<gpu::MemcpyOp>(
-        location, asyncTokenType, ValueRange{allocTileShapeIds.getAsyncToken()},
-        allocTileShapeIds.getMemref(),
-        static_cast<Value>(initModelMemrefFunc.getArgument(2)));
-    currentAsyncToken = transferTileShapeIds.getAsyncToken();
+    transferTileShapeIds = builder.create<memref::CopyOp>(
+        location, static_cast<Value>(initModelMemrefFunc.getArgument(2)),
+        allocTileShapeIds.getMemref());
+    // currentAsyncToken = transferTileShapeIds.getAsyncToken();
   }
 
   mlir::gpu::AllocOp allocChildIndices;
   mlir::gpu::MemcpyOp transferChildIndices;
   if (sparseRep) {
     allocChildIndices = builder.create<gpu::AllocOp>(
-        location, childIndexArgType, asyncTokenType,
-        ValueRange{currentAsyncToken}, ValueRange{}, ValueRange{});
+        location, childIndexArgType, Type(),
+        ValueRange(), ValueRange(), ValueRange(), true);
     memrefsToFree.push_back(allocChildIndices.getMemref());
 
-    transferChildIndices = builder.create<gpu::MemcpyOp>(
-        location, asyncTokenType, ValueRange{allocChildIndices.getAsyncToken()},
-        allocChildIndices.getMemref(),
-        static_cast<Value>(initModelMemrefFunc.getArgument(3)));
-    currentAsyncToken = transferChildIndices.getAsyncToken();
+     builder.create<memref::CopyOp>(
+        location, static_cast<Value>(initModelMemrefFunc.getArgument(3)),
+        allocChildIndices.getMemref());
+    // currentAsyncToken = transferChildIndices.getAsyncToken();
   }
 
   // Create the gpu.launch op
@@ -207,13 +199,14 @@ void GenerateModelMemrefInitializerImpl(const std::string &funcName,
   auto numThreadsPerBlockConst =
       builder.create<arith::ConstantIndexOp>(location, numThreadsPerBlock);
   // Wait for all the transfers and allocs before the gpu.launch to finish
-  auto waitForTransfersAndAllocs = builder.create<gpu::WaitOp>(
-      location, Type(), ValueRange{currentAsyncToken});
-  currentAsyncToken = waitForTransfersAndAllocs.getAsyncToken();
+  auto waitOp = builder.create<gpu::WaitOp>(
+    location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{});
+  auto currentAsyncToken = waitOp.getAsyncToken();
   auto gpuLaunch = builder.create<gpu::LaunchOp>(
       location, numThreadBlocksConst, oneIndexConst, oneIndexConst,
       numThreadsPerBlockConst, oneIndexConst, oneIndexConst, nullptr,
-      nullptr, ValueRange{});
+      Type(),
+      ValueRange());
 
   builder.setInsertionPointToStart(&gpuLaunch.getBody().front());
 
@@ -243,19 +236,27 @@ void GenerateModelMemrefInitializerImpl(const std::string &funcName,
 
   
   // Free all the allocated memrefs
-//   Value deallocAsyncToken = gpuLaunch.getAsyncToken();
-//   for (auto memref : memrefsToFree) {
-//     deallocAsyncToken =
-//         builder
-//             .create<gpu::DeallocOp>(location, asyncTokenType,
-//                                     ValueRange{deallocAsyncToken}, memref)
-//             .getAsyncToken();
-//   }
+//   Value gpuLaunchAsyncToken = gpuLaunch.getAsyncToken();
 
   // Wait for gpuLaunch/dealloc to finish.
-  auto waitop = builder.create<gpu::WaitOp>(location, gpu::AsyncTokenType::get(module.getContext()),
-  ValueRange{});
+//   builder.create<gpu::WaitOp>(
+//     location, Type(), ValueRange{gpuLaunchAsyncToken});
 
+//   auto mbAlloc = builder.create<memref::AllocOp>(location, memrefType);
+
+//   builder.create<memref::CopyOp>(
+//     location, static_cast<Value>(modelMemrefGPUAlloc.getMemref()),
+//     mbAlloc.getMemref());
+
+//   waitOp = builder.create<gpu::WaitOp>(
+//       location, gpu::AsyncTokenType::get(module.getContext()), ValueRange{});
+
+//   for (auto memref : memrefsToFree) {
+//         builder
+//             .create<gpu::DeallocOp>(location, waitOp.getAsyncToken().getType(),
+//                                     ValueRange{waitOp.getAsyncToken()}, memref)
+//             .getAsyncToken();
+//   }
 
   builder.create<mlir::func::ReturnOp>(
       location, static_cast<Value>(modelMemrefGPUAlloc.getMemref()));

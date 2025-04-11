@@ -141,14 +141,17 @@ public:
   }
 };
 
-
 void generateSPIRVGetElementPtr(Operation *op, ArrayRef<Value> operands,
                                 ConversionPatternRewriter &rewriter,
                                 int64_t elementNumber, Value &elementPtr) {
 
+  const int32_t kTreeMemrefOperandNum = 0;
+  const int32_t kIndexOperandNum = 1;
+  const int32_t kElementIndexOperandNum = 3;
   auto location = op->getLoc();
-  auto structPtr = operands[0];
+  auto structPtr = operands[kTreeMemrefOperandNum];
   Type i32Type = rewriter.getI32Type();
+
 
   // Create the second InBoundsPtrAccessChain to access the i32 field
   Value i32Index = rewriter.create<spirv::ConstantOp>(
@@ -160,12 +163,43 @@ void generateSPIRVGetElementPtr(Operation *op, ArrayRef<Value> operands,
   int rank = memRefType.getRank();
   if (memRefType.hasStaticShape() && rank) {
 
-    structPtr = rewriter.create<spirv::AccessChainOp>(location, structPtr,
-                                                      operands[1]);
+    structPtr =
+        rewriter.create<spirv::AccessChainOp>(location, structPtr, operands[kIndexOperandNum]);
   }
 
-  elementPtr =
-      rewriter.create<spirv::AccessChainOp>(location, structPtr, i32Index);
+  if (operands.size() == 4)
+    elementPtr = rewriter.create<spirv::AccessChainOp>(
+        location, structPtr, ValueRange{i32Index, operands[kElementIndexOperandNum]});
+  else
+    elementPtr =
+        rewriter.create<spirv::AccessChainOp>(location, structPtr, i32Index);
+  llvm::errs()<<"elementPtr : "<<elementPtr<<"\n";
+  llvm::errs()<<"elementNumber : "<<elementNumber<<"\n";
+}
+
+void generateSPIRVGetElementPtrForI32Ops(Operation *op,
+                                         ArrayRef<Value> operands,
+                                         ConversionPatternRewriter &rewriter,
+                                         Value &elementPtr, Value memrefVal,
+                                         Value indexVal) {
+
+  const int32_t kTreeMemrefOperandNum = 0;
+  const int32_t kIndexOperandNum = 1;
+  auto location = op->getLoc();
+  auto structPtr = memrefVal;
+  Type i32Type = rewriter.getI32Type();
+  auto indexType = indexVal.getType();
+  assert(indexType.isa<IntegerType>());
+
+  Type elementPtrType = spirv::PointerType::get(
+      i32Type, memrefVal.getType().cast<spirv::PointerType>().getStorageClass());
+
+  auto bufferPtrCastToI32Ptr = rewriter.create<spirv::BitcastOp>(
+      location, elementPtrType, memrefVal);
+
+  // elementPtr = rewriter.create<spirv::AccessChainOp>(
+  //     location, bufferPtrCastToI32Ptr, indexVal);
+  elementPtr = bufferPtrCastToI32Ptr;
 }
 
 void generateSPIRVLoadStructElement(Operation *op, ArrayRef<Value> operands,
@@ -177,6 +211,14 @@ void generateSPIRVLoadStructElement(Operation *op, ArrayRef<Value> operands,
 
   // Load the element
   Value elementVal = rewriter.create<spirv::LoadOp>(location, elementPtr);
+
+  if (elementVal.getType().isIntOrIndex()) {
+    rewriter.create<gpu::PrintfOp>(location, "Loaded integer element: %ld\n",
+                                   ValueRange{elementVal});
+  } else if (elementVal.getType().isa<FloatType>()) {
+    rewriter.create<gpu::PrintfOp>(location, "Loaded float element: %f\n",
+                                   ValueRange{elementVal});
+  }
 
   rewriter.replaceOp(op, static_cast<Value>(elementVal));
 
@@ -194,8 +236,7 @@ void generateSPIRVStoreStructElement(Operation *op, ArrayRef<Value> operands,
 
   auto location = op->getLoc();
   Value elementPtr;
-  generateSPIRVGetElementPtr(op, operands, rewriter, elementNumber,
-                                 elementPtr);
+  generateSPIRVGetElementPtr(op, operands, rewriter, elementNumber, elementPtr);
 
   // Store the element
   rewriter.create<spirv::StoreOp>(location, elementPtr, elementVal);
@@ -278,7 +319,6 @@ Type generateGetElementPtr(Operation *op, ArrayRef<Value> operands,
   return elementType;
 }
 
-
 void generateLoadStructElement(Operation *op, ArrayRef<Value> operands,
                                ConversionPatternRewriter &rewriter,
                                int64_t elementNumber,
@@ -293,7 +333,13 @@ void generateLoadStructElement(Operation *op, ArrayRef<Value> operands,
   // Load the element
   auto elementVal = rewriter.create<LLVM::LoadOp>(
       location, elementType, static_cast<Value>(elementPtr));
-
+  if (elementVal.getType().isIntOrIndex()) {
+    rewriter.create<gpu::PrintfOp>(location, "Loaded integer element: %ld\n",
+                                   ValueRange{elementVal});
+  } else if (elementVal.getType().isa<FloatType>()) {
+    rewriter.create<gpu::PrintfOp>(location, "Loaded float element: %f\n",
+                                   ValueRange{elementVal});
+  }
   rewriter.replaceOp(op, static_cast<Value>(elementVal));
 }
 
@@ -403,11 +449,11 @@ struct LoadTileThresholdOpSPIRVLowering : public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    assert(operands.size() == 3);
+    assert(operands.size() == 3 || operands.size() == 4);
     generateSPIRVLoadStructElement(op, operands, rewriter,
                                    kThresholdElementNumberInTile);
     return mlir::success();
-}
+  }
 };
 
 struct LoadTileFeatureIndicesOpLowering : public ConversionPattern {
@@ -439,7 +485,7 @@ struct LoadTileFeatureIndicesOpSPIRVLowering : public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    assert(operands.size() == 3);
+    assert(operands.size() == 3 || operands.size() == 4);
     generateSPIRVLoadStructElement(op, operands, rewriter,
                                    kFeatureIndexElementNumberInTile);
     return mlir::success();
@@ -466,7 +512,7 @@ struct LoadTileShapeOpLowering : public ConversionPattern {
 
 struct LoadTileShapeOpSPIRVLowering : public ConversionPattern {
   LoadTileShapeOpSPIRVLowering(GPUSPIRVTypeConverter &typeConverter,
-                                        MLIRContext *ctx)
+                               MLIRContext *ctx)
       : ConversionPattern(
             typeConverter,
             mlir::decisionforest::LoadTileShapeOp::getOperationName(),
@@ -476,9 +522,8 @@ struct LoadTileShapeOpSPIRVLowering : public ConversionPattern {
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     assert(operands.size() == 3);
-    llvm_unreachable("LoadTileShapeOpSPIRVLowering not supported");
-    // generateSPIRVLoadStructElement(op, operands, rewriter,
-    //                                kFeatureIndexElementNumberInTile);
+    generateSPIRVLoadStructElement(op, operands, rewriter,
+                                   kTileShapeElementNumberInTile);
     return mlir::success();
   }
 };
@@ -519,12 +564,7 @@ struct LoadChildIndexOpSPIRVLowering : public ConversionPattern {
                   ConversionPatternRewriter &rewriter) const final {
     assert(operands.size() == 2);
     generateSPIRVLoadStructElement(op, operands, rewriter,
-                                   kFeatureIndexElementNumberInTile);
-    // llvm_unreachable("LoadChildIndexOpSPIRVLowering not supported");
-    // generateLoadStructElement(op, operands, rewriter,
-    // m_childIndexElementNumber,
-    //                           static_cast<const LLVMTypeConverter
-    //                           *>(getTypeConverter()));
+                                   m_childIndexElementNumber);
     return mlir::success();
   }
 };
@@ -562,8 +602,13 @@ struct ReinterpretToI32AndLoadElementSPIRVLowering : public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    llvm_unreachable(
-        "ReinterpretToI32AndLoadElementSPIRVLowering not supported");
+    Value elementPtr;
+    generateSPIRVGetElementPtrForI32Ops(
+        op, operands, rewriter, elementPtr, operands[0], operands[1]);
+
+    Value elementVal = rewriter.create<spirv::LoadOp>(op->getLoc(), elementPtr);
+
+    rewriter.replaceOp(op, static_cast<Value>(elementVal));
     return mlir::success();
   }
 };
@@ -603,8 +648,13 @@ struct ReinterpretToI32AndStoreElementSPIRVLowering : public ConversionPattern {
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    llvm_unreachable(
-        "ReinterpretToI32AndStoreElementSPIRVLowering not supported");
+
+    Value elementPtr;
+    generateSPIRVGetElementPtrForI32Ops(op, operands, rewriter, elementPtr,
+                                        operands[1], operands[2]);
+
+    rewriter.create<spirv::StoreOp>(op->getLoc(), elementPtr, operands[0]);
+    rewriter.eraseOp(op);
     return mlir::success();
   }
 };
@@ -656,14 +706,9 @@ struct InitTileOpSPIRVLowering : public ConversionPattern {
     auto tileType = modelMemrefType.getElementType()
                         .cast<decisionforest::TiledNumericalNodeType>();
     if (tileType.getTileSize() > 1) {
-      llvm_unreachable(
-          "InitTileOpSPIRVLowering not supported for getTileSize() > 1 ");
+      generateSPIRVStoreStructElement(op, operands, rewriter, 2,
+                                 tileOpAdaptor.getTileShapeID());
     }
-    // if (tileType.getTileSize() > 1)
-    //   generateStoreStructElement(
-    //       op, operands, rewriter, tileOpAdaptor.getTileShapeID().getType(),
-    //       2, static_cast<const LLVMTypeConverter *>(getTypeConverter()),
-    //       tileOpAdaptor.getTileShapeID());
     rewriter.eraseOp(op);
     return mlir::success();
   }
@@ -729,7 +774,10 @@ struct InitSparseTileOpSPIRVLowering : public ConversionPattern {
     auto tileType = modelMemrefType.getElementType()
                         .cast<decisionforest::TiledNumericalNodeType>();
     if (tileType.getTileSize() > 1) {
-      llvm_unreachable("InitSparseTileOpSPIRVLowering not supported for getTileSize() > 1 ");
+      generateSPIRVStoreStructElement(op, operands, rewriter, 2,
+                                      tileOpAdaptor.getTileShapeID());
+      generateSPIRVStoreStructElement(op, operands, rewriter, 3,
+                                      tileOpAdaptor.getChildIndex());
     } else {
       // When tile size is 1, we don't store the tile shape, so child index is
       // element 2.
@@ -853,6 +901,43 @@ struct GetModelMemrefElemSizeOpLowering : public ConversionPattern {
         rewriter.create<LLVM::PtrToIntOp>(location, indexType, endPtr);
     auto sizeInBytes = rewriter.create<LLVM::SubOp>(location, indexType,
                                                     endPtrInt, buffPtrInt);
+    rewriter.replaceOp(op, static_cast<Value>(sizeInBytes));
+    return mlir::success();
+  }
+};
+
+struct GetModelMemrefElemSizeOpSPIRVLowering : public ConversionPattern {
+  GetModelMemrefElemSizeOpSPIRVLowering(GPUSPIRVTypeConverter &typeConverter,
+                                        MLIRContext *ctx)
+      : ConversionPattern(typeConverter,
+                          mlir::decisionforest::GetModelMemrefElementSizeOp::
+                              getOperationName(),
+                          1 /*benefit*/, ctx) {}
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    const int32_t kTreeMemrefOperandNum = 0;
+    auto location = op->getLoc();
+    auto MemrefBufferPointer = operands[kTreeMemrefOperandNum];
+    Type i32Type = rewriter.getI32Type();
+
+    Value indexVal = rewriter.create<spirv::ConstantOp>(
+        location, rewriter.getI64Type(),
+        rewriter.getIntegerAttr(rewriter.getI64Type(), 1));
+    auto indexType = indexVal.getType();
+    assert(indexType.isa<IntegerType>());
+
+    auto endPtr = rewriter.create<spirv::AccessChainOp>(
+        location, MemrefBufferPointer, indexVal);
+
+    auto buffPtrInt = rewriter.create<spirv::ConvertPtrToUOp>(
+        location, indexType, MemrefBufferPointer);
+    auto endPtrInt =
+        rewriter.create<spirv::ConvertPtrToUOp>(location, indexType, endPtr);
+    auto sizeInBytes = rewriter.create<spirv::ISubOp>(location, indexType,
+                                                      endPtrInt, buffPtrInt);
+
     rewriter.replaceOp(op, static_cast<Value>(sizeInBytes));
     return mlir::success();
   }
@@ -1470,7 +1555,8 @@ void ArrayBasedRepresentation::AddSPIRVConversionPatterns(
                LoadTileThresholdOpSPIRVLowering, InitTileOpSPIRVLowering,
                LoadTileShapeOpSPIRVLowering,
                ReinterpretToI32AndLoadElementSPIRVLowering,
-               ReinterpretToI32AndStoreElementSPIRVLowering>(
+               ReinterpretToI32AndStoreElementSPIRVLowering,
+               GetModelMemrefElemSizeOpSPIRVLowering>(
       converter, patterns.getContext());
   patterns.add<PrintfOpPattern>(converter, patterns.getContext());
 }
@@ -2197,10 +2283,14 @@ void SparseRepresentation::AddSPIRVConversionPatterns(
 
   // llvm_unreachable("Unsupported Op conversions");
   patterns.add<LoadTileFeatureIndicesOpSPIRVLowering,
-               LoadTileThresholdOpSPIRVLowering, InitTileOpSPIRVLowering,
+               LoadTileThresholdOpSPIRVLowering, 
+               LoadTileShapeOpSPIRVLowering,
+               InitSparseTileOpSPIRVLowering,
+               InitTileOpSPIRVLowering,
                ReinterpretToI32AndLoadElementSPIRVLowering,
                ReinterpretToI32AndStoreElementSPIRVLowering,
-               InitSparseTileOpSPIRVLowering>(
+               GetModelMemrefElemSizeOpSPIRVLowering
+               >(
       converter, patterns.getContext());
   auto childIndexElementNum = GetTileSize() == 1 ? 2 : 3;
   patterns.add<LoadChildIndexOpSPIRVLowering>(converter, patterns.getContext(), childIndexElementNum);
