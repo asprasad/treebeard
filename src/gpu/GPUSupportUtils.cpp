@@ -25,6 +25,10 @@
 #include "llvm/Support/Casting.h"
 
 #include "TreebeardContext.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Support/LLVM.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 
 #include "GPUSupportUtils.h"
 #include "CompileUtils.h"
@@ -146,6 +150,56 @@ void ReplaceCPUReferencesWithGPUMemref(
       }
     }
   }
+}
+
+static LLVM::LLVMFunctionType getPrintfType(MLIRContext *context) {
+  auto llvmI32Ty = IntegerType::get(context, 32);
+  auto llvmPtrTy = LLVM::LLVMPointerType::get(context);
+  auto llvmFnType = LLVM::LLVMFunctionType::get(llvmI32Ty, llvmPtrTy,
+                                                /*isVarArg=*/true);
+  return llvmFnType;
+}
+
+static FlatSymbolRefAttr getOrInsertPrintf(OpBuilder &rewriter,
+  ModuleOp module) {
+auto *context = module.getContext();
+if (module.lookupSymbol<LLVM::LLVMFuncOp>("printf"))
+return SymbolRefAttr::get(context, "printf");
+
+// Insert the printf function into the body of the parent module.
+PatternRewriter::InsertionGuard insertGuard(rewriter);
+rewriter.setInsertionPointToStart(module.getBody());
+rewriter.create<LLVM::LLVMFuncOp>(module.getLoc(), "printf",
+getPrintfType(context));
+return SymbolRefAttr::get(context, "printf");
+}
+
+
+/// Return a value representing an access into a global string with the given
+/// name, creating the string if necessary.
+static Value getOrCreateGlobalString(Location loc, OpBuilder &builder,
+                                     StringRef name, StringRef value,
+                                     ModuleOp module) {
+  // Create the global at the entry of the module.
+  LLVM::GlobalOp global;
+  if (!(global = module.lookupSymbol<LLVM::GlobalOp>(name))) {
+    OpBuilder::InsertionGuard insertGuard(builder);
+    builder.setInsertionPointToStart(module.getBody());
+    auto type = LLVM::LLVMArrayType::get(
+        IntegerType::get(builder.getContext(), 8), value.size());
+    global = builder.create<LLVM::GlobalOp>(loc, type, /*isConstant=*/true,
+                                            LLVM::Linkage::Internal, name,
+                                            builder.getStringAttr(value),
+                                            /*alignment=*/0);
+  }
+
+  // Get the pointer to the first character in the global string.
+  Value globalPtr = builder.create<LLVM::AddressOfOp>(loc, global);
+  Value cst0 = builder.create<LLVM::ConstantOp>(loc, builder.getI64Type(),
+                                                builder.getIndexAttr(0));
+  return builder.create<LLVM::GEPOp>(
+      loc, LLVM::LLVMPointerType::get(builder.getContext()), global.getType(),
+      globalPtr, ArrayRef<Value>({cst0, cst0}));
 }
 
 void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
@@ -284,6 +338,20 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
 
       // Add the transfers as an async dependency to the gpu.launch op.
       // gpuLaunchOp.addAsyncDependency(waitToken);
+
+
+      ModuleOp parentModule = module;
+
+      // Get a symbol reference to the printf function, inserting it if
+      // necessary.
+      auto printfRef = getOrInsertPrintf(builder, parentModule);
+      Value formatSpecifierCst = getOrCreateGlobalString(
+          location, builder, "frmt_spec",
+          StringRef("Hello, before Prediction_Function launch\n\0", 42),
+          parentModule);
+      builder.create<LLVM::CallOp>(
+        location, getPrintfType(builder.getContext()), printfRef,
+          ArrayRef<Value>({formatSpecifierCst}));
 
       builder.setInsertionPointAfter(gpuLaunchOp.getOperation());
 
