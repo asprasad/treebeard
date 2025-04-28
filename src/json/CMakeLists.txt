@@ -1,11 +1,12 @@
 message("Module path ${CMAKE_MODULE_PATH}")
 
 if(ENABLE_ONNX_PARSER)
-    if(NOT DEFINED PROTOBUF_LIB_DIR)
-        message(FATAL_ERROR "Protobuf library directory not specified. Please set PROTOBUF_LIB_DIR that points to cmake compatible protobuf library installation.")
+    if(DEFINED PROTOBUF_LIB_DIR)
+        set(Protobuf_DIR ${PROTOBUF_LIB_DIR}/cmake)
+    else()
+        message(STATUS "Protobuf library directory not specified. Using default path.")
     endif()
 
-    set(Protobuf_DIR ${PROTOBUF_LIB_DIR}/cmake)
     find_package(Protobuf REQUIRED)
 
     if(NOT Protobuf_FOUND)
