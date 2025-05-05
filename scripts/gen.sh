@@ -12,7 +12,7 @@ MLIR_BUILD="build"
 CONFIG="Release"
 ONNX_ENABLED=OFF
 
-while getopts "d:m:c:o:" opt
+while getopts "d:m:c:o" opt
 do
    case "$opt" in
       d ) CMAKE="$OPTARG" ;;
