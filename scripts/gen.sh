@@ -12,7 +12,7 @@ MLIR_BUILD="build"
 CONFIG="Release"
 ONNX_ENABLED=OFF
 
-while getopts "d:m:c:" opt
+while getopts "d:m:c:o:" opt
 do
    case "$opt" in
       d ) CMAKE="$OPTARG" ;;
@@ -25,6 +25,7 @@ done
 echo "Using cmake command : $CMAKE"
 echo "Using MLIR_BUILD : $MLIR_BUILD"
 echo "Using configuration : $CONFIG"
+echo "Using ONNX_ENABLED : $ONNX_ENABLED"
 
 # run this from the build directory
 $CMAKE -G Ninja .. -DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
