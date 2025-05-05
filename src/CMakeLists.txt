@@ -39,6 +39,11 @@ add_definitions(-DTREEBEARD_SRC_DIR="${CMAKE_SOURCE_DIR}")
 add_definitions(-DLLVM_LIB_DIR="${LLVM_BUILD_DIRECTORY}")
 add_definitions(-DTREEBEARD_BUILD_DIR="${CMAKE_BINARY_DIR}")
 
+if (ENABLE_ONNX_PARSER)
+        message(STATUS "Enabling ONNX parser")
+        add_definitions(-DENABLE_ONNX_PARSER=1)
+endif()
+
 if(NV_GPU_SUPPORT OR AMD_GPU_SUPPORT)
         add_definitions(-DTREEBEARD_GPU_SUPPORT=1)
 endif()
