@@ -10,6 +10,7 @@ echo "Using LLVM rooted at : $LLVM_DIR"
 CMAKE="cmake"
 MLIR_BUILD="build"
 CONFIG="Release"
+ONNX_ENABLED=OFF
 
 while getopts "d:m:c:" opt
 do
@@ -17,6 +18,7 @@ do
       d ) CMAKE="$OPTARG" ;;
       m ) MLIR_BUILD="$OPTARG" ;;
       c ) CONFIG="$OPTARG" ;;
+      o ) ONNX_ENABLED=ON ;;
    esac
 done
 
@@ -28,8 +30,9 @@ echo "Using configuration : $CONFIG"
 $CMAKE -G Ninja .. -DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
        -DMLIR_DIR=$LLVM_DIR/$MLIR_BUILD/lib/cmake/mlir \
        -DLLVM_BUILD_DIRECTORY=$LLVM_DIR/$MLIR_BUILD/ \
-       -DCMAKE_BUILD_TYPE=$CONFIG
-#      -DENABLE_ONNX_PARSER=ON -DPROTOBUF_LIB_DIR=<path to protobuf dir>
+       -DCMAKE_BUILD_TYPE=$CONFIG \
+       -DENABLE_ONNX_PARSER=$ONNX_ENABLED 
+#      -DPROTOBUF_LIB_DIR=<path to protobuf dir>
 #      -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
 #      -DLLVM_ENABLE_LLD=ON
 #      -DCMAKE_CXX_FLAGS="-std=c++17"

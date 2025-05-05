@@ -207,9 +207,6 @@ class TreebeardAPI:
       self.runtime_lib.ConstructTreebeardContext.restype = ctypes.c_int64
       self.runtime_lib.ConstructTreebeardContext.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int64]
 
-      self.runtime_lib.ConstructTreebeardContextFromGPUAutoscheduleOptions.restype = ctypes.c_int64
-      self.runtime_lib.ConstructTreebeardContextFromGPUAutoscheduleOptions.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int64, ctypes.c_int64]
-
       self.runtime_lib.DestroyTreebeardContext.argTypes = [ctypes.c_int64]
 
       self.runtime_lib.SetForestCreatorType.argTypes = [ctypes.c_int64, ctypes.c_char_p]
@@ -226,6 +223,16 @@ class TreebeardAPI:
 
       self.runtime_lib.ConstructInferenceRunnerFromHIR.restype = ctypes.c_int64
       self.runtime_lib.ConstructInferenceRunnerFromHIR.argtypes = [ctypes.c_int64]
+
+      self.InitializeGPUAPI()
+      
+    except Exception as e:
+      print("Loading the TreeBeard runtime failed with exception :", e)
+  
+  def InitializeGPUAPI(self):
+    try:
+      self.runtime_lib.ConstructTreebeardContextFromGPUAutoscheduleOptions.restype = ctypes.c_int64
+      self.runtime_lib.ConstructTreebeardContextFromGPUAutoscheduleOptions.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int64, ctypes.c_int64]
 
       # extern "C" void *ConstructGPUInferenceRunnerFromHIR(void *tbContext)
       self.runtime_lib.ConstructGPUInferenceRunnerFromHIR.restype = ctypes.c_int64
@@ -280,8 +287,9 @@ class TreebeardAPI:
       self.runtime_lib.GetGPUKernelExecutionTime.restype = ctypes.c_int64
 
     except Exception as e:
-      print("Loading the TreeBeard runtime failed with exception :", e)
-  
+      print("Loading the TreeBeard GPU API skipped :", e)
+
+
   def InitializeInferenceRunner(self, modelSOPath : str, modelGlobalsJSONPath : str) -> int:
     soPath = modelSOPath.encode('ascii')
     globalsJSONPath = modelGlobalsJSONPath.encode('ascii')
