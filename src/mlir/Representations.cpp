@@ -162,9 +162,11 @@ void generateSPIRVGetElementPtr(Operation *op, ArrayRef<Value> operands,
   auto memRefType = op->getOperand(0).getType().cast<MemRefType>();
   int rank = memRefType.getRank();
   if (memRefType.hasStaticShape() && rank) {
-
-    structPtr =
-        rewriter.create<spirv::AccessChainOp>(location, structPtr, operands[kIndexOperandNum]);
+    structPtr = rewriter.create<spirv::AccessChainOp>(
+        location, structPtr, ValueRange{operands[kIndexOperandNum]});
+  } else {
+    structPtr = rewriter.create<spirv::InBoundsPtrAccessChainOp>(
+        location, structPtr, operands[kIndexOperandNum], std::nullopt);
   }
 
   if (operands.size() == 4)
@@ -173,8 +175,6 @@ void generateSPIRVGetElementPtr(Operation *op, ArrayRef<Value> operands,
   else
     elementPtr =
         rewriter.create<spirv::AccessChainOp>(location, structPtr, i32Index);
-  llvm::errs()<<"elementPtr : "<<elementPtr<<"\n";
-  llvm::errs()<<"elementNumber : "<<elementNumber<<"\n";
 }
 
 void generateSPIRVGetElementPtrForI32Ops(Operation *op,
