@@ -344,14 +344,14 @@ void AddGPUAllocationsAndTransfers(mlir::ModuleOp module) {
 
       // Get a symbol reference to the printf function, inserting it if
       // necessary.
-      auto printfRef = getOrInsertPrintf(builder, parentModule);
-      Value formatSpecifierCst = getOrCreateGlobalString(
-          location, builder, "frmt_spec",
-          StringRef("Hello, before Prediction_Function launch\n\0", 42),
-          parentModule);
-      builder.create<LLVM::CallOp>(
-        location, getPrintfType(builder.getContext()), printfRef,
-          ArrayRef<Value>({formatSpecifierCst}));
+      // auto printfRef = getOrInsertPrintf(builder, parentModule);
+      // Value formatSpecifierCst = getOrCreateGlobalString(
+      //     location, builder, "frmt_spec",
+      //     StringRef("Hello, before Prediction_Function launch\n\0", 42),
+      //     parentModule);
+      // builder.create<LLVM::CallOp>(
+      //   location, getPrintfType(builder.getContext()), printfRef,
+      //     ArrayRef<Value>({formatSpecifierCst}));
 
       builder.setInsertionPointAfter(gpuLaunchOp.getOperation());
 
@@ -439,7 +439,7 @@ struct MakeGPULoopsPerfectlyNestedPass
   void runOnOperation() final { makeGPULoopsPerfectlyNested(); }
 };
 
-bool measureGpuKernelTime = false;
+bool measureGpuKernelTime = true;
 int numberOfKernelRuns = 1;
 
 gpu::ParallelLoopDimMappingAttr getMappingAttr(scf::ParallelOp parallelOp) {

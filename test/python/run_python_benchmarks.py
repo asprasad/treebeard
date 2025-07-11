@@ -148,7 +148,7 @@ def RunTestOnSingleModelTestInputsJIT_Multibatch(modelName : str, sparse, option
 def RunSingleTest_Treelite(modelJSONPath, csvPath, modelName) -> float:
   booster = xgb.Booster(model_file=modelJSONPath)
   treeliteModel = treelite.Model.from_xgboost(booster)
-  generated_code_dir = "/home/ashwin/mlir-build/llvm-project/mlir/examples/tree-heavy/test/python/treelite_generated_code"
+  generated_code_dir = "/home/vijethv/silvanforge-setup/llvm-project/mlir/examples/tree-heavy/test/python/treelite_generated_code"
   model_code_dir = os.path.join(generated_code_dir, modelName)
   if not os.path.exists(model_code_dir):
     os.makedirs(model_code_dir)

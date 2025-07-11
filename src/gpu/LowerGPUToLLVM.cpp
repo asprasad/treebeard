@@ -286,17 +286,17 @@ void SetSpirvEntryPointABIPass::runOnOperation() {
 
     // Insert GPU printf at the entry
     OpBuilder entryBuilder(&gpuFunc.front(), gpuFunc.front().begin());
-    entryBuilder.create<gpu::PrintfOp>(
-        gpuFunc.getLoc(),
-        "Hello, this is " + gpuFunc.getName().str() + " Entry\n", ValueRange{});
+    // entryBuilder.create<gpu::PrintfOp>(
+    //     gpuFunc.getLoc(),
+    //     "Hello, this is " + gpuFunc.getName().str() + " Entry\n", ValueRange{});
 
     // Insert GPU printf at the end
     Block &entryBlock = gpuFunc.front();
     Operation *terminator = entryBlock.getTerminator();
     OpBuilder exitBuilder(terminator);
-    exitBuilder.create<gpu::PrintfOp>(
-        gpuFunc.getLoc(), "Hello, this is " + gpuFunc.getName().str() + " Exit\n",
-        ValueRange{});
+    // exitBuilder.create<gpu::PrintfOp>(
+    //     gpuFunc.getLoc(), "Hello, this is " + gpuFunc.getName().str() + " Exit\n",
+    //     ValueRange{});
 
     // Determine workgroup size
     SmallVector<int32_t, 3> workgroupSizeVec = {}; // Explicit size
@@ -1370,7 +1370,7 @@ void LowerGPUToLLVM(
    spirvModulePM.addPass(spirv::createSPIRVLowerABIAttributesPass());
    spirvModulePM.addPass(spirv::createSPIRVUpdateVCEPass());
    
-   pm.nest<func::FuncOp>().addPass(LLVM::createRequestCWrappersPass());
+  //  pm.nest<func::FuncOp>().addPass(LLVM::createRequestCWrappersPass());
    pm.addPass(createCanonicalizerPass());
    pm.addPass(createCSEPass());
    pm.addPass(createReconcileUnrealizedCastsPass());

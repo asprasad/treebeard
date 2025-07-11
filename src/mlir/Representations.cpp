@@ -212,13 +212,13 @@ void generateSPIRVLoadStructElement(Operation *op, ArrayRef<Value> operands,
   // Load the element
   Value elementVal = rewriter.create<spirv::LoadOp>(location, elementPtr);
 
-  if (elementVal.getType().isIntOrIndex()) {
-    rewriter.create<gpu::PrintfOp>(location, "Loaded integer element: %ld\n",
-                                   ValueRange{elementVal});
-  } else if (elementVal.getType().isa<FloatType>()) {
-    rewriter.create<gpu::PrintfOp>(location, "Loaded float element: %f\n",
-                                   ValueRange{elementVal});
-  }
+  // if (elementVal.getType().isIntOrIndex()) {
+  //   rewriter.create<gpu::PrintfOp>(location, "Loaded integer element: %ld\n",
+  //                                  ValueRange{elementVal});
+  // } else if (elementVal.getType().isa<FloatType>()) {
+  //   rewriter.create<gpu::PrintfOp>(location, "Loaded float element: %f\n",
+  //                                  ValueRange{elementVal});
+  // }
 
   rewriter.replaceOp(op, static_cast<Value>(elementVal));
 
@@ -333,13 +333,13 @@ void generateLoadStructElement(Operation *op, ArrayRef<Value> operands,
   // Load the element
   auto elementVal = rewriter.create<LLVM::LoadOp>(
       location, elementType, static_cast<Value>(elementPtr));
-  if (elementVal.getType().isIntOrIndex()) {
-    rewriter.create<gpu::PrintfOp>(location, "Loaded integer element: %ld\n",
-                                   ValueRange{elementVal});
-  } else if (elementVal.getType().isa<FloatType>()) {
-    rewriter.create<gpu::PrintfOp>(location, "Loaded float element: %f\n",
-                                   ValueRange{elementVal});
-  }
+  // if (elementVal.getType().isIntOrIndex()) {
+  //   rewriter.create<gpu::PrintfOp>(location, "Loaded integer element: %ld\n",
+  //                                  ValueRange{elementVal});
+  // } else if (elementVal.getType().isa<FloatType>()) {
+  //   rewriter.create<gpu::PrintfOp>(location, "Loaded float element: %f\n",
+  //                                  ValueRange{elementVal});
+  // }
   rewriter.replaceOp(op, static_cast<Value>(elementVal));
 }
 

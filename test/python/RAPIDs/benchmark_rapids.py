@@ -1,14 +1,14 @@
 import argparse
 import os
 import math
-import cupy as cp
+# import cupy as cp
 import time
 import numpy
 import pandas
 import treebeard
 import matplotlib.pyplot as plt
 import warnings
-from cuml import ForestInference
+# from cuml import ForestInference
 from functools import partial
 
 filepath = os.path.abspath(__file__)
@@ -207,13 +207,14 @@ def RunTestOnSingleModelTestInputs_Treebeard_AutoTuneHeuristic_Kernel(modelName 
 if __name__ == "__main__":
   # create an argument parser
   parser = argparse.ArgumentParser(description="Benchmarking script for RAPIDs and Treebeard")
-  parser.add_argument("--num_trials", type=int, default=3, help="Number of trials to run for each benchmark")
-  parser.add_argument("--batch_size", type=int, default=4096, help="Batch sizes to run")
+  parser.add_argument("--num_trials", type=int, default=1, help="Number of trials to run for each benchmark")
+  parser.add_argument("--batch_size", type=int, default=1024, help="Batch sizes to run")
   parser.add_argument("--output_file", type=str, default="benchmark_results.csv", help="Output file to write the results to")
   args = parser.parse_args()
 
   num_trials = args.num_trials
-  benchmarks = ["abalone", "airline", "airline-ohe", "covtype", "epsilon", "higgs", "letters", "year_prediction_msd"]
+  # benchmarks = ["abalone", "airline", "airline-ohe", "covtype", "higgs", "letters"]
+  benchmarks = ["abalone"]
   batchSize = args.batch_size
   output_file = args.output_file
 
@@ -226,13 +227,13 @@ if __name__ == "__main__":
   autotune_kernel_time_speedups = []
 
   for benchmark in benchmarks:
-    rapids_total_func = partial(RunTestOnSingleModelTestInputs_RAPIDs, modelName=benchmark)
-    rapids_total_time = run_benchmark_function_and_return_median_time(rapids_total_func, num_trials)
-    rapids_total_times.append(rapids_total_time)
+    # rapids_total_func = partial(RunTestOnSingleModelTestInputs_RAPIDs, modelName=benchmark)
+    # rapids_total_time = run_benchmark_function_and_return_median_time(rapids_total_func, num_trials)
+    # rapids_total_times.append(rapids_total_time)
 
-    rapids_kernel_time_func = partial(RunTestOnSingleModelTestInputs_RAPIDs_KernelTime, modelName=benchmark)
-    rapids_kernel_time = run_benchmark_function_and_return_median_time(rapids_kernel_time_func, num_trials)
-    rapids_kernel_times.append(rapids_total_time)
+    # rapids_kernel_time_func = partial(RunTestOnSingleModelTestInputs_RAPIDs_KernelTime, modelName=benchmark)
+    # rapids_kernel_time = run_benchmark_function_and_return_median_time(rapids_kernel_time_func, num_trials)
+    # rapids_kernel_times.append(rapids_total_time)
 
     treebeard_auto_tune_heuristic_total_func = partial(RunTestOnSingleModelTestInputs_Treebeard_AutoTuneHeuristic, modelName=benchmark)
     treebeard_auto_tune_heuristic_total_time = run_benchmark_function_and_return_median_time(treebeard_auto_tune_heuristic_total_func, num_trials)
@@ -242,16 +243,16 @@ if __name__ == "__main__":
     treebeard_auto_tune_heuristic_kernel_time = run_benchmark_function_and_return_median_time(treebeard_auto_tune_heuristic_kernel_func, num_trials)
     treebeard_auto_tune_heuristic_kernel_times.append(treebeard_auto_tune_heuristic_kernel_time)
 
-    autotune_total_time_speedups.append(rapids_total_time/treebeard_auto_tune_heuristic_total_time)
-    autotune_kernel_time_speedups.append(rapids_kernel_time/treebeard_auto_tune_heuristic_kernel_time)
+    # autotune_total_time_speedups.append(rapids_total_time/treebeard_auto_tune_heuristic_total_time)
+    # autotune_kernel_time_speedups.append(rapids_kernel_time/treebeard_auto_tune_heuristic_kernel_time)
     
     print(benchmark, batchSize, 
-          rapids_total_time,  
+          #rapids_total_time,  
           treebeard_auto_tune_heuristic_total_time,
-          rapids_total_time/treebeard_auto_tune_heuristic_total_time, 
-          rapids_kernel_time, treebeard_auto_tune_heuristic_kernel_time,
-          rapids_kernel_time/treebeard_auto_tune_heuristic_kernel_time,
+          # rapids_total_time/treebeard_auto_tune_heuristic_total_time, 
+          # rapids_kernel_time, treebeard_auto_tune_heuristic_kernel_time,
+          # rapids_kernel_time/treebeard_auto_tune_heuristic_kernel_time,
           flush=True)
   # print the geometric mean of the speedups for this batch size
-  print(numpy.prod(autotune_total_time_speedups)**(1.0/len(autotune_total_time_speedups)),
-        numpy.prod(autotune_kernel_time_speedups)**(1.0/len(autotune_kernel_time_speedups)), flush=True)
+  # print(numpy.prod(autotune_total_time_speedups)**(1.0/len(autotune_total_time_speedups)),
+  #       numpy.prod(autotune_kernel_time_speedups)**(1.0/len(autotune_kernel_time_speedups)), flush=True)
