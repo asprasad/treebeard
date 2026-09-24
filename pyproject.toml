@@ -1,0 +1,42 @@
+[build-system]
+requires = ["scikit-build-core>=0.10"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "treebeard-ml"
+version = "0.1.0"
+description = "Compiler and runtime for efficient decision-tree ensemble inference"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+dependencies = ["numpy>=1.23"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.optional-dependencies]
+onnx = ["onnx>=1.12"]
+xgboost = ["xgboost>=1.7,<2", "scikit-learn>=1.0"]
+test = ["onnx>=1.12", "xgboost>=1.7,<2", "scikit-learn>=1.0"]
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+wheel.py-api = "py3"
+wheel.platlib = true
+install.components = ["python"]
+cmake.build-type = "Release"
+build.targets = ["treebeard-runtime"]
+cmake.define.ENABLE_ONNX_PARSER = "ON"
+cmake.define.NV_GPU_SUPPORT = "OFF"
+cmake.define.AMD_GPU_SUPPORT = "OFF"
+sdist.exclude = [
+  ".venv",
+  "build*",
+  "onnx_models",
+  "xgb_models",
+]
+sdist.include = ["THIRD_PARTY_NOTICES.md"]

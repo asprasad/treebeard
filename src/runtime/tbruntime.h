@@ -4,11 +4,22 @@
 #include <cstdint>
 #define TREEBEARD_RUNTIME_EXPORT __attribute__((visibility("default")))
 
+enum class TreebeardErrorCode : int32_t {
+  kSuccess = 0,
+  kUnsupportedModel = 1,
+  kUnsupportedConfiguration = 2,
+  kCompilation = 3,
+  kRuntime = 4,
+};
+
 #define COMPILER_OPTION_SETTER_DECLARATION(propName, propType)                 \
   TREEBEARD_RUNTIME_EXPORT void Set_##propName(intptr_t options, propType val);
 
 extern "C" {
-TREEBEARD_RUNTIME_EXPORT void RunInference(intptr_t inferenceRunnerInt,
+TREEBEARD_RUNTIME_EXPORT const char *TreebeardGetLastError();
+TREEBEARD_RUNTIME_EXPORT int32_t TreebeardGetLastErrorCode();
+
+TREEBEARD_RUNTIME_EXPORT bool RunInference(intptr_t inferenceRunnerInt,
                                            void *inputs, void *results);
 
 TREEBEARD_RUNTIME_EXPORT void

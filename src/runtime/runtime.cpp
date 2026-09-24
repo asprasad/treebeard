@@ -4,6 +4,7 @@
 #include <fstream>
 #include <iostream>
 #include <json.hpp>
+#include <stdexcept>
 #include <string>
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -25,6 +26,46 @@
 #include "schedule.h"
 #include "tbruntime.h"
 #include "xgboostparser.h"
+
+namespace {
+
+thread_local std::string treebeardLastError;
+thread_local TreebeardErrorCode treebeardLastErrorCode =
+    TreebeardErrorCode::kSuccess;
+
+void ClearTreebeardError() {
+  treebeardLastError.clear();
+  treebeardLastErrorCode = TreebeardErrorCode::kSuccess;
+}
+
+void SetTreebeardError(TreebeardErrorCode code, const std::string &message) {
+  treebeardLastErrorCode = code;
+  treebeardLastError = message;
+}
+
+template <typename Result, typename Callable>
+Result GuardTreebeardCall(TreebeardErrorCode errorCode, Result failure,
+                          Callable &&callable) noexcept {
+  ClearTreebeardError();
+  try {
+    return callable();
+  } catch (const std::exception &exception) {
+    SetTreebeardError(errorCode, exception.what());
+  } catch (...) {
+    SetTreebeardError(errorCode, "unknown native Treebeard failure");
+  }
+  return failure;
+}
+
+} // namespace
+
+extern "C" const char *TreebeardGetLastError() {
+  return treebeardLastError.c_str();
+}
+
+extern "C" int32_t TreebeardGetLastErrorCode() {
+  return static_cast<int32_t>(treebeardLastErrorCode);
+}
 
 // ===-------------------------------------------------------------=== //
 // Execution API
@@ -55,40 +96,49 @@ InitializeInferenceRunner(const char *soPath,
 
 // Run inference
 //    -- inference runner, row, result
-extern "C" void RunInference(intptr_t inferenceRunnerInt, void *inputs,
+extern "C" bool RunInference(intptr_t inferenceRunnerInt, void *inputs,
                              void *results) {
-  auto inferenceRunner =
-      reinterpret_cast<mlir::decisionforest::InferenceRunnerBase *>(
-          inferenceRunnerInt);
-  // TODO The types in this template don't really matter. Maybe we should get
-  // rid of them?
-  inferenceRunner->RunInference<double, double>(
-      reinterpret_cast<double *>(inputs), reinterpret_cast<double *>(results));
+  return GuardTreebeardCall<bool>(TreebeardErrorCode::kRuntime, false, [&]() {
+    if (inferenceRunnerInt == 0 || inputs == nullptr || results == nullptr)
+      throw std::invalid_argument("invalid inference arguments");
+    auto inferenceRunner =
+        reinterpret_cast<mlir::decisionforest::InferenceRunnerBase *>(
+            inferenceRunnerInt);
+    inferenceRunner->RunInference<double, double>(
+        reinterpret_cast<double *>(inputs),
+        reinterpret_cast<double *>(results));
+    return true;
+  });
 }
 
-extern "C" void RunInferenceOnMultipleBatches(intptr_t inferenceRunnerInt,
+extern "C" bool RunInferenceOnMultipleBatches(intptr_t inferenceRunnerInt,
                                               void *inputs, void *results,
                                               int32_t numRows) {
-  auto inferenceRunner =
-      reinterpret_cast<mlir::decisionforest::InferenceRunnerBase *>(
-          inferenceRunnerInt);
-  auto batchSize = inferenceRunner->GetBatchSize();
-  auto rowSize = inferenceRunner->GetRowSize();
+  return GuardTreebeardCall<bool>(TreebeardErrorCode::kRuntime, false, [&]() {
+    if (inferenceRunnerInt == 0 || inputs == nullptr || results == nullptr)
+      throw std::invalid_argument("invalid inference arguments");
+    auto inferenceRunner =
+        reinterpret_cast<mlir::decisionforest::InferenceRunnerBase *>(
+            inferenceRunnerInt);
+    auto batchSize = inferenceRunner->GetBatchSize();
+    auto rowSize = inferenceRunner->GetRowSize();
+    if (numRows < 0 || numRows % batchSize != 0)
+      throw std::invalid_argument(
+          "number of rows must be a non-negative multiple of batch size");
 
-  assert(numRows % batchSize == 0);
-  int32_t inputElementSize = inferenceRunner->GetInputElementBitWidth() / 8;
-  int32_t returnTypeSize = inferenceRunner->GetReturnTypeBitWidth() / 8;
-  for (int32_t batch = 0; batch < numRows / batchSize; ++batch) {
-    auto batchPtr = reinterpret_cast<char *>(inputs) +
-                    (batch * (rowSize * batchSize) * inputElementSize);
-    auto resultsPtr = reinterpret_cast<char *>(results) +
-                      (batch * batchSize * returnTypeSize);
-    // TODO The types in this template don't really matter. Maybe we should get
-    // rid of them?
-    inferenceRunner->RunInference<double, double>(
-        reinterpret_cast<double *>(batchPtr),
-        reinterpret_cast<double *>(resultsPtr));
-  }
+    int32_t inputElementSize = inferenceRunner->GetInputElementBitWidth() / 8;
+    int32_t returnTypeSize = inferenceRunner->GetReturnTypeBitWidth() / 8;
+    for (int32_t batch = 0; batch < numRows / batchSize; ++batch) {
+      auto batchPtr = reinterpret_cast<char *>(inputs) +
+                      (batch * (rowSize * batchSize) * inputElementSize);
+      auto resultsPtr = reinterpret_cast<char *>(results) +
+                        (batch * batchSize * returnTypeSize);
+      inferenceRunner->RunInference<double, double>(
+          reinterpret_cast<double *>(batchPtr),
+          reinterpret_cast<double *>(resultsPtr));
+    }
+    return true;
+  });
 }
 
 extern "C" int32_t GetBatchSize(intptr_t inferenceRunnerInt) {
@@ -363,11 +413,14 @@ extern "C" void DestroyRepresentation(void *rep) {
 extern "C" intptr_t ConstructTreebeardContext(const char *modelPath,
                                               const char *modelGlobalsJSONPath,
                                               intptr_t options) {
-  TreeBeard::CompilerOptions *optionsPtr =
-      reinterpret_cast<TreeBeard::CompilerOptions *>(options);
-  auto *tbContext = new TreeBeard::TreebeardContext(
-      modelPath, modelGlobalsJSONPath, *optionsPtr);
-  return reinterpret_cast<intptr_t>(tbContext);
+  return GuardTreebeardCall<intptr_t>(
+      TreebeardErrorCode::kUnsupportedConfiguration, 0, [&]() {
+        TreeBeard::CompilerOptions *optionsPtr =
+            reinterpret_cast<TreeBeard::CompilerOptions *>(options);
+        auto *tbContext = new TreeBeard::TreebeardContext(
+            modelPath, modelGlobalsJSONPath, *optionsPtr);
+        return reinterpret_cast<intptr_t>(tbContext);
+      });
 }
 
 #if TREEBEARD_GPU_SUPPORT
@@ -391,34 +444,51 @@ extern "C" void DestroyTreebeardContext(intptr_t tbContext) {
   delete tbContextPtr;
 }
 
-extern "C" void SetForestCreatorType(intptr_t tbContext,
+extern "C" bool SetForestCreatorType(intptr_t tbContext,
                                      const char *creatorType) {
-  TreeBeard::TreebeardContext *tbContextPtr =
-      reinterpret_cast<TreeBeard::TreebeardContext *>(tbContext);
-  tbContextPtr->SetForestCreatorType(creatorType);
+  return GuardTreebeardCall<bool>(
+      TreebeardErrorCode::kUnsupportedModel, false, [&]() {
+        TreeBeard::TreebeardContext *tbContextPtr =
+            reinterpret_cast<TreeBeard::TreebeardContext *>(tbContext);
+        tbContextPtr->SetForestCreatorType(creatorType);
+        return true;
+      });
 }
 
-extern "C" void SetRepresentationAndSerializer(intptr_t tbContext,
+extern "C" bool SetRepresentationAndSerializer(intptr_t tbContext,
                                                const char *repType) {
-  TreeBeard::TreebeardContext *tbContextPtr =
-      reinterpret_cast<TreeBeard::TreebeardContext *>(tbContext);
-  tbContextPtr->SetRepresentationAndSerializer(repType);
+  return GuardTreebeardCall<bool>(
+      TreebeardErrorCode::kUnsupportedConfiguration, false, [&]() {
+        TreeBeard::TreebeardContext *tbContextPtr =
+            reinterpret_cast<TreeBeard::TreebeardContext *>(tbContext);
+        tbContextPtr->SetRepresentationAndSerializer(repType);
+        return true;
+      });
 }
 
 extern "C" void *GetScheduleFromTBContext(intptr_t tbContext) {
-  TreeBeard::TreebeardContext *tbContextPtr =
-      reinterpret_cast<TreeBeard::TreebeardContext *>(tbContext);
-  return tbContextPtr->forestConstructor->GetSchedule();
+  return GuardTreebeardCall<void *>(
+      TreebeardErrorCode::kCompilation, nullptr, [&]() {
+        TreeBeard::TreebeardContext *tbContextPtr =
+            reinterpret_cast<TreeBeard::TreebeardContext *>(tbContext);
+        return reinterpret_cast<void *>(
+            tbContextPtr->forestConstructor->GetSchedule());
+      });
 }
 
 // ===-------------------------------------------------------------=== //
 // Generic Compilation API
 // ===-------------------------------------------------------------=== //
 
-extern "C" void BuildHIRRepresentation(void *tbContext) {
-  TreeBeard::TreebeardContext *tbContextPtr =
-      reinterpret_cast<TreeBeard::TreebeardContext *>(tbContext);
-  TreeBeard::BuildHIRModule(*tbContextPtr, *tbContextPtr->forestConstructor);
+extern "C" bool BuildHIRRepresentation(void *tbContext) {
+  return GuardTreebeardCall<bool>(
+      TreebeardErrorCode::kUnsupportedModel, false, [&]() {
+        TreeBeard::TreebeardContext *tbContextPtr =
+            reinterpret_cast<TreeBeard::TreebeardContext *>(tbContext);
+        TreeBeard::BuildHIRModule(*tbContextPtr,
+                                  *tbContextPtr->forestConstructor);
+        return true;
+      });
 }
 
 inline mlir::ModuleOp LowerToLLVM(void *tbContext) {
@@ -440,14 +510,17 @@ extern "C" bool LowerToLLVMAndDumpIR(void *tbContext, const char *fileName) {
 }
 
 extern "C" void *ConstructInferenceRunnerFromHIR(void *tbContext) {
-  TreeBeard::TreebeardContext *tbContextPtr =
-      reinterpret_cast<TreeBeard::TreebeardContext *>(tbContext);
-  auto module = LowerToLLVM(tbContext);
-  auto *inferenceRunner = new mlir::decisionforest::InferenceRunner(
-      tbContextPtr->serializer, module, tbContextPtr->options.tileSize,
-      tbContextPtr->options.thresholdTypeWidth,
-      tbContextPtr->options.featureIndexTypeWidth);
-  return reinterpret_cast<void *>(inferenceRunner);
+  return GuardTreebeardCall<void *>(
+      TreebeardErrorCode::kCompilation, nullptr, [&]() {
+        TreeBeard::TreebeardContext *tbContextPtr =
+            reinterpret_cast<TreeBeard::TreebeardContext *>(tbContext);
+        auto module = LowerToLLVM(tbContext);
+        auto *inferenceRunner = new mlir::decisionforest::InferenceRunner(
+            tbContextPtr->serializer, module, tbContextPtr->options.tileSize,
+            tbContextPtr->options.thresholdTypeWidth,
+            tbContextPtr->options.featureIndexTypeWidth);
+        return reinterpret_cast<void *>(inferenceRunner);
+      });
 }
 
 #ifdef TREEBEARD_GPU_SUPPORT

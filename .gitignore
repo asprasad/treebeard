@@ -15,3 +15,7 @@ docs/MICRO*2022/*.pdf
 .cache
 .vscode/launch.json
 xgb_models/test/GPUBenchmarks
+dist/
+wheelhouse*/
+_skbuild/
+.venv*/*

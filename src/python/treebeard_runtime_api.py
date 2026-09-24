@@ -1,18 +1,39 @@
 import os
 import ctypes
+from enum import IntEnum
+
+
+class TreebeardErrorCode(IntEnum):
+  SUCCESS = 0
+  UNSUPPORTED_MODEL = 1
+  UNSUPPORTED_CONFIGURATION = 2
+  COMPILATION = 3
+  RUNTIME = 4
+
+
+class TreebeardNativeError(RuntimeError):
+  def __init__(self, code, message):
+    super().__init__(message)
+    self.code = code
 
 filepath = os.path.abspath(__file__)
 treebeard_runtime_dir = os.path.dirname(filepath)
 treebeard_runtime_so_name = "libtreebeard-runtime.so"
 treebeard_runtime_path = os.path.join(treebeard_runtime_dir, treebeard_runtime_so_name)
 
-# We expect the runtime so and this python file to be in the same directory
-assert os.path.exists(treebeard_runtime_path)
+if not os.path.exists(treebeard_runtime_path):
+  raise ImportError(
+      f"Treebeard native runtime was not found at {treebeard_runtime_path}")
 
 class TreebeardAPI:
   def __init__(self) -> None:
     try:
       self.runtime_lib = ctypes.CDLL(treebeard_runtime_path)
+
+      self.runtime_lib.TreebeardGetLastError.argtypes = None
+      self.runtime_lib.TreebeardGetLastError.restype = ctypes.c_char_p
+      self.runtime_lib.TreebeardGetLastErrorCode.argtypes = None
+      self.runtime_lib.TreebeardGetLastErrorCode.restype = ctypes.c_int32
 
       self.runtime_lib.CreateInferenceRunner.argtypes = (ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int64)
       self.runtime_lib.CreateInferenceRunner.restype = ctypes.c_int64
@@ -24,10 +45,10 @@ class TreebeardAPI:
       self.runtime_lib.InitializeInferenceRunner.restype = ctypes.c_int64
       
       self.runtime_lib.RunInference.argtypes = (ctypes.c_int64, ctypes.c_void_p, ctypes.c_void_p)
-      self.runtime_lib.RunInference.restype = None
+      self.runtime_lib.RunInference.restype = ctypes.c_bool
 
       self.runtime_lib.RunInferenceOnMultipleBatches.argtypes = (ctypes.c_int64, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_int32)
-      self.runtime_lib.RunInferenceOnMultipleBatches.restype = None
+      self.runtime_lib.RunInferenceOnMultipleBatches.restype = ctypes.c_bool
       
       self.runtime_lib.GetBatchSize.argtypes = [ctypes.c_int64]
       self.runtime_lib.GetBatchSize.restype = ctypes.c_int32
@@ -207,19 +228,25 @@ class TreebeardAPI:
       self.runtime_lib.ConstructTreebeardContext.restype = ctypes.c_int64
       self.runtime_lib.ConstructTreebeardContext.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int64]
 
-      self.runtime_lib.ConstructTreebeardContextFromGPUAutoscheduleOptions.restype = ctypes.c_int64
-      self.runtime_lib.ConstructTreebeardContextFromGPUAutoscheduleOptions.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int64, ctypes.c_int64]
+      self.gpu_support = hasattr(self.runtime_lib, "ConstructGPUInferenceRunnerFromHIR")
+      if self.gpu_support:
+        self.runtime_lib.ConstructTreebeardContextFromGPUAutoscheduleOptions.restype = ctypes.c_int64
+        self.runtime_lib.ConstructTreebeardContextFromGPUAutoscheduleOptions.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int64, ctypes.c_int64]
 
-      self.runtime_lib.DestroyTreebeardContext.argTypes = [ctypes.c_int64]
+      self.runtime_lib.DestroyTreebeardContext.argtypes = [ctypes.c_int64]
+      self.runtime_lib.DestroyTreebeardContext.restype = None
 
-      self.runtime_lib.SetForestCreatorType.argTypes = [ctypes.c_int64, ctypes.c_char_p]
+      self.runtime_lib.SetForestCreatorType.argtypes = [ctypes.c_int64, ctypes.c_char_p]
+      self.runtime_lib.SetForestCreatorType.restype = ctypes.c_bool
 
-      self.runtime_lib.SetRepresentationAndSerializer.argTypes = [ctypes.c_int64, ctypes.c_char_p]
+      self.runtime_lib.SetRepresentationAndSerializer.argtypes = [ctypes.c_int64, ctypes.c_char_p]
+      self.runtime_lib.SetRepresentationAndSerializer.restype = ctypes.c_bool
 
       self.runtime_lib.GetScheduleFromTBContext.restype = ctypes.c_int64
       self.runtime_lib.GetScheduleFromTBContext.argtypes = [ctypes.c_int64]
 
       self.runtime_lib.BuildHIRRepresentation.argtypes = [ctypes.c_int64]
+      self.runtime_lib.BuildHIRRepresentation.restype = ctypes.c_bool
 
       self.runtime_lib.LowerToLLVMAndDumpIR.restype = ctypes.c_bool
       self.runtime_lib.LowerToLLVMAndDumpIR.argtypes = [ctypes.c_int64, ctypes.c_char_p]
@@ -227,60 +254,66 @@ class TreebeardAPI:
       self.runtime_lib.ConstructInferenceRunnerFromHIR.restype = ctypes.c_int64
       self.runtime_lib.ConstructInferenceRunnerFromHIR.argtypes = [ctypes.c_int64]
 
-      # extern "C" void *ConstructGPUInferenceRunnerFromHIR(void *tbContext)
-      self.runtime_lib.ConstructGPUInferenceRunnerFromHIR.restype = ctypes.c_int64
-      self.runtime_lib.ConstructGPUInferenceRunnerFromHIR.argtypes = [ctypes.c_int64]
+      if self.gpu_support:
+        self.runtime_lib.ConstructGPUInferenceRunnerFromHIR.restype = ctypes.c_int64
+        self.runtime_lib.ConstructGPUInferenceRunnerFromHIR.argtypes = [ctypes.c_int64]
 
-      # extern "C" void *ConstructGPUInferenceRunnerFromTBContext(void *tbContext)
-      self.runtime_lib.ConstructGPUInferenceRunnerFromTBContext.restype = ctypes.c_int64
-      self.runtime_lib.ConstructGPUInferenceRunnerFromTBContext.argtypes = [ctypes.c_int64]
+        self.runtime_lib.ConstructGPUInferenceRunnerFromTBContext.restype = ctypes.c_int64
+        self.runtime_lib.ConstructGPUInferenceRunnerFromTBContext.argtypes = [ctypes.c_int64]
 
       # void IndexVariable_SetGPUThreadDim(intptr_t indexVarPtr, int32_t construct, int32_t dim)
       self.runtime_lib.IndexVariable_SetGPUThreadDim.restype = None
       self.runtime_lib.IndexVariable_SetGPUThreadDim.argtypes = [ctypes.c_int64, ctypes.c_int32, ctypes.c_int32]
 
-      # extern "C" intptr_t CreateGPUAutoScheduleOptions()
-      self.runtime_lib.CreateGPUAutoScheduleOptions.restype = ctypes.c_int64
-      self.runtime_lib.CreateGPUAutoScheduleOptions.argtypes = None
+      if self.gpu_support:
+        self.runtime_lib.CreateGPUAutoScheduleOptions.restype = ctypes.c_int64
+        self.runtime_lib.CreateGPUAutoScheduleOptions.argtypes = None
 
-      # extern "C" void DeleteGPUAutoScheduleOptions(intptr_t options) 
-      self.runtime_lib.DeleteGPUAutoScheduleOptions.restype = None
-      self.runtime_lib.DeleteGPUAutoScheduleOptions.argtypes = [ctypes.c_int64]
+        self.runtime_lib.DeleteGPUAutoScheduleOptions.restype = None
+        self.runtime_lib.DeleteGPUAutoScheduleOptions.argtypes = [ctypes.c_int64]
 
-      # extern "C" void *findBestGPUScheduleAndCompileModel(void *tbContext)
-      self.runtime_lib.findBestGPUScheduleAndCompileModel.restype = ctypes.c_int64
-      self.runtime_lib.findBestGPUScheduleAndCompileModel.argtypes = [ctypes.c_int64]
+        self.runtime_lib.findBestGPUScheduleAndCompileModel.restype = ctypes.c_int64
+        self.runtime_lib.findBestGPUScheduleAndCompileModel.argtypes = [ctypes.c_int64]
 
-      self.runtime_lib.Set_numRowsPerTB.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
-      self.runtime_lib.Set_numRowsPerThread.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
-      self.runtime_lib.Set_rowTileSize.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
-      self.runtime_lib.Set_numTreeThreads.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
-      self.runtime_lib.Set_numTreesAtATime.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
-      self.runtime_lib.Set_cacheRows.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
-      self.runtime_lib.Set_cacheTrees.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
-      self.runtime_lib.Set_unrollTreeWalks.argtypes = [ctypes.c_int64, ctypes.c_int32 ]
-      self.runtime_lib.Set_treeWalkInterleaveFactor.argtypes = [ctypes.c_int64, ctypes.c_int32]
-      self.runtime_lib.Set_sharedMemoryReduce.argtypes = [ctypes.c_int64, ctypes.c_int32]
+        self.runtime_lib.Set_numRowsPerTB.argtypes = [ctypes.c_int64, ctypes.c_int32]
+        self.runtime_lib.Set_numRowsPerThread.argtypes = [ctypes.c_int64, ctypes.c_int32]
+        self.runtime_lib.Set_rowTileSize.argtypes = [ctypes.c_int64, ctypes.c_int32]
+        self.runtime_lib.Set_numTreeThreads.argtypes = [ctypes.c_int64, ctypes.c_int32]
+        self.runtime_lib.Set_numTreesAtATime.argtypes = [ctypes.c_int64, ctypes.c_int32]
+        self.runtime_lib.Set_cacheRows.argtypes = [ctypes.c_int64, ctypes.c_int32]
+        self.runtime_lib.Set_cacheTrees.argtypes = [ctypes.c_int64, ctypes.c_int32]
+        self.runtime_lib.Set_unrollTreeWalks.argtypes = [ctypes.c_int64, ctypes.c_int32]
+        self.runtime_lib.Set_treeWalkInterleaveFactor.argtypes = [ctypes.c_int64, ctypes.c_int32]
+        self.runtime_lib.Set_sharedMemoryReduce.argtypes = [ctypes.c_int64, ctypes.c_int32]
 
-      self.runtime_lib.Set_numRowsPerTB.restype = None
-      self.runtime_lib.Set_numRowsPerThread.restype = None
-      self.runtime_lib.Set_rowTileSize.restype = None
-      self.runtime_lib.Set_numTreeThreads.restype = None
-      self.runtime_lib.Set_numTreesAtATime.restype = None
-      self.runtime_lib.Set_cacheRows.restype = None
-      self.runtime_lib.Set_cacheTrees.restype = None
-      self.runtime_lib.Set_unrollTreeWalks.restype = None
-      self.runtime_lib.Set_treeWalkInterleaveFactor.restype = None
-      self.runtime_lib.Set_sharedMemoryReduce.restype = None
+        self.runtime_lib.Set_numRowsPerTB.restype = None
+        self.runtime_lib.Set_numRowsPerThread.restype = None
+        self.runtime_lib.Set_rowTileSize.restype = None
+        self.runtime_lib.Set_numTreeThreads.restype = None
+        self.runtime_lib.Set_numTreesAtATime.restype = None
+        self.runtime_lib.Set_cacheRows.restype = None
+        self.runtime_lib.Set_cacheTrees.restype = None
+        self.runtime_lib.Set_unrollTreeWalks.restype = None
+        self.runtime_lib.Set_treeWalkInterleaveFactor.restype = None
+        self.runtime_lib.Set_sharedMemoryReduce.restype = None
 
-      self.runtime_lib.SetEnableMeasureGpuKernelTime.argtypes = [ctypes.c_int8]
-      self.runtime_lib.SetEnableMeasureGpuKernelTime.restype = None
+        self.runtime_lib.SetEnableMeasureGpuKernelTime.argtypes = [ctypes.c_int8]
+        self.runtime_lib.SetEnableMeasureGpuKernelTime.restype = None
 
-      self.runtime_lib.GetGPUKernelExecutionTime.argtypes = [ctypes.c_int64]
-      self.runtime_lib.GetGPUKernelExecutionTime.restype = ctypes.c_int64
+        self.runtime_lib.GetGPUKernelExecutionTime.argtypes = [ctypes.c_int64]
+        self.runtime_lib.GetGPUKernelExecutionTime.restype = ctypes.c_int64
 
     except Exception as e:
-      print("Loading the TreeBeard runtime failed with exception :", e)
+      raise ImportError(f"loading the Treebeard runtime failed: {e}") from e
+
+  def _raise_last_error(self):
+    message = self.runtime_lib.TreebeardGetLastError()
+    if message:
+      message = message.decode("utf-8", errors="replace")
+    else:
+      message = "native Treebeard operation failed"
+    raise TreebeardNativeError(
+        int(self.runtime_lib.TreebeardGetLastErrorCode()), message)
   
   def InitializeInferenceRunner(self, modelSOPath : str, modelGlobalsJSONPath : str) -> int:
     soPath = modelSOPath.encode('ascii')
@@ -294,10 +327,13 @@ class TreebeardAPI:
     return int(self.runtime_lib.GetBatchSize(inferenceRunner))
   
   def RunInference(self, inferenceRunner : int, inputs : ctypes.c_void_p, results : ctypes.c_void_p) -> None:
-    self.runtime_lib.RunInference(inferenceRunner, inputs, results)
+    if not self.runtime_lib.RunInference(inferenceRunner, inputs, results):
+      self._raise_last_error()
 
   def RunInferenceOnMultipleBatches(self, inferenceRunner : int, inputs : ctypes.c_void_p, results : ctypes.c_void_p, numRows : int) -> None:
-    self.runtime_lib.RunInferenceOnMultipleBatches(inferenceRunner, inputs, results, numRows)
+    if not self.runtime_lib.RunInferenceOnMultipleBatches(
+        inferenceRunner, inputs, results, numRows):
+      self._raise_last_error()
 
   def DeleteInferenceRunner(self, inferenceRunner : int) -> None:
     self.runtime_lib.DeleteInferenceRunner(inferenceRunner)
@@ -342,7 +378,7 @@ class TreebeardAPI:
       self.runtime_lib.Schedule_VectorReduce(schedPtr, ctypes.c_int64(indexVarPtr), ctypes.c_int32(vectorWidth))
   
   def Schedule_SharedReduce(self, schedPtr, indexVarPtr):
-      self.runtime_lib.Schedule_SharedReduce(ctypes.c_int64(schedPtr), ctypes.c_int64(indexVarPtr))
+      self.runtime_lib.Schedule_SharedReduce(schedPtr, ctypes.c_int64(indexVarPtr))
 
   def Schedule_GetRootIndex(self, schedPtr):
       return self.runtime_lib.Schedule_GetRootIndex(schedPtr)
@@ -372,7 +408,8 @@ class TreebeardAPI:
     model_path_ascii = model_path.encode('ascii')
     model_globals_path_ascii = model_globals_path.encode('ascii')
     tbContext = self.runtime_lib.ConstructTreebeardContext(model_path_ascii, model_globals_path_ascii, options_ptr)
-    # print("TBContext_Create: ", tbContext, type(tbContext))
+    if not tbContext:
+      self._raise_last_error()
     return tbContext
   
   def ConstructTreebeardContextFromGPUAutoscheduleOptions(self, model_path, model_globals_path, options_ptr, gpu_autoschedule_options_ptr):
@@ -387,8 +424,9 @@ class TreebeardAPI:
 
   def SetForestCreatorType(self, treebeard_context_ptr, file_type):
     file_type_ascii = file_type.encode('ascii')
-    # print("TBContext_SetTypeAPI: ", treebeard_context_ptr, type(treebeard_context_ptr))
-    self.runtime_lib.SetForestCreatorType(ctypes.c_int64(treebeard_context_ptr), file_type_ascii)
+    if not self.runtime_lib.SetForestCreatorType(
+        ctypes.c_int64(treebeard_context_ptr), file_type_ascii):
+      self._raise_last_error()
 
   def LowerToLLVMAndDumpIR(self, treebeard_context_ptr, output_path):
     output_path_utf8 = output_path.encode('utf-8')
@@ -396,8 +434,23 @@ class TreebeardAPI:
 
   def SetRepresentationAndSerializer(self, treebeard_context_ptr, rep_type):
     rep_type_ascii = rep_type.encode('ascii')
-    self.runtime_lib.SetRepresentationAndSerializer(ctypes.c_int64(treebeard_context_ptr), rep_type_ascii)
+    if not self.runtime_lib.SetRepresentationAndSerializer(
+        ctypes.c_int64(treebeard_context_ptr), rep_type_ascii):
+      self._raise_last_error()
 
   def GetScheduleFromTBContext(self, treebeard_context_ptr):
     schedule_ptr = self.runtime_lib.GetScheduleFromTBContext(treebeard_context_ptr)
+    if not schedule_ptr:
+      self._raise_last_error()
     return ctypes.c_int64(schedule_ptr)
+
+  def BuildHIRRepresentation(self, treebeard_context_ptr):
+    if not self.runtime_lib.BuildHIRRepresentation(treebeard_context_ptr):
+      self._raise_last_error()
+
+  def ConstructInferenceRunnerFromHIR(self, treebeard_context_ptr):
+    runner = self.runtime_lib.ConstructInferenceRunnerFromHIR(
+        treebeard_context_ptr)
+    if not runner:
+      self._raise_last_error()
+    return int(runner)

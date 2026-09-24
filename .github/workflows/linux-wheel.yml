@@ -1,0 +1,252 @@
+name: Linux wheel
+
+on:
+  pull_request:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  build-wheel:
+    runs-on: ubuntu-latest
+    container:
+      image: quay.io/pypa/manylinux_2_28_x86_64
+    env:
+      CMAKE_PREFIX_PATH: /opt/treebeard-build
+      LD_LIBRARY_PATH: /opt/treebeard-build/lib
+      LLVM_DIR: /opt/treebeard-build/lib/cmake/llvm
+      MLIR_DIR: /opt/treebeard-build/lib/cmake/mlir
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PYTHON: /opt/python/cp312-cp312/bin/python
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM and MLIR 16
+        shell: bash
+        run: |
+          curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest \
+            | tar -xj -C /usr/local/bin --strip-components=1 bin/micromamba
+          micromamba create --yes --prefix "$CMAKE_PREFIX_PATH" \
+            --channel conda-forge \
+            llvmdev=16 mlir=16 libprotobuf=3.21 llvm-openmp=16
+
+      - name: Build wheel
+        shell: bash
+        run: |
+          "$PYTHON" -m pip install --upgrade pip build cmake ninja auditwheel patchelf
+          "$PYTHON" -m build --wheel
+          "$PYTHON" -m auditwheel show dist/*.whl
+          "$PYTHON" -m auditwheel repair dist/*.whl \
+            --plat manylinux_2_35_x86_64 \
+            --wheel-dir wheelhouse
+
+      - name: Enforce wheel size limit
+        shell: bash
+        run: |
+          wheel=$(find wheelhouse -maxdepth 1 -name '*.whl' -print -quit)
+          size=$(stat --format=%s "$wheel")
+          echo "Wheel size: $size bytes"
+          test "$size" -lt 104857600
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: treebeard-linux-wheel
+          path: wheelhouse/*.whl
+          if-no-files-found: error
+
+  test-wheel:
+    needs: build-wheel
+    runs-on: ubuntu-22.04
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: treebeard-linux-wheel
+          path: wheelhouse
+
+      - name: Test installed wheel
+        shell: bash
+        run: |
+          wheel=$(find "$GITHUB_WORKSPACE/wheelhouse" -maxdepth 1 -name '*.whl' -print -quit)
+          rm -rf /tmp/treebeard-wheel-test /tmp/treebeard-wheel-smoke
+          python -m venv /tmp/treebeard-wheel-test
+          /tmp/treebeard-wheel-test/bin/pip install "${wheel}[test]"
+          mkdir -p /tmp/treebeard-wheel-smoke/xgboost \
+            /tmp/treebeard-wheel-smoke/onnx
+          cp xgb_models/abalone_xgb_model_1.7.6.json \
+            xgb_models/abalone_xgb_model_save.json.test.sampled.csv \
+            /tmp/treebeard-wheel-smoke/xgboost/
+          cp \
+            onnx_models/abalone_onnx_model_save.onnx \
+            onnx_models/abalone_onnx_model_save.onnx.csv \
+            /tmp/treebeard-wheel-smoke/onnx/
+          cd /tmp/treebeard-wheel-smoke
+          env -u PYTHONPATH LD_LIBRARY_PATH= \
+            /tmp/treebeard-wheel-test/bin/python \
+            "$GITHUB_WORKSPACE/test/python/wheel_smoke_test.py" \
+            xgboost onnx
+
+  build-cuda-wheel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    container:
+      image: quay.io/pypa/manylinux_2_28_x86_64
+    env:
+      BUILD_PREFIX: /opt/treebeard-build
+      CUDA_VERSION: "12.6"
+      LLVM_VERSION: "16.0.6"
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PYTHON: /opt/python/cp312-cp312/bin/python
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM 16 and CUDA 12.6
+        shell: bash
+        run: |
+          curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest \
+            | tar -xj -C /usr/local/bin --strip-components=1 bin/micromamba
+          micromamba create --yes --prefix "$BUILD_PREFIX" \
+            --channel conda-forge --channel nvidia \
+            llvmdev=16 clang=16 libprotobuf=3.21 llvm-openmp=16 \
+            cuda-nvcc="$CUDA_VERSION" cuda-driver-dev="$CUDA_VERSION" \
+            cuda-cudart-dev="$CUDA_VERSION"
+
+      - name: Build CUDA-enabled MLIR 16
+        shell: bash
+        run: |
+          curl -Ls \
+            "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/llvm-project-${LLVM_VERSION}.src.tar.xz" \
+            | tar -xJ
+          cuda_stub=$(find "$BUILD_PREFIX" -path '*/lib/stubs/libcuda.so' -print -quit)
+          test -n "$cuda_stub"
+          cmake -S "llvm-project-${LLVM_VERSION}.src/llvm" \
+            -B /opt/treebeard-llvm-cuda -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_C_COMPILER="$BUILD_PREFIX/bin/clang" \
+            -DCMAKE_CXX_COMPILER="$BUILD_PREFIX/bin/clang++" \
+            -DCMAKE_CUDA_COMPILER="$BUILD_PREFIX/bin/nvcc" \
+            -DCMAKE_CUDA_HOST_COMPILER="$BUILD_PREFIX/bin/clang++" \
+            -DCUDAToolkit_ROOT="$BUILD_PREFIX" \
+            -DCUDA_DRIVER_LIBRARY="$cuda_stub" \
+            -DCUDA_RUNTIME_LIBRARY="$cuda_stub" \
+            -DLLVM_ENABLE_ASSERTIONS=ON \
+            -DLLVM_ENABLE_PROJECTS=mlir \
+            -DLLVM_INCLUDE_BENCHMARKS=OFF \
+            -DLLVM_INCLUDE_EXAMPLES=OFF \
+            -DLLVM_INCLUDE_TESTS=OFF \
+            -DLLVM_TARGETS_TO_BUILD='X86;NVPTX' \
+            -DMLIR_ENABLE_CUDA_CONVERSIONS=ON \
+            -DMLIR_ENABLE_CUDA_RUNNER=ON
+          cmake --build /opt/treebeard-llvm-cuda --parallel 2 --target \
+            bin/mlir-opt \
+            lib/libMLIRExecutionEngine.a \
+            lib/libMLIRGPUTransforms.a \
+            lib/libMLIROpenMPToLLVMIRTranslation.a \
+            lib/libmlir_cuda_runtime.so \
+            lib/libmlir_runner_utils.so
+
+      - name: Build CUDA wheel
+        shell: bash
+        env:
+          CMAKE_BUILD_PARALLEL_LEVEL: "2"
+          CMAKE_PREFIX_PATH: /opt/treebeard-llvm-cuda:/opt/treebeard-build
+          LD_LIBRARY_PATH: /opt/treebeard-build/lib:/opt/treebeard-llvm-cuda/lib
+          LLVM_DIR: /opt/treebeard-llvm-cuda/lib/cmake/llvm
+          MLIR_DIR: /opt/treebeard-llvm-cuda/lib/cmake/mlir
+        run: |
+          "$PYTHON" -m pip install --upgrade pip build cmake ninja auditwheel patchelf
+          export CMAKE_ARGS="-DNV_GPU_SUPPORT=ON -DAMD_GPU_SUPPORT=OFF -DENABLE_ONNX_PARSER=ON -DLLVM_BUILD_DIRECTORY=/opt/treebeard-llvm-cuda/ -DTREEBEARD_GPU_RUNTIME_DIR=/opt/treebeard-llvm-cuda/lib -DTREEBEARD_OPENMP_RUNTIME=$BUILD_PREFIX/lib/libomp.so"
+          "$PYTHON" -m build --wheel --outdir dist-cuda
+          "$PYTHON" -m auditwheel show dist-cuda/*.whl
+          "$PYTHON" -m auditwheel repair dist-cuda/*.whl \
+            --plat manylinux_2_35_x86_64 \
+            --exclude libcuda.so.1 \
+            --wheel-dir wheelhouse-cuda
+
+      - name: Verify CUDA wheel contents
+        shell: bash
+        run: |
+          wheel=$(find wheelhouse-cuda -maxdepth 1 -name '*.whl' -print -quit)
+          test -n "$wheel"
+          entries=$(unzip -Z1 "$wheel")
+          grep -q '^treebeard/libtreebeard-runtime.so$' <<<"$entries"
+          grep -q '^treebeard/libmlir_cuda_runtime.so$' <<<"$entries"
+          grep -q '^treebeard/libmlir_runner_utils.so$' <<<"$entries"
+          grep -q '^treebeard/libomp.so$' <<<"$entries"
+          ! grep -q '/libcuda\.so' <<<"$entries"
+          size=$(stat --format=%s "$wheel")
+          echo "CUDA wheel size: $size bytes"
+          test "$size" -lt 104857600
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: treebeard-linux-cuda126-wheel
+          path: wheelhouse-cuda/*.whl
+          if-no-files-found: error
+
+  test-cuda-wheel:
+    needs: build-cuda-wheel
+    runs-on: ubuntu-22.04
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: treebeard-linux-cuda126-wheel
+          path: wheelhouse-cuda
+
+      - name: Install CUDA driver stub
+        shell: bash
+        run: |
+          mkdir -p /tmp/treebeard-micromamba
+          curl -Ls https://micro.mamba.pm/api/micromamba/linux-64/latest \
+            | tar -xj -C /tmp/treebeard-micromamba bin/micromamba
+          /tmp/treebeard-micromamba/bin/micromamba create --yes \
+            --prefix /tmp/treebeard-cuda-driver \
+            --channel nvidia cuda-driver-dev=12.6
+          cuda_stub=$(find /tmp/treebeard-cuda-driver -path '*/lib/stubs/libcuda.so' -print -quit)
+          test -n "$cuda_stub"
+          echo "CUDA_STUB_DIR=$(dirname "$cuda_stub")" >> "$GITHUB_ENV"
+
+      - name: Test installed CUDA wheel
+        shell: bash
+        run: |
+          wheel=$(find "$GITHUB_WORKSPACE/wheelhouse-cuda" -maxdepth 1 -name '*.whl' -print -quit)
+          rm -rf /tmp/treebeard-cuda-wheel-test /tmp/treebeard-cuda-wheel-smoke
+          python -m venv /tmp/treebeard-cuda-wheel-test
+          /tmp/treebeard-cuda-wheel-test/bin/pip install "${wheel}[test]"
+          cd /tmp
+          env -u PYTHONPATH LD_LIBRARY_PATH="$CUDA_STUB_DIR" \
+            /tmp/treebeard-cuda-wheel-test/bin/python -c \
+            'import treebeard; assert treebeard.treebeardAPI.gpu_support; print(treebeard.__file__)'
+          mkdir -p /tmp/treebeard-cuda-wheel-smoke/xgboost \
+            /tmp/treebeard-cuda-wheel-smoke/onnx
+          cp "$GITHUB_WORKSPACE/xgb_models/abalone_xgb_model_1.7.6.json" \
+            "$GITHUB_WORKSPACE/xgb_models/abalone_xgb_model_save.json.test.sampled.csv" \
+            /tmp/treebeard-cuda-wheel-smoke/xgboost/
+          cp \
+            "$GITHUB_WORKSPACE/onnx_models/abalone_onnx_model_save.onnx" \
+            "$GITHUB_WORKSPACE/onnx_models/abalone_onnx_model_save.onnx.csv" \
+            /tmp/treebeard-cuda-wheel-smoke/onnx/
+          cd /tmp/treebeard-cuda-wheel-smoke
+          env -u PYTHONPATH LD_LIBRARY_PATH="$CUDA_STUB_DIR" \
+            /tmp/treebeard-cuda-wheel-test/bin/python \
+            "$GITHUB_WORKSPACE/test/python/wheel_smoke_test.py" \
+            xgboost onnx

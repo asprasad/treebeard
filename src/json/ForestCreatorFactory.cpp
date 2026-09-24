@@ -1,6 +1,7 @@
 #include "ForestCreatorFactory.h"
 #include "onnxmodelparser.h"
 #include "xgboostparser.h"
+#include <stdexcept>
 
 namespace TreeBeard {
 
@@ -18,7 +19,8 @@ std::shared_ptr<ForestCreator>
 ForestCreatorFactory::GetForestCreator(const std::string &name,
                                        TreeBeard::TreebeardContext &tbContext) {
   auto mapIter = m_constructionMap.find(name);
-  assert(mapIter != m_constructionMap.end() && "Unknown forest creator name!");
+  if (mapIter == m_constructionMap.end())
+    throw std::invalid_argument("unsupported model format: " + name);
   return mapIter->second(tbContext);
 }
 

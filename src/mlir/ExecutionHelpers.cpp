@@ -17,6 +17,18 @@ bool FileExists(const std::string &filename) {
   return fin.good();
 }
 
+std::string GetCurrentLibraryDirectory() {
+  Dl_info info;
+  if (dladdr(reinterpret_cast<void *>(&GetCurrentLibraryDirectory), &info) ==
+          0 ||
+      info.dli_fname == nullptr)
+    return {};
+  std::string libraryPath(info.dli_fname);
+  auto separator = libraryPath.find_last_of('/');
+  return separator == std::string::npos ? std::string(".")
+                                        : libraryPath.substr(0, separator);
+}
+
 } // namespace
 
 namespace mlir {
@@ -119,10 +131,9 @@ InferenceRunner::CreateExecutionEngine(mlir::ModuleOp module) {
     executionEngineLibs.push_back(debugSOPath.data());
   }
 #ifdef OMP_SUPPORT
-  std::string libompPath =
-      std::string(LLVM_LIB_DIR) + std::string("lib/libomp.so");
+  std::string libompPath = GetCurrentLibraryDirectory() + "/libomp.so";
   if (!FileExists(libompPath)) {
-    libompPath = "/usr/lib/llvm-10/lib/libomp.so";
+    libompPath = "libomp.so";
   }
   executionEngineLibs.push_back(libompPath);
 #endif

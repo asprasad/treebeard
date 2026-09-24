@@ -1,6 +1,36 @@
 # Treebeard 
 Treebeard is an optimizing compiler for decision tree ensemble inference. Please feel free to file a github issue if you have trouble setting up Treebeard.
 
+## Install with pip
+
+The Python distribution is named `treebeard-ml` and is imported as
+`treebeard`:
+
+```bash
+python -m pip install treebeard-ml
+```
+
+The prebuilt wheels currently target CPU inference on Linux x86-64 with glibc
+2.35 or newer. They include the native Treebeard runtime and its LLVM/OpenMP
+runtime libraries, so using a wheel does not require a compiler, CMake, LLVM,
+or MLIR. Optional model framework dependencies can be installed as extras:
+
+```bash
+python -m pip install "treebeard-ml[xgboost]"
+python -m pip install "treebeard-ml[onnx]"
+```
+
+GPU support is not included in the published wheels. Build Treebeard from
+source with the corresponding GPU CMake option to use a GPU target.
+
+| Installation | Required on the target machine |
+| --- | --- |
+| Prebuilt CPU wheel | Python 3.9 or newer, NumPy, and glibc 2.35 or newer |
+| Source build | C/C++ compiler, CMake, Ninja, LLVM/MLIR 16, protobuf, and OpenMP |
+
+If no compatible wheel is available, pip may attempt a source build and the
+second row applies.
+
 # Setting up Treebeard
 1. **[Dependencies]** Install git, clang (v15 or newer), lld (v15 or newer), cmake (v3.20 or newer), ninja (v1.10.0 or newer), gcc (v9.3.0 or newer), g++ (v9.3.0 or newer), protobuf lib (3.21 or newer). Anaconda.
     1. Run the following command on Ubuntu 20.04 (The packages default to the right versions on Ubuntu 20.04. Specific versions may need to be specified in other versions of Linux).
@@ -35,6 +65,72 @@ To setup Treebeard's python support in a new shell (after the previous step has 
     . setupPythonEnv.sh
     conda activate treebeard
     ```
+
+### Compiling a model from Python
+
+An XGBoost estimator or booster can be compiled directly. Treebeard handles the
+temporary model serialization and fixed-size runtime batches internally.
+
+```python
+import numpy as np
+import treebeard
+
+kernel = treebeard.compile(rf_model)
+probabilities = kernel.run(X_test)
+```
+
+`run()` returns one Treebeard model result per input row. For an XGBoost
+`binary:logistic` model, this is the positive-class probability. Inputs are
+converted to contiguous `float32` arrays by default. The batch size, data types,
+and existing compiler options can be customized when compiling:
+
+```python
+options = treebeard.CompilerOptions(1024, 8)
+options.SetNumberOfCores(16)
+
+kernel = treebeard.compile(
+    rf_model,
+    options=options,
+    input_type=np.float32,
+    result_type=np.float32,
+)
+```
+
+The existing scheduling API is exposed through a callback:
+
+```python
+def cpu_schedule(schedule):
+    batch = schedule.GetBatchIndex()
+    batch_outer = schedule.NewIndexVariable("batch_outer")
+    batch_inner = schedule.NewIndexVariable("batch_inner")
+    schedule.Tile(batch, batch_outer, batch_inner, 8)
+    schedule.Parallel(batch_outer)
+    schedule.Simdize(batch_inner)
+
+kernel = treebeard.compile(rf_model, schedule=cpu_schedule)
+```
+
+Use `target="gpu"` with a GPU schedule callback, or provide existing GPU
+autoschedule options:
+
+```python
+gpu_options = treebeard.GPUAutoScheduleOptions.Construct(256)
+kernel = treebeard.compile(
+    rf_model,
+    target="gpu",
+    gpu_auto_schedule_options=gpu_options,
+)
+```
+
+Loaded ONNX models are accepted as well. Treebeard infers the feature count from
+a static model input shape:
+
+```python
+model = onnx.load("model.onnx")
+kernel = treebeard.compile(model)
+outputs = kernel.run(inputs)
+```
+
 ## Running Tests
 
 1. **[Functionality Tests]** Use the following steps to run functionality tests. Run these steps in the same shell as above. Running these will print a pass/fail result on the console. All of these tests should pass after the previous steps have been completed successfully. Please raise a github issue if any of these tests fail.
@@ -43,6 +139,16 @@ To setup Treebeard's python support in a new shell (after the previous step has 
         cd <treebeard_home>/test/python
         python run_python_tests.py
         ```
+        For a build configured with `ENABLE_ONNX_PARSER=ON`, install the Python
+        `onnx` package and include loaded-ONNX execution coverage with:
+        ```bash
+        TREEBEARD_ENABLE_ONNX_TESTS=1 python run_python_tests.py
+        ```
+        The high-level API tests execute batch tiling, SIMD vectorization, and
+        tree-before-batch loop ordering schedules. GPU builds additionally run
+        a basic GPU schedule and atomic, vector, and shared-memory reduction
+        schedules when a working NVIDIA or AMD device is detected; otherwise
+        those tests are reported as skipped.
     2. To run basic sanity tests, run the following.
         ```bash
         cd <treebeard_home>/build/bin
@@ -64,6 +170,38 @@ that is tuned for the Intel processor on which we ran our experiments (Intel Cor
 scripts with the "--explore" switch will explore a few other predefined configurations 
 and find the best one among these for the machine on which code is being executed. However, this will mean 
 that the python script will take significantly longer to complete.
+
+## Building a Python wheel
+
+Set `CMAKE_PREFIX_PATH` to an installation containing LLVM/MLIR 16, protobuf,
+and OpenMP, then build with the PEP 517 frontend:
+
+```bash
+python -m pip install build
+CMAKE_PREFIX_PATH=/path/to/llvm-and-mlir python -m build --wheel
+```
+
+On Linux, repair the wheel before distributing it so that non-system shared
+libraries are bundled:
+
+```bash
+python -m pip install auditwheel patchelf
+auditwheel repair dist/*.whl --wheel-dir wheelhouse
+```
+
+Test the repaired artifact in a fresh environment and outside the source
+checkout:
+
+```bash
+python -m venv /tmp/treebeard-wheel-test
+/tmp/treebeard-wheel-test/bin/pip install wheelhouse/treebeard_ml-*.whl
+cd /tmp
+/tmp/treebeard-wheel-test/bin/python -c "import treebeard; print(treebeard.__version__)"
+```
+
+Compilation and inference failures are reported as `TreebeardError`
+subclasses, including `UnsupportedModelError`, `UnsupportedConfigurationError`,
+`CompilationError`, and `RuntimeUnavailableError`.
 
 # Customizing the build
 1. Setup a build of [MLIR](https://mlir.llvm.org/getting_started/).

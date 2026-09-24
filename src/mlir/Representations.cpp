@@ -22,6 +22,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Types.h"
 #include <cstdint>
+#include <stdexcept>
 
 using namespace mlir;
 using namespace mlir::decisionforest::helpers;
@@ -1777,7 +1778,8 @@ REGISTER_REPRESENTATION(sparse, constructSparseRepresentation)
 std::shared_ptr<IRepresentation>
 RepresentationFactory::GetRepresentation(const std::string &name) {
   auto mapIter = m_constructionMap.find(name);
-  assert(mapIter != m_constructionMap.end() && "Unknown representation name!");
+  if (mapIter == m_constructionMap.end())
+    throw std::invalid_argument("unsupported representation: " + name);
   return mapIter->second();
 }
 

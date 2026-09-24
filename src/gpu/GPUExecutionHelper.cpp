@@ -20,6 +20,18 @@ bool FileExists(const std::string &filename) {
   return fin.good();
 }
 
+std::string GetCurrentLibraryDirectory() {
+  Dl_info info;
+  if (dladdr(reinterpret_cast<void *>(&GetCurrentLibraryDirectory), &info) ==
+          0 ||
+      info.dli_fname == nullptr)
+    return {};
+  std::string libraryPath(info.dli_fname);
+  auto separator = libraryPath.find_last_of('/');
+  return separator == std::string::npos ? std::string(".")
+                                        : libraryPath.substr(0, separator);
+}
+
 } // anonymous namespace
 
 namespace mlir {
@@ -82,10 +94,10 @@ GPUInferenceRunner::CreateExecutionEngine(mlir::ModuleOp module) {
 
   // Libraries that we'll pass to the ExecutionEngine for loading.
   SmallVector<StringRef, 4> executionEngineLibs;
+  std::string runtimeLibraryDirectory = GetCurrentLibraryDirectory();
 
 #ifdef OMP_SUPPORT
-  std::string libompPath =
-      std::string(LLVM_LIB_DIR) + std::string("lib/libomp.so");
+  std::string libompPath = runtimeLibraryDirectory + "/libomp.so";
   assert(FileExists(libompPath));
   executionEngineLibs.push_back(libompPath);
 #endif
@@ -97,7 +109,7 @@ GPUInferenceRunner::CreateExecutionEngine(mlir::ModuleOp module) {
 
 #ifdef TREEBEARD_NV_GPU_SUPPORT
   std::string libCudaRuntimePath =
-      std::string(LLVM_LIB_DIR) + std::string("lib/libmlir_cuda_runtime.so");
+      runtimeLibraryDirectory + "/libmlir_cuda_runtime.so";
   assert(FileExists(libCudaRuntimePath));
   executionEngineLibs.push_back(libCudaRuntimePath);
 #elif defined(TREEBEARD_AMD_GPU_SUPPORT)
@@ -108,7 +120,7 @@ GPUInferenceRunner::CreateExecutionEngine(mlir::ModuleOp module) {
 #endif // TREEBEARD_AMD_GPU_SUPPORT
 
   std::string libMLIRRunnerUtilsPath =
-      std::string(LLVM_LIB_DIR) + std::string("lib/libmlir_runner_utils.so");
+      runtimeLibraryDirectory + "/libmlir_runner_utils.so";
   assert(FileExists(libMLIRRunnerUtilsPath));
   executionEngineLibs.push_back(libMLIRRunnerUtilsPath);
 

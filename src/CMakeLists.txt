@@ -3,6 +3,10 @@ option(NV_GPU_SUPPORT "Turn on NVIDIA GPU support" OFF)
 option(ENABLE_ONNX_PARSER "Turn on Treebeard ONNX parser" OFF)
 option(AMD_GPU_CHIPSET "AMD GPU architecture identifier" "")
 
+if(ENABLE_ONNX_PARSER)
+        add_definitions(-DENABLE_ONNX_PARSER=1)
+endif()
+
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(conversion_libs GLOBAL PROPERTY MLIR_CONVERSION_LIBS)
 set(TREEBEARD_DEPENDENCY_LIBS
@@ -36,7 +40,6 @@ add_dependencies(treebeard DecisionForestGen)
 
 llvm_update_compile_flags(treebeard)
 add_definitions(-DTREEBEARD_SRC_DIR="${CMAKE_SOURCE_DIR}")
-add_definitions(-DLLVM_LIB_DIR="${LLVM_BUILD_DIRECTORY}")
 add_definitions(-DTREEBEARD_BUILD_DIR="${CMAKE_BINARY_DIR}")
 
 if(NV_GPU_SUPPORT OR AMD_GPU_SUPPORT)
@@ -49,6 +52,7 @@ endif()
 
 if(NV_GPU_SUPPORT)
         add_definitions(-DTREEBEARD_NV_GPU_SUPPORT)
+        list(APPEND TREEBEARD_DEPENDENCY_LIBS MLIRGPUTransforms)
 elseif(AMD_GPU_SUPPORT)
         add_definitions(-DTREEBEARD_AMD_GPU_SUPPORT)
 

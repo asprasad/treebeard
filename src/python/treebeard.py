@@ -1,8 +1,46 @@
 import ctypes
-from treebeard_runtime_api import TreebeardAPI
+import os
+import tempfile
+try:
+  from ._runtime_api import (  # pyright: ignore[reportMissingImports]
+      TreebeardAPI, TreebeardErrorCode)
+except ImportError:
+  from treebeard_runtime_api import TreebeardAPI, TreebeardErrorCode
 import numpy
-from typing import List
+from typing import Callable, List, Optional
 from enum import Enum
+
+
+class TreebeardError(RuntimeError):
+  pass
+
+
+class UnsupportedModelError(TreebeardError):
+  pass
+
+
+class UnsupportedConfigurationError(TreebeardError):
+  pass
+
+
+class CompilationError(TreebeardError):
+  pass
+
+
+class RuntimeUnavailableError(TreebeardError):
+  pass
+
+
+def _translate_native_error(error):
+  error_types = {
+    TreebeardErrorCode.UNSUPPORTED_MODEL: UnsupportedModelError,
+    TreebeardErrorCode.UNSUPPORTED_CONFIGURATION:
+      UnsupportedConfigurationError,
+    TreebeardErrorCode.COMPILATION: CompilationError,
+    TreebeardErrorCode.RUNTIME: RuntimeUnavailableError,
+  }
+  error_code = getattr(error, "code", TreebeardErrorCode.SUCCESS)
+  return error_types.get(error_code, TreebeardError)(str(error))
 
 treebeardAPI = TreebeardAPI()
 #### ---------------------------------------------------------------- ####
@@ -225,6 +263,9 @@ class Schedule:
   def VectorReduce(self, index, width):
       treebeardAPI.Schedule_VectorReduce(self.schedulePtr, index.indexVarPtr, width)
 
+  def SharedReduce(self, index):
+      treebeardAPI.Schedule_SharedReduce(self.schedulePtr, index.indexVarPtr)
+
   def GetRootIndex(self):
       return IndexVariable("root", treebeardAPI.Schedule_GetRootIndex(self.schedulePtr))
 
@@ -274,14 +315,21 @@ class TreebeardContext:
     return Schedule(schedulePtr)
 
   def BuildHIRRepresentation(self):
-    treebeardAPI.runtime_lib.BuildHIRRepresentation(self.tbcontextPtr)
+    try:
+      treebeardAPI.BuildHIRRepresentation(self.tbcontextPtr)
+    except RuntimeError as error:
+      raise _translate_native_error(error) from error
 
   def DumpLLVMIR(self, path: str):
     treebeardAPI.LowerToLLVMAndDumpIR(self.tbcontextPtr, path)
 
   def ConstructInferenceRunnerFromHIR(self):
     inferenceRunner = TreebeardInferenceRunner()
-    inferenceRunner.inferenceRunner = int(treebeardAPI.runtime_lib.ConstructInferenceRunnerFromHIR(self.tbcontextPtr))
+    try:
+      inferenceRunner.inferenceRunner = (
+          treebeardAPI.ConstructInferenceRunnerFromHIR(self.tbcontextPtr))
+    except RuntimeError as error:
+      raise _translate_native_error(error) from error
     inferenceRunner.rowSize = treebeardAPI.GetRowSize(inferenceRunner.inferenceRunner)
     inferenceRunner.batchSize = treebeardAPI.GetBatchSize(inferenceRunner.inferenceRunner)
     return inferenceRunner
@@ -376,8 +424,144 @@ class TreebeardInferenceRunner:
     assert type(inputs) is numpy.ndarray
     numRows = inputs.shape[0]
     results = numpy.zeros((numRows), resultType)
-    self.treebeardAPI.RunInferenceOnMultipleBatches(self.inferenceRunner, inputs.ctypes.data_as(ctypes.c_void_p), results.ctypes.data_as(ctypes.c_void_p), numRows)
+    try:
+      self.treebeardAPI.RunInferenceOnMultipleBatches(
+          self.inferenceRunner, inputs.ctypes.data_as(ctypes.c_void_p),
+          results.ctypes.data_as(ctypes.c_void_p), numRows)
+    except RuntimeError as error:
+      raise _translate_native_error(error) from error
     return results
+
+#### ---------------------------------------------------------------- ####
+#### High-level compilation API
+#### ---------------------------------------------------------------- ####
+class TreebeardKernel:
+  def __init__(self, inference_runner, compilation_context, model_artifacts,
+               input_type, result_type) -> None:
+    self._inference_runner = inference_runner
+    self._compilation_context = compilation_context
+    self._model_artifacts = model_artifacts
+    self.input_type = numpy.dtype(input_type)
+    self.result_type = numpy.dtype(result_type)
+    self.batch_size = inference_runner.batchSize
+    self.num_features = inference_runner.rowSize
+
+  def close(self):
+    self._inference_runner = None
+    self._compilation_context = None
+    if self._model_artifacts is not None:
+      self._model_artifacts.cleanup()
+      self._model_artifacts = None
+
+  def __enter__(self):
+    return self
+
+  def __exit__(self, exception_type, exception_value, traceback):
+    self.close()
+
+  def __del__(self):
+    self.close()
+
+  def run(self, inputs):
+    if self._inference_runner is None:
+      raise RuntimeError("kernel is closed")
+    inputs = numpy.asarray(inputs, dtype=self.input_type, order="C")
+    if inputs.ndim != 2:
+      raise ValueError("inputs must be a two-dimensional array")
+    if inputs.shape[1] != self.num_features:
+      raise ValueError(
+          f"expected {self.num_features} features, got {inputs.shape[1]}")
+    if inputs.shape[0] == 0:
+      return numpy.empty((0,), dtype=self.result_type)
+
+    num_rows = inputs.shape[0]
+    padded_rows = ((num_rows + self.batch_size - 1) //
+                   self.batch_size) * self.batch_size
+    if padded_rows != num_rows:
+      padded_inputs = numpy.zeros(
+          (padded_rows, self.num_features), dtype=self.input_type)
+      padded_inputs[:num_rows] = inputs
+      inputs = padded_inputs
+
+    results = self._inference_runner.RunInferenceOnMultipleBatches(
+        inputs, self.result_type)
+    return results[:num_rows]
+
+
+def _materialize_model(model, artifacts):
+  if isinstance(model, (str, os.PathLike)):
+    model_path = os.fspath(model)
+    if not os.path.isfile(model_path):
+      raise FileNotFoundError(model_path)
+    extension = os.path.splitext(model_path)[1].lower()
+    return (model_path, "onnx_file" if extension == ".onnx" else
+            "xgboost_json", None)
+
+  if hasattr(model, "get_booster"):
+    model = model.get_booster()
+  if hasattr(model, "save_model"):
+    model_path = os.path.join(artifacts.name, "model.json")
+    model.save_model(model_path)
+    return model_path, "xgboost_json", None
+  if hasattr(model, "SerializeToString"):
+    model_path = os.path.join(artifacts.name, "model.onnx")
+    with open(model_path, "wb") as model_file:
+      model_file.write(model.SerializeToString())
+    try:
+      num_features = model.graph.input[0].type.tensor_type.shape.dim[-1].dim_value
+    except (AttributeError, IndexError):
+      num_features = 0
+    return model_path, "onnx_file", num_features if num_features > 0 else None
+
+  raise TypeError(
+      "model must be an XGBoost estimator/booster, an ONNX model, or a model path")
+
+
+def compile(model, options: Optional[CompilerOptions] = None, *,
+            batch_size: int = 1024, tile_size: int = 1,
+            target: str = "cpu",
+            schedule: Optional[Callable[[Schedule], None]] = None,
+            representation: str = "sparse",
+            gpu_auto_schedule_options: Optional[GPUAutoScheduleOptions] = None,
+            input_type=numpy.float32, result_type=numpy.float32):
+  if target not in ("cpu", "gpu"):
+    raise ValueError("target must be 'cpu' or 'gpu'")
+  if batch_size <= 0:
+    raise ValueError("batch_size must be positive")
+  if gpu_auto_schedule_options is not None and target != "gpu":
+    raise ValueError("gpu_auto_schedule_options requires target='gpu'")
+  if gpu_auto_schedule_options is not None and schedule is not None:
+    raise ValueError("GPU auto-scheduling cannot be combined with a schedule")
+  if options is None:
+    options = CompilerOptions(batch_size, tile_size)
+
+  artifacts = tempfile.TemporaryDirectory(prefix="treebeard-")
+  try:
+    model_path, input_filetype, num_features = _materialize_model(
+        model, artifacts)
+    if num_features is not None:
+      options.SetNumberOfFeatures(num_features)
+    globals_path = os.path.join(artifacts.name, "model.treebeard-globals.json")
+    context = TreebeardContext(
+        model_path, globals_path, options, gpu_auto_schedule_options)
+    context.SetRepresentationType(representation)
+    context.SetInputFiletype(input_filetype)
+
+    if gpu_auto_schedule_options is not None:
+      runner = TreebeardInferenceRunner.GPUInferenceRunnerFromTBContext(context)
+    else:
+      context.BuildHIRRepresentation()
+      if schedule is not None:
+        schedule(context.GetSchedule())
+      if target == "gpu":
+        runner = context.ConstructGPUInferenceRunnerFromHIR()
+      else:
+        runner = context.ConstructInferenceRunnerFromHIR()
+    return TreebeardKernel(
+        runner, context, artifacts, input_type, result_type)
+  except Exception:
+    artifacts.cleanup()
+    raise
 
 #### ---------------------------------------------------------------- ####
 #### Treebeard API -- Do not use these!

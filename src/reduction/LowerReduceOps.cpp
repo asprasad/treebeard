@@ -672,10 +672,13 @@ struct AtomicReduceDimensionOpLowering : public ConversionPattern {
 
     auto reductionType = reduceOp.getReductionTypeAttr().getReductionType();
     Value zeroIdxReduceDone;
-    {
+    if (sourceMemref == targetMemref) {
       mlir::OpBuilder::InsertionGuard saveInsertionPoint(rewriter);
 
       auto parForOp = op->getParentOfType<scf::ParallelOp>();
+      if (!parForOp)
+        return rewriter.notifyMatchFailure(
+            op, "in-place atomic reduction requires an scf.parallel parent");
       rewriter.setInsertionPoint(parForOp);
       auto zeroInt = rewriter.create<arith::ConstantIntOp>(
           location, 0, rewriter.getIntegerType(8));
